@@ -60,9 +60,9 @@ export default function HeroSection() {
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-white text-white hover:bg-white hover:text-mdsc-blue-primary"
+                variant="secondary" 
+                size="lg"
+                className="bg-white text-mdsc-blue-primary border-2 border-white hover:bg-mdsc-gold hover:text-white"
                 onClick={() => router.push('/courses')}
               >
                 Découvrir les formations
