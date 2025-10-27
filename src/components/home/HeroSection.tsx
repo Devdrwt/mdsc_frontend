@@ -62,7 +62,7 @@ export default function HeroSection() {
               <Button 
                 variant="secondary" 
                 size="lg"
-                className="bg-white text-mdsc-blue-primary border-2 border-white hover:bg-mdsc-gold hover:text-white"
+                className="bg-white text-mdsc-blue-primary border-2 border-white hover:bg-[#D79A49] hover:text-white"
                 onClick={() => router.push('/courses')}
               >
                 Découvrir les formations
@@ -80,10 +80,10 @@ export default function HeroSection() {
                 alt="Apprentissage en ligne"
                 className="w-full h-auto object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-tr from-mdsc-gold/20 to-mdsc-blue-primary/20"></div>
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#D79A49]/20 to-mdsc-blue-primary/20"></div>
             </div>
             {/* Decorative border effect */}
-            <div className="absolute -inset-2 bg-gradient-to-r from-mdsc-gold to-mdsc-blue-primary rounded-2xl opacity-20 blur-sm"></div>
+            <div className="absolute -inset-2 bg-gradient-to-r from-[#D79A49] to-mdsc-blue-primary rounded-2xl opacity-20 blur-sm"></div>
           </div>
         </div>
 

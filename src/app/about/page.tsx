@@ -143,7 +143,7 @@ export default function AboutPage() {
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
                 <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-mdsc-gold rounded-full flex items-center justify-center mr-4">
+                  <div className="w-12 h-12 bg-[#D79A49] rounded-full flex items-center justify-center mr-4">
                     <Globe className="h-6 w-6 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">Notre Vision</h2>
@@ -200,7 +200,7 @@ export default function AboutPage() {
                 return (
                   <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div className="flex items-start space-x-4">
-                      <div className="w-12 h-12 bg-mdsc-gold rounded flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-[#D79A49] rounded flex items-center justify-center flex-shrink-0">
                         <Icon className="h-6 w-6 text-white" />
                       </div>
                       <div>
@@ -240,7 +240,7 @@ export default function AboutPage() {
                   <h3 className="text-lg font-semibold mb-1">
                     {member.name}
                   </h3>
-                  <p className="text-mdsc-gold font-medium mb-2">
+                  <p className="text-[#D79A49] font-medium mb-2">
                     {member.role}
                   </p>
                   <p className="text-sm opacity-90">
@@ -276,13 +276,13 @@ export default function AboutPage() {
           {/* Témoignage */}
           <section className="text-center">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12">
-              <div className="w-16 h-16 bg-mdsc-gold rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-16 h-16 bg-[#D79A49] rounded-full flex items-center justify-center mx-auto mb-6">
                 <Quote className="h-8 w-8 text-white" />
               </div>
               <blockquote className="text-2xl font-bold text-gray-900 mb-4">
                 "La société civile est le moteur du changement durable."
               </blockquote>
-              <div className="w-24 h-1 bg-mdsc-gold mx-auto"></div>
+              <div className="w-24 h-1 bg-[#D79A49] mx-auto"></div>
             </div>
           </section>
         </div>

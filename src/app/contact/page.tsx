@@ -271,7 +271,7 @@ export default function ContactPage() {
               {/* Localisation */}
               <div>
                 <div className="mb-4">
-                  <span className="inline-block bg-mdsc-gold text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
+                  <span className="inline-block bg-[#D79A49] text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
                     Où nous trouver
                   </span>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -293,7 +293,7 @@ export default function ContactPage() {
                     Rue de l'Innovation Sociale<br />
                     Cotonou, Bénin
                   </p>
-                  <button className="bg-mdsc-gold text-white py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors font-medium flex items-center mx-auto">
+                  <button className="bg-[#D79A49] text-white py-2 px-4 rounded-lg hover:bg-[#c1873f] transition-colors font-medium flex items-center mx-auto">
                     <MapPin className="h-4 w-4 mr-2" />
                     Ouvrir dans Maps
                   </button>

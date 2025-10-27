@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Open_Sans } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "../lib/context/ThemeContext";
+import ClientProviders from "../components/providers/ClientProviders";
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair",
@@ -67,13 +67,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(){const e=document.documentElement;e.classList.remove('dark');}();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${playfairDisplay.variable} ${openSans.variable} antialiased`}
       >
-        <ThemeProvider>
+        <ClientProviders>
           {children}
-        </ThemeProvider>
+        </ClientProviders>
       </body>
     </html>
   );

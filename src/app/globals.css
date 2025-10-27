@@ -63,8 +63,8 @@
   --radius: var(--radius);
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
+/* Dark mode - Désactivé pour forcer le mode clair par défaut */
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #0f172a;
     --foreground: #f1f5f9;
@@ -76,7 +76,7 @@
     --secondary: var(--mdsc-orange);
     --accent: var(--mdsc-orange-light);
   }
-}
+} */
 
 /* Dark mode avec classe .dark */
 .dark {
@@ -86,11 +86,6 @@
   --muted-foreground: #cbd5e1;
   --border: #334155;
   --input: #1e293b;
-}
-
-.dark body {
-  background: #0f172a;
-  color: #f1f5f9;
 }
 
 .dark .bg-white {
@@ -127,13 +122,19 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--mdsc-white);
+  color: var(--mdsc-blue-dark);
   font-family: var(--font-sans), system-ui, sans-serif;
   line-height: 1.6;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background: #0f172a;
+  color: #f1f5f9;
 }
 
 /* Styles globaux pour les formulaires - Texte en gris foncé */
@@ -380,7 +381,7 @@ select:focus {
 
 .mdsc-accent-line {
   height: 0.25rem;
-  background-color: #f97316;
+  background-color: #D79A49;
   border-radius: 9999px;
 }
 

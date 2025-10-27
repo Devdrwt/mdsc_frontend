@@ -26,7 +26,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
       case 'Débutant':
         return 'bg-mdsc-blue-primary text-white';
       case 'Intermédiaire':
-        return 'bg-mdsc-gold text-white';
+        return 'bg-[#D79A49] text-white';
       case 'Avancé':
         return 'bg-mdsc-blue-dark text-white';
       default:

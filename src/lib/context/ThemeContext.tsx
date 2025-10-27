@@ -15,35 +15,38 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme);
-    applyTheme(initialTheme);
-  }, []);
-
   const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    if (newTheme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    if (typeof window !== 'undefined') {
+      const root = document.documentElement;
+      if (newTheme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
     }
   };
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme);
+    }
     applyTheme(newTheme);
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Supprimer immédiatement la classe dark
+      const root = document.documentElement;
+      root.classList.remove('dark');
+      
+      // Toujours démarrer en mode clair
+      setTheme('light');
+      
+      setMounted(true);
+    }
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

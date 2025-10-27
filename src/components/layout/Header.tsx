@@ -27,8 +27,8 @@ export default function Header() {
     <header 
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled 
-          ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg border-b border-gray-200 dark:border-gray-700' 
-          : 'bg-white dark:bg-gray-900'
+          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
+          : 'bg-white'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -44,10 +44,10 @@ export default function Header() {
               <a
                 key={item.name}
                 href={item.href}
-                className="relative px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-mdsc-blue-dark dark:hover:text-[#cc6600] transition-all duration-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group"
+                className="relative px-4 py-2 text-sm font-medium text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] dark:hover:text-[#D79A49] transition-all duration-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group"
               >
                 {item.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#cc6600] group-hover:w-full transition-all duration-300 rounded-full"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#D79A49] group-hover:w-full transition-all duration-300 rounded-full"></span>
               </a>
             ))}
           </nav>
@@ -56,7 +56,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-2">
             <button 
               onClick={toggleTheme}
-              className="p-2.5 text-gray-700 dark:text-gray-300 hover:text-[#cc6600] transition-all duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 group relative"
+              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 group relative"
               aria-label="Toggle dark mode"
             >
               {theme === 'dark' ? (
@@ -67,13 +67,13 @@ export default function Header() {
             </button>
             <a 
               href="/login" 
-              className="px-6 py-2.5 rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark bg-white dark:bg-gray-800 hover:bg-mdsc-blue-dark hover:text-white dark:hover:text-white transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:scale-105"
+              className="px-6 py-2.5 rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-mdsc-blue-dark hover:text-white transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:scale-105"
             >
               Connexion
             </a>
             <a 
               href="/select-role" 
-              className="px-6 py-2.5 rounded-lg bg-[#cc6600] text-white hover:bg-[#b35a00] transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg hover:scale-105 hover:-translate-y-0.5"
+              className="px-6 py-2.5 rounded-lg bg-[#D79A49] text-white hover:bg-[#c1873f] transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg hover:scale-105 hover:-translate-y-0.5"
             >
               S'inscrire
             </a>
@@ -83,7 +83,7 @@ export default function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-700 dark:text-gray-300 hover:text-[#cc6600] focus:outline-none focus:ring-2 focus:ring-[#cc6600] rounded-lg transition-all duration-200"
+              className="p-2 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] focus:outline-none focus:ring-2 focus:ring-[#D79A49] rounded-lg transition-all duration-200"
               aria-label="Toggle menu"
             >
               <div className="relative w-6 h-6">
@@ -111,7 +111,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-gray-700 dark:text-gray-200 hover:text-mdsc-blue-dark dark:hover:text-[#cc6600] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 font-medium"
+                className="block px-4 py-3 text-mdsc-blue-dark dark:text-gray-200 hover:text-[#D79A49] dark:hover:text-[#D79A49] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 font-medium"
                 style={{ 
                   animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
                 }}
@@ -122,7 +122,7 @@ export default function Header() {
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <button 
                 onClick={toggleTheme}
-                className="w-full px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:text-[#cc6600] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 flex items-center gap-3"
+                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-200 hover:text-[#D79A49] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 flex items-center gap-3"
               >
                 {theme === 'dark' ? (
                   <>
@@ -139,14 +139,14 @@ export default function Header() {
               <a 
                 href="/login"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark dark:text-white dark:border-white hover:bg-mdsc-blue-dark hover:text-white dark:hover:bg-white dark:hover:text-mdsc-blue-dark transition-all duration-300 font-medium"
+                className="block px-4 py-3 text-center rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-mdsc-blue-dark hover:text-white transition-all duration-300 font-medium"
               >
                 Connexion
               </a>
               <a 
                 href="/select-role"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg bg-[#cc6600] text-white hover:bg-[#b35a00] transition-all duration-300 font-medium shadow-md"
+                className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-[#c1873f] transition-all duration-300 font-medium shadow-md"
               >
                 S'inscrire
               </a>
