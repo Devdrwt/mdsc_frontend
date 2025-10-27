@@ -8,7 +8,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigation = [
-    { name: 'Accueil', href: '/' },
+    { name: 'Aaaccueil', href: '/' },
     { name: 'À propos', href: '/about' },
     { name: 'Formations', href: '/courses' },
     { name: 'Actualités', href: '/news' },
