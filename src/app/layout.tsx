@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Open_Sans } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "../lib/context/ThemeContext";
 
 const playfairDisplay = Playfair_Display({
   variable: "--font-playfair",
@@ -70,7 +71,9 @@ export default function RootLayout({
       <body
         className={`${playfairDisplay.variable} ${openSans.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
