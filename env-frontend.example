@@ -1,0 +1,29 @@
+# ========================================
+# MDSC Frontend - Environment Variables
+# Copier ce fichier en .env.local
+# ========================================
+
+# API URLs
+NEXT_PUBLIC_API_URL=http://localhost/api
+NEXT_PUBLIC_MOODLE_URL=http://localhost/moodle
+NEXT_PUBLIC_MOODLE_WEBSERVICE_URL=http://localhost/moodle/webservice/rest/server.php
+
+# Keycloak Configuration
+NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:8080
+NEXT_PUBLIC_KEYCLOAK_REALM=mdsc
+NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=mdsc-frontend
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=changeme_generate_with_openssl_rand_base64_32
+
+# App Configuration
+NEXT_PUBLIC_SITE_NAME=MDSC MOOC Platform
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_DEFAULT_LOCALE=fr
+
+# Feature Flags
+NEXT_PUBLIC_ENABLE_REGISTRATION=true
+NEXT_PUBLIC_ENABLE_SSO=true
+NEXT_PUBLIC_ENABLE_2FA=false
+

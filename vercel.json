@@ -1,0 +1,12 @@
+{
+    "version": 2,
+    "name": "mdsc_frontend",
+    "builds": [
+        { "src": "package.json", "use": "@vercel/static-build" }
+    ],
+    "routes": [
+        { "src": "/static/(.*)", "dest": "/static/$1" },
+        { "src": "/(.*)", "dest": "/index.html" }
+    ],
+    "cleanUrls": true
+}

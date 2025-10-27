@@ -1,0 +1,204 @@
+{
+  "common": {
+    "appName": "Maison de la Société Civile",
+    "tagline": "crédibilité, innovation",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "success": "Opération réussie",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "viewAll": "Voir tout"
+  },
+  "nav": {
+    "home": "Accueil",
+    "courses": "Cours",
+    "dashboard": "Dashboard",
+    "about": "À Propos",
+    "contact": "Contact",
+    "login": "Se connecter",
+    "register": "S'inscrire",
+    "logout": "Déconnexion"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "subtitle": "Connectez-vous à votre compte",
+      "email": "Email",
+      "password": "Mot de passe",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Pas encore de compte ?",
+      "createAccount": "Créer un compte",
+      "submit": "Se connecter",
+      "error": "Erreur lors de la connexion. Veuillez vérifier vos identifiants."
+    },
+    "register": {
+      "title": "Inscription",
+      "subtitle": "Créez votre compte MdSC",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse email",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "organization": "Organisation",
+      "organizationType": "Type d'organisation",
+      "phone": "Téléphone",
+      "city": "Ville",
+      "country": "Pays",
+      "acceptTerms": "J'accepte les conditions d'utilisation",
+      "hasAccount": "Déjà un compte ?",
+      "submit": "Créer mon compte",
+      "success": "Inscription réussie !",
+      "successMessage": "Votre compte a été créé. Veuillez vérifier votre email."
+    },
+    "emailVerification": {
+      "title": "Vérifiez votre email",
+      "subtitle": "Nous avons envoyé un code de vérification à",
+      "code": "Code de vérification",
+      "codePlaceholder": "000000",
+      "codeHint": "Saisissez le code à 6 chiffres reçu par email",
+      "verify": "Vérifier le code",
+      "resendEmail": "Renvoyer l'email",
+      "resending": "Renvoi en cours...",
+      "didntReceive": "Vous n'avez pas reçu l'email ?",
+      "backToRegister": "Retour à l'inscription",
+      "tips": "Conseils :",
+      "checkSpam": "Vérifiez votre dossier spam/courrier indésirable",
+      "codeExpires": "Le code expire dans 15 minutes",
+      "contactSupport": "Contactez le support si vous ne recevez pas l'email"
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié ?",
+      "subtitle": "Saisissez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe",
+      "email": "Adresse email",
+      "submit": "Envoyer le lien de réinitialisation",
+      "success": "Email envoyé !",
+      "successMessage": "Nous avons envoyé un lien de réinitialisation à votre adresse email. Vérifiez votre boîte de réception.",
+      "sendAnother": "Envoyer un autre email",
+      "backToLogin": "Retour à la connexion"
+    },
+    "resetPassword": {
+      "title": "Nouveau mot de passe",
+      "subtitle": "Définissez votre nouveau mot de passe sécurisé",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "submit": "Réinitialiser le mot de passe",
+      "success": "Mot de passe réinitialisé !",
+      "successMessage": "Votre mot de passe a été mis à jour avec succès.",
+      "invalidLink": "Lien invalide",
+      "invalidLinkMessage": "Le lien de réinitialisation est invalide ou a expiré.",
+      "requestNew": "Demander un nouveau lien",
+      "requirements": "Exigences du mot de passe :",
+      "minLength": "Au moins 8 caractères",
+      "uppercase": "Contient des lettres majuscules et minuscules",
+      "number": "Contient au moins un chiffre",
+      "special": "Contient au moins un caractère spécial"
+    }
+  },
+  "home": {
+    "hero": {
+      "title": "Renforcez la Société Civile par l'Apprentissage",
+      "subtitle": "La plateforme MOOC de la Maison de la Société Civile offre des formations clés pour la crédibilité, l'innovation et l'impact.",
+      "exploreCourses": "Découvrir les cours",
+      "register": "S'inscrire"
+    },
+    "courses": {
+      "title": "Nos Formations Populaires",
+      "subtitle": "Découvrez les cours les plus suivis et les mieux notés pour renforcer vos compétences.",
+      "free": "Gratuit",
+      "viewCourse": "Voir le cours",
+      "viewAll": "Voir tous les cours"
+    }
+  },
+  "courses": {
+    "title": "Catalogue de cours",
+    "subtitle": "Découvrez nos formations spécialisées pour renforcer les capacités des organisations de la société civile",
+    "search": "Rechercher un cours...",
+    "allCategories": "Toutes les catégories",
+    "allLevels": "Tous les niveaux",
+    "resultsCount": "{count} cours trouvé",
+    "resultsCount_plural": "{count} cours trouvés",
+    "noResults": "Aucun cours trouvé",
+    "noResultsMessage": "Essayez de modifier vos critères de recherche",
+    "levels": {
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé"
+    },
+    "categories": {
+      "finance": "Finance",
+      "communication": "Communication",
+      "evaluation": "Évaluation",
+      "mobilization": "Mobilisation",
+      "management": "Gestion",
+      "leadership": "Leadership",
+      "advocacy": "Plaidoyer",
+      "hr": "RH"
+    },
+    "card": {
+      "by": "Par",
+      "free": "Gratuit",
+      "students": "étudiants",
+      "duration": "durée",
+      "rating": "note"
+    }
+  },
+  "dashboard": {
+    "welcome": "Bonjour, {name} 👋",
+    "subtitle": "Voici un aperçu de votre progression d'apprentissage",
+    "stats": {
+      "enrolledCourses": "Cours inscrits",
+      "completedCourses": "Cours terminés",
+      "certificates": "Certificats",
+      "studyTime": "Temps d'étude"
+    },
+    "recentCourses": {
+      "title": "Mes cours récents",
+      "viewAll": "Voir tous",
+      "noCourses": "Aucun cours suivi",
+      "noCoursesMessage": "Commencez votre parcours de formation",
+      "discoverCourses": "Découvrir les cours",
+      "progress": "Progression"
+    },
+    "globalProgress": {
+      "title": "Progression globale",
+      "monthlyGoal": "Objectif mensuel",
+      "completed": "{completed} cours terminés sur {goal} objectifs ce mois"
+    },
+    "upcomingDeadlines": {
+      "title": "Prochaines échéances",
+      "inDays": "Dans {days} jours",
+      "inDay": "Dans {days} jour",
+      "inWeek": "Dans {weeks} semaine",
+      "inWeeks": "Dans {weeks} semaines"
+    },
+    "recommendations": {
+      "title": "Recommandés pour vous",
+      "complements": "Complète votre parcours en {category}"
+    },
+    "actions": {
+      "planning": "Planning",
+      "notifications": "Notifications",
+      "settings": "Paramètres",
+      "logout": "Déconnexion"
+    }
+  },
+  "footer": {
+    "description": "Renforcer les capacités des organisations de la société civile pour plus de crédibilité et d'innovation.",
+    "navigation": "Navigation",
+    "contact": "Contact",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "copyright": "© {year} Maison de la Société Civile. Tous droits réservés."
+  }
+}
