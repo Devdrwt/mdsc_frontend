@@ -32,11 +32,11 @@ export default function Header() {
   return (
     <>
     <header 
-      className={`fixed top-4 left-0 w-full z-50 transition-all duration-300 bg-transparent`}
+      className={`fixed top-2 md:top-4 left-0 w-full z-50 transition-all duration-300 bg-transparent`}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Capsule container */}
-        <div className="flex justify-between items-center h-20 bg-white/95 backdrop-blur rounded-[36px] shadow-md border border-gray-200 px-4 sm:px-6">
+        <div className="flex justify-between items-center h-16 md:h-20 bg-white/95 backdrop-blur rounded-[24px] md:rounded-[36px] shadow-md border border-gray-200 px-3 md:px-6">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Logo size="sm" />
@@ -103,16 +103,16 @@ export default function Header() {
         </div>
 
         {/* Menu mobile */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+        <div className={`md:hidden mt-2 transition-all duration-300 ease-in-out ${
           isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="px-2 pt-4 pb-4 space-y-2">
+          <div className="bg-white/95 backdrop-blur rounded-[24px] shadow-md border border-gray-200 px-4 py-4 space-y-2">
             {navigation.map((item, index) => (
               <a
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-mdsc-blue-dark dark:text-gray-200 hover:text-[#D79A49] dark:hover:text-[#D79A49] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-200 font-medium"
+                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#D79A49] hover:bg-orange-200 rounded-lg transition-all duration-200 font-medium"
                 style={{ 
                   animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
                 }}
@@ -120,34 +120,25 @@ export default function Header() {
                 {item.name}
               </a>
             ))}
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="pt-2 border-t border-gray-200 space-y-2">
               <button 
                 onClick={toggleTheme}
-                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-200 hover:text-[#D79A49] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 flex items-center gap-3"
+                className="w-full px-4 py-3 text-left text-mdsc-blue-dark hover:text-[#D79A49] rounded-lg hover:bg-orange-200 transition-all duration-200 flex items-center gap-3"
               >
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="h-5 w-5" />
-                    Mode clair
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-5 w-5" />
-                    Mode sombre
-                  </>
-                )}
+                <Sun className="h-5 w-5" />
+                Mode clair
               </button>
               <a 
                 href="/login"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-mdsc-blue-dark hover:text-white transition-all duration-300 font-medium"
+                className="block px-4 py-3 text-center rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium"
               >
                 Connexion
               </a>
               <a 
                 href="/select-role"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-[#c1873f] transition-all duration-300 font-medium shadow-md"
+                className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
               >
                 S'inscrire
               </a>
@@ -157,7 +148,7 @@ export default function Header() {
       </div>
     </header>
     {needsSpacer && (
-      <div className="h-24" style={{
+      <div className="h-20 md:h-24" style={{
         background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
       }} />
     )}
