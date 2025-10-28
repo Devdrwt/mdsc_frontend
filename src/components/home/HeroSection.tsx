@@ -32,16 +32,29 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="bg-mdsc-blue-primary min-h-screen flex items-center relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <section className="min-h-screen flex items-center relative overflow-hidden" style={{
+      background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
+    }}>
+      {/* Very subtle line pattern */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-10 opacity-10"
+        style={{
+          backgroundImage:
+            'radial-gradient(800px 600px at 20% 20%, rgba(255,255,255,0.08) 1px, transparent 1px), radial-gradient(600px 400px at 80% 80%, rgba(255,255,255,0.06) 1px, transparent 1px)',
+          backgroundSize: '100px 100px, 120px 120px',
+          backgroundRepeat: 'repeat'
+        }}
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Contenu principal */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl text-display text-white" style={{color: 'white', fontFamily: 'var(--font-playfair)'}}>
-                Apprends à ton rythme, transmets ton savoir et inspire la prochaine génération.
+              <h1 className="text-2xl md:text-3xl lg:text-4xl text-display text-white dark:text-white" style={{color: 'white', fontFamily: 'var(--font-playfair)'}}>
+                <span className="text-mdsc-gold">Apprends</span> à ton rythme, <span className="text-mdsc-gold">transmets</span> ton savoir et <span className="text-mdsc-gold">inspire</span> la prochaine génération.
               </h1>
-              <p className="text-xl text-body-large text-white" style={{color: 'white'}}>
+              <p className="text-xl text-body-large text-white dark:text-white" style={{color: 'white'}}>
                 Accède à des cours exclusifs, des sessions live interactives et des certifications reconnues. 
                 Crée et partage tes contenus, anime des sessions live, évalue les apprenants et suis leurs 
                 progrès en temps réel. Ton expertise mérite une scène : fais-la briller ici.
@@ -54,18 +67,17 @@ export default function HeroSection() {
                 variant="secondary" 
                 size="lg" 
                 className="group"
-                onClick={() => router.push('/select-role')}
-              >
-                Commencer maintenant
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <Button 
-                variant="secondary" 
-                size="lg"
-                className="bg-white text-mdsc-blue-primary border-2 border-white hover:bg-[#D79A49] hover:text-white"
                 onClick={() => router.push('/courses')}
               >
                 Découvrir les formations
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button 
+                variant="primary" 
+                size="lg"
+                onClick={() => router.push('/about')}
+              >
+                En savoir plus
               </Button>
             </div>
 
@@ -74,24 +86,14 @@ export default function HeroSection() {
 
           {/* Hero Image */}
           <div className="relative">
-            <div className="relative overflow-hidden rounded-2xl shadow-2xl">
+            <div className="relative overflow-hidden rounded-[48px] shadow-2xl">
               <img
                 src="/apprenant.png"
                 alt="Apprentissage en ligne"
-                className="w-full h-auto object-cover"
+                className="w-full h-auto object-cover rounded-[48px]"
               />
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#D79A49]/20 to-mdsc-blue-primary/20"></div>
             </div>
-            {/* Decorative border effect */}
-            <div className="absolute -inset-2 bg-gradient-to-r from-[#D79A49] to-mdsc-blue-primary rounded-2xl opacity-20 blur-sm"></div>
           </div>
-        </div>
-
-        {/* Wave transition */}
-        <div className="absolute bottom-0 left-0 w-full">
-          <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="relative block w-full h-16">
-            <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" fill="white"></path>
-          </svg>
         </div>
       </div>
     </section>

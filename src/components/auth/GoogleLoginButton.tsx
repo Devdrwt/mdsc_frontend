@@ -131,7 +131,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       type="button"
       onClick={handleGoogleLogin}
       disabled={isLoading}
-      className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mdsc-blue-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 font-medium hover:bg-orange-200 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mdsc-blue-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FcGoogle className="h-5 w-5 mr-3" />
       {isLoading ? 'Connexion en cours...' : 'Continuer avec Google'}

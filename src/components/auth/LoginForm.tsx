@@ -132,7 +132,7 @@ export default function LoginForm() {
             </div>
 
             <div className="text-sm">
-              <a href="/forgot-password" className="font-medium text-mdsc-blue hover:text-blue-700">
+              <a href="/forgot-password" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-2 py-1 rounded transition-colors">
                 Mot de passe oublié ?
               </a>
             </div>
@@ -180,7 +180,7 @@ export default function LoginForm() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-700">
             Vous n'avez pas encore de compte ?{' '}
-            <a href="/select-role" className="font-medium text-mdsc-blue hover:text-blue-700">
+            <a href="/select-role" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-2 py-1 rounded transition-colors">
               S'inscrire gratuitement
             </a>
           </p>
@@ -189,7 +189,7 @@ export default function LoginForm() {
         <div className="mt-4 pt-4 border-t border-gray-200">
           <button
             onClick={() => router.push('/')}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-orange-200 hover:text-gray-800 transition-colors rounded"
           >
             <Home className="h-4 w-4 mr-2" />
             Retour à l'accueil

@@ -93,9 +93,14 @@ export default function Home() {
   
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-      <main>
+      {/* Wrap header + hero in same gradient to remove white gap */}
+      <div className="relative" style={{
+        background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
+      }}>
+        <Header />
         <HeroSection />
+      </div>
+      <main>
         <CoursePreview courses={featuredCourses} />
         <Testimonials />
         <CallToAction />

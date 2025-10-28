@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Logo from '../ui/Logo';
 import { Menu, X, Moon, Sun, Search } from 'lucide-react';
 import { useTheme } from '../../lib/context/ThemeContext';
@@ -9,10 +10,11 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
 
   const navigation = [
     { name: 'Formations', href: '/courses' },
-    { name: 'Contact', href: '/contact' },
+    { name: 'Contacts', href: '/contact' },
   ];
 
   useEffect(() => {
@@ -23,16 +25,18 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const isHome = pathname === '/';
+  const isDashboard = pathname?.startsWith('/dashboard');
+  const needsSpacer = !isHome && !isDashboard;
+
   return (
+    <>
     <header 
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled 
-          ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
-          : 'bg-white'
-      }`}
+      className={`fixed top-4 left-0 w-full z-50 transition-all duration-300 bg-transparent`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Capsule container */}
+        <div className="flex justify-between items-center h-20 bg-white/95 backdrop-blur rounded-[36px] shadow-md border border-gray-200 px-4 sm:px-6">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Logo size="sm" />
@@ -56,24 +60,21 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-2">
             <button 
               onClick={toggleTheme}
-              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 group relative"
+              className="p-2.5 text-mdsc-blue-dark hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-100 group"
               aria-label="Toggle dark mode"
+              title="Mode clair"
             >
-              {theme === 'dark' ? (
-                <Sun className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
-              ) : (
-                <Moon className="h-5 w-5 group-hover:-rotate-12 transition-transform duration-300" />
-              )}
+              <Sun className="h-5 w-5" />
             </button>
             <a 
               href="/login" 
-              className="px-6 py-2.5 rounded-lg border-2 border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-mdsc-blue-dark hover:text-white transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:scale-105"
+              className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
             >
               Connexion
             </a>
             <a 
               href="/select-role" 
-              className="px-6 py-2.5 rounded-lg bg-[#D79A49] text-white hover:bg-[#c1873f] transition-all duration-300 font-medium text-sm shadow-md hover:shadow-lg hover:scale-105 hover:-translate-y-0.5"
+              className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium text-sm"
             >
               S'inscrire
             </a>
@@ -155,5 +156,11 @@ export default function Header() {
         </div>
       </div>
     </header>
+    {needsSpacer && (
+      <div className="h-24" style={{
+        background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
+      }} />
+    )}
+    </>
   );
 }

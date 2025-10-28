@@ -406,11 +406,11 @@ export default function RegisterForm() {
             <div className="ml-3 text-sm">
               <label htmlFor="acceptTerms" className="text-gray-700">
                 J'accepte les{' '}
-                <a href="/terms" className="font-medium text-mdsc-blue hover:text-blue-700">
+                <a href="/terms" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-1 py-0.5 rounded transition-colors">
                   conditions d'utilisation
                 </a>{' '}
                 et la{' '}
-                <a href="/privacy" className="font-medium text-mdsc-blue hover:text-blue-700">
+                <a href="/privacy" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-1 py-0.5 rounded transition-colors">
                   politique de confidentialité
                 </a>
               </label>
@@ -430,7 +430,7 @@ export default function RegisterForm() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-700">
             Vous avez déjà un compte ?{' '}
-            <a href="/login" className="font-medium text-mdsc-blue hover:text-blue-700">
+            <a href="/login" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-2 py-1 rounded transition-colors">
               Se connecter
             </a>
           </p>

@@ -63,7 +63,7 @@ export default function ModernNavigation({
         <div
           className={`
             flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer
-            transition-all duration-200 hover:bg-gray-100
+            transition-all duration-200 hover:bg-white/20
             ${isActive ? 'bg-mdsc-blue-primary text-white' : 'text-gray-700'}
             ${level > 0 ? 'ml-4' : ''}
           `}

@@ -75,7 +75,7 @@ export default function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative p-2 text-gray-500 hover:text-gray-700 transition-colors"
+              className="relative p-2 text-gray-500 hover:bg-orange-200 hover:text-gray-700 transition-colors rounded"
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -101,7 +101,7 @@ export default function ModernHeader({
                       <div
                         key={notification.id}
                         onClick={() => onNotificationClick?.(notification)}
-                        className="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="p-4 border-b border-gray-100 hover:bg-orange-200 cursor-pointer transition-colors rounded"
                       >
                         <div className="flex items-start space-x-3">
                           <div className={`w-2 h-2 rounded-full mt-2 ${
@@ -131,7 +131,7 @@ export default function ModernHeader({
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-3 p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center space-x-3 p-2 text-gray-700 hover:bg-orange-200 rounded-lg transition-colors"
             >
               <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                 {user?.avatar ? (
@@ -159,7 +159,7 @@ export default function ModernHeader({
                       onProfileClick?.();
                       setShowUserMenu(false);
                     }}
-                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-orange-200 rounded-lg transition-colors"
                   >
                     <User className="h-4 w-4" />
                     <span>Profil</span>
@@ -169,7 +169,7 @@ export default function ModernHeader({
                       onSettingsClick?.();
                       setShowUserMenu(false);
                     }}
-                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-orange-200 rounded-lg transition-colors"
                   >
                     <Settings className="h-4 w-4" />
                     <span>Paramètres</span>
@@ -180,7 +180,7 @@ export default function ModernHeader({
                       onLogout?.();
                       setShowUserMenu(false);
                     }}
-                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-red-600 hover:bg-red-100 rounded-lg transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Déconnexion</span>
