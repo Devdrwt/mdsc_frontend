@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import EmailVerification from './EmailVerification';
 import { register, ApiError } from '../../lib/services/authService';
 import { countries } from '../../lib/constants/countries';
-import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, AlertCircle, Home, GraduationCap, Users } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, GraduationCap, Users } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 
 interface FormData {
@@ -237,9 +237,19 @@ const SimpleRegisterForm = () => {
       <div className="max-w-2xl w-full space-y-8">
         {/* En-tête */}
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-mdsc-blue-dark">
-            Créer un compte
-          </h2>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="p-2 rounded-lg hover:bg-orange-200 transition-colors"
+              aria-label="Retour à l'accueil"
+              title="Retour à l'accueil"
+            >
+              <ArrowLeft className="h-5 w-5 text-mdsc-blue-dark" />
+            </button>
+            <h2 className="text-3xl font-bold text-mdsc-blue-dark">
+              Créer un compte
+            </h2>
+          </div>
           <p className="mt-2 text-sm text-gray-600">
             Rejoignez la communauté MdSC et commencez votre parcours d'apprentissage
           </p>
@@ -640,7 +650,7 @@ const SimpleRegisterForm = () => {
             <div>
               <GoogleLoginButton 
                 onError={(err) => setError(err)}
-              />
+              /> 
             </div>
 
             {/* Lien vers la connexion */}
@@ -667,17 +677,6 @@ const SimpleRegisterForm = () => {
               Politique de confidentialité
             </a>
           </p>
-        </div>
-
-        {/* Bouton retour à l'accueil */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <button
-            onClick={() => router.push('/')}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <Home className="h-4 w-4 mr-2" />
-            Retour à l'accueil
-          </button>
         </div>
       </div>
     </div>

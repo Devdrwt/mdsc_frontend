@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
 import { useAuthStore } from '../../lib/stores/authStore';
 import { ApiError } from '../../lib/services/authService';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Home } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 
 export default function LoginForm() {
@@ -51,9 +51,19 @@ export default function LoginForm() {
     <div className="max-w-md mx-auto">
       <div className="card-mdsc">
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-mdsc-blue mb-2">
-            Se connecter
-          </h2>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="p-2 rounded-lg hover:bg-orange-200 transition-colors"
+              aria-label="Retour à l'accueil"
+              title="Retour à l'accueil"
+            >
+              <ArrowLeft className="h-5 w-5 text-mdsc-blue-dark" />
+            </button>
+            <h2 className="text-2xl font-bold text-mdsc-blue mb-0">
+              Se connecter
+            </h2>
+          </div>
           <p className="text-gray-700">
             Accédez à votre espace de formation
           </p>
@@ -165,17 +175,7 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-700">Autre option</span>
-            </div>
-          </div>
-
-        </div>
+        
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-700">
@@ -184,16 +184,6 @@ export default function LoginForm() {
               S'inscrire gratuitement
             </a>
           </p>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <button
-            onClick={() => router.push('/')}
-            className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-600 hover:bg-orange-200 hover:text-gray-800 transition-colors rounded"
-          >
-            <Home className="h-4 w-4 mr-2" />
-            Retour à l'accueil
-          </button>
         </div>
       </div>
     </div>

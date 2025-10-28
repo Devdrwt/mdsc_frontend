@@ -60,6 +60,17 @@ export default function SelectRolePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
+      {/* Bouton retour à l'accueil */}
+      <div className="absolute top-4 left-4 z-10">
+        <button
+          onClick={() => router.push('/')}
+          className="flex items-center text-gray-600 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm"
+        >
+          <Home className="h-5 w-5 mr-2" />
+          Retour à l'accueil
+        </button>
+      </div>
+
       {/* Header Section */}
       <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -162,17 +173,6 @@ export default function SelectRolePage() {
               Se connecter
             </a>
           </p>
-          
-          {/* Back to Home Button */}
-          <div className="mt-6">
-            <button
-              onClick={() => router.push('/')}
-              className="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Retour à l'accueil
-            </button>
-          </div>
         </div>
       </div>
 
