@@ -25,6 +25,7 @@ import {
   Eye,
   Bookmark
 } from 'lucide-react';
+import BadgesCertificatesPreview from '../../../components/dashboard/shared/BadgesCertificatesPreview';
 
 interface CourseProgress {
   courseId: string;
@@ -405,6 +406,9 @@ export default function StudentDashboard() {
               ))}
             </div>
           </div>
+
+          {/* Badges et Certificats Preview */}
+          <BadgesCertificatesPreview />
         </div>
       </DashboardLayout>
     </AuthGuard>

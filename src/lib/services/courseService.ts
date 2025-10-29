@@ -159,8 +159,40 @@ export class CourseService {
   }
 
   // Récupérer un cours par ID
-  static async getCourseById(id: string): Promise<Course> {
+  static async getCourseById(id: string | number): Promise<Course> {
     const response = await apiRequest(`/courses/${id}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Récupérer un cours par slug
+  static async getCourseBySlug(slug: string): Promise<Course> {
+    const response = await apiRequest(`/courses/slug/${slug}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Récupérer les cours populaires
+  static async getPopularCourses(limit: number = 10): Promise<Course[]> {
+    const response = await apiRequest(`/courses/popular?limit=${limit}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Récupérer les cours recommandés
+  static async getRecommendedCourses(limit: number = 10): Promise<Course[]> {
+    const response = await apiRequest(`/courses/recommended?limit=${limit}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Vérifier si l'utilisateur est inscrit
+  static async checkEnrollment(courseId: number): Promise<{ is_enrolled: boolean; enrollment?: any }> {
+    const response = await apiRequest(`/courses/${courseId}/check-enrollment`, {
       method: 'GET',
     });
     return response.data;

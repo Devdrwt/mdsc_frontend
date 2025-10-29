@@ -125,8 +125,8 @@ export default function Header() {
                 onClick={toggleTheme}
                 className="w-full px-4 py-3 text-left text-mdsc-blue-dark hover:text-[#D79A49] rounded-lg hover:bg-orange-200 transition-all duration-200 flex items-center gap-3"
               >
-                <Sun className="h-5 w-5" />
-                Mode clair
+                    <Sun className="h-5 w-5" />
+                    Mode clair
               </button>
               <a 
                 href="/login"

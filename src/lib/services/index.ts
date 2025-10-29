@@ -14,6 +14,13 @@ export { default as EvaluationService } from './evaluationService';
 export { default as ProfessionalService } from './professionalService';
 export * from './chatIAService';
 
+// Nouveaux services selon architecture
+export { MediaService, mediaService } from './mediaService';
+export { BadgeService, badgeService } from './badgeService';
+export { CertificateService as NewCertificateService, certificateService } from './certificateService';
+export { ProgressService, progressService } from './progressService';
+export { QuizService as NewQuizService, quizService } from './quizService';
+
 // Export de l'API de base
 export { default as api } from './api';
 export { 

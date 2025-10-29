@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Award, Target, Star, TrendingUp, Users, Clock, BookOpen } from 'lucide-react';
 import { gamificationService, UserProgress, Badge, LeaderboardEntry } from '../../../lib/services/gamificationService';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import { BadgeCollection } from '../../../components/gamification';
 
 export default function GamificationPanel() {
   const { user } = useAuthStore();
@@ -199,47 +200,7 @@ export default function GamificationPanel() {
 
           {/* Onglet Badges */}
           {activeTab === 'badges' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Vos Badges</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {badges.map((badge, index) => {
-                  const isUnlocked = progress?.badges.some(b => b.id === badge.id);
-                  return (
-                    <div
-                      key={badge.id || `badge-${index}`}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        isUnlocked
-                          ? 'border-mdsc-gold bg-yellow-50'
-                          : 'border-gray-200 bg-gray-50 opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className={`p-2 rounded-lg ${
-                          isUnlocked ? 'bg-mdsc-gold text-white' : 'bg-gray-300 text-gray-500'
-                        }`}>
-                          <Award className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className={`font-medium ${isUnlocked ? 'text-gray-900' : 'text-gray-500'}`}>
-                            {badge.name}
-                          </h4>
-                          <p className="text-sm text-gray-500">{badge.points} points</p>
-                        </div>
-                      </div>
-                      <p className={`text-sm ${isUnlocked ? 'text-gray-700' : 'text-gray-500'}`}>
-                        {badge.description}
-                      </p>
-                      {isUnlocked && (
-                        <div className="mt-3 flex items-center text-xs text-mdsc-gold">
-                          <Star className="h-3 w-3 mr-1" />
-                          <span>Débloqué !</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <BadgeCollection showProgress={true} />
           )}
 
           {/* Onglet Classement */}
