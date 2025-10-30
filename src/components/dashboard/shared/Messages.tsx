@@ -1,13 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Inbox, Send, Plus, Search, Mail, MailOpen, Trash2, Clock, User } from 'lucide-react';
+import { Inbox, Send, Plus, Search, Mail, MailOpen, Trash2, Clock, User, Users } from 'lucide-react';
 import { MessageService, Message } from '../../../lib/services/messageService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 
-export default function Messages() {
+interface MessagesProps {
+  courseId?: string;
+}
+
+export default function Messages({ courseId }: MessagesProps) {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'inbox' | 'sent' | 'compose'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'sent' | 'compose' | 'course'>('inbox');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
@@ -20,14 +24,19 @@ export default function Messages() {
 
   useEffect(() => {
     loadMessages();
-  }, [activeTab]);
+  }, [activeTab, courseId]);
 
   const loadMessages = async () => {
     setLoading(true);
     try {
-      const data = activeTab === 'inbox'
-        ? await MessageService.getReceivedMessages()
-        : await MessageService.getSentMessages();
+      let data: Message[] = [];
+      if (activeTab === 'inbox') {
+        data = await MessageService.getReceivedMessages();
+      } else if (activeTab === 'sent') {
+        data = await MessageService.getSentMessages();
+      } else if (activeTab === 'course' && courseId) {
+        data = await MessageService.getCourseMessages(courseId);
+      }
       setMessages(data || []);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -38,6 +47,33 @@ export default function Messages() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Vérifier si c'est un message de broadcast
+    if (activeTab === 'course' && courseId) {
+      if (!composeData.subject || !composeData.content) {
+        alert('Veuillez remplir tous les champs');
+        return;
+      }
+
+      try {
+        await MessageService.sendBroadcastMessage({
+          courseId,
+          subject: composeData.subject,
+          content: composeData.content,
+          type: 'broadcast',
+        });
+        alert('Message envoyé avec succès à tous les participants du cours');
+        setComposeData({ receiverId: '', subject: '', content: '' });
+        setActiveTab('course');
+        loadMessages();
+      } catch (error: any) {
+        console.error('Error sending broadcast message:', error);
+        alert(error.message || 'Erreur lors de l\'envoi du message');
+      }
+      return;
+    }
+
+    // Message direct
     if (!composeData.receiverId || !composeData.subject || !composeData.content) {
       alert('Veuillez remplir tous les champs');
       return;
@@ -97,7 +133,7 @@ export default function Messages() {
         <div className="flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab('inbox')}
-            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 px-4 py-4 text-center font-medium transition-colors ${
               activeTab === 'inbox'
                 ? 'text-mdsc-blue-primary border-b-2 border-mdsc-blue-primary'
                 : 'text-gray-600 hover:text-gray-900'
@@ -108,7 +144,7 @@ export default function Messages() {
           </button>
           <button
             onClick={() => setActiveTab('sent')}
-            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 px-4 py-4 text-center font-medium transition-colors ${
               activeTab === 'sent'
                 ? 'text-mdsc-blue-primary border-b-2 border-mdsc-blue-primary'
                 : 'text-gray-600 hover:text-gray-900'
@@ -117,9 +153,22 @@ export default function Messages() {
             <Send className="h-5 w-5 inline-block mr-2" />
             Envoyés
           </button>
+          {courseId && (
+            <button
+              onClick={() => setActiveTab('course')}
+              className={`flex-1 px-4 py-4 text-center font-medium transition-colors ${
+                activeTab === 'course'
+                  ? 'text-mdsc-blue-primary border-b-2 border-mdsc-blue-primary'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Users className="h-5 w-5 inline-block mr-2" />
+              Messages du cours
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('compose')}
-            className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+            className={`flex-1 px-4 py-4 text-center font-medium transition-colors ${
               activeTab === 'compose'
                 ? 'text-mdsc-blue-primary border-b-2 border-mdsc-blue-primary'
                 : 'text-gray-600 hover:text-gray-900'
@@ -152,7 +201,7 @@ export default function Messages() {
                 <div className="p-8 text-center text-gray-500">Chargement...</div>
               ) : filteredMessages.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
-                  Aucun message {activeTab === 'inbox' ? 'reçu' : 'envoyé'}
+                  {activeTab === 'course' ? 'Aucun message dans ce cours' : activeTab === 'inbox' ? 'Aucun message reçu' : 'Aucun message envoyé'}
                 </div>
               ) : (
                 filteredMessages.map((message) => (
@@ -169,7 +218,7 @@ export default function Messages() {
                           <div className="w-2 h-2 bg-blue-600 rounded-full" />
                         )}
                         <span className="font-medium text-gray-900 truncate">
-                          {activeTab === 'inbox' ? message.senderName : message.receiverName}
+                          {activeTab === 'inbox' ? message.senderName : activeTab === 'course' ? message.senderName : message.receiverName}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">
@@ -187,6 +236,17 @@ export default function Messages() {
           <div className={`${activeTab === 'compose' ? 'lg:col-span-3' : 'lg:col-span-2'} overflow-y-auto p-6`}>
             {activeTab === 'compose' ? (
               <form onSubmit={handleSendMessage} className="space-y-6">
+                {courseId && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 text-blue-600 mr-2" />
+                      <span className="text-blue-800 font-medium">
+                        Vous allez envoyer un message à tous les participants de ce cours
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {!courseId && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Destinataire (ID utilisateur) <span className="text-red-500">*</span>
@@ -197,9 +257,10 @@ export default function Messages() {
                     onChange={(e) => setComposeData({ ...composeData, receiverId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
                     placeholder="Entrez l'ID de l'utilisateur"
-                    required
+                      required={!courseId}
                   />
                 </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -224,7 +285,7 @@ export default function Messages() {
                     onChange={(e) => setComposeData({ ...composeData, content: e.target.value })}
                     rows={12}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-                    placeholder="Votre message..."
+                    placeholder={courseId ? 'Votre message sera envoyé à tous les participants du cours...' : 'Votre message...'}
                     required
                   />
                 </div>
@@ -253,8 +314,14 @@ export default function Messages() {
                     <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
                       <span className="flex items-center">
                         <User className="h-4 w-4 mr-1" />
-                        {activeTab === 'inbox' ? selectedMessage.senderName : selectedMessage.receiverName}
+                        {activeTab === 'inbox' ? selectedMessage.senderName : activeTab === 'course' ? selectedMessage.senderName : selectedMessage.receiverName}
                       </span>
+                      {selectedMessage.type === 'broadcast' && (
+                        <span className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          Broadcast
+                      </span>
+                      )}
                       <span className="flex items-center">
                         <Clock className="h-4 w-4 mr-1" />
                         {new Date(selectedMessage.createdAt).toLocaleString()}

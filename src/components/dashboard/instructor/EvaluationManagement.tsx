@@ -17,8 +17,8 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { evaluationService } from '../../../lib/services/evaluationService';
 import { courseService } from '../../../lib/services/courseService';
+import { quizService } from '../../../lib/services/quizService';
 
 interface Evaluation {
   id: string;
@@ -38,6 +38,11 @@ export default function EvaluationManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'quiz' | 'assignment' | 'exam'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'closed'>('all');
+  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<any[]>([]);
+  const [updateBusyId, setUpdateBusyId] = useState<string | null>(null);
 
   // Charger les évaluations
   useEffect(() => {
@@ -47,25 +52,24 @@ export default function EvaluationManagement() {
   const loadEvaluations = async () => {
     setLoading(true);
     try {
-      // Récupérer les cours de l'instructeur (utiliser getMyCourses à la place)
+      // Récupérer les cours de l'instructeur
       const courses = await courseService.getMyCourses();
       
-      // Pour chaque cours, récupérer les évaluations
+      // Pour chaque cours, récupérer les quizzes (évaluations)
       const allEvaluations: Evaluation[] = [];
       for (const course of courses) {
         try {
-          const courseEvals = await evaluationService.getCourseEvaluations(course.id);
-          // Transformer les données pour correspondre à l'interface
-          const transformed = courseEvals.map((evaluation: any) => ({
-            id: evaluation.id,
-            title: evaluation.title,
-            type: evaluation.type,
+          const quizzes = await quizService.getQuizzesByCourse(course.id);
+          const transformed = quizzes.map((q: any) => ({
+            id: String(q.id),
+            title: q.title || q.name || 'Quiz',
+            type: 'quiz' as const,
             courseName: course.title,
-            status: evaluation.status === 'not-started' ? 'draft' : 'published' as 'draft' | 'published' | 'closed',
-            dueDate: evaluation.dueDate || new Date().toISOString(),
-            submissionsCount: 0, // À calculer depuis l'API
-            averageScore: evaluation.score || 0,
-            createdAt: evaluation.createdAt,
+            status: (q.status === 'draft' ? 'draft' : 'published') as 'draft' | 'published' | 'closed',
+            dueDate: q.due_date || q.deadline || new Date().toISOString(),
+            submissionsCount: Number(q.total_attempts || 0),
+            averageScore: Number(q.avg_score || 0),
+            createdAt: q.created_at || q.createdAt || new Date().toISOString(),
           }));
           allEvaluations.push(...transformed);
         } catch (error) {
@@ -92,6 +96,35 @@ export default function EvaluationManagement() {
     if (filterStatus !== 'all' && evaluation.status !== filterStatus) return false;
     return true;
   });
+
+  const openAttempts = async (quizId: string) => {
+    setSelectedQuizId(quizId);
+    setShowAttemptsModal(true);
+    setAttemptsLoading(true);
+    try {
+      const data = await quizService.getAttemptHistory(quizId);
+      setAttempts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Erreur chargement tentatives', e);
+      setAttempts([]);
+    } finally {
+      setAttemptsLoading(false);
+    }
+  };
+
+  const quickAdjustScore = async (attemptId: string, delta: number) => {
+    try {
+      setUpdateBusyId(attemptId);
+      const current = attempts.find(a => String(a.id) === String(attemptId));
+      const nextScore = Math.max(0, Math.min(100, Number(current?.score || 0) + delta));
+      const updated = await quizService.updateAttempt(attemptId, { score: nextScore });
+      setAttempts(prev => prev.map(a => String(a.id) === String(attemptId) ? { ...a, score: updated.score } : a));
+    } catch (e) {
+      console.error('Erreur mise à jour tentative', e);
+    } finally {
+      setUpdateBusyId(null);
+    }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -307,7 +340,7 @@ export default function EvaluationManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900" title="Voir">
+                      <button onClick={() => openAttempts(evaluation.id)} className="text-blue-600 hover:text-blue-900" title="Voir tentatives">
                         <Eye className="h-4 w-4" />
                       </button>
                       <button className="text-gray-600 hover:text-gray-900" title="Modifier">
@@ -334,6 +367,69 @@ export default function EvaluationManagement() {
           </div>
         )}
       </div>
+
+      {/* Modal tentatives */}
+      {showAttemptsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Tentatives du quiz</h3>
+              <button onClick={() => setShowAttemptsModal(false)} className="text-gray-500 hover:text-gray-700">Fermer</button>
+            </div>
+            <div className="p-4">
+              {attemptsLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-mdsc-gold"></div>
+                </div>
+              ) : attempts.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Étudiant</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Soumis</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {attempts.map((a) => (
+                        <tr key={a.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm text-gray-900">
+                            {a.user_name || a.student_name || `#${a.user_id || a.student_id || '-'}`}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{a.score ?? 0}%</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '-'}</td>
+                          <td className="px-4 py-2 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                disabled={updateBusyId === String(a.id)}
+                                onClick={() => quickAdjustScore(String(a.id), +5)}
+                                className="px-2 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                +5
+                              </button>
+                              <button
+                                disabled={updateBusyId === String(a.id)}
+                                onClick={() => quickAdjustScore(String(a.id), -5)}
+                                className="px-2 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                -5
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center text-gray-600 py-12">Aucune tentative trouvée</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

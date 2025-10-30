@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { 
   BookOpen, 
   Plus, 
@@ -20,11 +23,15 @@ import {
 } from 'lucide-react';
 import { ProfessionalService, Module, Domain } from '../../../lib/services/professionalService';
 import { courseService, Course } from '../../../lib/services/courseService';
+import { useAuthStore } from '../../../lib/stores/authStore';
 
 export default function ModuleManagement() {
+  const { user } = useAuthStore();
   const [modules, setModules] = useState<Module[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [reorderTimeout, setReorderTimeout] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDomain, setFilterDomain] = useState<number | 'all'>('all');
@@ -48,6 +55,21 @@ export default function ModuleManagement() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        if (!user?.id) return;
+        const list = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
+        const arr = Array.isArray(list) ? list : (list as any)?.data || [];
+        setCourses(arr);
+        if (!selectedCourseId && arr[0]?.id) setSelectedCourseId(String(arr[0].id));
+      } catch (e) {
+        // silent
+      }
+    };
+    loadCourses();
+  }, [user]);
 
   const loadData = async () => {
     try {
@@ -183,6 +205,179 @@ export default function ModuleManagement() {
     }
   };
 
+  // DnD Sortable card + inline rename
+  const [inlineEditId, setInlineEditId] = useState<number | null>(null);
+  const [inlineTitle, setInlineTitle] = useState<string>('');
+
+  function SortableCard({ module }: { module: Module }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: module.id });
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    } as React.CSSProperties;
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+      >
+        {module.thumbnail_url && (
+          <img
+            src={module.thumbnail_url}
+            alt={module.title}
+            className="w-full h-48 object-cover"
+          />
+        )}
+        <div className="p-6" {...attributes} {...listeners}>
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-1">
+              {inlineEditId === module.id ? (
+                <input
+                  autoFocus
+                  value={inlineTitle}
+                  onChange={(e) => setInlineTitle(e.target.value)}
+                  onBlur={async () => {
+                    try {
+                      await ProfessionalService.updateModule(module.id, { title: inlineTitle });
+                      setModules(prev => prev.map(m => m.id === module.id ? { ...m, title: inlineTitle } : m));
+                    } finally {
+                      setInlineEditId(null);
+                    }
+                  }}
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      try {
+                        await ProfessionalService.updateModule(module.id, { title: inlineTitle });
+                        setModules(prev => prev.map(m => m.id === module.id ? { ...m, title: inlineTitle } : m));
+                      } finally {
+                        setInlineEditId(null);
+                      }
+                    } else if (e.key === 'Escape') {
+                      setInlineEditId(null);
+                    }
+                  }}
+                  className="w-full border-b border-gray-300 focus:outline-none focus:border-blue-500 text-lg font-semibold text-gray-900"
+                />
+              ) : (
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2" title={module.title}>
+                  {module.title}
+                </h3>
+              )}
+              <p className="text-sm text-gray-600 line-clamp-2">{module.short_description}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 mb-3">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(module.difficulty)}`}>
+              {getDifficultyLabel(module.difficulty)}
+            </span>
+            {module.certification_required && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <Award className="h-3 w-3 mr-1" />
+                Certifié
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
+                <span>{module.duration_hours}h</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                {module.price > 0 ? (
+                  <>
+                    <span className="font-semibold text-gray-900">{module.price} {module.currency}</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4" />
+                    <span>Gratuit</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center space-x-2">
+              {module.is_published ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <Eye className="h-3 w-3 mr-1" />
+                  Publié
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  <EyeOff className="h-3 w-3 mr-1" />
+                  Brouillon
+                </span>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => { setInlineEditId(module.id); setInlineTitle(module.title); }}
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="Renommer"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              {!module.is_published ? (
+                <button
+                  onClick={async () => { await handlePublish(module.id); }}
+                  className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                  title="Publier"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={async () => { await ProfessionalService.updateModule(module.id, { is_published: false }); loadData(); }}
+                  className="p-2 text-gray-400 hover:text-yellow-600 transition-colors"
+                  title="Dépublier"
+                >
+                  <EyeOff className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={() => handleDelete(module.id)}
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                title="Supprimer"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setModules((prev) => {
+      const oldIndex = prev.findIndex(m => m.id === active.id);
+      const newIndex = prev.findIndex(m => m.id === over.id);
+      const reordered = arrayMove(prev, oldIndex, newIndex).map((m, idx) => ({ ...m, order_index: idx }));
+      if (selectedCourseId) {
+        if (reorderTimeout) clearTimeout(reorderTimeout);
+        const t = setTimeout(() => {
+          ProfessionalService.reorderModulesByCourse(Number(selectedCourseId), reordered.map(m => ({ id: m.id, order_index: m.order_index ?? 0 }))).catch(() => {});
+        }, 400);
+        setReorderTimeout(t);
+      } else {
+        reordered.forEach((m, idx) => {
+          if (m.order_index !== idx) {
+            ProfessionalService.updateModule(m.id, { order_index: idx }).catch(() => {});
+          }
+        });
+      }
+      return reordered;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -229,6 +424,18 @@ export default function ModuleManagement() {
           </div>
           
           <div className="flex items-center space-x-4">
+            <div>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => setSelectedCourseId(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Cours (optionnel pour DnD)</option>
+                {courses.map(c => (
+                  <option key={c.id} value={String(c.id)}>{c.title}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <select
@@ -255,96 +462,16 @@ export default function ModuleManagement() {
         </div>
       </div>
 
-      {/* Liste des modules */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredModules.map((module) => (
-          <div
-            key={module.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-          >
-            {module.thumbnail_url && (
-              <img
-                src={module.thumbnail_url}
-                alt={module.title}
-                className="w-full h-48 object-cover"
-              />
-            )}
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{module.title}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-2">{module.short_description}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2 mb-3">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(module.difficulty)}`}>
-                  {getDifficultyLabel(module.difficulty)}
-                </span>
-                {module.certification_required && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    <Award className="h-3 w-3 mr-1" />
-                    Certifié
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{module.duration_hours}h</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    {module.price > 0 ? (
-                      <>
-                        <span className="font-semibold text-gray-900">{module.price} {module.currency}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Globe className="h-4 w-4" />
-                        <span>Gratuit</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="flex items-center space-x-2">
-                  {module.is_published ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <Eye className="h-3 w-3 mr-1" />
-                      Publié
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      <EyeOff className="h-3 w-3 mr-1" />
-                      Brouillon
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => handleEdit(module)}
-                    className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
-                    title="Modifier"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(module.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                    title="Supprimer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Liste des modules avec DnD */}
+      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <SortableContext items={filteredModules.map(m => m.id)} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredModules.map((module) => (
+              <SortableCard key={module.id} module={module} />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {filteredModules.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">

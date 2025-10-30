@@ -299,6 +299,10 @@ export interface AnalyticsExport {
 
 // Service principal
 export class AnalyticsService {
+  static async getInstructorDashboard(): Promise<any> {
+    const response = await apiRequest('/analytics/instructor-dashboard', { method: 'GET' });
+    return response.data;
+  }
   // Récupérer les données d'analytics générales
   static async getAnalytics(filter?: AnalyticsFilter): Promise<AnalyticsData> {
     const params = new URLSearchParams();

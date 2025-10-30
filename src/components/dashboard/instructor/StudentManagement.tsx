@@ -17,7 +17,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '../../../lib/stores/authStore';
-import DataTable from '../shared/DataTable';
+import { courseService, Course } from '../../../lib/services/courseService';
+import { EnrollmentService } from '../../../lib/services/enrollmentService';
 
 interface Student {
   id: string;
@@ -43,6 +44,13 @@ export default function StudentManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all');
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [order, setOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [sort, setSort] = useState<'enrolled_at' | 'progress' | 'last_accessed_at' | 'completed_at' | 'first_name' | 'last_name'>('last_accessed_at');
+  const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
 
   useEffect(() => {
     const loadStudents = async () => {
@@ -163,6 +171,83 @@ export default function StudentManagement() {
     setFilteredStudents(filtered);
   }, [students, searchTerm, filterStatus, selectedCourse]);
 
+  // Charger les cours de l'instructeur
+  useEffect(() => {
+    const loadCourses = async () => {
+      if (!user) return;
+      try {
+        const list = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
+        const arr = Array.isArray(list) ? list : (list as any)?.data || [];
+        setCourses(arr);
+        if (!selectedCourseId && arr[0]?.id) setSelectedCourseId(String(arr[0].id));
+      } catch (e) {
+        console.error('Erreur chargement cours', e);
+      }
+    };
+    loadCourses();
+  }, [user]);
+
+  // Charger les inscriptions (pagination serveur)
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (!selectedCourseId) return;
+      try {
+        setLoading(true);
+        const { data, pagination } = await EnrollmentService.getCourseEnrollments(selectedCourseId, {
+          page,
+          limit,
+          search: searchTerm,
+          status: filterStatus,
+          sort: 'last_accessed_at',
+          order: 'DESC',
+        });
+        const mapped: Student[] = data.map((r: any) => ({
+          id: String(r.user_id),
+          firstName: r.first_name,
+          lastName: r.last_name,
+          email: r.email,
+          avatar: r.avatar_url || undefined,
+          enrolledCourses: 0,
+          completedCourses: r.status === 'completed' ? 1 : 0,
+          currentLevel: '',
+          totalPoints: 0,
+          lastActivity: r.last_accessed_at || r.enrolled_at,
+          progress: Math.round(Number(r.progress_percentage || 0)),
+          averageGrade: Number(r.avg_quiz_score || 0) / 20 * 5 || 0,
+          status: 'active',
+        }));
+        setStudents(mapped);
+        setFilteredStudents(mapped);
+        setServerPagination(pagination);
+      } catch (e) {
+        console.error('Erreur chargement inscriptions', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEnrollments();
+  }, [selectedCourseId, page, limit, searchTerm, filterStatus]);
+
+  // Pagination client (en attendant l'API paginée)
+  const total = serverPagination.total || filteredStudents.length;
+  const totalPages = serverPagination.pages || Math.max(1, Math.ceil(total / limit));
+  const pagedStudents = filteredStudents;
+
+  const exportCsv = () => {
+    const rows = [
+      ['id', 'firstName', 'lastName', 'email', 'enrolledCourses', 'completedCourses', 'progress', 'averageGrade', 'status'],
+      ...filteredStudents.map(s => [s.id, s.firstName, s.lastName, s.email, String(s.enrolledCourses), String(s.completedCourses), String(s.progress), String(s.averageGrade), s.status])
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'students.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -280,7 +365,7 @@ export default function StudentManagement() {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
+      {/* Filtres, recherche et export */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex-1 max-w-md">
@@ -290,18 +375,30 @@ export default function StudentManagement() {
                 type="text"
                 placeholder="Rechercher un étudiant..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent w-full"
               />
             </div>
           </div>
           
           <div className="flex items-center space-x-4">
+            <div>
+              <select
+                value={selectedCourseId}
+                onChange={(e) => { setSelectedCourseId(e.target.value); setPage(1); }}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
+              >
+                <option value="">Sélectionner un cours</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => { setFilterStatus(e.target.value as any); setPage(1); }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               >
                 <option value="all">Tous les étudiants</option>
@@ -310,6 +407,9 @@ export default function StudentManagement() {
                 <option value="suspended">Suspendus</option>
               </select>
             </div>
+            <button onClick={exportCsv} className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">
+              Export CSV
+            </button>
           </div>
         </div>
       </div>
@@ -318,7 +418,7 @@ export default function StudentManagement() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {filteredStudents.length > 0 ? (
           <div className="divide-y divide-gray-200">
-            {filteredStudents.map((student) => (
+            {pagedStudents.map((student) => (
               <div key={student.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
@@ -418,6 +518,40 @@ export default function StudentManagement() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredStudents.length > 0 && (
+        <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm text-gray-600">
+            Page {page} / {totalPages} · {total} étudiants
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+            >
+              Précédent
+            </button>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+            >
+              Suivant
+            </button>
+            <select
+              value={limit}
+              onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
+              className="ml-2 border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

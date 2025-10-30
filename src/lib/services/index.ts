@@ -15,6 +15,7 @@ export { default as ProfessionalService } from './professionalService';
 export * from './chatIAService';
 
 // Nouveaux services selon architecture
+export { ModuleService, moduleService } from './moduleService';
 export { MediaService, mediaService } from './mediaService';
 export { BadgeService, badgeService } from './badgeService';
 export { CertificateService as NewCertificateService, certificateService } from './certificateService';

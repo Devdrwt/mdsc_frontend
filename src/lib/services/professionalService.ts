@@ -27,6 +27,7 @@ export interface Module {
   thumbnail_url?: string;
   certification_required: boolean;
   is_published: boolean;
+  order_index?: number;
   created_at: string;
   updated_at: string;
   domain?: Domain;
@@ -231,6 +232,14 @@ export class ProfessionalService {
     await apiRequest(`/professional/courses/${courseId}/sequences/reorder`, {
       method: 'PUT',
       body: JSON.stringify({ sequenceOrders }),
+    });
+  }
+
+  // ============= MODULES REORDER PAR COURS (DnD) =============
+  static async reorderModulesByCourse(courseId: number | string, modules: Array<{ id: number; order_index: number }>): Promise<void> {
+    await apiRequest(`/modules/courses/${courseId}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ modules }),
     });
   }
 

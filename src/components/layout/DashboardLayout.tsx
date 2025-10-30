@@ -77,7 +77,6 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         return [
           ...baseItems,
           { name: 'Modules', href: `/dashboard/${userRole}/modules`, icon: BookOpen },
-          { name: 'Séquences', href: `/dashboard/${userRole}/sequences`, icon: BookOpen },
           { name: 'Mes Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen },
           { name: 'Mes Étudiants', href: `/dashboard/${userRole}/students`, icon: Users },
           { name: 'Analytics', href: `/dashboard/${userRole}/analytics`, icon: BarChart3 },

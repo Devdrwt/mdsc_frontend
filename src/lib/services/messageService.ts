@@ -4,11 +4,12 @@ export interface Message {
   id: string;
   senderId: number;
   senderName: string;
-  receiverId: number;
-  receiverName: string;
+  receiverId?: number;
+  receiverName?: string;
+  courseId?: string;
   subject: string;
   content: string;
-  type: 'direct' | 'announcement' | 'system';
+  type: 'direct' | 'announcement' | 'system' | 'broadcast';
   isRead: boolean;
   createdAt: string;
   readAt?: string;
@@ -92,6 +93,32 @@ export class MessageService {
       }
       throw error;
     }
+  }
+
+  // Récupérer les messages d'un cours (broadcast)
+  static async getCourseMessages(courseId: string, limit: number = 50, offset: number = 0): Promise<Message[]> {
+    const response = await apiRequest(`/messages?courseId=${courseId}&limit=${limit}&offset=${offset}`, {
+      method: 'GET',
+    });
+    return response.data || [];
+  }
+
+  // Envoyer un message de broadcast à tous les participants d'un cours
+  static async sendBroadcastMessage(data: {
+    courseId: string;
+    subject: string;
+    content: string;
+    type?: 'announcement' | 'broadcast';
+  }): Promise<Message> {
+    const response = await apiRequest(`/messages?courseId=${data.courseId}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        subject: data.subject,
+        content: data.content,
+        type: data.type || 'broadcast',
+      }),
+    });
+    return response.data;
   }
 }
 

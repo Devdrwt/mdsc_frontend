@@ -3,6 +3,15 @@ import { Quiz, QuizAttempt, QuizQuestion } from '../../types/course';
 
 export class QuizService {
   /**
+   * Lister les quizzes par cours
+   */
+  static async getQuizzesByCourse(courseId: string | number): Promise<Quiz[]> {
+    const response = await apiRequest(`/quizzes?courseId=${courseId}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+  /**
    * Récupérer le quiz d'une leçon
    */
   static async getQuizByLesson(lessonId: string): Promise<Quiz> {
@@ -12,18 +21,36 @@ export class QuizService {
     return response.data;
   }
 
+  // Alias de compatibilité
+  static async getQuizByLessonId(lessonId: string): Promise<Quiz> {
+    return this.getQuizByLesson(lessonId);
+  }
+
   /**
    * Soumettre une tentative de quiz
    */
   static async submitAttempt(
-    quizId: string,
-    answers: Record<string, string | string[]>
+    quizId: string | number,
+    answers: Record<string | number, string | string[]>
   ): Promise<QuizAttempt> {
-    const response = await apiRequest(`/quizzes/${quizId}/attempt`, {
+    // 1) Créer une tentative -> obtain attemptId
+    const createRes = await apiRequest(`/quizzes/${quizId}/attempt`, {
       method: 'POST',
-      body: JSON.stringify({ answers }),
     });
-    return response.data;
+    const attempt = createRes.data as QuizAttempt;
+    const attemptId = (attempt as any).id;
+
+    // 2) Normaliser les réponses et PUT sur /quizzes/attempts/{attemptId}
+    const normalized: Record<string, any> = {};
+    Object.keys(answers).forEach((k) => {
+      normalized[String(k)] = answers[k as any];
+    });
+
+    const updateRes = await apiRequest(`/quizzes/attempts/${attemptId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ answers: normalized }),
+    });
+    return updateRes.data;
   }
 
   /**
@@ -32,6 +59,20 @@ export class QuizService {
   static async getAttemptHistory(quizId: string): Promise<QuizAttempt[]> {
     const response = await apiRequest(`/quizzes/${quizId}/attempts`, {
       method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Mettre à jour une tentative (correction/notation)
+   */
+  static async updateAttempt(
+    attemptId: string | number,
+    data: Partial<QuizAttempt> & { score?: number; feedback?: string; status?: string; answers?: any }
+  ): Promise<QuizAttempt> {
+    const response = await apiRequest(`/quizzes/attempts/${attemptId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
     return response.data;
   }
@@ -61,18 +102,35 @@ export class QuizService {
 
     quiz.questions.forEach((question) => {
       totalPoints += question.points;
-      const userAnswer = answers[question.id];
+      const userAnswer = answers[String(question.id)];
 
-      if (question.questionType === 'multiple_choice') {
-        const correctOptions = question.options?.filter((opt) => opt.correct).map((opt) => opt.text) || [];
-        const userOptions = Array.isArray(userAnswer) ? userAnswer : [userAnswer];
-        const isCorrect = correctOptions.length === userOptions.length &&
-          correctOptions.every((opt) => userOptions.includes(opt));
-        if (isCorrect) earnedPoints += question.points;
-      } else if (question.questionType === 'true_false' || question.questionType === 'short_answer') {
-        const correctAnswer = question.correctAnswer?.toLowerCase().trim();
-        const userAnswerStr = String(userAnswer).toLowerCase().trim();
-        if (correctAnswer === userAnswerStr) earnedPoints += question.points;
+      const qType = (question as any).question_type || (question as any).questionType;
+      const correctAnswer: any = (question as any).correct_answer ?? (question as any).correctAnswer;
+
+      if (qType === 'multiple_choice') {
+        // single choice; correctAnswer is a string
+        const ua = Array.isArray(userAnswer) ? userAnswer[0] : userAnswer;
+        if (
+          typeof correctAnswer === 'string' &&
+          String(ua).trim().toLowerCase() === correctAnswer.trim().toLowerCase()
+        ) {
+          earnedPoints += question.points;
+        }
+      } else if (qType === 'multiple_select') {
+        // multiple select; correctAnswer is string[]
+        const uaArr = Array.isArray(userAnswer) ? userAnswer : [String(userAnswer)];
+        const correctArr: string[] = Array.isArray(correctAnswer) ? correctAnswer : [];
+        const norm = (arr: string[]) => arr.map((s) => String(s).trim().toLowerCase()).sort();
+        const isEqual = JSON.stringify(norm(uaArr)) === JSON.stringify(norm(correctArr));
+        if (isEqual) earnedPoints += question.points;
+      } else if (qType === 'true_false' || qType === 'short_answer') {
+        const ua = Array.isArray(userAnswer) ? userAnswer[0] : userAnswer;
+        if (
+          typeof correctAnswer === 'string' &&
+          String(ua).trim().toLowerCase() === correctAnswer.trim().toLowerCase()
+        ) {
+          earnedPoints += question.points;
+        }
       }
     });
 

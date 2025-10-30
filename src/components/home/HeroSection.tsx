@@ -46,13 +46,13 @@ export default function HeroSection() {
           backgroundRepeat: 'repeat'
         }}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 md:pt-36">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Contenu principal */}
           <div className="space-y-8">
             <div className="space-y-4">
               <h1 className="text-2xl md:text-3xl lg:text-4xl text-display text-white dark:text-white" style={{color: 'white', fontFamily: 'var(--font-playfair)'}}>
-                <span className="text-mdsc-gold">Apprends</span> à ton rythme, <span className="text-mdsc-gold">transmets</span> ton savoir et <span className="text-mdsc-gold">inspire</span> la prochaine génération.
+                <span className="text-[#FAD6A4]">Apprends</span> à ton rythme, <span className="text-[#FAD6A4]">transmets</span> ton savoir et <span className="text-[#FAD6A4]">inspire</span> la prochaine génération.
               </h1>
               <p className="text-xl text-body-large text-white dark:text-white" style={{color: 'white'}}>
                 Accède à des cours exclusifs, des sessions live interactives et des certifications reconnues. 

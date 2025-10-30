@@ -51,6 +51,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Proxy dev: /api -> backend local sur 5000
+  async rewrites() {
+    return process.env.NEXT_PUBLIC_API_URL
+      ? []
+      : [
+          {
+            source: '/api/:path*',
+            destination: 'http://localhost:5000/api/:path*',
+          },
+        ];
+  },
 };
 
 export default nextConfig;

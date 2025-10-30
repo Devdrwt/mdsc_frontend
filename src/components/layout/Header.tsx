@@ -34,9 +34,9 @@ export default function Header() {
     <header 
       className={`fixed top-2 md:top-4 left-0 w-full z-50 transition-all duration-300 bg-transparent`}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Capsule container */}
-        <div className="flex justify-between items-center h-16 md:h-20 bg-white/95 backdrop-blur rounded-[24px] md:rounded-[36px] shadow-md border border-gray-200 px-3 md:px-6">
+        <div className="flex justify-between items-center h-20 md:h-24 bg-white/95 backdrop-blur rounded-[24px] md:rounded-[36px] shadow-md border border-gray-200 px-3 md:px-6">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Logo size="sm" />
@@ -48,10 +48,10 @@ export default function Header() {
               <a
                 key={item.name}
                 href={item.href}
-                className="relative px-4 py-2 text-sm font-medium text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] dark:hover:text-[#D79A49] transition-all duration-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group"
+                className="relative px-4 py-2 text-sm font-medium text-[#3380AA] hover:text-[#F8C37B] transition-all duration-200 group"
               >
                 {item.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#D79A49] group-hover:w-full transition-all duration-300 rounded-full"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F8C37B] group-hover:w-full transition-all duration-300 rounded-full"></span>
               </a>
             ))}
           </nav>
@@ -74,7 +74,7 @@ export default function Header() {
             </a>
             <a 
               href="/select-role" 
-              className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium text-sm"
+              className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
             >
               S'inscrire
             </a>

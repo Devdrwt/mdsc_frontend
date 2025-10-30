@@ -1,7 +1,7 @@
 import { useAuthStore } from '../stores/authStore';
 
 // Configuration de base de l'API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api';
 
 // Interface pour les options de requête
 interface ApiRequestOptions {
@@ -118,7 +118,7 @@ export async function apiRequest<T = any>(
     method = 'GET',
     headers = {},
     body,
-    credentials = 'include',
+    credentials = 'same-origin',
   } = options;
   
   // Construire l'URL complète
@@ -145,6 +145,7 @@ export async function apiRequest<T = any>(
       headers: requestHeaders,
       body,
       credentials,
+      mode: 'cors',
     });
     
     // Gérer la réponse

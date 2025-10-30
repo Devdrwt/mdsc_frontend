@@ -207,11 +207,15 @@ export class CourseService {
   }
 
   // Récupérer les cours d'un instructeur
-  static async getInstructorCourses(instructorId: string): Promise<Course[]> {
-    const response = await apiRequest(`/courses/instructor/${instructorId}`, {
+  static async getInstructorCourses(instructorId: string | number, params?: { status?: 'all' | 'published' | 'draft'; page?: number; limit?: number; }): Promise<Course[]> {
+    const search = new URLSearchParams();
+    if (params?.status && params.status !== 'all') search.append('status', params.status);
+    if (params?.page) search.append('page', String(params.page));
+    if (params?.limit) search.append('limit', String(params.limit));
+    const qs = search.toString();
+    const response = await apiRequest(`/courses/instructor/${instructorId}${qs ? `?${qs}` : ''}`, {
       method: 'GET',
     });
-    // L'API retourne { success: true, data: { courses: [...] } }
     return response.data?.courses || response.data || [];
   }
 
@@ -381,17 +385,17 @@ export class CourseService {
   }
 
   // Créer une leçon
-  static async createLesson(courseId: string, data: CreateLessonData): Promise<Lesson> {
-    const response = await apiRequest(`/lessons/courses/${courseId}/lessons`, {
+  static async createLesson(courseId: string | number, data: CreateLessonData): Promise<Lesson> {
+    const response = await apiRequest(`/courses/${courseId}/lessons`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
     return response.data;
   }
 
-  // Mettre à jour une leçon
-  static async updateLesson(lessonId: string, data: UpdateLessonData): Promise<Lesson> {
-    const response = await apiRequest(`/lessons/${lessonId}`, {
+  // Mettre à jour une leçon (alignement backend)
+  static async updateLesson(courseId: string | number, lessonId: string | number, data: UpdateLessonData): Promise<Lesson> {
+    const response = await apiRequest(`/courses/${courseId}/lessons/${lessonId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });

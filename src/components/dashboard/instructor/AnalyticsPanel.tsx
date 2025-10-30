@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import { AnalyticsService } from '../../../lib/services/analyticsService';
 
 interface AnalyticsData {
   totalStudents: number;
@@ -56,42 +57,49 @@ export default function AnalyticsPanel() {
 
       try {
         setLoading(true);
-        
-        // Simulation des données d'analytics - dans un vrai projet, on récupérerait depuis l'API
-        const mockAnalytics: AnalyticsData = {
-          totalStudents: 156,
-          activeStudents: 89,
-          totalCourses: 8,
-          completionRate: 73.5,
-          averageRating: 4.3,
-          totalHours: 1240,
-          monthlyStats: [
-            { month: 'Jan', students: 45, completions: 12, revenue: 2400 },
-            { month: 'Fév', students: 52, completions: 18, revenue: 3600 },
-            { month: 'Mar', students: 38, completions: 15, revenue: 3000 },
-            { month: 'Avr', students: 61, completions: 22, revenue: 4400 },
-            { month: 'Mai', students: 48, completions: 19, revenue: 3800 },
-            { month: 'Juin', students: 55, completions: 21, revenue: 4200 },
-          ],
-          courseStats: [
-            { id: '1', name: 'Leadership et Management', students: 45, completionRate: 78, rating: 4.5 },
-            { id: '2', name: 'Communication Efficace', students: 38, completionRate: 82, rating: 4.3 },
-            { id: '3', name: 'Gestion de Projet Agile', students: 32, completionRate: 71, rating: 4.2 },
-            { id: '4', name: 'Mobilisation communautaire', students: 28, completionRate: 85, rating: 4.6 },
-            { id: '5', name: 'Gestion participative', students: 25, completionRate: 69, rating: 4.1 },
-          ],
-          studentEngagement: [
-            { day: 'Lun', activeUsers: 45, newRegistrations: 3 },
-            { day: 'Mar', activeUsers: 52, newRegistrations: 5 },
-            { day: 'Mer', activeUsers: 38, newRegistrations: 2 },
-            { day: 'Jeu', activeUsers: 61, newRegistrations: 7 },
-            { day: 'Ven', activeUsers: 48, newRegistrations: 4 },
-            { day: 'Sam', activeUsers: 35, newRegistrations: 1 },
-            { day: 'Dim', activeUsers: 28, newRegistrations: 2 },
-          ],
+        const raw = await AnalyticsService.getInstructorDashboard();
+        const cs = raw?.courses_statistics || {};
+        const ss = raw?.students_statistics || {};
+        const top = Array.isArray(raw?.top_courses) ? raw.top_courses : [];
+        const trend = Array.isArray(raw?.enrollment_trend) ? raw.enrollment_trend : [];
+
+        // Map to panel shape
+        const monthlyStats = trend.slice(-6).map((t: any) => ({
+          month: String(t.month ?? ''),
+          students: Number(t.new_enrollments || 0),
+          completions: Number(t.completions || 0),
+          revenue: Number(t.revenue || 0),
+        }));
+
+        const courseStats = top.slice(0, 10).map((c: any) => ({
+          id: String(c.id),
+          name: c.title,
+          students: Number(c.enrollment_count || 0),
+          completionRate: Math.round(Number(c.avg_progress || 0)),
+          rating: Number(c.average_rating || 0),
+        }));
+
+        const days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+        const last7 = trend.slice(-7);
+        const studentEngagement = (last7.length ? last7 : days.map((d) => ({ day: d, new_enrollments: 0 }))).map((t: any, i: number) => ({
+          day: days[i % days.length],
+          activeUsers: Number(t.new_enrollments || 0),
+          newRegistrations: Number(t.new_enrollments || 0),
+        }));
+
+        const mapped: AnalyticsData = {
+          totalStudents: Number(ss.total_students || 0),
+          activeStudents: Number(ss.active_students || 0),
+          totalCourses: Number(cs.total_courses || 0),
+          completionRate: Number(ss.avg_completion_rate || 0),
+          averageRating: Number(raw?.average_rating || 0),
+          totalHours: Number(raw?.total_time || 0),
+          monthlyStats,
+          courseStats,
+          studentEngagement,
         };
 
-        setAnalytics(mockAnalytics);
+        setAnalytics(mapped);
       } catch (error) {
         console.error('Erreur lors du chargement des analytics:', error);
       } finally {

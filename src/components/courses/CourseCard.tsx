@@ -89,7 +89,14 @@ export default function CourseCard({
           <div className="pt-4">
             <Button 
               size="sm"
-              onClick={() => onEnroll?.(course.id)}
+              onClick={() => {
+                const slug = (course as any).slug || (course as any).slug?.toString();
+                if (slug) {
+                  window.location.href = `/courses/${slug}`;
+                } else {
+                  onEnroll?.(String((course as any).id));
+                }
+              }}
               className="w-full"
             >
               Voir détails

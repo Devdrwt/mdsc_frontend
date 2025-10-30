@@ -24,17 +24,31 @@ export class CertificateService {
   }
 
   /**
-   * Vérifier un certificat via code QR
+   * Vérifier un certificat via code QR (PUBLIQUE - pas besoin d'auth)
    */
   static async verifyCertificate(code: string): Promise<{
     valid: boolean;
     certificate?: Certificate;
     message?: string;
   }> {
-    const response = await apiRequest(`/certificates/${code}`, {
+    // Route publique, donc pas d'auth header
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const response = await fetch(`${apiUrl}/certificates/verify/${code}`, {
       method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data;
+
+    if (!response.ok) {
+      return {
+        valid: false,
+        message: 'Certificat invalide ou non trouvé',
+      };
+    }
+
+    const data = await response.json();
+    return data;
   }
 
   /**

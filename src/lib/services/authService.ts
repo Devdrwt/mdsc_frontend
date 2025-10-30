@@ -56,9 +56,12 @@ async function fetchAPI<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
   
-  const defaultHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+  const defaultHeaders: HeadersInit = {};
+
+  // Ne pas définir Content-Type pour FormData
+  if (!(options.body instanceof FormData)) {
+    defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   // Ajouter le token d'authentification si disponible
   const token = localStorage.getItem('authToken');
@@ -216,10 +219,23 @@ export async function getProfile(token?: string): Promise<ApiResponse> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  return fetchAPI('/auth/profile', {
-    method: 'GET',
-    headers,
-  });
+  try {
+    // Essayer d'abord avec /api/users/me
+    return await fetchAPI('/users/me', {
+      method: 'GET',
+      headers,
+    });
+  } catch (error: any) {
+    // Fallback sur /auth/profile si /users/me n'existe pas
+    if (error.statusCode === 404) {
+      console.warn('Route /users/me not implemented yet, falling back to /auth/profile');
+      return fetchAPI('/auth/profile', {
+        method: 'GET',
+        headers,
+      });
+    }
+    throw error;
+  }
 }
 
 // Vérifier si l'utilisateur est connecté
@@ -256,10 +272,23 @@ export async function updateProfile(data: {
   organization?: string;
   country?: string;
 }): Promise<ApiResponse> {
-  return fetchAPI('/auth/profile', {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
+  try {
+    // Essayer d'abord avec /api/users/me
+    return await fetchAPI('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  } catch (error: any) {
+    // Fallback sur /auth/profile si /users/me n'existe pas
+    if (error.statusCode === 404) {
+      console.warn('Route /users/me not implemented yet, falling back to /auth/profile');
+      return fetchAPI('/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    }
+    throw error;
+  }
 }
 
 // Changer le mot de passe
@@ -271,6 +300,35 @@ export async function changePassword(data: {
     method: 'PUT',
     body: JSON.stringify(data),
   });
+}
+
+// Uploader un avatar
+export async function uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  try {
+    // Essayer d'abord avec /api/users/me/avatar
+    return await fetchAPI<{ avatarUrl: string }>('/users/me/avatar', {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Ne pas définir Content-Type pour FormData
+    });
+  } catch (error: any) {
+    // Fallback sur /files/upload si /users/me/avatar n'existe pas
+    if (error.statusCode === 404) {
+      console.warn('Route /users/me/avatar not implemented yet, using /files/upload');
+      formData.delete('avatar');
+      formData.append('file', file);
+      formData.append('category', 'profile-photo');
+      return fetchAPI<{ avatarUrl: string }>('/files/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {}, // Ne pas définir Content-Type pour FormData
+      });
+    }
+    throw error;
+  }
 }
 
 export { ApiError };

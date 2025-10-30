@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useAuthStore } from '../../../../lib/stores/authStore';
-import { updateProfile } from '../../../../lib/services/authService';
-import { FileService, FileUpload } from '../../../../lib/services/fileService';
+import { updateProfile, uploadAvatar, getProfile } from '../../../../lib/services/authService';
+import { FileService } from '../../../../lib/services/fileService';
 import { Upload, Camera, Loader } from 'lucide-react';
 
 export default function StudentProfilePage() {
@@ -23,19 +23,34 @@ export default function StudentProfilePage() {
   });
 
   useEffect(() => {
-    loadProfilePhoto();
-  }, []);
-
-  const loadProfilePhoto = async () => {
-    try {
-      const photo = await FileService.getProfilePhoto();
-      if (photo) {
-        setProfilePhoto(photo.url);
+    const loadUserProfile = async () => {
+      try {
+        const response = await getProfile();
+        if (response.success && response.data) {
+          // Charger l'avatar depuis le profil
+          if (response.data.avatarUrl) {
+            setProfilePhoto(response.data.avatarUrl);
+          } else {
+            // Fallback: essayer de charger depuis FileService
+            try {
+              const photo = await FileService.getProfilePhoto();
+              if (photo) {
+                setProfilePhoto(photo.url);
+              }
+            } catch (error) {
+              console.error('Error loading profile photo:', error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user profile:', error);
       }
-    } catch (error) {
-      console.error('Error loading profile photo:', error);
+    };
+
+    if (user) {
+      loadUserProfile();
     }
-  };
+  }, [user]);
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -52,9 +67,11 @@ export default function StudentProfilePage() {
 
     setUploadingPhoto(true);
     try {
-      const uploaded = await FileService.uploadProfilePhoto(file);
-      setProfilePhoto(uploaded.url);
-      alert('Photo uploadée avec succès');
+      const response = await uploadAvatar(file);
+      if (response.success && response.data?.avatarUrl) {
+        setProfilePhoto(response.data.avatarUrl);
+        alert('Photo uploadée avec succès');
+      }
     } catch (error) {
       console.error('Error uploading photo:', error);
       alert('Erreur lors de l\'upload de la photo');

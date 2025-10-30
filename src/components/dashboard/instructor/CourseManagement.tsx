@@ -35,7 +35,10 @@ export default function CourseManagement() {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'draft' | 'archived'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
   const [showCreateModal, setShowCreateModal] = useState(false);
   
   // État du formulaire de création
@@ -60,9 +63,12 @@ export default function CourseManagement() {
 
       try {
         setLoading(true);
-        const instructorCourses = await courseService.getMyCourses();
-        setCourses(instructorCourses || []);
-        setFilteredCourses(instructorCourses || []);
+        const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
+        const arr = Array.isArray(list) ? list : (list as any)?.data || list || [];
+        const pagination = (list as any)?.pagination || { page, limit, total: arr.length, pages: Math.max(1, Math.ceil(arr.length / limit)) };
+        setCourses(arr);
+        setFilteredCourses(arr);
+        setServerPagination(pagination);
       } catch (error) {
         console.error('Erreur lors du chargement des cours:', error);
         // En cas d'erreur, initialiser avec un tableau vide
@@ -74,35 +80,19 @@ export default function CourseManagement() {
     };
 
     loadCourses();
-  }, [user]);
+  }, [user, page, limit, filterStatus]);
 
   useEffect(() => {
     let filtered = courses;
-
-    // Filtrage par statut
-    switch (filterStatus) {
-      case 'active':
-        filtered = filtered.filter(course => course.progress > 0);
-        break;
-      case 'draft':
-        filtered = filtered.filter(course => course.progress === 0);
-        break;
-      case 'archived':
-        filtered = filtered.filter(course => course.updatedAt && new Date(course.updatedAt) < new Date());
-        break;
-    }
-
-    // Filtrage par recherche
     if (searchTerm) {
       filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (course.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (course.category || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     setFilteredCourses(filtered);
-  }, [courses, searchTerm, filterStatus]);
+  }, [courses, searchTerm]);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,13 +292,12 @@ export default function CourseManagement() {
               <Filter className="h-4 w-4 text-gray-400" />
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => { setFilterStatus(e.target.value as any); setPage(1); }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               >
                 <option value="all">Tous les cours</option>
-                <option value="active">Actifs</option>
+                <option value="published">Publiés</option>
                 <option value="draft">Brouillons</option>
-                <option value="archived">Archivés</option>
               </select>
             </div>
           </div>
@@ -434,6 +423,40 @@ export default function CourseManagement() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {filteredCourses.length > 0 && (
+        <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm text-gray-600">
+            Page {serverPagination.page} / {serverPagination.pages} · {serverPagination.total} cours
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+            >
+              Précédent
+            </button>
+            <button
+              disabled={page >= (serverPagination.pages || 1)}
+              onClick={() => setPage(p => Math.min(serverPagination.pages || 1, p + 1))}
+              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+            >
+              Suivant
+            </button>
+            <select
+              value={limit}
+              onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
+              className="ml-2 border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Modal de création de cours */}
       {showCreateModal && (

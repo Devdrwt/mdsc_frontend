@@ -3,6 +3,7 @@
 import React from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
+import Messages from '../../../../components/dashboard/shared/Messages';
 
 export default function StudentMessagesPage() {
   return (
@@ -19,12 +20,8 @@ export default function StudentMessagesPage() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">💬</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Page de messages en développement</h3>
-            <p className="text-gray-600">Cette fonctionnalité sera bientôt disponible.</p>
-          </div>
+          {/* Messages Component */}
+          <Messages />
         </div>
       </DashboardLayout>
     </AuthGuard>
