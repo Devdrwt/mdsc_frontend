@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Users, Star, Play, BookOpen, Award } from 'lucide-react';
+import { Clock, Users, Star, Play, BookOpen, Award, User } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
 
@@ -74,7 +74,7 @@ export default function CourseCard({
           </p>
         </div>
 
-        <div className="flex items-center space-x-6 text-sm text-gray-500">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
           <div className="flex items-center space-x-1">
             <Clock className="h-4 w-4" />
             <span>{course.duration}</span>
@@ -82,6 +82,14 @@ export default function CourseCard({
           <div className="flex items-center space-x-1">
             <Users className="h-4 w-4" />
             <span>{course.students}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <User className="h-4 w-4" />
+            <span>
+              {typeof course.instructor === 'string' 
+                ? course.instructor 
+                : course.instructor?.name || 'Instructeur'}
+            </span>
           </div>
         </div>
 

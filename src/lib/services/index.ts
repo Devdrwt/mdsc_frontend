@@ -21,6 +21,7 @@ export { BadgeService, badgeService } from './badgeService';
 export { CertificateService as NewCertificateService, certificateService } from './certificateService';
 export { ProgressService, progressService } from './progressService';
 export { QuizService as NewQuizService, quizService } from './quizService';
+export { GamificationService, gamificationService } from './gamificationService';
 
 // Export de l'API de base
 export { default as api } from './api';
@@ -72,20 +73,13 @@ export type {
   QuizAnalytics 
 } from './quizService';
 
+// Gamification types from gamificationService.ts
 export type { 
-  Badge, 
-  BadgeRequirement, 
-  UserProgress, 
-  Achievement, 
-  UserStats, 
-  LeaderboardEntry, 
-  GamificationSettings, 
-  CreateBadgeData, 
-  UpdateBadgeData, 
-  CreateAchievementData, 
-  UpdateAchievementData, 
-  GamificationStats 
-} from './gamificationService';
+  UserXP,
+  UserStreaks,
+  Challenge,
+  UserChallenge
+} from '../../types';
 
 export type { 
   AnalyticsData, 

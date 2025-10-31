@@ -31,6 +31,7 @@ export class ModuleService {
       title: string;
       description?: string;
       order_index: number;
+      image_url?: string;
     }
   ): Promise<Module> {
     const response = await apiRequest(`/modules/courses/${courseId}/modules`, {
@@ -50,6 +51,7 @@ export class ModuleService {
       description?: string;
       order_index?: number;
       is_unlocked?: boolean;
+      image_url?: string;
     }
   ): Promise<Module> {
     const response = await apiRequest(`/modules/${moduleId}`, {
@@ -86,6 +88,19 @@ export class ModuleService {
       method: 'GET',
     });
     return response.data;
+  }
+
+  /**
+   * Réordonner les modules d'un cours (Drag & Drop)
+   */
+  static async reorderCourseModules(
+    courseId: number,
+    modules: Array<{ id: number; order_index: number }>
+  ): Promise<void> {
+    await apiRequest(`/modules/courses/${courseId}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ modules }),
+    });
   }
 }
 

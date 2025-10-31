@@ -1,16 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../ui/Logo';
-import { Menu, X, Moon, Sun, Search } from 'lucide-react';
+import { Menu, X, Moon, Sun, Search, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useTheme } from '../../lib/context/ThemeContext';
+import { useAuthStore } from '../../lib/stores/authStore';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuthStore();
 
   const navigation = [
     { name: 'Formations', href: '/courses' },
@@ -24,6 +28,15 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
 
   const isHome = pathname === '/';
   const isDashboard = pathname?.startsWith('/dashboard');
@@ -66,18 +79,49 @@ export default function Header() {
             >
               <Sun className="h-5 w-5" />
             </button>
-            <a 
-              href="/login" 
-              className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
-            >
-              Connexion
-            </a>
-            <a 
-              href="/select-role" 
-              className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
-            >
-              S'inscrire
-            </a>
+            {isAuthenticated && user ? (
+              <>
+                <a 
+                  href={`/dashboard/${user.role}`}
+                  className="px-4 py-2 rounded-lg bg-[#3380AA] text-white hover:bg-[#2A6A8F] transition-all duration-200 font-medium text-sm"
+                  title="Mon tableau de bord"
+                >
+                  <LayoutDashboard className="h-4 w-4 inline mr-2" />
+                  Dashboard
+                </a>
+                <a 
+                  href={`/dashboard/${user.role}/profile`}
+                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
+                  title="Mon profil"
+                >
+                  <User className="h-4 w-4 inline mr-2" />
+                  {user.firstName} {user.lastName}
+                </a>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
+                  title="Se déconnecter"
+                >
+                  <LogOut className="h-4 w-4 inline mr-2" />
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <a 
+                  href="/login" 
+                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
+                >
+                  Connexion
+                </a>
+                <a 
+                  href="/select-role" 
+                  className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
+                >
+                  S'inscrire
+                </a>
+              </>
+            )}
           </div>
 
           {/* Bouton menu mobile */}
@@ -128,20 +172,53 @@ export default function Header() {
                     <Sun className="h-5 w-5" />
                     Mode clair
               </button>
-              <a 
-                href="/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium"
-              >
-                Connexion
-              </a>
-              <a 
-                href="/select-role"
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
-              >
-                S'inscrire
-              </a>
+              {isAuthenticated && user ? (
+                <>
+                  <a 
+                    href={`/dashboard/${user.role}`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-4 py-3 text-left rounded-lg bg-[#3380AA] text-white hover:bg-[#2A6A8F] transition-all duration-200 font-medium flex items-center gap-3"
+                  >
+                    <LayoutDashboard className="h-5 w-5" />
+                    Dashboard
+                  </a>
+                  <a 
+                    href={`/dashboard/${user.role}/profile`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-4 py-3 text-left rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium flex items-center gap-3"
+                  >
+                    <User className="h-5 w-5" />
+                    {user.firstName} {user.lastName}
+                  </a>
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium flex items-center justify-center gap-3"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a 
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-4 py-3 text-center rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium"
+                  >
+                    Connexion
+                  </a>
+                  <a 
+                    href="/select-role"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
+                  >
+                    S'inscrire
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>

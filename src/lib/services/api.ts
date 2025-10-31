@@ -1,7 +1,7 @@
 import { useAuthStore } from '../stores/authStore';
 
 // Configuration de base de l'API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Interface pour les options de requête
 interface ApiRequestOptions {
@@ -73,17 +73,29 @@ function getAuthHeaders(): Record<string, string> {
 // Fonction utilitaire pour gérer les erreurs de réponse
 async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   let data: any;
+  let responseText: string = '';
   
   try {
-    // Essayer de parser la réponse comme JSON
-    const text = await response.text();
-    data = text ? JSON.parse(text) : {};
+    // Lire le texte de la réponse une seule fois
+    responseText = await response.text();
+    
+    // Essayer de parser en JSON
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      // Si ce n'est pas du JSON, utiliser le texte comme message
+      data = { message: responseText || 'Erreur serveur' };
+    }
   } catch (error) {
-    // Si le parsing échoue, utiliser le texte brut
-    data = { message: await response.text() };
+    // Si la lecture échoue complètement
+    data = { message: 'Impossible de lire la réponse du serveur' };
   }
   
   if (!response.ok) {
+    // Log temporaire pour identifier toutes les routes 404
+    if (response.status === 404) {
+      console.error(`❌ [404] ${response.url}`);
+    }
     const error = new ApiError(
       data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
       response.status,

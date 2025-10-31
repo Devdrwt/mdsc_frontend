@@ -41,13 +41,15 @@ export default function BadgeCollection({
         badgeService.getEligibleBadges(),
       ]);
       
-      setUserBadges(earned);
+      setUserBadges(earned || []);
       
       // Combiner tous les badges
       const allBadgesData = await badgeService.getAllBadges();
-      setAllBadges(allBadgesData);
+      setAllBadges(allBadgesData || []);
     } catch (error) {
       console.error('Erreur lors du chargement des badges:', error);
+      setUserBadges([]);
+      setAllBadges([]);
     } finally {
       setLoading(false);
     }

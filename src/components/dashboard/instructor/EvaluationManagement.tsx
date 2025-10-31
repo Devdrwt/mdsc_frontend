@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { courseService } from '../../../lib/services/courseService';
 import { quizService } from '../../../lib/services/quizService';
+import { useAuthStore } from '../../../lib/stores/authStore';
+import QuizBuilder from './QuizBuilder';
 
 interface Evaluation {
   id: string;
@@ -33,6 +35,7 @@ interface Evaluation {
 }
 
 export default function EvaluationManagement() {
+  const { user } = useAuthStore();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,32 +46,53 @@ export default function EvaluationManagement() {
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [updateBusyId, setUpdateBusyId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [courses, setCourses] = useState<any[]>([]);
 
   // Charger les évaluations
   useEffect(() => {
-    loadEvaluations();
-  }, []);
+    if (user) {
+      loadEvaluations();
+      loadCourses();
+    }
+  }, [user]);
+
+  const loadCourses = async () => {
+    if (!user) return;
+    try {
+      const instructorCourses = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
+      setCourses(instructorCourses || []);
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    }
+  };
 
   const loadEvaluations = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       // Récupérer les cours de l'instructeur
-      const courses = await courseService.getMyCourses();
+      const courses = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
       
       // Pour chaque cours, récupérer les quizzes (évaluations)
       const allEvaluations: Evaluation[] = [];
       for (const course of courses) {
         try {
-          const quizzes = await quizService.getQuizzesByCourse(course.id);
-          const transformed = quizzes.map((q: any) => ({
+          // Récupérer le cours avec tous ses détails (incluant quizzes si backend le fournit)
+          const fullCourse = await courseService.getCourseById(course.id);
+          const quizzes = (fullCourse as any).quizzes || [];
+          
+          const transformed = (quizzes || []).map((q: any) => ({
             id: String(q.id),
             title: q.title || q.name || 'Quiz',
             type: 'quiz' as const,
             courseName: course.title,
             status: (q.status === 'draft' ? 'draft' : 'published') as 'draft' | 'published' | 'closed',
             dueDate: q.due_date || q.deadline || new Date().toISOString(),
-            submissionsCount: Number(q.total_attempts || 0),
-            averageScore: Number(q.avg_score || 0),
+            submissionsCount: Number(q.total_attempts || q.attempts_count || 0),
+            averageScore: Number(q.avg_score || q.average_score || 0),
             createdAt: q.created_at || q.createdAt || new Date().toISOString(),
           }));
           allEvaluations.push(...transformed);
@@ -80,7 +104,6 @@ export default function EvaluationManagement() {
       setEvaluations(allEvaluations);
     } catch (error) {
       console.error('Error loading evaluations:', error);
-      // En cas d'erreur, utiliser des données vides
       setEvaluations([]);
     } finally {
       setLoading(false);
@@ -175,7 +198,7 @@ export default function EvaluationManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Gestion des Évaluations</h2>
           <p className="text-gray-600 mt-1">Créez et gérez les évaluations de vos cours</p>
         </div>
-        <button className="btn-mdsc-primary flex items-center">
+        <button onClick={() => setShowCreateModal(true)} className="btn-mdsc-primary flex items-center">
           <Plus className="h-5 w-5 mr-2" />
           Nouvelle évaluation
         </button>
@@ -425,6 +448,61 @@ export default function EvaluationManagement() {
                 </div>
               ) : (
                 <div className="text-center text-gray-600 py-12">Aucune tentative trouvée</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal création évaluation */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">Nouvelle évaluation</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-700">
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sélectionner un cours *
+                </label>
+                <select
+                  value={selectedCourseId}
+                  onChange={(e) => setSelectedCourseId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Choisir un cours...</option>
+                  {courses.map(course => (
+                    <option key={course.id} value={String(course.id)}>{course.title}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedCourseId && (
+                <QuizBuilder
+                  courseId={selectedCourseId}
+                  lessonId=""
+                  quizType="assessment"
+                  initialQuiz={undefined}
+                  onSave={async (quiz) => {
+                    try {
+                      await quizService.createQuiz(quiz);
+                      setShowCreateModal(false);
+                      setSelectedCourseId('');
+                      loadEvaluations();
+                    } catch (error) {
+                      console.error('Error creating quiz:', error);
+                      throw error;
+                    }
+                  }}
+                  onCancel={() => {
+                    setShowCreateModal(false);
+                    setSelectedCourseId('');
+                  }}
+                />
               )}
             </div>
           </div>

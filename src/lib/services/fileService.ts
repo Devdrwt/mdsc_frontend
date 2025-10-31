@@ -153,21 +153,26 @@ export class FileService {
 
   // Récupérer tous les fichiers de l'utilisateur
   static async getMyFiles(filter?: FileFilter): Promise<FileUpload[]> {
-    const params = new URLSearchParams();
-    if (filter?.category) params.append('category', filter.category);
-    if (filter?.mimeType) params.append('mimeType', filter.mimeType);
-    if (filter?.isPublic !== undefined) params.append('isPublic', filter.isPublic.toString());
-    if (filter?.tags) params.append('tags', filter.tags.join(','));
-    if (filter?.startDate) params.append('startDate', filter.startDate);
-    if (filter?.endDate) params.append('endDate', filter.endDate);
-    if (filter?.search) params.append('search', filter.search);
-    if (filter?.size?.min) params.append('sizeMin', filter.size.min.toString());
-    if (filter?.size?.max) params.append('sizeMax', filter.size.max.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filter?.category) params.append('category', filter.category);
+      if (filter?.mimeType) params.append('mimeType', filter.mimeType);
+      if (filter?.isPublic !== undefined) params.append('isPublic', filter.isPublic.toString());
+      if (filter?.tags) params.append('tags', filter.tags.join(','));
+      if (filter?.startDate) params.append('startDate', filter.startDate);
+      if (filter?.endDate) params.append('endDate', filter.endDate);
+      if (filter?.search) params.append('search', filter.search);
+      if (filter?.size?.min) params.append('sizeMin', filter.size.min.toString());
+      if (filter?.size?.max) params.append('sizeMax', filter.size.max.toString());
 
-    const response = await apiRequest(`/files/my?${params.toString()}`, {
-      method: 'GET',
-    });
-    return response.data;
+      const response = await apiRequest(`/files/my?${params.toString()}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user files:', error);
+      return [];
+    }
   }
 
   // Récupérer tous les fichiers
@@ -556,7 +561,7 @@ export class FileService {
   static async uploadIdentityDocument(file: File): Promise<FileUpload> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('category', 'identity-document');
+    formData.append('file_type', 'identity_document');
 
     const response = await apiRequest('/files/upload', {
       method: 'POST',
@@ -580,8 +585,10 @@ export class FileService {
   // Récupérer la pièce d'identité
   static async getIdentityDocument(): Promise<FileUpload | null> {
     try {
-      const files = await this.getMyFiles({ category: 'identity-document' });
-      return files.length > 0 ? files[0] : null;
+      const allFiles = await this.getMyFiles();
+      // Chercher le fichier avec file_type = identity_document
+      const identityDoc = allFiles.find(f => (f as any).file_type === 'identity_document');
+      return identityDoc || null;
     } catch (error) {
       console.error('Error fetching identity document:', error);
       return null;

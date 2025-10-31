@@ -270,13 +270,6 @@ const SimpleRegisterForm = () => {
               </>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => router.push('/select-role')}
-            className="ml-3 text-sm text-blue-600 hover:text-blue-800 underline"
-          >
-            Changer de rôle
-          </button>
         </div>
 
         {/* Formulaire */}

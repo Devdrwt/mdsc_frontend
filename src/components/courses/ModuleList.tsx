@@ -27,40 +27,42 @@ export default function ModuleList({
   const [progress, setProgress] = useState<Progress[]>([]);
   const [loading, setLoading] = useState(true);
   const [localModules, setLocalModules] = useState<Module[]>(modules);
+  // DnD basique pour réordonner les modules
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => { setLocalModules(modules); }, [modules]);
 
   useEffect(() => {
+    const loadUnlockStatus = async () => {
+      try {
+        const status = await moduleService.getModulesUnlockStatus(courseId);
+        setUnlockStatus(status);
+      } catch (error) {
+        console.error('Erreur lors du chargement du statut de déverrouillage:', error);
+        // Fallback: premier module toujours déverrouillé
+        if (modules.length > 0) {
+          setUnlockStatus({ [modules[0].id]: true });
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadProgress = async () => {
+      if (!enrollmentId) return;
+      try {
+        const progressData = await progressService.getEnrollmentProgress(enrollmentId);
+        setProgress(progressData);
+      } catch (error) {
+        console.error('Erreur lors du chargement de la progression:', error);
+      }
+    };
+
     loadUnlockStatus();
     if (enrollmentId) {
       loadProgress();
     }
-  }, [courseId, enrollmentId]);
-
-  const loadUnlockStatus = async () => {
-    try {
-      const status = await moduleService.getModulesUnlockStatus(courseId);
-      setUnlockStatus(status);
-    } catch (error) {
-      console.error('Erreur lors du chargement du statut de déverrouillage:', error);
-      // Fallback: premier module toujours déverrouillé
-      if (modules.length > 0) {
-        setUnlockStatus({ [modules[0].id]: true });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProgress = async () => {
-    if (!enrollmentId) return;
-    try {
-      const progressData = await progressService.getEnrollmentProgress(enrollmentId);
-      setProgress(progressData);
-    } catch (error) {
-      console.error('Erreur lors du chargement de la progression:', error);
-    }
-  };
+  }, [courseId, enrollmentId, modules]);
 
   const getModuleProgress = (module: Module): number => {
     if (!module.lessons || module.lessons.length === 0) return 0;
@@ -89,21 +91,6 @@ export default function ModuleList({
     return prevModuleComplete;
   };
 
-  if (loading) {
-    return (
-      <div className={`space-y-4 ${className}`}>
-        {[1, 2, 3].map(i => (
-          <div key={i} className="bg-gray-50 rounded-lg p-4 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // DnD basique pour réordonner les modules
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const handleDragStart = (index: number) => setDragIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
@@ -118,6 +105,19 @@ export default function ModuleList({
     setDragIndex(null);
     onReorder?.(localModules);
   };
+
+  if (loading) {
+    return (
+      <div className={`space-y-4 ${className}`}>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-gray-50 rounded-lg p-4 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-4 ${className}`}>

@@ -28,15 +28,16 @@ export default function CertificateCollection({
     try {
       setLoading(true);
       const data = await certificateService.getUserCertificates();
-      setCertificates(data);
+      setCertificates(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur lors du chargement des certificats:', error);
+      setCertificates([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredCertificates = certificates.filter((cert) => {
+  const filteredCertificates = Array.isArray(certificates) ? certificates.filter((cert) => {
     const matchesSearch = searchTerm === '' || 
       cert.course?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       cert.certificateCode.toLowerCase().includes(searchTerm.toLowerCase());
@@ -51,7 +52,7 @@ export default function CertificateCollection({
     }
     
     return matchesSearch && matchesFilter;
-  });
+  }) : [];
 
   if (loading) {
     return (

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, GripVertical, Save, X, PlayCircle, Clock } from 'lucide-react';
 import { courseService, Course, Lesson, CreateLessonData, UpdateLessonData } from '../../../lib/services/courseService';
+import toast from '../../../lib/utils/toast';
 
 interface LessonManagementProps {
   courseId: string;
@@ -77,16 +78,18 @@ export default function LessonManagement({ courseId }: LessonManagementProps) {
     try {
       if (editingLesson) {
         // Mise à jour
-        await courseService.updateLesson(editingLesson.id, formData as UpdateLessonData);
+        await courseService.updateLesson(courseId, editingLesson.id, formData as UpdateLessonData);
+        toast.success('Leçon mise à jour', 'Les modifications ont été enregistrées');
       } else {
         // Création
         await courseService.createLesson(courseId, formData as CreateLessonData);
+        toast.success('Leçon créée', 'La leçon a été créée avec succès');
       }
       await loadLessons();
       closeModal();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la sauvegarde de la leçon:', error);
-      alert('Erreur lors de la sauvegarde de la leçon.');
+      toast.error('Erreur', error.message || 'Impossible de sauvegarder la leçon');
     }
   };
 
@@ -96,10 +99,11 @@ export default function LessonManagement({ courseId }: LessonManagementProps) {
     setDeletingLesson(lessonId);
     try {
       await courseService.deleteLesson(lessonId);
+      toast.success('Leçon supprimée', 'La leçon a été supprimée avec succès');
       await loadLessons();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la suppression de la leçon:', error);
-      alert('Erreur lors de la suppression de la leçon.');
+      toast.error('Erreur', error.message || 'Impossible de supprimer la leçon');
     } finally {
       setDeletingLesson(null);
     }

@@ -35,14 +35,18 @@ export default function BadgesCertificatesPreview({
       ]);
 
       // Trier par date d'obtention et prendre les plus récents
-      const sortedBadges = badges
+      const badgesArray = Array.isArray(badges) ? badges : [];
+      const sortedBadges = badgesArray
         .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime())
         .slice(0, limit);
 
       setRecentBadges(sortedBadges);
-      setCertificateCount(certificates.length);
+      const certificatesArray = Array.isArray(certificates) ? certificates : [];
+      setCertificateCount(certificatesArray.length);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      setRecentBadges([]);
+      setCertificateCount(0);
     } finally {
       setLoading(false);
     }

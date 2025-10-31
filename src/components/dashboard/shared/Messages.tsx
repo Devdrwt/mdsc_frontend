@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Inbox, Send, Plus, Search, Mail, MailOpen, Trash2, Clock, User, Users } from 'lucide-react';
 import { MessageService, Message } from '../../../lib/services/messageService';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import toast from '../../../lib/utils/toast';
 
 interface MessagesProps {
   courseId?: string;
@@ -37,9 +38,11 @@ export default function Messages({ courseId }: MessagesProps) {
       } else if (activeTab === 'course' && courseId) {
         data = await MessageService.getCourseMessages(courseId);
       }
-      setMessages(data || []);
+      // S'assurer que data est toujours un tableau
+      setMessages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading messages:', error);
+      setMessages([]); // En cas d'erreur, initialiser avec un tableau vide
     } finally {
       setLoading(false);
     }
@@ -51,7 +54,7 @@ export default function Messages({ courseId }: MessagesProps) {
     // Vérifier si c'est un message de broadcast
     if (activeTab === 'course' && courseId) {
       if (!composeData.subject || !composeData.content) {
-        alert('Veuillez remplir tous les champs');
+        toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs');
         return;
       }
 
@@ -62,20 +65,20 @@ export default function Messages({ courseId }: MessagesProps) {
           content: composeData.content,
           type: 'broadcast',
         });
-        alert('Message envoyé avec succès à tous les participants du cours');
+        toast.success('Message envoyé', 'Message envoyé avec succès à tous les participants du cours');
         setComposeData({ receiverId: '', subject: '', content: '' });
         setActiveTab('course');
         loadMessages();
       } catch (error: any) {
         console.error('Error sending broadcast message:', error);
-        alert(error.message || 'Erreur lors de l\'envoi du message');
+        toast.error('Erreur', error.message || 'Erreur lors de l\'envoi du message');
       }
       return;
     }
 
     // Message direct
     if (!composeData.receiverId || !composeData.subject || !composeData.content) {
-      alert('Veuillez remplir tous les champs');
+      toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs');
       return;
     }
 
@@ -85,13 +88,13 @@ export default function Messages({ courseId }: MessagesProps) {
         subject: composeData.subject,
         content: composeData.content,
       });
-      alert('Message envoyé avec succès');
+      toast.success('Message envoyé', 'Votre message a été envoyé avec succès');
       setComposeData({ receiverId: '', subject: '', content: '' });
       setActiveTab('inbox');
       loadMessages();
     } catch (error: any) {
       console.error('Error sending message:', error);
-      alert(error.message || 'Erreur lors de l\'envoi du message');
+      toast.error('Erreur', error.message || 'Erreur lors de l\'envoi du message');
     }
   };
 
@@ -112,20 +115,21 @@ export default function Messages({ courseId }: MessagesProps) {
       if (selectedMessage?.id === messageId) {
         setSelectedMessage(null);
       }
+      toast.success('Message supprimé', 'Le message a été supprimé avec succès');
     } catch (error) {
       console.error('Error deleting message:', error);
-      alert('Erreur lors de la suppression');
+      toast.error('Erreur', 'Erreur lors de la suppression');
     }
   };
 
-  const filteredMessages = messages.filter(message => {
+  const filteredMessages = Array.isArray(messages) ? messages.filter(message => {
     const searchLower = searchTerm.toLowerCase();
     return (
       message.subject.toLowerCase().includes(searchLower) ||
       message.content.toLowerCase().includes(searchLower) ||
       (activeTab === 'inbox' ? message.senderName : message.receiverName).toLowerCase().includes(searchLower)
     );
-  });
+  }) : [];
 
   return (
     <div className="space-y-6">

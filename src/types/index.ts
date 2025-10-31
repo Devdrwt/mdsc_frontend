@@ -32,6 +32,7 @@ export interface Module {
   description?: string;
   order_index: number;
   is_unlocked: boolean;
+  image_url?: string; // Image d'identification du module
   lessons?: Lesson[];
   createdAt?: string;
 }
@@ -106,28 +107,8 @@ export interface QuizAttempt {
   completed_at: string;
 }
 
-// Badge selon architecture
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon_url?: string;
-  category: string;
-  criteria: {
-    type: 'profile_completion' | 'pages_visited' | 'courses_enrolled' | 'course_completion' | 'courses_completed';
-    value: number | string;
-    course_category?: string;
-  };
-  createdAt?: string;
-}
-
-export interface UserBadge {
-  id: string;
-  user_id: string;
-  badge_id: string;
-  badge?: Badge;
-  earned_at: string;
-}
+// Badge selon architecture - rediriger vers course.ts
+export type { Badge, UserBadge } from './course';
 
 // Certificat selon architecture
 export interface Certificate {
@@ -171,9 +152,14 @@ export interface User {
   firstName: string;
   lastName: string;
   role: 'student' | 'instructor' | 'admin';
-  avatar?: string;
+  avatarUrl?: string;
+  phone?: string;
   organization?: string;
-  createdAt?: string;
+  country?: string;
+  isEmailVerified: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Types pour l'authentification
@@ -267,3 +253,54 @@ export type SupportedLanguage = 'fr' | 'en';
 
 // Types pour les thèmes
 export type Theme = 'light' | 'dark' | 'system';
+
+// ============================================
+// Types Gamification
+// ============================================
+
+export interface UserXP {
+  id: string;
+  user_id: string;
+  total_xp: number;
+  current_level: number;
+  xp_to_next_level: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserStreaks {
+  id: string;
+  user_id: string;
+  daily_streak: number;
+  perfect_quiz_streak: number;
+  last_activity_date: string;
+  longest_daily_streak: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  type: 'weekly' | 'monthly' | 'seasonal' | 'event';
+  criteria: Record<string, any>; // JSON des conditions
+  reward_xp: number;
+  reward_badge_id?: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserChallenge {
+  id: string;
+  user_id: string;
+  challenge_id: string;
+  progress: Record<string, any>; // JSON de progression
+  completed: boolean;
+  completed_at?: string;
+  created_at: string;
+  challenge?: Challenge; // Relation
+}

@@ -4,6 +4,7 @@ import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '../ui/Button';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { resetPassword } from '../../lib/services/authService';
 
 function ResetPasswordContent() {
   const router = useRouter();
@@ -57,15 +58,18 @@ function ResetPasswordContent() {
     setIsLoading(true);
 
     try {
-      // TODO: Intégrer avec l'API pour réinitialiser le mot de passe
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await resetPassword(token!, formData.password);
       
-      setSuccess(true);
-      setTimeout(() => {
-        router.push('/login?reset=success');
-      }, 3000);
-    } catch (err) {
-      setError('Erreur lors de la réinitialisation. Veuillez réessayer.');
+      if (response.success) {
+        setSuccess(true);
+        setTimeout(() => {
+          router.push('/login?reset=success');
+        }, 3000);
+      } else {
+        setError(response.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
       console.error('Password reset error:', err);
     } finally {
       setIsLoading(false);

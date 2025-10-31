@@ -283,7 +283,7 @@ export default function MyCourses() {
                     <div className="flex flex-col items-end space-y-2">
                       {/* Bouton d'action */}
                       <a
-                        href={`/dashboard/student/courses/${course.id}`}
+                        href={`/learn/${course.id}`}
                         className="btn-mdsc-primary text-sm"
                       >
                         {course.progress === 100 ? 'Revoir' : course.progress > 0 ? 'Continuer' : 'Commencer'}

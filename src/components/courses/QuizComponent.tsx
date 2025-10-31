@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, AlertCircle, Clock, Trophy } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Clock, Trophy, FileQuestion, Target } from 'lucide-react';
 import { quizService } from '../../lib/services/quizService';
 import { Quiz, QuizQuestion, QuizAttempt } from '../../types/course';
 import Button from '../ui/Button';
@@ -10,6 +10,7 @@ interface QuizComponentProps {
   quizId: string;
   lessonId: string;
   onComplete?: (attempt: QuizAttempt) => void;
+  quizType?: 'formative' | 'assessment';
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export default function QuizComponent({
   quizId,
   lessonId,
   onComplete,
+  quizType = 'formative',
   className = '',
 }: QuizComponentProps) {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -187,12 +189,27 @@ export default function QuizComponent({
   const isAnswered = currentQuestion.id in answers;
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
+  const isFormative = quizType === 'formative';
+  
   return (
     <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xl font-bold text-gray-900">{quiz.title}</h3>
+          <div className="flex items-center space-x-3">
+            <h3 className="text-xl font-bold text-gray-900">{quiz.title}</h3>
+            {isFormative ? (
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center space-x-1">
+                <FileQuestion className="h-3 w-3" />
+                <span>Formatif</span>
+              </span>
+            ) : (
+              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium flex items-center space-x-1">
+                <Target className="h-3 w-3" />
+                <span>Évaluation</span>
+              </span>
+            )}
+          </div>
           {timeRemaining !== null && (
             <div className="flex items-center space-x-2 text-mdsc-blue-primary">
               <Clock className="h-5 w-5" />
@@ -200,6 +217,14 @@ export default function QuizComponent({
             </div>
           )}
         </div>
+        {!isFormative && quiz.is_final && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-2">
+            <p className="text-sm text-purple-800 flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Ce quiz est obligatoire pour obtenir le certificat. Score minimum requis : {quiz.passingScore}%</span>
+            </p>
+          </div>
+        )}
         
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div

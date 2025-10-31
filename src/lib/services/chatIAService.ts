@@ -50,10 +50,18 @@ class ChatIAService {
   constructor() {
     this.apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
     this.baseUrl = 'https://api.openai.com/v1';
+    
+    if (!this.apiKey) {
+      console.warn('⚠️ OpenAI API key not configured. Chat IA features will not work.');
+    }
   }
 
   // Envoyer un message à l'IA
   async sendMessage(message: string, context: ChatContext): Promise<ChatMessage> {
+    if (!this.apiKey) {
+      throw new Error('OpenAI API key is not configured. Please set NEXT_PUBLIC_OPENAI_API_KEY environment variable.');
+    }
+
     try {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
@@ -79,7 +87,8 @@ class ChatIAService {
       });
 
       if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Erreur HTTP: ${response.status} - ${errorData.error?.message || response.statusText}`);
       }
 
       const data = await response.json();

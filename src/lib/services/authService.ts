@@ -67,9 +67,6 @@ async function fetchAPI<T>(
   const token = localStorage.getItem('authToken');
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
-    console.log('🔐 [DEBUG] Making API request with token:', token.substring(0, 20) + '...');
-  } else {
-    console.warn('⚠️ [DEBUG] No token found in localStorage');
   }
 
   const config: RequestInit = {
@@ -81,31 +78,37 @@ async function fetchAPI<T>(
   };
 
   try {
-    console.log('📡 [DEBUG] API Request:', url);
     const response = await fetch(url, config);
-    console.log('📥 [DEBUG] API Response status:', response.status);
-    const data = await response.json();
+    
+    // Lire le texte de la réponse
+    const responseText = await response.text();
+    let data: any = {};
+    
+    // Essayer de parser en JSON si possible
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      // Si ce n'est pas du JSON, utiliser le texte comme message
+      data = { message: responseText || 'Erreur serveur' };
+    }
 
     if (!response.ok) {
-      console.error('❌ [DEBUG] API Error:', data);
       throw new ApiError(
-        data.message || 'Une erreur est survenue',
+        data.message || data.error || 'Une erreur est survenue',
         response.status,
         data.errors
       );
     }
 
-    console.log('✅ [DEBUG] API Success:', data.success);
     return data;
   } catch (error) {
-    console.error('💥 [DEBUG] API Exception:', error);
     if (error instanceof ApiError) {
       throw error;
     }
 
     // Erreur réseau ou autre
     throw new ApiError(
-      'Impossible de se connecter au serveur. Vérifiez votre connexion.',
+      error instanceof Error ? error.message : 'Impossible de se connecter au serveur. Vérifiez votre connexion.',
       0
     );
   }
@@ -219,23 +222,10 @@ export async function getProfile(token?: string): Promise<ApiResponse> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  try {
-    // Essayer d'abord avec /api/users/me
-    return await fetchAPI('/users/me', {
-      method: 'GET',
-      headers,
-    });
-  } catch (error: any) {
-    // Fallback sur /auth/profile si /users/me n'existe pas
-    if (error.statusCode === 404) {
-      console.warn('Route /users/me not implemented yet, falling back to /auth/profile');
-      return fetchAPI('/auth/profile', {
-        method: 'GET',
-        headers,
-      });
-    }
-    throw error;
-  }
+  return await fetchAPI('/users/me', {
+    method: 'GET',
+    headers,
+  });
 }
 
 // Vérifier si l'utilisateur est connecté
@@ -272,23 +262,10 @@ export async function updateProfile(data: {
   organization?: string;
   country?: string;
 }): Promise<ApiResponse> {
-  try {
-    // Essayer d'abord avec /api/users/me
-    return await fetchAPI('/users/me', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  } catch (error: any) {
-    // Fallback sur /auth/profile si /users/me n'existe pas
-    if (error.statusCode === 404) {
-      console.warn('Route /users/me not implemented yet, falling back to /auth/profile');
-      return fetchAPI('/auth/profile', {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      });
-    }
-    throw error;
-  }
+  return await fetchAPI('/users/me', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
 }
 
 // Changer le mot de passe
@@ -304,31 +281,20 @@ export async function changePassword(data: {
 
 // Uploader un avatar
 export async function uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
-  const formData = new FormData();
-  formData.append('avatar', file);
-
-  try {
-    // Essayer d'abord avec /api/users/me/avatar
-    return await fetchAPI<{ avatarUrl: string }>('/users/me/avatar', {
-      method: 'POST',
-      body: formData,
-      headers: {}, // Ne pas définir Content-Type pour FormData
-    });
-  } catch (error: any) {
-    // Fallback sur /files/upload si /users/me/avatar n'existe pas
-    if (error.statusCode === 404) {
-      console.warn('Route /users/me/avatar not implemented yet, using /files/upload');
-      formData.delete('avatar');
-      formData.append('file', file);
-      formData.append('category', 'profile-photo');
-      return fetchAPI<{ avatarUrl: string }>('/files/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {}, // Ne pas définir Content-Type pour FormData
-      });
-    }
-    throw error;
+  // Validation MIME strict : PNG/JPEG uniquement
+  const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+  if (!allowedMimeTypes.includes(file.type)) {
+    throw new ApiError('Format d\'image non supporté. Utilisez PNG ou JPEG.', 400);
   }
+  
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return await fetchAPI<{ avatarUrl: string }>('/users/me/avatar', {
+    method: 'POST',
+    body: formData,
+    headers: {}, // Ne pas définir Content-Type pour FormData
+  });
 }
 
 export { ApiError };

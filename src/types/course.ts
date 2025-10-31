@@ -7,6 +7,7 @@ export interface Module {
   description?: string;
   order_index: number;
   is_unlocked: boolean;
+  image_url?: string; // Image d'identification du module
   created_at: string;
   updated_at: string;
   lessons_count?: number;
@@ -15,6 +16,7 @@ export interface Module {
   courseId?: string | number;
   orderIndex?: number;
   isUnlocked?: boolean;
+  imageUrl?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -216,9 +218,11 @@ export interface Badge {
     type: string;
     [key: string]: any;
   };
+  pdf_url?: string; // URL du PDF du badge
   created_at: string;
   // Compatibilité avec l'ancien format
   iconUrl?: string;
+  pdfUrl?: string;
   createdAt?: string;
 }
 
@@ -266,19 +270,28 @@ export interface Course {
   title: string;
   slug: string;
   description: string;
+  short_description?: string;
   category_id: number;
   category_name?: string;
   category_color?: string;
   level: 'debutant' | 'intermediaire' | 'avance';
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration_minutes: number;
   language: string;
   thumbnail_url?: string;
+  video_url?: string;
+  price: number;
+  currency?: string;
   instructor_id: number;
   instructor_first_name?: string;
   instructor_last_name?: string;
   prerequisite_course_id?: number;
   prerequisite_title?: string;
   is_published: boolean;
+  is_featured: boolean;
+  enrollment_deadline?: string;
+  course_start_date?: string;
+  course_end_date?: string;
   enrollment_count: number;
   rating: number;
   average_rating?: number;

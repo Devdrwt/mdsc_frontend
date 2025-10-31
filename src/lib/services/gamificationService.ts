@@ -1,468 +1,216 @@
 import { apiRequest } from './api';
+import { UserXP, UserStreaks, Challenge, UserChallenge, Badge, UserBadge } from '../../types';
 
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  category: string;
-  points: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  requirements: BadgeRequirement[];
-  isUnlocked: boolean;
-  unlockedAt?: string;
-}
-
-export interface BadgeRequirement {
-  id: string;
-  badgeId: string;
-  type: string;
-  value: number;
-  description: string;
-}
-
+// Types additionnels pour la gamification
 export interface UserProgress {
-  id: string;
-  userId: string;
-  level: number;
-  experience: number;
-  points: number;
-  streak: number;
-  lastActivity: string;
-  achievements: Achievement[];
-  badges: Badge[];
-  stats?: UserStats;
-  statistics?: UserStats;
-}
-
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  points: number;
-  category: string;
-  isUnlocked: boolean;
-  unlockedAt?: string;
-  progress: number;
-  maxProgress: number;
-}
-
-export interface UserStats {
-  coursesCompleted: number;
-  lessonsCompleted: number;
-  quizzesPassed: number;
-  certificatesEarned: number;
-  hoursStudied: number;
-  daysActive: number;
-  perfectScores: number;
-  firstPlaceFinishes: number;
+  total_xp: number;
+  current_level: number;
+  xp_in_current_level: number;
+  xp_for_next_level: number;
+  badges_earned: number;
+  courses_completed: number;
+  quizzes_passed: number;
 }
 
 export interface LeaderboardEntry {
   userId: string;
-  userName: string;
-  userAvatar?: string;
+  username?: string;
   level: number;
-  experience: number;
-  points: number;
-  position: number;
-  badge: string;
+  total_xp: number;
+  rank: number;
 }
 
-export interface GamificationSettings {
-  id: string;
-  userId: string;
-  notificationsEnabled: boolean;
-  publicProfile: boolean;
-  showProgress: boolean;
-  showAchievements: boolean;
-  showBadges: boolean;
-}
-
-export interface CreateBadgeData {
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  category: string;
-  points: number;
-  rarity: string;
-  requirements: Array<{
-    type: string;
-    value: number;
-    description: string;
-  }>;
-}
-
-export interface UpdateBadgeData {
-  name?: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  category?: string;
-  points?: number;
-  rarity?: string;
-}
-
-export interface CreateAchievementData {
-  name: string;
-  description: string;
-  icon: string;
-  points: number;
-  category: string;
-  maxProgress: number;
-}
-
-export interface UpdateAchievementData {
-  name?: string;
-  description?: string;
-  icon?: string;
-  points?: number;
-  category?: string;
-  maxProgress?: number;
-}
-
-export interface GamificationStats {
-  totalUsers: number;
-  totalBadges: number;
-  totalAchievements: number;
-  averageLevel: number;
-  averageExperience: number;
-  totalPoints: number;
-  topPerformers: LeaderboardEntry[];
-}
-
-// Service principal
 export class GamificationService {
-  // Récupérer le profil de l'utilisateur
-  static async getUserProfile(): Promise<UserProgress> {
-    const response = await apiRequest('/gamification/profile', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer le profil d'un utilisateur
-  static async getUserProfileById(userId: string): Promise<UserProgress> {
-    const response = await apiRequest(`/gamification/profile/${userId}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer tous les badges
-  static async getAllBadges(): Promise<Badge[]> {
-    const response = await apiRequest('/gamification/badges', {
-      method: 'GET',
-    });
-    // L'API retourne { success: true, data: [...] }
-    return response.data?.data || response.data || [];
-  }
-
-  // Récupérer les badges de l'utilisateur
-  static async getUserBadges(): Promise<Badge[]> {
-    const response = await apiRequest('/gamification/badges/my', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les badges par catégorie
-  static async getBadgesByCategory(category: string): Promise<Badge[]> {
-    const response = await apiRequest(`/gamification/badges/category/${category}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les badges par rareté
-  static async getBadgesByRarity(rarity: string): Promise<Badge[]> {
-    const response = await apiRequest(`/gamification/badges/rarity/${rarity}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Créer un nouveau badge
-  static async createBadge(data: CreateBadgeData): Promise<Badge> {
-    const response = await apiRequest('/gamification/badges', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
-
-  // Mettre à jour un badge
-  static async updateBadge(badgeId: string, data: UpdateBadgeData): Promise<Badge> {
-    const response = await apiRequest(`/gamification/badges/${badgeId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
-
-  // Supprimer un badge
-  static async deleteBadge(badgeId: string): Promise<void> {
-    await apiRequest(`/gamification/badges/${badgeId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Récupérer toutes les réalisations
-  static async getAllAchievements(): Promise<Achievement[]> {
-    const response = await apiRequest('/gamification/achievements', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les réalisations de l'utilisateur
-  static async getUserAchievements(): Promise<Achievement[]> {
-    const response = await apiRequest('/gamification/achievements/my', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les réalisations par catégorie
-  static async getAchievementsByCategory(category: string): Promise<Achievement[]> {
-    const response = await apiRequest(`/gamification/achievements/category/${category}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Créer une nouvelle réalisation
-  static async createAchievement(data: CreateAchievementData): Promise<Achievement> {
-    const response = await apiRequest('/gamification/achievements', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
-
-  // Mettre à jour une réalisation
-  static async updateAchievement(achievementId: string, data: UpdateAchievementData): Promise<Achievement> {
-    const response = await apiRequest(`/gamification/achievements/${achievementId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
-
-  // Supprimer une réalisation
-  static async deleteAchievement(achievementId: string): Promise<void> {
-    await apiRequest(`/gamification/achievements/${achievementId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Récupérer le classement
-  static async getLeaderboard(limit: number = 50): Promise<LeaderboardEntry[]> {
-    const response = await apiRequest(`/gamification/leaderboard?limit=${limit}`, {
-      method: 'GET',
-    });
-    // L'API retourne { success: true, data: { leaderboard: [...] } }
-    return response.data?.leaderboard || response.data || [];
-  }
-
-  // Récupérer le classement par catégorie
-  static async getLeaderboardByCategory(category: string, limit: number = 50): Promise<LeaderboardEntry[]> {
-    const response = await apiRequest(`/gamification/leaderboard/category/${category}?limit=${limit}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer le classement par période
-  static async getLeaderboardByPeriod(period: string, limit: number = 50): Promise<LeaderboardEntry[]> {
-    const response = await apiRequest(`/gamification/leaderboard/period/${period}?limit=${limit}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les paramètres de gamification
-  static async getGamificationSettings(): Promise<GamificationSettings> {
-    const response = await apiRequest('/gamification/settings', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Mettre à jour les paramètres de gamification
-  static async updateGamificationSettings(settings: Partial<GamificationSettings>): Promise<GamificationSettings> {
-    const response = await apiRequest('/gamification/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    });
-    return response.data;
-  }
-
-  // Ajouter des points à l'utilisateur
-  static async addPoints(points: number, reason: string): Promise<UserProgress> {
-    const response = await apiRequest('/gamification/points', {
-      method: 'POST',
-      body: JSON.stringify({ points, reason }),
-    });
-    return response.data;
-  }
-
-  // Ajouter de l'expérience à l'utilisateur
-  static async addExperience(experience: number, reason: string): Promise<UserProgress> {
-    const response = await apiRequest('/gamification/experience', {
-      method: 'POST',
-      body: JSON.stringify({ experience, reason }),
-    });
-    return response.data;
-  }
-
-  // Débloquer un badge
-  static async unlockBadge(badgeId: string): Promise<Badge> {
-    const response = await apiRequest(`/gamification/badges/${badgeId}/unlock`, {
-      method: 'POST',
-    });
-    return response.data;
-  }
-
-  // Débloquer une réalisation
-  static async unlockAchievement(achievementId: string): Promise<Achievement> {
-    const response = await apiRequest(`/gamification/achievements/${achievementId}/unlock`, {
-      method: 'POST',
-    });
-    return response.data;
-  }
-
-  // Récupérer les statistiques de gamification
-  static async getGamificationStats(): Promise<GamificationStats> {
-    const response = await apiRequest('/gamification/stats', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par niveau
-  static async getUsersByLevel(level: number): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/level/${level}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par points
-  static async getUsersByPoints(minPoints: number, maxPoints: number): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/points?min=${minPoints}&max=${maxPoints}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par expérience
-  static async getUsersByExperience(minExperience: number, maxExperience: number): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/experience?min=${minExperience}&max=${maxExperience}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par streak
-  static async getUsersByStreak(minStreak: number, maxStreak: number): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/streak?min=${minStreak}&max=${maxStreak}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par activité
-  static async getUsersByActivity(days: number): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/activity?days=${days}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par réalisation
-  static async getUsersByAchievement(achievementId: string): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/achievement/${achievementId}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par badge
-  static async getUsersByBadge(badgeId: string): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/badge/${badgeId}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par catégorie
-  static async getUsersByCategory(category: string): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/category/${category}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par période
-  static async getUsersByPeriod(period: string): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/period/${period}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les utilisateurs par recherche
-  static async searchUsers(query: string): Promise<UserProgress[]> {
-    const response = await apiRequest(`/gamification/users/search?q=${encodeURIComponent(query)}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer la progression d'un utilisateur
-  static async getUserProgress(userId: string): Promise<UserProgress> {
-    const response = await apiRequest(`/gamification/users/${userId}/progress`, {
-      method: 'GET',
-    });
-    // L'API retourne { success: true, data: { ... } }
-    return response.data?.data || response.data || null;
-  }
-
-  // Récupérer tous les badges disponibles
-  static async getAvailableBadges(): Promise<Badge[]> {
-    const response = await apiRequest('/gamification/badges', {
-      method: 'GET',
-    });
-    // L'API retourne { success: true, data: [...] }
-    return response.data?.data || response.data || [];
-  }
-
-  // Calculer le niveau d'un utilisateur basé sur ses points
-  static calculateLevel(totalPoints: number): { level: number; levelName: string; pointsToNext: number } {
-    const levelThresholds = [0, 100, 250, 500, 1000, 2000, 3500, 5000, 7500, 10000];
-    const levelNames = ['Débutant', 'Apprenti', 'Intermédiaire', 'Avancé', 'Expert', 'Maître', 'Légende', 'Champion', 'Héros', 'Légende'];
-    
-    let level = 1;
-    for (let i = 0; i < levelThresholds.length - 1; i++) {
-      if (totalPoints >= levelThresholds[i] && totalPoints < levelThresholds[i + 1]) {
-        level = i + 1;
-        break;
-      }
+  /**
+   * Récupérer la progression de l'utilisateur
+   */
+  static async getUserProgress(userId?: string): Promise<UserProgress> {
+    try {
+      const userXP = await this.getUserXP(userId);
+      return {
+        total_xp: userXP.total_xp || 0,
+        current_level: userXP.current_level || 1,
+        xp_in_current_level: userXP.xp_in_current_level || 0,
+        xp_for_next_level: userXP.xp_for_next_level || 100,
+        badges_earned: 0, // TODO: Récupérer depuis l'API
+        courses_completed: 0, // TODO: Récupérer depuis l'API
+        quizzes_passed: 0, // TODO: Récupérer depuis l'API
+      };
+    } catch (error) {
+      console.error('Error fetching user progress:', error);
+      // Retourner des valeurs par défaut en cas d'erreur
+      return {
+        total_xp: 0,
+        current_level: 1,
+        xp_in_current_level: 0,
+        xp_for_next_level: 100,
+        badges_earned: 0,
+        courses_completed: 0,
+        quizzes_passed: 0,
+      };
     }
+  }
+
+  /**
+   * Récupérer les XP et niveau de l'utilisateur
+   */
+  static async getUserXP(userId?: string): Promise<UserXP> {
+    const endpoint = userId ? `/gamification/xp/users/${userId}` : '/gamification/xp';
+    const response = await apiRequest(endpoint, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Ajouter des points XP à un utilisateur
+   */
+  static async addXP(amount: number, reason: string): Promise<UserXP> {
+    const response = await apiRequest('/gamification/xp/add', {
+      method: 'POST',
+      body: JSON.stringify({ amount, reason }),
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupérer les streaks de l'utilisateur
+   */
+  static async getUserStreaks(userId?: string): Promise<UserStreaks> {
+    const endpoint = userId ? `/gamification/streaks/users/${userId}` : '/gamification/streaks';
+    const response = await apiRequest(endpoint, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Mettre à jour le streak quotidien
+   */
+  static async updateDailyStreak(): Promise<UserStreaks> {
+    const response = await apiRequest('/gamification/streaks/daily', {
+      method: 'POST',
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupérer tous les défis actifs
+   */
+  static async getActiveChallenges(): Promise<Challenge[]> {
+    const response = await apiRequest('/gamification/challenges/active', {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupérer tous les défis
+   */
+  static async getAllChallenges(): Promise<Challenge[]> {
+    const response = await apiRequest('/gamification/challenges', {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupérer les défis de l'utilisateur
+   */
+  static async getUserChallenges(userId?: string): Promise<UserChallenge[]> {
+    const endpoint = userId ? `/gamification/challenges/users/${userId}` : '/gamification/challenges/my';
+    const response = await apiRequest(endpoint, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  /**
+   * Rejoindre un défi
+   */
+  static async joinChallenge(challengeId: string): Promise<UserChallenge> {
+    const response = await apiRequest(`/gamification/challenges/${challengeId}/join`, {
+      method: 'POST',
+    });
+    return response.data;
+  }
+
+  /**
+   * Mettre à jour la progression d'un défi
+   */
+  static async updateChallengeProgress(challengeId: string, progress: Record<string, any>): Promise<UserChallenge> {
+    const response = await apiRequest(`/gamification/challenges/${challengeId}/progress`, {
+      method: 'PUT',
+      body: JSON.stringify({ progress }),
+    });
+    return response.data;
+  }
+
+  /**
+   * Récupérer le classement global
+   */
+  static async getLeaderboard(params?: { limit?: number; type?: 'xp' | 'streak' }): Promise<LeaderboardEntry[]> {
+    try {
+      const search = new URLSearchParams();
+      if (params?.limit) search.append('limit', String(params.limit));
+      if (params?.type) search.append('type', params.type);
+      const qs = search.toString();
+      const response = await apiRequest(`/gamification/leaderboard${qs ? `?${qs}` : ''}`, {
+        method: 'GET',
+      });
+      
+      // Transformer UserXP[] en LeaderboardEntry[]
+      const entries: LeaderboardEntry[] = (response.data || []).map((user: any, index: number) => ({
+        userId: user.user_id?.toString() || index.toString(),
+        username: user.username || `User ${user.user_id}`,
+        level: user.current_level || 1,
+        total_xp: user.total_xp || 0,
+        rank: index + 1,
+      }));
+      
+      return entries;
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      return [];
+    }
+  }
+  
+  /**
+   * Récupérer tous les badges disponibles
+   */
+  static async getAvailableBadges(): Promise<Badge[]> {
+    try {
+      const response = await apiRequest('/badges', {
+        method: 'GET',
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching available badges:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Calculer le niveau à partir des XP
+   */
+  static calculateLevel(totalXp: number): { level: number; xpToNextLevel: number; xpInCurrentLevel: number } {
+    // Formula: level = sqrt(xp / 100) + 1
+    // XP pour atteindre un niveau: (level - 1)^2 * 100
+    const level = Math.floor(Math.sqrt(totalXp / 100)) + 1;
+    const xpForThisLevel = (level - 1) ** 2 * 100;
+    const xpForNextLevel = level ** 2 * 100;
+    const xpInCurrentLevel = totalXp - xpForThisLevel;
+    const xpToNextLevel = xpForNextLevel - totalXp;
     
-    const pointsToNext = levelThresholds[level] - totalPoints;
-    const levelName = levelNames[level - 1] || 'Légende';
-    
-    return { level, levelName, pointsToNext };
+    return { level, xpToNextLevel, xpInCurrentLevel };
+  }
+
+  /**
+   * Vérifier si un utilisateur peut gagner un niveau
+   */
+  static canLevelUp(userXP: UserXP): boolean {
+    return userXP.total_xp >= (userXP.current_level ** 2 * 100);
   }
 }
 
-// Export par défaut
-export default GamificationService;
-
-// Export nommé pour compatibilité
 export const gamificationService = GamificationService;

@@ -93,42 +93,18 @@ export class EvaluationService {
 
   // Récupérer les évaluations d'un utilisateur
   static async getUserEvaluations(userId: number): Promise<Evaluation[]> {
-    try {
-      const response = await apiRequest(`/evaluations/user/${userId}`, {
-        method: 'GET',
-      });
-      return response.data || [];
-    } catch (error: any) {
-      // Si la route n'existe pas (404), retourner un tableau vide
-      if (error.statusCode === 404) {
-        console.warn('Route /evaluations/user/:userId not implemented yet, returning empty array');
-        return [];
-      }
-      throw error;
-    }
+    const response = await apiRequest(`/evaluations/user/${userId}`, {
+      method: 'GET',
+    });
+    return response.data || [];
   }
 
   // Récupérer les statistiques d'évaluation d'un utilisateur
   static async getUserEvaluationStats(userId: number): Promise<EvaluationStats> {
-    try {
-      const response = await apiRequest(`/evaluations/user/${userId}/stats`, {
-        method: 'GET',
-      });
-      return response.data;
-    } catch (error: any) {
-      // Si la route n'existe pas (404), retourner des stats vides
-      if (error.statusCode === 404) {
-        console.warn('Route /evaluations/user/:userId/stats not implemented yet, returning default stats');
-        return {
-          totalEvaluations: 0,
-          completedEvaluations: 0,
-          averageScore: 0,
-          totalPoints: 0,
-          earnedPoints: 0,
-        };
-      }
-      throw error;
-    }
+    const response = await apiRequest(`/evaluations/user/${userId}/stats`, {
+      method: 'GET',
+    });
+    return response.data;
   }
 
   // CRUD pour instructeurs

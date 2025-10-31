@@ -5,14 +5,17 @@ import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useAuthStore } from '../../../../lib/stores/authStore';
 import { updateProfile, uploadAvatar, getProfile } from '../../../../lib/services/authService';
-import { FileService } from '../../../../lib/services/fileService';
-import { Upload, Camera, Loader } from 'lucide-react';
+import { FileService, FileUpload } from '../../../../lib/services/fileService';
+import { Upload, Camera, Loader, FileText, CheckCircle } from 'lucide-react';
+import toast from '../../../../lib/utils/toast';
 
 export default function StudentProfilePage() {
   const { user, setUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [identityDocument, setIdentityDocument] = useState<FileUpload | null>(null);
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -27,20 +30,29 @@ export default function StudentProfilePage() {
       try {
         const response = await getProfile();
         if (response.success && response.data) {
+          // Le backend retourne { user: {...} } dans response.data
+          const userData = response.data.user || response.data;
+          // Mettre à jour le formData avec les données du profil
+          setFormData({
+            firstName: userData.firstName || user?.firstName || '',
+            lastName: userData.lastName || user?.lastName || '',
+            email: userData.email || user?.email || '',
+            bio: userData.bio || '',
+            specialization: userData.specialization || '',
+            website: userData.website || '',
+          });
           // Charger l'avatar depuis le profil
-          if (response.data.avatarUrl) {
-            setProfilePhoto(response.data.avatarUrl);
-          } else {
-            // Fallback: essayer de charger depuis FileService
-            try {
-              const photo = await FileService.getProfilePhoto();
-              if (photo) {
-                setProfilePhoto(photo.url);
-              }
-            } catch (error) {
-              console.error('Error loading profile photo:', error);
-            }
+          if (userData.avatarUrl) {
+            setProfilePhoto(userData.avatarUrl);
           }
+        }
+
+        // Charger la pièce d'identité
+        try {
+          const document = await FileService.getIdentityDocument();
+          if (document) setIdentityDocument(document);
+        } catch (error) {
+          console.error('Error loading identity document:', error);
         }
       } catch (error) {
         console.error('Error loading user profile:', error);
@@ -57,26 +69,60 @@ export default function StudentProfilePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image');
+      toast.warning('Format invalide', 'Veuillez sélectionner une image');
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      alert('L\'image ne doit pas dépasser 2 MB');
+      toast.warning('Fichier trop volumineux', 'L\'image ne doit pas dépasser 2 MB');
       return;
     }
 
     setUploadingPhoto(true);
     try {
       const response = await uploadAvatar(file);
-      if (response.success && response.data?.avatarUrl) {
-        setProfilePhoto(response.data.avatarUrl);
-        alert('Photo uploadée avec succès');
+      if (response.success && response.data) {
+        // Le backend retourne une URL complète pour l'image
+        const photoUrl = response.data.url || response.data.storage_path || response.data.avatarUrl;
+        if (photoUrl) {
+          setProfilePhoto(photoUrl);
+          toast.success('Photo uploadée', 'Votre photo a été mise à jour avec succès');
+        } else {
+          console.log('⚠️ [UPLOAD] No URL found in response:', response.data);
+        }
       }
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Erreur lors de l\'upload de la photo');
+      toast.error('Erreur', 'Erreur lors de l\'upload de la photo');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Accepter PDF, PNG, JPEG selon les spécifications backend
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.warning('Format invalide', 'Veuillez sélectionner un fichier PDF, PNG ou JPEG');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning('Fichier trop volumineux', 'Le document ne doit pas dépasser 5 MB');
+      return;
+    }
+
+    setUploadingDocument(true);
+    try {
+      const uploaded = await FileService.uploadIdentityDocument(file);
+      setIdentityDocument(uploaded);
+      toast.success('Document uploadé', 'Votre pièce d\'identité a été enregistrée');
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast.error('Erreur', 'Erreur lors de l\'upload du document');
+    } finally {
+      setUploadingDocument(false);
     }
   };
 
@@ -87,11 +133,11 @@ export default function StudentProfilePage() {
       if (response.success) {
         setUser({ ...user!, ...formData });
         setIsEditing(false);
-        alert('Profil mis à jour avec succès');
+        toast.success('Profil mis à jour', 'Vos modifications ont été enregistrées');
       }
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert(error.message || 'Erreur lors de la mise à jour du profil');
+      toast.error('Erreur', error.message || 'Erreur lors de la mise à jour du profil');
     }
   };
 
@@ -156,6 +202,56 @@ export default function StudentProfilePage() {
                       Formats acceptés : JPG, PNG (Max 2 MB)
                     </p>
                   </div>
+                </div>
+
+                {/* Pièce d'identité */}
+                <div className="pb-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Pièce d'identité</h3>
+                  {identityDocument ? (
+                    <div className="border border-green-200 bg-green-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <CheckCircle className="h-6 w-6 text-green-600" />
+                          <div>
+                            <p className="font-medium text-gray-900">{identityDocument.originalName}</p>
+                            <p className="text-sm text-gray-600">
+                              Uploadé le {new Date(identityDocument.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href={identityDocument.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-mdsc-blue-primary hover:underline"
+                        >
+                          Voir
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600 mb-4">Aucun document d'identité uploadé</p>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        onChange={handleDocumentUpload}
+                        className="hidden"
+                        id="identity-document-upload"
+                      />
+                      <label
+                        htmlFor="identity-document-upload"
+                        className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors cursor-pointer"
+                      >
+                        <Upload className="h-5 w-5 mr-2" />
+                        {uploadingDocument ? 'Upload en cours...' : 'Uploader un document'}
+                      </label>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Formats acceptés : PDF, PNG, JPEG (Max 5 MB)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

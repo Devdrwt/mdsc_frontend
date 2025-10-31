@@ -2,6 +2,7 @@ import { apiRequest } from './api';
 
 export interface Course {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   shortDescription: string;
@@ -163,7 +164,9 @@ export class CourseService {
     const response = await apiRequest(`/courses/${id}`, {
       method: 'GET',
     });
-    return response.data;
+    console.log('🔍 Response getCourseById:', response);
+    // Le backend renvoie { course, modules, lessons, quizzes }
+    return response.data.course || response.data;
   }
 
   // Récupérer un cours par slug
@@ -171,23 +174,9 @@ export class CourseService {
     const response = await apiRequest(`/courses/slug/${slug}`, {
       method: 'GET',
     });
-    return response.data;
-  }
-
-  // Récupérer les cours populaires
-  static async getPopularCourses(limit: number = 10): Promise<Course[]> {
-    const response = await apiRequest(`/courses/popular?limit=${limit}`, {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  // Récupérer les cours recommandés
-  static async getRecommendedCourses(limit: number = 10): Promise<Course[]> {
-    const response = await apiRequest(`/courses/recommended?limit=${limit}`, {
-      method: 'GET',
-    });
-    return response.data;
+    console.log('🔍 Response getCourseBySlug:', response);
+    // Le backend renvoie { course, modules, lessons, quizzes }
+    return response.data.course || response.data;
   }
 
   // Vérifier si l'utilisateur est inscrit

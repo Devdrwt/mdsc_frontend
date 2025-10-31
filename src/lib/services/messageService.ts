@@ -41,7 +41,8 @@ export class MessageService {
     const response = await apiRequest(`/messages/received?limit=${limit}&offset=${offset}`, {
       method: 'GET',
     });
-    return response.data || [];
+    const data = response.data || [];
+    return Array.isArray(data) ? data : [];
   }
 
   // Récupérer les messages envoyés
@@ -49,7 +50,8 @@ export class MessageService {
     const response = await apiRequest(`/messages/sent?limit=${limit}&offset=${offset}`, {
       method: 'GET',
     });
-    return response.data || [];
+    const data = response.data || [];
+    return Array.isArray(data) ? data : [];
   }
 
   // Récupérer un message spécifique
@@ -76,23 +78,10 @@ export class MessageService {
 
   // Récupérer les statistiques de messages
   static async getStats(): Promise<MessageStats> {
-    try {
-      const response = await apiRequest('/messages/stats', {
-        method: 'GET',
-      });
-      return response.data;
-    } catch (error: any) {
-      // Si la route n'existe pas (404), retourner des stats vides
-      if (error.statusCode === 404) {
-        console.warn('Route /messages/stats not implemented yet, returning default stats');
-        return {
-          unreadCount: 0,
-          totalReceived: 0,
-          totalSent: 0,
-        };
-      }
-      throw error;
-    }
+    const response = await apiRequest('/messages/stats', {
+      method: 'GET',
+    });
+    return response.data;
   }
 
   // Récupérer les messages d'un cours (broadcast)
@@ -100,7 +89,8 @@ export class MessageService {
     const response = await apiRequest(`/messages?courseId=${courseId}&limit=${limit}&offset=${offset}`, {
       method: 'GET',
     });
-    return response.data || [];
+    const data = response.data || [];
+    return Array.isArray(data) ? data : [];
   }
 
   // Envoyer un message de broadcast à tous les participants d'un cours

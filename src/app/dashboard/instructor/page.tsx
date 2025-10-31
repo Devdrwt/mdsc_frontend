@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -26,7 +27,8 @@ import {
   Calendar,
   Settings,
   FileText,
-  PlayCircle
+  PlayCircle,
+  Upload
 } from 'lucide-react';
 
 interface InstructorStats {
@@ -108,9 +110,9 @@ export default function InstructorDashboard() {
 
           setStats({
             totalCourses: Number(cs.total_courses || coursesArray.length || 0),
-            totalStudents: Number(ss.total_students || coursesArray.reduce((sum, c) => sum + (c.totalStudents || 0), 0)),
+            totalStudents: Number(ss.total_students || coursesArray.reduce((sum, c) => sum + (c.totalStudents || c.enrollment_count || 0), 0)),
             totalRevenue: Number(cs.total_revenue || coursesArray.reduce((sum, c) => sum + (c.price || 0), 0)),
-            averageRating: coursesArray.length > 0 ? (coursesArray.reduce((sum, c) => sum + (c.rating || 0), 0) / coursesArray.length) : 0,
+            averageRating: coursesArray.length > 0 ? (coursesArray.reduce((sum, c) => sum + (c.rating || c.average_rating || 0), 0) / coursesArray.length) : 0,
             completionRate: Number(ss.avg_completion_rate || 0),
             monthlyViews: 0,
             monthlyGrowth: Number(ss.new_students_30d || 0),
@@ -123,8 +125,8 @@ export default function InstructorDashboard() {
         } catch (_) {
           // Fallback local calc si analytics non dispo
           const totalStudents = coursesArray.reduce((sum, course) => sum + (course.totalStudents || 0), 0);
-          const totalRevenue = coursesArray.reduce((sum, course) => sum + course.price, 0);
-          const averageRating = coursesArray.length > 0 ? coursesArray.reduce((sum, course) => sum + course.rating, 0) / coursesArray.length : 0;
+          const totalRevenue = coursesArray.reduce((sum, course) => sum + (course.price || 0), 0);
+          const averageRating = coursesArray.length > 0 ? coursesArray.reduce((sum, course) => sum + (course.rating || 0), 0) / coursesArray.length : 0;
           setStats({
             totalCourses: coursesArray.length,
             totalStudents,
@@ -150,8 +152,8 @@ export default function InstructorDashboard() {
           title: course.title,
           students: course.totalStudents || 0,
           completionRate: Math.floor(Math.random() * 40) + 60,
-          rating: course.rating,
-          revenue: course.price,
+          rating: course.rating || 0,
+          revenue: course.price || 0,
           views: Math.floor(Math.random() * 1000) + 100,
           trend: Math.random() > 0.5 ? 'up' : 'down'
         })));
@@ -339,7 +341,7 @@ export default function InstructorDashboard() {
                     </div>
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <span>{course.students} étudiants</span>
-                      <span>{course.rating.toFixed(1)} ⭐</span>
+                      <span>{(course.rating || 0).toFixed(1)} ⭐</span>
                       <span>{course.views} vues</span>
                     </div>
                   </div>
@@ -433,21 +435,14 @@ export default function InstructorDashboard() {
                   title: 'Nouveau Cours',
                   description: 'Créer un cours',
                   color: 'bg-blue-500',
-                  href: '/dashboard/instructor/courses/create'
+                  href: '/dashboard/instructor/courses'
                 },
                 {
-                  icon: Plus,
-                  title: 'Créer un module',
-                  description: 'Ajouter un module',
+                  icon: BookOpen,
+                  title: 'Mes Modules',
+                  description: 'Gérer les modules',
                   color: 'bg-indigo-500',
                   href: '/dashboard/instructor/modules'
-                },
-                {
-                  icon: FileText,
-                  title: 'Uploader média',
-                  description: 'Ajouter des ressources',
-                  color: 'bg-teal-500',
-                  href: '/dashboard/instructor/media'
                 },
                 {
                   icon: Users,
@@ -464,17 +459,38 @@ export default function InstructorDashboard() {
                   href: '/dashboard/instructor/analytics'
                 },
                 {
+                  icon: FileText,
+                  title: 'Évaluations',
+                  description: 'Gérer les évaluations',
+                  color: 'bg-teal-500',
+                  href: '/dashboard/instructor/evaluations'
+                },
+                {
+                  icon: MessageSquare,
+                  title: 'Messages',
+                  description: 'Voir les messages',
+                  color: 'bg-cyan-500',
+                  href: '/dashboard/instructor/messages'
+                },
+                {
+                  icon: Award,
+                  title: 'Gamification',
+                  description: 'Gérer les badges',
+                  color: 'bg-yellow-500',
+                  href: '/dashboard/instructor/gamification'
+                },
+                {
                   icon: Settings,
-                  title: 'Paramètres',
-                  description: 'Configuration',
+                  title: 'Mon Profil',
+                  description: 'Paramètres',
                   color: 'bg-gray-500',
-                  href: '/dashboard/instructor/settings'
+                  href: '/dashboard/instructor/profile'
                 }
               ].map((action, index) => (
-                <a
+                <Link
                   key={index}
                   href={action.href}
-                  className="group flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-105"
+                  className="group flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-105 cursor-pointer"
                 >
                   <div className={`${action.color} p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform`}>
                     <action.icon className="h-6 w-6 text-white" />
@@ -483,7 +499,7 @@ export default function InstructorDashboard() {
                     <p className="font-medium text-gray-900">{action.title}</p>
                     <p className="text-sm text-gray-500">{action.description}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>

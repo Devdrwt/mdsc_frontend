@@ -24,9 +24,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Moon,
-  Sun
+  Sun,
+  Activity,
+  Grid3x3
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/stores/authStore';
+import NotificationContainer from '../ui/NotificationContainer';
 import Image from 'next/image';
 
 interface DashboardLayoutProps {
@@ -46,6 +49,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const router = useRouter();
   const pathname = usePathname();
@@ -61,8 +65,15 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       case 'student':
         return [
           ...baseItems,
-          { name: 'Modules', href: `/dashboard/${userRole}/modules`, icon: BookOpen },
-          { name: 'Mes Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen },
+          { 
+            name: 'Formations', 
+            href: `/dashboard/${userRole}/courses`, 
+            icon: BookOpen,
+            children: [
+              { name: 'Catalogue', href: '/courses', icon: Grid3x3 },
+              { name: 'Mes Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen }
+            ]
+          },
           { name: 'Progression', href: `/dashboard/${userRole}/progress`, icon: BarChart3 },
           { name: 'Évaluations', href: `/dashboard/${userRole}/evaluations`, icon: FileText },
           { name: 'Certificats', href: `/dashboard/${userRole}/certificates`, icon: Award },
@@ -71,13 +82,20 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           { name: 'Calendrier', href: `/dashboard/${userRole}/calendar`, icon: Calendar },
           { name: 'Messages', href: `/dashboard/${userRole}/messages`, icon: MessageSquare },
           { name: 'Profil', href: `/dashboard/${userRole}/profile`, icon: User },
+          { name: 'Paramètres', href: `/dashboard/${userRole}/settings`, icon: Settings },
         ];
 
       case 'instructor':
         return [
           ...baseItems,
-          { name: 'Modules', href: `/dashboard/${userRole}/modules`, icon: BookOpen },
-          { name: 'Mes Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen },
+          { 
+            name: 'Mes Cours', 
+            href: `/dashboard/${userRole}/courses`, 
+            icon: BookOpen,
+            children: [
+              { name: 'Modules', href: `/dashboard/${userRole}/modules`, icon: BookOpen }
+            ]
+          },
           { name: 'Mes Étudiants', href: `/dashboard/${userRole}/students`, icon: Users },
           { name: 'Analytics', href: `/dashboard/${userRole}/analytics`, icon: BarChart3 },
           { name: 'Évaluations', href: `/dashboard/${userRole}/evaluations`, icon: FileText },
@@ -85,6 +103,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           { name: 'Assistant IA', href: `/dashboard/${userRole}/chat-ai`, icon: Brain },
           { name: 'Messages', href: `/dashboard/${userRole}/messages`, icon: MessageSquare },
           { name: 'Profil', href: `/dashboard/${userRole}/profile`, icon: User },
+          { name: 'Paramètres', href: `/dashboard/${userRole}/settings`, icon: Settings },
         ];
 
       case 'admin':
@@ -94,6 +113,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           { name: 'Utilisateurs', href: `/dashboard/${userRole}/users`, icon: Users },
           { name: 'Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen },
           { name: 'Statistiques', href: `/dashboard/${userRole}/statistics`, icon: BarChart3 },
+          { name: 'Surveillance', href: `/dashboard/${userRole}/monitoring`, icon: Activity },
           { name: 'Gamification', href: `/dashboard/${userRole}/gamification`, icon: Trophy },
           { name: 'Assistant IA', href: `/dashboard/${userRole}/chat-ai`, icon: Brain },
           { name: 'Configuration', href: `/dashboard/${userRole}/settings`, icon: Settings },
@@ -157,6 +177,21 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     }
   }, []);
 
+  // Ouvrir automatiquement le sous-menu si un enfant est actif
+  useEffect(() => {
+    const openActiveSubmenu = () => {
+      navigationItems.forEach(item => {
+        if (item.children) {
+          const hasActiveChild = item.children.some(child => isActive(child.href));
+          if (hasActiveChild) {
+            setOpenSubmenus(prev => new Set(prev).add(item.name));
+          }
+        }
+      });
+    };
+    openActiveSubmenu();
+  }, [pathname]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -175,6 +210,98 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
 
   const isActive = (href: string) => {
     return pathname === href || pathname.startsWith(href + '/');
+  };
+
+  const toggleSubmenu = (itemName: string) => {
+    setOpenSubmenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemName)) {
+        newSet.delete(itemName);
+      } else {
+        newSet.add(itemName);
+      }
+      return newSet;
+    });
+  };
+
+  const renderNavItem = (item: NavigationItem, isMobile: boolean = false) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isOpen = openSubmenus.has(item.name);
+    const active = isActive(item.href);
+
+    if (hasChildren && !sidebarCollapsed) {
+      return (
+        <div key={item.name}>
+          <button
+            onClick={() => toggleSubmenu(item.name)}
+            className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              active
+                ? `${colors.primary} text-white`
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <item.icon className="h-5 w-5 flex-shrink-0" />
+            <span className="ml-3">{item.name}</span>
+            {item.badge && (
+              <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {item.badge}
+              </span>
+            )}
+            {hasChildren && (
+              <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            )}
+          </button>
+          {isOpen && item.children && (
+            <div className="ml-8 mt-1 space-y-1">
+              {item.children.map((child) => (
+                <a
+                  key={child.name}
+                  href={child.href}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive(child.href)
+                      ? `${colors.primary} text-white`
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <child.icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="ml-3">{child.name}</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <a
+        key={item.name}
+        href={item.href}
+        className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${isMobile ? '' : 'group'} ${
+          active
+            ? `${colors.primary} text-white`
+            : 'text-gray-700 hover:bg-gray-100'
+        }`}
+        title={sidebarCollapsed && !isMobile ? item.name : undefined}
+      >
+        <item.icon className={`${isMobile ? 'mr-3' : ''} h-5 w-5 flex-shrink-0`} />
+        {!isMobile && !sidebarCollapsed && (
+          <>
+            <span className="ml-3">{item.name}</span>
+            {item.badge && (
+              <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {item.badge}
+              </span>
+            )}
+          </>
+        )}
+        {sidebarCollapsed && !isMobile && item.badge && (
+          <span className="absolute ml-3 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
+            {item.badge}
+          </span>
+        )}
+      </a>
+    );
   };
 
   return (
@@ -202,25 +329,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             </button>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-2">
-            {navigationItems.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive(item.href)
-                    ? `${colors.primary} text-white`
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <item.icon className="mr-3 h-5 w-5" />
-                {item.name}
-                {item.badge && (
-                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                    {item.badge}
-                  </span>
-                )}
-              </a>
-            ))}
+            {navigationItems.map((item) => renderNavItem(item, true))}
           </nav>
         </div>
       </div>
@@ -256,36 +365,8 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
               </button>
             )}
           </div>
-          <nav className="flex-1 px-4 py-4 space-y-2">
-            {navigationItems.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group ${
-                  isActive(item.href)
-                    ? `${colors.primary} text-white`
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                title={sidebarCollapsed ? item.name : undefined}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && (
-                  <>
-                    <span className="ml-3">{item.name}</span>
-                    {item.badge && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-                {sidebarCollapsed && item.badge && (
-                  <span className="absolute ml-3 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
-                    {item.badge}
-                  </span>
-                )}
-              </a>
-            ))}
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+            {navigationItems.map((item) => renderNavItem(item, false))}
           </nav>
         </div>
       </div>
@@ -388,6 +469,9 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           </div>
         </main>
       </div>
+
+      {/* Toast Notifications */}
+      <NotificationContainer />
     </div>
   );
 }

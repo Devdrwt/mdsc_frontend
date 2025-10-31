@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
+import toast from '../../../lib/utils/toast';
 
 interface Student {
   id: string;
@@ -53,96 +54,7 @@ export default function StudentManagement() {
   const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
 
   useEffect(() => {
-    const loadStudents = async () => {
-      if (!user) return;
-
-      try {
-        setLoading(true);
-        
-        // Simulation des données d'étudiants - dans un vrai projet, on récupérerait depuis l'API
-        const mockStudents: Student[] = [
-          {
-            id: '1',
-            firstName: 'Marie',
-            lastName: 'Koné',
-            email: 'marie.kone@example.com',
-            enrolledCourses: 3,
-            completedCourses: 1,
-            currentLevel: 'Intermédiaire',
-            totalPoints: 450,
-            lastActivity: '2024-01-15',
-            progress: 75,
-            averageGrade: 4.2,
-            status: 'active'
-          },
-          {
-            id: '2',
-            firstName: 'Jean',
-            lastName: 'Traoré',
-            email: 'jean.traore@example.com',
-            enrolledCourses: 2,
-            completedCourses: 2,
-            currentLevel: 'Avancé',
-            totalPoints: 680,
-            lastActivity: '2024-01-14',
-            progress: 90,
-            averageGrade: 4.5,
-            status: 'active'
-          },
-          {
-            id: '3',
-            firstName: 'Fatou',
-            lastName: 'Diabaté',
-            email: 'fatou.diabate@example.com',
-            enrolledCourses: 4,
-            completedCourses: 0,
-            currentLevel: 'Débutant',
-            totalPoints: 120,
-            lastActivity: '2024-01-10',
-            progress: 25,
-            averageGrade: 3.8,
-            status: 'active'
-          },
-          {
-            id: '4',
-            firstName: 'Paul',
-            lastName: 'N\'Guessan',
-            email: 'paul.nguessan@example.com',
-            enrolledCourses: 1,
-            completedCourses: 1,
-            currentLevel: 'Expert',
-            totalPoints: 850,
-            lastActivity: '2024-01-05',
-            progress: 100,
-            averageGrade: 4.8,
-            status: 'inactive'
-          },
-          {
-            id: '5',
-            firstName: 'Aminata',
-            lastName: 'Ouattara',
-            email: 'aminata.ouattara@example.com',
-            enrolledCourses: 2,
-            completedCourses: 1,
-            currentLevel: 'Intermédiaire',
-            totalPoints: 320,
-            lastActivity: '2024-01-12',
-            progress: 60,
-            averageGrade: 4.0,
-            status: 'active'
-          }
-        ];
-
-        setStudents(mockStudents);
-        setFilteredStudents(mockStudents);
-      } catch (error) {
-        console.error('Erreur lors du chargement des étudiants:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStudents();
+    // Les étudiants sont chargés via fetchEnrollments basé sur selectedCourseId
   }, [user]);
 
   useEffect(() => {
@@ -190,37 +102,56 @@ export default function StudentManagement() {
   // Charger les inscriptions (pagination serveur)
   useEffect(() => {
     const fetchEnrollments = async () => {
-      if (!selectedCourseId) return;
+      if (!selectedCourseId) {
+        setStudents([]);
+        setFilteredStudents([]);
+        return;
+      }
       try {
         setLoading(true);
         const { data, pagination } = await EnrollmentService.getCourseEnrollments(selectedCourseId, {
           page,
           limit,
           search: searchTerm,
-          status: filterStatus,
+          status: filterStatus !== 'all' ? filterStatus : undefined,
           sort: 'last_accessed_at',
           order: 'DESC',
         });
-        const mapped: Student[] = data.map((r: any) => ({
-          id: String(r.user_id),
-          firstName: r.first_name,
-          lastName: r.last_name,
-          email: r.email,
-          avatar: r.avatar_url || undefined,
+        const mapped: Student[] = (data || []).map((r: any) => ({
+          id: String(r.user_id || r.id),
+          firstName: r.first_name || r.firstName || '',
+          lastName: r.last_name || r.lastName || '',
+          email: r.email || '',
+          avatar: r.avatar_url || r.avatar || undefined,
           enrolledCourses: 0,
           completedCourses: r.status === 'completed' ? 1 : 0,
           currentLevel: '',
           totalPoints: 0,
-          lastActivity: r.last_accessed_at || r.enrolled_at,
-          progress: Math.round(Number(r.progress_percentage || 0)),
+          lastActivity: r.last_accessed_at || r.enrolled_at || '',
+          progress: Math.round(Number(r.progress_percentage || r.progress || 0)),
           averageGrade: Number(r.avg_quiz_score || 0) / 20 * 5 || 0,
-          status: 'active',
+          status: r.status || 'active' as 'active' | 'inactive' | 'suspended',
         }));
         setStudents(mapped);
         setFilteredStudents(mapped);
         setServerPagination(pagination);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Erreur chargement inscriptions', e);
+        setStudents([]);
+        setFilteredStudents([]);
+        // Afficher l'erreur à l'utilisateur pour toutes les erreurs d'autorisation
+        const isAuthError = e.status === 403 || 
+            e.message?.includes('autorisé') || 
+            e.message?.includes('Non autorisé') || 
+            e.message?.includes('inscrits') ||
+            e.message?.includes('Accès interdit') ||
+            e.message?.includes('Permissions insuffisantes');
+        if (isAuthError) {
+          toast.error('Accès refusé', e.message || 'Vous n\'êtes pas autorisé à consulter les inscrits de ce cours');
+        } else {
+          // Pour les autres erreurs, afficher un message générique
+          toast.error('Erreur', 'Impossible de charger les inscriptions. Veuillez réessayer.');
+        }
       } finally {
         setLoading(false);
       }

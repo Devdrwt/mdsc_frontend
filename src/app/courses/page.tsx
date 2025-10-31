@@ -7,7 +7,7 @@ import CourseCard from '../../components/courses/CourseCard';
 import Button from '../../components/ui/Button';
 import { Search, Clock, Users } from 'lucide-react';
 import { Course } from '../../types';
-import { courseService } from '../../lib/services/courseService';
+import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
 
 // Données de démonstration (en attendant l'intégration API)
 const sampleCourses: Course[] = [
@@ -108,16 +108,103 @@ const levels = [
   'Avancé'
 ];
 
+// Fonction pour convertir ServiceCourse en Course (pour CourseCard)
+const convertToCourse = (serviceCourse: ServiceCourse): any => {
+  console.log('🔄 Conversion cours:', serviceCourse);
+  console.log('🔗 Slug brut:', serviceCourse.slug, 'ID:', serviceCourse.id);
+  
+  // Convertir la durée en string pour CourseCard
+  const durationInWeeks = Math.ceil((serviceCourse.duration || 0) / 60 / 7); // Convertir minutes en semaines
+  const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
+  
+  // Convertir le niveau pour CourseCard
+  const levelString = serviceCourse.level === 'beginner' ? 'Débutant' 
+    : serviceCourse.level === 'intermediate' ? 'Intermédiaire' 
+    : 'Avancé';
+
+  // Gérer l'instructeur correctement
+  let instructorData;
+  if (typeof serviceCourse.instructor === 'string') {
+    instructorData = { id: '', name: serviceCourse.instructor };
+  } else if (serviceCourse.instructor && typeof serviceCourse.instructor === 'object') {
+    instructorData = {
+      id: serviceCourse.instructor.id || '',
+      name: serviceCourse.instructor.name || 'Instructeur',
+      avatar: serviceCourse.instructor.avatar
+    };
+  } else {
+    instructorData = { id: '', name: 'Instructeur' };
+  }
+
+  const converted = {
+    id: serviceCourse.id,
+    title: serviceCourse.title,
+    slug: serviceCourse.slug || serviceCourse.id, // Utiliser le slug s'il existe, sinon l'id
+    description: serviceCourse.description || '',
+    shortDescription: serviceCourse.shortDescription || '',
+    category: serviceCourse.category || 'non-categorisé',
+    level: levelString, // Pour CourseCard
+    level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
+    duration: durationString, // String pour CourseCard
+    language: 'fr',
+    thumbnail_url: serviceCourse.thumbnail,
+    instructor: instructorData,
+    is_published: serviceCourse.isPublished !== undefined ? serviceCourse.isPublished : true,
+    enrollment_count: serviceCourse.totalStudents || 0,
+    rating: serviceCourse.rating || 0,
+    // Conversions pour CourseCard
+    thumbnail: serviceCourse.thumbnail || '/apprenant.png',
+    students: serviceCourse.totalStudents || 0,
+    price: serviceCourse.price || 0,
+  };
+  
+  console.log('✅ Cours converti:', converted);
+  return converted;
+};
+
 export default function CoursesPage() {
-  const [courses, setCourses] = useState<Course[]>(sampleCourses);
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>(sampleCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toutes les catégories');
   const [selectedLevel, setSelectedLevel] = useState('Tous les niveaux');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Charger les cours depuis l'API
+  useEffect(() => {
+    const loadCourses = async () => {
+      try {
+        setIsLoading(true);
+        console.log('🔄 Chargement des cours depuis l\'API...');
+        const response = await CourseService.getAllCourses();
+        console.log('📦 Réponse API:', response);
+        
+        // Extraire les cours de la réponse
+        const serviceCourses = response.courses || (Array.isArray(response) ? response : []);
+        console.log('📚 Cours extraits:', serviceCourses.length, 'cours');
+        
+        const convertedCourses = Array.isArray(serviceCourses) 
+          ? serviceCourses.map(convertToCourse)
+          : [];
+        console.log('✅ Cours convertis:', convertedCourses.length, 'cours');
+        setCourses(convertedCourses);
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des cours:', error);
+        setCourses([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadCourses();
+  }, []);
 
   // Filtrage des cours
   useEffect(() => {
+    if (!Array.isArray(courses)) {
+      setFilteredCourses([]);
+      return;
+    }
+
     let filtered = courses;
 
     // Filtre par recherche
@@ -125,7 +212,9 @@ export default function CoursesPage() {
       filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+        (typeof course.instructor === 'string' 
+          ? course.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+          : course.instructor.name.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 

@@ -457,10 +457,10 @@ export default function AdminDashboard() {
                 },
                 {
                   icon: BarChart3,
-                  title: 'Analytics',
+                  title: 'Statistiques',
                   description: 'Statistiques détaillées',
                   color: 'bg-purple-500',
-                  href: '/dashboard/admin/analytics'
+                  href: '/dashboard/admin/statistics'
                 },
                 {
                   icon: Settings,

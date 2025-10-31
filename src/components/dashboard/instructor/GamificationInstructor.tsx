@@ -2,23 +2,29 @@
 
 import React, { useEffect, useState } from 'react';
 import { Trophy, Award, Users, RefreshCw } from 'lucide-react';
-import { GamificationService, Badge } from '../../../lib/services/gamificationService';
+import { GamificationService } from '../../../lib/services/gamificationService';
+import { BadgeService } from '../../../lib/services/badgeService';
+import { Badge, UserBadge } from '../../../types';
 
 export default function GamificationInstructor() {
   const [loading, setLoading] = useState(true);
   const [badges, setBadges] = useState<Badge[]>([]);
-  const [myBadges, setMyBadges] = useState<Badge[]>([]);
+  const [myBadges, setMyBadges] = useState<UserBadge[]>([]);
   const [checking, setChecking] = useState(false);
 
   const load = async () => {
     try {
       setLoading(true);
       const [allBadges, mine] = await Promise.all([
-        GamificationService.getAllBadges(),
-        GamificationService.getUserBadges(),
+        BadgeService.getAllBadges(),
+        BadgeService.getUserBadges(),
       ]);
       setBadges(allBadges || []);
       setMyBadges(mine || []);
+    } catch (error) {
+      console.error('Error loading badges:', error);
+      setBadges([]);
+      setMyBadges([]);
     } finally {
       setLoading(false);
     }
@@ -118,15 +124,19 @@ export default function GamificationInstructor() {
             {badges.map((b) => (
               <div key={b.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${b.color || '#fef3c7'}` }}>
-                    <span className="text-sm">🏅</span>
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center bg-yellow-100">
+                    {b.icon_url ? (
+                      <img src={b.icon_url} alt={b.name} className="h-8 w-8" />
+                    ) : (
+                      <span className="text-sm">🏅</span>
+                    )}
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">{b.name}</div>
-                    <div className="text-xs text-gray-500">{b.category} · {b.points} pts</div>
+                    <div className="text-xs text-gray-500">{b.category || 'Général'}</div>
                   </div>
                 </div>
-                <div className="text-sm text-gray-600 mt-2 line-clamp-2">{b.description}</div>
+                <div className="text-sm text-gray-600 mt-2 line-clamp-2">{b.description || 'Aucune description'}</div>
               </div>
             ))}
           </div>

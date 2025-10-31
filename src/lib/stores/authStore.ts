@@ -10,12 +10,15 @@ export interface User {
   firstName: string;
   lastName: string;
   role: 'student' | 'instructor' | 'admin';
+  avatarUrl?: string;
   npi?: string;
   phone?: string;
   organization?: string;
   country?: string;
   isEmailVerified: boolean;
+  isActive: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface AuthState {

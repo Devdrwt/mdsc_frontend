@@ -16,11 +16,22 @@ import {
   Play,
   Pause,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  Clock,
+  Globe,
+  Image as ImageIcon,
+  Video,
+  Star,
+  Settings,
+  AlertTriangle,
+  Link as LinkIcon,
+  X
 } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
+import toast from '../../../lib/utils/toast';
 
 interface CourseStats {
   totalStudents: number;
@@ -54,6 +65,11 @@ export default function CourseManagement() {
     language: 'fr',
     price: 0,
     currency: 'XOF',
+    is_featured: false,
+    prerequisite_course_id: '',
+    enrollment_deadline: '',
+    course_start_date: '',
+    course_end_date: '',
   });
   const [creating, setCreating] = useState(false);
 
@@ -85,11 +101,16 @@ export default function CourseManagement() {
   useEffect(() => {
     let filtered = courses;
     if (searchTerm) {
-      filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (course.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (course.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(course => {
+        const categoryStr = typeof course.category === 'string' 
+          ? course.category 
+          : (course.category as any)?.name || '';
+        return (
+          course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (course.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          categoryStr.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
     }
     setFilteredCourses(filtered);
   }, [courses, searchTerm]);
@@ -98,14 +119,14 @@ export default function CourseManagement() {
     e.preventDefault();
     
     if (!createFormData.title || !createFormData.description || !createFormData.short_description) {
-      alert('Veuillez remplir tous les champs obligatoires');
+      toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
 
     setCreating(true);
     try {
       const newCourse = await courseService.createCourse(createFormData);
-      alert('Cours créé avec succès !');
+      toast.success('Cours créé', 'Votre cours a été créé avec succès !');
       setShowCreateModal(false);
       // Réinitialiser le formulaire
       setCreateFormData({
@@ -120,6 +141,11 @@ export default function CourseManagement() {
         language: 'fr',
         price: 0,
         currency: 'XOF',
+        is_featured: false,
+        prerequisite_course_id: '',
+        enrollment_deadline: '',
+        course_start_date: '',
+        course_end_date: '',
       });
       // Recharger la liste des cours
       const instructorCourses = await courseService.getMyCourses();
@@ -127,7 +153,7 @@ export default function CourseManagement() {
       setFilteredCourses(instructorCourses || []);
     } catch (error: any) {
       console.error('Erreur lors de la création du cours:', error);
-      alert(error.message || 'Erreur lors de la création du cours');
+      toast.error('Erreur', error.message || 'Erreur lors de la création du cours');
     } finally {
       setCreating(false);
     }
@@ -174,12 +200,21 @@ export default function CourseManagement() {
     }
 
     try {
-      // TODO: Implémenter la suppression de cours via l'API Moodle
-      console.log('Suppression du cours:', courseId);
+      await courseService.deleteCourse(courseId.toString());
+      toast.success('Cours supprimé', 'Le cours a été supprimé avec succès');
       // Mettre à jour la liste locale
       setCourses(prev => prev.filter(course => course.id !== courseId.toString()));
-    } catch (error) {
+      setFilteredCourses(prev => prev.filter(course => course.id !== courseId.toString()));
+      // Recharger les cours depuis l'API
+      if (user) {
+        const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
+        const arr = Array.isArray(list) ? list : (list as any)?.data || list || [];
+        setCourses(arr);
+        setFilteredCourses(arr);
+      }
+    } catch (error: any) {
       console.error('Erreur lors de la suppression du cours:', error);
+      toast.error('Erreur', error.message || 'Impossible de supprimer le cours. Veuillez réessayer.');
     }
   };
 
@@ -326,7 +361,7 @@ export default function CourseManagement() {
                       <div className="flex items-center space-x-6 text-sm text-gray-500 mb-3">
                         <div className="flex items-center space-x-1">
                           <BookOpen className="h-4 w-4" />
-                          <span>{course.category}</span>
+                          <span>{typeof course.category === 'string' ? course.category : (course.category as any)?.name || 'Non catégorisé'}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="h-4 w-4" />
@@ -366,14 +401,20 @@ export default function CourseManagement() {
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => window.location.href = `/dashboard/instructor/courses/${course.id}/edit`}
+                          onClick={() => {
+                            // Pour l'instant, on ouvre une alerte. 
+                            // TODO: Créer une page ou modal d'édition
+                            toast.info('Fonctionnalité à venir', 'La modification de cours sera bientôt disponible');
+                          }}
                           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                           title="Modifier le cours"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => window.location.href = `/dashboard/instructor/courses/${course.id}/analytics`}
+                          onClick={() => {
+                            toast.info('Analytics', 'Les analytics détaillées sont disponibles depuis le menu Analytics');
+                          }}
                           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                           title="Analytics du cours"
                         >
@@ -390,7 +431,7 @@ export default function CourseManagement() {
                       
                       {/* Bouton principal */}
                       <a
-                        href={`/dashboard/instructor/courses/${course.id}`}
+                        href={`/instructor/courses/${course.id}`}
                         className="btn-mdsc-secondary text-sm"
                       >
                         Gérer le cours
@@ -461,171 +502,303 @@ export default function CourseManagement() {
       {/* Modal de création de cours */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Créer un nouveau cours</h2>
-              <p className="text-gray-600 mt-1">Remplissez les informations pour créer votre cours</p>
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* En-tête avec gradient */}
+            <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 p-6 text-white flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <BookOpen className="h-8 w-8" />
+                  <div>
+                    <h2 className="text-2xl font-bold">Créer un nouveau cours</h2>
+                    <p className="text-yellow-50 text-sm mt-1">Remplissez les informations pour créer votre cours</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-white/80 hover:text-white transition-colors p-2"
+                  type="button"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={handleCreateCourse} className="p-6 space-y-6">
-              {/* Titre */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Titre du cours <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={createFormData.title}
-                  onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  placeholder="Ex: Leadership et Management d'Équipe"
-                  required
-                />
-              </div>
-
-              {/* Description courte */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description courte <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={createFormData.short_description}
-                  onChange={(e) => setCreateFormData({ ...createFormData, short_description: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  placeholder="Une description courte et accrocheuse..."
-                  required
-                />
-              </div>
-
-              {/* Description complète */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description complète <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={createFormData.description}
-                  onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  placeholder="Une description détaillée de votre cours..."
-                  required
-                />
-              </div>
-
-              {/* Catégorie et Niveau */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID Catégorie
-                  </label>
-                  <input
-                    type="text"
-                    value={createFormData.category_id}
-                    onChange={(e) => setCreateFormData({ ...createFormData, category_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                    placeholder="Ex: 1"
-                  />
+            {/* Contenu avec scroll */}
+            <form onSubmit={handleCreateCourse} className="flex flex-col flex-1 overflow-hidden">
+            <div className="overflow-y-auto flex-1 p-6 bg-gray-50 space-y-6 min-h-0">
+              {/* Section: Informations générales */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
+                  <BookOpen className="h-5 w-5 text-mdsc-gold" />
+                  <h3 className="text-lg font-semibold text-gray-900">Informations générales</h3>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Niveau de difficulté
-                  </label>
-                  <select
-                    value={createFormData.difficulty}
-                    onChange={(e) => setCreateFormData({ ...createFormData, difficulty: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  >
-                    <option value="beginner">Débutant</option>
-                    <option value="intermediate">Intermédiaire</option>
-                    <option value="advanced">Avancé</option>
-                  </select>
-                </div>
-              </div>
+                <div className="space-y-4">
+                  {/* Titre */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Titre du cours <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={createFormData.title}
+                      onChange={(e) => setCreateFormData({ ...createFormData, title: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors placeholder-gray-400"
+                      placeholder="Ex: Leadership et Management d'Équipe"
+                      required
+                    />
+                  </div>
 
-              {/* Durée et Prix */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Durée (en minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={createFormData.duration_minutes}
-                    onChange={(e) => setCreateFormData({ ...createFormData, duration_minutes: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                    placeholder="Ex: 480"
-                  />
-                </div>
+                  {/* Description courte */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description courte <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={createFormData.short_description}
+                      onChange={(e) => setCreateFormData({ ...createFormData, short_description: e.target.value })}
+                      rows={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors resize-none"
+                      placeholder="Une description courte et accrocheuse..."
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prix (FCFA)
-                  </label>
-                  <input
-                    type="number"
-                    value={createFormData.price}
-                    onChange={(e) => setCreateFormData({ ...createFormData, price: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                    placeholder="Ex: 0"
-                  />
+                  {/* Description complète */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description complète <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={createFormData.description}
+                      onChange={(e) => setCreateFormData({ ...createFormData, description: e.target.value })}
+                      rows={4}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors resize-none"
+                      placeholder="Une description détaillée de votre cours..."
+                      required
+                    />
+                  </div>
+
+                  {/* Catégorie et Niveau */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ID Catégorie
+                      </label>
+                      <input
+                        type="text"
+                        value={createFormData.category_id}
+                        onChange={(e) => setCreateFormData({ ...createFormData, category_id: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="Ex: 1"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Niveau de difficulté
+                      </label>
+                      <select
+                        value={createFormData.difficulty}
+                        onChange={(e) => setCreateFormData({ ...createFormData, difficulty: e.target.value as any })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                      >
+                        <option value="beginner">Débutant</option>
+                        <option value="intermediate">Intermédiaire</option>
+                        <option value="advanced">Avancé</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* URL de l'image */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL de l'image de couverture
-                </label>
-                <input
-                  type="url"
-                  value={createFormData.thumbnail_url}
-                  onChange={(e) => setCreateFormData({ ...createFormData, thumbnail_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  placeholder="https://exemple.com/image.jpg"
-                />
+              {/* Section: Configuration du cours */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
+                  <Settings className="h-5 w-5 text-mdsc-gold" />
+                  <h3 className="text-lg font-semibold text-gray-900">Configuration du cours</h3>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Durée et Prix */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Durée (en minutes)
+                      </label>
+                      <input
+                        type="number"
+                        value={createFormData.duration_minutes}
+                        onChange={(e) => setCreateFormData({ ...createFormData, duration_minutes: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="Ex: 480"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prix (FCFA)
+                      </label>
+                      <input
+                        type="number"
+                        value={createFormData.price}
+                        onChange={(e) => setCreateFormData({ ...createFormData, price: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="Ex: 0"
+                      />
+                    </div>
+                  </div>
+
+                  {/* URL de l'image et de la vidéo */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        URL de l'image de couverture
+                      </label>
+                      <input
+                        type="url"
+                        value={createFormData.thumbnail_url}
+                        onChange={(e) => setCreateFormData({ ...createFormData, thumbnail_url: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="https://exemple.com/image.jpg"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        URL de la vidéo (optionnel)
+                      </label>
+                      <input
+                        type="url"
+                        value={createFormData.video_url}
+                        onChange={(e) => setCreateFormData({ ...createFormData, video_url: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="https://exemple.com/video.mp4"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Langue */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Langue du cours
+                    </label>
+                    <input
+                      type="text"
+                      value={createFormData.language}
+                      onChange={(e) => setCreateFormData({ ...createFormData, language: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                      placeholder="fr"
+                    />
+                  </div>
+
+                  {/* Cours mis en vedette */}
+                  <div className="flex items-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <input
+                      type="checkbox"
+                      id="is_featured"
+                      checked={createFormData.is_featured}
+                      onChange={(e) => setCreateFormData({ ...createFormData, is_featured: e.target.checked })}
+                      className="h-5 w-5 text-mdsc-gold focus:ring-mdsc-gold border-gray-300 rounded cursor-pointer"
+                    />
+                    <label htmlFor="is_featured" className="ml-3 block text-sm text-gray-700 cursor-pointer">
+                      Mettre ce cours en vedette
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              {/* URL de la vidéo */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  URL de la vidéo (optionnel)
-                </label>
-                <input
-                  type="url"
-                  value={createFormData.video_url}
-                  onChange={(e) => setCreateFormData({ ...createFormData, video_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
-                  placeholder="https://exemple.com/video.mp4"
-                />
-              </div>
+              {/* Section: Dates et prérequis */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
+                  <Calendar className="h-5 w-5 text-mdsc-gold" />
+                  <h3 className="text-lg font-semibold text-gray-900">Dates et prérequis</h3>
+                </div>
 
-              {/* Boutons d'action */}
-              <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  disabled={creating}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-6 py-2 bg-mdsc-gold text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  {creating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Création...</span>
-                    </>
-                  ) : (
+                <div className="space-y-4">
+                  {/* Cours prérequis, dates et deadline */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ID du cours prérequis
+                      </label>
+                      <input
+                        type="text"
+                        value={createFormData.prerequisite_course_id}
+                        onChange={(e) => setCreateFormData({ ...createFormData, prerequisite_course_id: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="Ex: 1 (optionnel)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date limite d'inscription
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={createFormData.enrollment_deadline}
+                        onChange={(e) => setCreateFormData({ ...createFormData, enrollment_deadline: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de début du cours
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={createFormData.course_start_date}
+                        onChange={(e) => setCreateFormData({ ...createFormData, course_start_date: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de fin du cours
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={createFormData.course_end_date}
+                        onChange={(e) => setCreateFormData({ ...createFormData, course_end_date: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Boutons d'action - en bas de la modal */}
+            <div className="border-t border-gray-200 bg-white p-6 flex justify-end space-x-4 shadow-lg flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                disabled={creating}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="px-6 py-3 bg-mdsc-gold text-white rounded-lg hover:bg-yellow-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium shadow-md hover:shadow-lg"
+              >
+                {creating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Création...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
                     <span>Créer le cours</span>
-                  )}
-                </button>
-              </div>
+                  </>
+                )}
+              </button>
+            </div>
             </form>
           </div>
         </div>

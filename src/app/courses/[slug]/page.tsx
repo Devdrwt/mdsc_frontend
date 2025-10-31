@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { BookOpen, Clock, User, Star, Play, CheckCircle, Lock } from 'lucide-react';
-import { Course } from '../../../types/course';
-import { courseService } from '../../../lib/services/courseService';
-import { courseService as modernCourseService } from '../../../lib/services/modernCourseService';
+import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
+import { EnrollmentService } from '../../../lib/services/enrollmentService';
+import toast from '../../../lib/utils/toast';
 import CoursePlayer from '../../../components/courses/CoursePlayer';
 import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
@@ -16,7 +16,7 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const slug = params?.slug as string;
   
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
@@ -30,17 +30,24 @@ export default function CourseDetailPage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      // Essayer d'abord avec le service moderne
-      try {
-        const data = await modernCourseService.getCourseBySlug(slug);
-        setCourse(data);
-      } catch {
-        // Fallback sur l'ancien service
-        const data = await courseService.getCourseById(slug);
-        setCourse(data);
-      }
+      console.log('🔄 Chargement du cours avec slug:', slug);
+      
+      // Si le slug est un nombre, utiliser getCourseById, sinon getCourseBySlug
+      const isNumeric = !isNaN(Number(slug));
+      console.log('🔍 Slug est numérique?', isNumeric);
+      
+      const data = isNumeric 
+        ? await CourseService.getCourseById(slug)
+        : await CourseService.getCourseBySlug(slug);
+      
+      console.log('📦 Cours chargé:', data);
+      console.log('🔍 ID du cours:', data.id, 'Type:', typeof data.id);
+      console.log('🔍 Toutes les clés:', Object.keys(data));
+      setCourse(data);
     } catch (err: any) {
+      console.error('❌ Erreur chargement cours:', err);
       setError(err.message || 'Erreur lors du chargement du cours');
+      toast.error('Erreur', err.message || 'Impossible de charger le cours');
     } finally {
       setLoading(false);
     }
@@ -50,11 +57,14 @@ export default function CourseDetailPage() {
     if (!course) return;
     
     try {
-      await courseService.enrollInCourse(course.id);
+      console.log('📝 Inscription au cours:', course.id);
+      await EnrollmentService.enrollInCourse(course.id.toString());
+      toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
       setShowPlayer(true);
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'inscription');
+      console.error('❌ Erreur inscription:', err);
+      toast.error('Erreur', err.message || 'Impossible de s\'inscrire au cours');
     }
   };
 
@@ -96,26 +106,29 @@ export default function CourseDetailPage() {
     );
   }
 
-  if (showPlayer && course.modules) {
+  if (showPlayer && course.lessons) {
     return (
       <div className="min-h-screen">
-        <CoursePlayer course={course} />
+        {/* CoursePlayer ne sera utilisé que lorsque nécessaire */}
+        <div className="text-center py-12">
+          <p>Redirection vers le lecteur de cours...</p>
+        </div>
       </div>
     );
   }
 
   const isEnrolled = course.enrollment !== undefined;
-  const categoryLabels = {
+  const categoryLabels: { [key: string]: string } = {
     sante: 'Santé',
     education: 'Éducation',
     gouvernance: 'Gouvernance',
     environnement: 'Environnement',
     economie: 'Économie',
   };
-  const levelLabels = {
-    debutant: 'Débutant',
-    intermediaire: 'Intermédiaire',
-    avance: 'Avancé',
+  const levelLabels: { [key: string]: string } = {
+    beginner: 'Débutant',
+    intermediate: 'Intermédiaire',
+    advanced: 'Avancé',
   };
 
   return (
@@ -142,7 +155,7 @@ export default function CourseDetailPage() {
                 <div className="flex items-center space-x-6 mb-6">
                   <div className="flex items-center space-x-2">
                     <User className="h-5 w-5" />
-                    <span>{course.instructor?.firstName} {course.instructor?.lastName}</span>
+                    <span>{course.instructor?.name || 'Instructeur'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Clock className="h-5 w-5" />
@@ -150,11 +163,11 @@ export default function CourseDetailPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span>{course.rating?.toFixed(1) || '0.0'}</span>
+                    <span>{(course.rating || 0).toFixed(1)}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <BookOpen className="h-5 w-5" />
-                    <span>{course.enrollmentCount || 0} inscrits</span>
+                    <span>{course.totalStudents || 0} inscrits</span>
                   </div>
                 </div>
 
@@ -172,10 +185,10 @@ export default function CourseDetailPage() {
                 </div>
               </div>
 
-              {course.thumbnailUrl && (
+              {course.thumbnail && (
                 <div className="relative">
                   <img
-                    src={course.thumbnailUrl}
+                    src={course.thumbnail}
                     alt={course.title}
                     className="w-full h-auto rounded-lg shadow-2xl"
                   />
@@ -186,58 +199,69 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Course Content */}
-        {course.modules && course.modules.length > 0 && (
+        {course.lessons && course.lessons.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-8">Contenu du cours</h2>
-            <div className="space-y-4">
-              {course.modules.map((module, moduleIndex) => (
-                <div key={module.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="p-6 bg-gray-50 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900">
-                          Module {moduleIndex + 1}: {module.title}
-                        </h3>
-                        {module.description && (
-                          <p className="text-gray-600 mt-2">{module.description}</p>
-                        )}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="divide-y divide-gray-200">
+                {course.lessons.map((lesson, lessonIndex) => (
+                  <div key={lesson.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0 w-8 h-8 bg-mdsc-blue-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-mdsc-blue-primary">
+                          {lessonIndex + 1}
+                        </span>
                       </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">{lesson.title}</h4>
+                        <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
+                          <span>{lesson.duration} min</span>
+                        </div>
+                      </div>
+                      {isEnrolled && lesson.isCompleted && (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      )}
+                      {!isEnrolled && (
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      )}
                     </div>
                   </div>
-                  
-                  {module.lessons && module.lessons.length > 0 && (
-                    <div className="divide-y divide-gray-200">
-                      {module.lessons.map((lesson, lessonIndex) => (
-                        <div key={lesson.id} className="p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <div className="flex-shrink-0 w-8 h-8 bg-mdsc-blue-primary/10 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-mdsc-blue-primary">
-                                {lessonIndex + 1}
-                              </span>
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{lesson.title}</h4>
-                              <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                                <span>{lesson.duration} min</span>
-                                <span className="capitalize">{lesson.contentType}</span>
-                              </div>
-                            </div>
-                            {isEnrolled && lesson.isCompleted && (
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                            )}
-                            {!isEnrolled && (
-                              <Lock className="h-5 w-5 text-gray-400" />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
+        
+        {/* Informations supplémentaires */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">À propos de ce cours</h3>
+              <p className="text-gray-600">{course.shortDescription || course.description}</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Informations pratiques</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Niveau:</span>
+                  <span className="font-medium">{levelLabels[course.level] || course.level}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Durée:</span>
+                  <span className="font-medium">{course.duration} minutes</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Note:</span>
+                  <span className="font-medium">{(course.rating || 0).toFixed(1)} ⭐</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Inscrits:</span>
+                  <span className="font-medium">{course.totalStudents || 0} étudiants</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <Footer />
