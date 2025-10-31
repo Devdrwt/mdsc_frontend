@@ -156,7 +156,7 @@ export default function NotificationBadge({
 
 // Hook pour afficher facilement des notifications
 export function useNotificationBadge() {
-  const [notification, setNotification] = useState<Partial<NotificationBadgeProps> | null>(null);
+  const [notification, setNotification] = useState<Omit<NotificationBadgeProps, 'show'> | null>(null);
 
   const showBadge = (config: Omit<NotificationBadgeProps, 'show'>) => {
     setNotification(config);
@@ -167,7 +167,7 @@ export function useNotificationBadge() {
   };
 
   const NotificationComponent = notification ? (
-    <NotificationBadge {...notification} show={!!notification} onClose={hideBadge} />
+    <NotificationBadge {...notification} show={true} onClose={hideBadge} />
   ) : null;
 
   return {

@@ -280,7 +280,7 @@ export async function changePassword(data: {
 }
 
 // Uploader un avatar
-export async function uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl: string }>> {
+export async function uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl?: string; url?: string; storage_path?: string }>> {
   // Validation MIME strict : PNG/JPEG uniquement
   const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg'];
   if (!allowedMimeTypes.includes(file.type)) {
@@ -290,7 +290,7 @@ export async function uploadAvatar(file: File): Promise<ApiResponse<{ avatarUrl:
   const formData = new FormData();
   formData.append('file', file);
 
-  return await fetchAPI<{ avatarUrl: string }>('/users/me/avatar', {
+  return await fetchAPI<{ avatarUrl?: string; url?: string; storage_path?: string }>('/users/me/avatar', {
     method: 'POST',
     body: formData,
     headers: {}, // Ne pas définir Content-Type pour FormData

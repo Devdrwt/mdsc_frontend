@@ -78,8 +78,10 @@ export const useAuthStore = create<AuthStore>()(
               user: {
                 ...user,
                 role: user.role as 'student' | 'instructor' | 'admin',
-                isEmailVerified: false,
-                createdAt: new Date().toISOString()
+                isEmailVerified: (user as any).isEmailVerified !== undefined ? (user as any).isEmailVerified : false,
+                isActive: (user as any).isActive !== undefined ? (user as any).isActive : true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
               },
               token,
               refreshToken,

@@ -20,16 +20,16 @@ export default function BadgeCard({
   onClick,
 }: BadgeCardProps) {
   // Utiliser badge.badge si c'est un UserBadge
-  const badgeData = 'badge' in badge && badge.badge ? badge.badge : badge;
+  const badgeData = 'badge' in badge && badge.badge ? badge.badge : badge as Badge;
 
   const getBadgeIcon = () => {
-    const category = badgeData.category.toLowerCase();
+    const category = badgeData.category?.toLowerCase() || '';
     
-    if (badgeData.iconUrl) {
+    if (badgeData.icon_url || badgeData.iconUrl) {
       return (
         <img
-          src={badgeData.iconUrl}
-          alt={badgeData.name}
+          src={badgeData.icon_url || badgeData.iconUrl}
+          alt={badgeData.name || 'Badge'}
           className="w-16 h-16 object-contain"
         />
       );
@@ -86,12 +86,12 @@ export default function BadgeCard({
 
       {/* Badge Name */}
       <h3 className={`text-lg font-bold mb-2 ${earned ? 'text-gray-900' : 'text-gray-600'}`}>
-        {badgeData.name}
+        {badgeData.name || 'Badge'}
       </h3>
 
       {/* Badge Description */}
       <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-        {badgeData.description}
+        {badgeData.description || ''}
       </p>
 
       {/* Progress Bar (si pas encore gagné) */}

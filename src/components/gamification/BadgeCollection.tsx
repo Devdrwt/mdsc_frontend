@@ -62,7 +62,7 @@ export default function BadgeCollection({
       const earnedIds = new Set(userBadges.map(ub => ub.badgeId));
       if (!earnedIds.has(badge.id)) {
         try {
-          const progress = await badgeService.getBadgeProgress(badge.id);
+          const progress = await badgeService.getBadgeProgress(badge.id.toString());
           progressMap[badge.id] = progress;
         } catch (error) {
           progressMap[badge.id] = 0;

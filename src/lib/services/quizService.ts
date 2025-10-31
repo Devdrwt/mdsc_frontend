@@ -27,6 +27,22 @@ export class QuizService {
   }
 
   /**
+   * Créer un nouveau quiz
+   */
+  static async createQuiz(quiz: Partial<Quiz> & { 
+    title: string; 
+    course_id?: number; 
+    lesson_id?: number;
+    questions?: Partial<QuizQuestion>[];
+  }): Promise<Quiz> {
+    const response = await apiRequest('/quizzes', {
+      method: 'POST',
+      body: JSON.stringify(quiz),
+    });
+    return response.data;
+  }
+
+  /**
    * Soumettre une tentative de quiz
    */
   static async submitAttempt(

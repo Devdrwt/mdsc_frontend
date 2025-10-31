@@ -48,7 +48,7 @@ export default function ModuleCatalog() {
 
   const handleEnroll = async (courseId: number) => {
     try {
-      await EnrollmentService.enrollInCourse(courseId.toString());
+      await EnrollmentService.enrollInCourse(courseId);
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours');
       loadCourses();
     } catch (error: any) {

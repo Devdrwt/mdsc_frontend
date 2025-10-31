@@ -21,13 +21,13 @@ export default function CoursePlayer({
   className = '',
 }: CoursePlayerProps) {
   const router = useRouter();
-  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(
-    initialModuleId || (course.modules && course.modules.length > 0 ? course.modules[0].id : null)
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(
+    initialModuleId ? parseInt(initialModuleId, 10) : (course.modules && course.modules.length > 0 ? course.modules[0].id : null)
   );
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(
-    initialLessonId || null
+  const [selectedLessonId, setSelectedLessonId] = useState<number | null>(
+    initialLessonId ? parseInt(initialLessonId, 10) : null
   );
-  const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
   const [courseProgress, setCourseProgress] = useState(0);
 
   useEffect(() => {
@@ -37,11 +37,10 @@ export default function CoursePlayer({
   const loadProgress = async () => {
     try {
       const progress = await progressService.getCourseProgress(course.id);
-      setCourseProgress(progress.progress);
+      setCourseProgress(progress.progress_percentage || 0);
       
-      if (progress.completedLessons) {
-        setCompletedLessons(new Set(progress.completedLessons));
-      }
+      // Note: completed_lessons est un nombre total, pas un array
+      // Pour obtenir la liste, il faudrait une autre API call
     } catch (error) {
       console.error('Erreur lors du chargement de la progression:', error);
     }
@@ -156,7 +155,7 @@ export default function CoursePlayer({
                       )}
                     </div>
                     <p className="text-xs text-gray-500 mb-2">
-                      {module.lessons?.length || 0} leçons • {module.duration || 0} min
+                      {module.lessons?.length || 0} leçons • {module.lessons?.reduce((sum, l) => sum + (l.duration || 0), 0) || 0} min
                     </p>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div

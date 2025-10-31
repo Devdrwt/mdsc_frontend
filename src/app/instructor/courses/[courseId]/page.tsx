@@ -39,7 +39,7 @@ export default function InstructorCourseDetailPage() {
           const m = await moduleService.getCourseModules(courseIdNum);
           setModules(m);
           try {
-            const media = await mediaService.getCourseMediaFiles(courseIdNum);
+            const media = await mediaService.getCourseMedia(courseIdNum.toString());
             setCourseMedia(media);
           } catch {}
         }

@@ -63,10 +63,10 @@ export default function QuizComponent({
     }
   };
 
-  const handleAnswerChange = (questionId: string, answer: string | string[]) => {
+  const handleAnswerChange = (questionId: string | number, answer: string | string[]) => {
     setAnswers((prev) => ({
       ...prev,
-      [questionId]: answer,
+      [String(questionId)]: answer,
     }));
   };
 
@@ -85,10 +85,7 @@ export default function QuizComponent({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const attempt = await quizService.submitQuizAttempt(quizId, {
-        answers,
-        timeSpent: startTime ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000) : 0,
-      });
+      const attempt = await quizService.submitAttempt(quizId, answers);
       
       setAttemptResult(attempt);
       onComplete?.(attempt);

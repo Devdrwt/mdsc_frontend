@@ -1,27 +1,25 @@
 // Export de tous les services
 export * from './authService';
 import { apiRequest } from './api';
-export { default as CourseService } from './courseService';
-export { default as QuizService } from './quizService';
-export { default as GamificationService } from './gamificationService';
-export { default as AnalyticsService } from './analyticsService';
-export { default as AIService } from './aiService';
-export { default as NotificationService } from './notificationService';
-export { default as CertificateService } from './certificateService';
-export { default as FileService } from './fileService';
-export { default as MessageService } from './messageService';
-export { default as EvaluationService } from './evaluationService';
-export { default as ProfessionalService } from './professionalService';
+export { CourseService } from './courseService';
+export { QuizService, quizService } from './quizService';
+export { GamificationService, gamificationService } from './gamificationService';
+export { AnalyticsService } from './analyticsService';
+export { AIService } from './aiService';
+export { NotificationService } from './notificationService';
+export { CertificateService, certificateService } from './certificateService';
+export { FileService } from './fileService';
+export { MessageService } from './messageService';
+export { EvaluationService } from './evaluationService';
+export { ProfessionalService } from './professionalService';
 export * from './chatIAService';
 
 // Nouveaux services selon architecture
 export { ModuleService, moduleService } from './moduleService';
 export { MediaService, mediaService } from './mediaService';
 export { BadgeService, badgeService } from './badgeService';
-export { CertificateService as NewCertificateService, certificateService } from './certificateService';
 export { ProgressService, progressService } from './progressService';
-export { QuizService as NewQuizService, quizService } from './quizService';
-export { GamificationService, gamificationService } from './gamificationService';
+export { EnrollmentService } from './enrollmentService';
 
 // Export de l'API de base
 export { default as api } from './api';
@@ -45,8 +43,8 @@ export type {
 } from './authService';
 
 export type { 
-  Course, 
-  Lesson, 
+  Course as ServiceCourse,
+  Lesson as ServiceLesson, 
   Enrollment, 
   Attachment, 
   CourseFilter, 
@@ -58,20 +56,6 @@ export type {
   CourseReview, 
   CourseStats 
 } from './courseService';
-
-export type { 
-  Quiz, 
-  QuizQuestion, 
-  QuizOption, 
-  QuizAttempt, 
-  QuizAnswer, 
-  CreateQuizData, 
-  UpdateQuizData, 
-  CreateQuestionData, 
-  UpdateQuestionData, 
-  QuizStats, 
-  QuizAnalytics 
-} from './quizService';
 
 // Gamification types from gamificationService.ts
 export type { 
@@ -157,19 +141,6 @@ export type {
   NotificationExport 
 } from './notificationService';
 
-export type { 
-  Certificate, 
-  CertificateMetadata, 
-  CertificateTemplate, 
-  CertificateVerification, 
-  CertificateStats, 
-  CreateCertificateData, 
-  UpdateCertificateData, 
-  CreateCertificateTemplateData, 
-  UpdateCertificateTemplateData, 
-  CertificateFilter, 
-  CertificateExport 
-} from './certificateService';
 
 export type { 
   FileUpload, 

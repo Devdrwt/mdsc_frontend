@@ -145,7 +145,7 @@ export interface CourseStats {
 // Service principal
 export class CourseService {
   // Récupérer tous les cours
-  static async getAllCourses(filters?: CourseFilter): Promise<Course[]> {
+  static async getAllCourses(filters?: CourseFilter): Promise<any> {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
     if (filters?.level) params.append('level', filters.level);
@@ -156,7 +156,7 @@ export class CourseService {
     const response = await apiRequest(`/courses?${params.toString()}`, {
       method: 'GET',
     });
-    return response.data;
+    return response;
   }
 
   // Récupérer un cours par ID

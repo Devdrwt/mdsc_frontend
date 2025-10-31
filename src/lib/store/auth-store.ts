@@ -57,7 +57,10 @@ export const useAuthStore = create<AuthStore>()(
               role: getUserRoles().includes('admin') ? 'admin' : 
                    getUserRoles().includes('instructor') ? 'instructor' : 'student',
               organization: keycloakUser?.organization || '',
+              isEmailVerified: true,
+              isActive: true,
               createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
             };
 
             set({
@@ -141,7 +144,10 @@ export const useAuthStore = create<AuthStore>()(
                 role: getUserRoles().includes('admin') ? 'admin' : 
                      getUserRoles().includes('instructor') ? 'instructor' : 'student',
                 organization: keycloakUser.organization || '',
+                isEmailVerified: true,
+                isActive: true,
                 createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
               };
 
               set({

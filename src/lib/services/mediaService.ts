@@ -160,6 +160,14 @@ export class MediaService {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   }
+
+  /**
+   * Valider le type de fichier
+   */
+  static validateFileType(file: File, contentType: string): boolean {
+    const allowedTypes = this.getAllowedFileTypes(contentType);
+    return allowedTypes.includes(file.type);
+  }
 }
 
 export const mediaService = MediaService;

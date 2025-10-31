@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Course } from '../../../types/course';
-import { courseService } from '../../../lib/services/courseService';
-import { courseService as modernCourseService } from '../../../lib/services/modernCourseService';
+import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import CoursePlayer from '../../../components/courses/CoursePlayer';
+import { Course } from '../../../types/course';
 
 export default function LearnCoursePage() {
   const params = useParams();
@@ -27,21 +26,12 @@ export default function LearnCoursePage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      // Charger le cours avec modules et leçons
-      try {
-        const data = await modernCourseService.getCourseById(courseId);
-        // Si le service moderne ne retourne pas les modules, charger séparément
-        if (!data.modules || data.modules.length === 0) {
-          // TODO: Charger les modules et leçons séparément via une API dédiée
-          // Pour l'instant, on garde le cours tel quel
-        }
-        setCourse(data);
-      } catch {
-        // Fallback sur l'ancien service
-        const data = await courseService.getCourseById(courseId);
-        setCourse(data);
-      }
+      const data = await CourseService.getCourseById(courseId);
+      // Convertir ServiceCourse vers Course
+      const convertedCourse: Course = data as any;
+      setCourse(convertedCourse);
     } catch (err: any) {
+      console.error('Erreur chargement cours:', err);
       setError(err.message || 'Erreur lors du chargement du cours');
     } finally {
       setLoading(false);

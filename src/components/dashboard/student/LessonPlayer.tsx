@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { progressService } from '../../../lib/services/progressService';
-import { QuizComponent } from '../../courses/QuizComponent';
+import QuizComponent from '../../courses/QuizComponent';
 import Modal from '../../ui/Modal';
 import Button from '../../ui/Button';
 

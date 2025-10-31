@@ -103,7 +103,7 @@ export default function MediaUpload({
 
   const handleRemove = () => {
     if (uploadedFile) {
-      mediaService.deleteMediaFile(uploadedFile.id).catch(console.error);
+      mediaService.deleteMediaFile(uploadedFile.id.toString()).catch(console.error);
     }
     setUploadedFile(null);
     setError(null);

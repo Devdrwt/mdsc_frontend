@@ -16,7 +16,7 @@ interface UseAutoProgressTrackingResult {
 interface UseAutoProgressTrackingOptions {
   enrollmentId?: string;
   courseId: string;
-  lessonId: string;
+  lessonId: string | number;
   onProgressUpdated?: (progress: number) => void;
   onCertificateGenerated?: () => void;
 }
@@ -51,7 +51,7 @@ export function useAutoProgressTracking({
 
     try {
       const progressData = await progressService.getEnrollmentProgress(Number(enrollmentId));
-      const lessonProgress = progressData.find(p => p.lesson_id === lessonId);
+      const lessonProgress = progressData.find(p => p.lesson_id === Number(lessonId));
       
       if (lessonProgress) {
         setProgress(lessonProgress.completion_percentage || 0);
@@ -123,7 +123,7 @@ export function useAutoProgressTracking({
       const courseProgress = await progressService.getCourseProgress(Number(courseId));
       
       // Vérifier si la progression est à 100%
-      const isComplete = courseProgress.progress === 100;
+      const isComplete = courseProgress.progress_percentage === 100;
 
       if (isComplete && !certificateGenerated) {
         // Générer le certificat automatiquement

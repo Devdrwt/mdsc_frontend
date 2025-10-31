@@ -60,7 +60,9 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             organization: user.organization,
             country: user.country,
             isEmailVerified: user.emailVerified || true,
-            createdAt: new Date().toISOString()
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           };
           
           console.log('Setting user in store:', userData);

@@ -19,7 +19,7 @@ export default function CertificateCard({
 }: CertificateCardProps) {
   const handleDownload = async () => {
     try {
-      const blob = await certificateService.downloadCertificate(certificate.id);
+      const blob = await certificateService.downloadCertificate(certificate.id.toString());
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

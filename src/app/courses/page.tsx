@@ -9,88 +9,6 @@ import { Search, Clock, Users } from 'lucide-react';
 import { Course } from '../../types';
 import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
 
-// Données de démonstration (en attendant l'intégration API)
-const sampleCourses: Course[] = [
-  {
-    id: '1',
-    title: 'Leadership et Management d\'Équipe',
-    description: 'Développez vos compétences en leadership et apprenez à gérer des équipes performantes dans un environnement dynamique.',
-    instructor: 'Dr. Kouassi Jean',
-    duration: '8 semaines',
-    students: 245,
-    rating: 4.8,
-    thumbnail: '/apprenant.png',
-    category: 'Management',
-    level: 'Intermédiaire',
-    price: 0,
-  },
-  {
-    id: '2',
-    title: 'Communication Efficace et Prise de Parole',
-    description: 'Maîtrisez l\'art de la communication professionnelle et développez votre aisance à l\'oral dans toutes les situations.',
-    instructor: 'Mme. Traoré Aminata',
-    duration: '6 semaines',
-    students: 189,
-    rating: 4.9,
-    thumbnail: '/apprenant.png',
-    category: 'Communication',
-    level: 'Débutant',
-    price: 15000,
-  },
-  {
-    id: '3',
-    title: 'Gestion de Projet Agile',
-    description: 'Apprenez les méthodologies agiles et devenez un chef de projet efficace capable de mener vos équipes au succès.',
-    instructor: 'Prof. N\'Guessan Paul',
-    duration: '10 semaines',
-    students: 167,
-    rating: 4.7,
-    thumbnail: '/apprenant.png',
-    category: 'Gestion de projet',
-    level: 'Avancé',
-    price: 25000,
-  },
-  {
-    id: '4',
-    title: 'Transformation Numérique',
-    description: 'Comprenez les enjeux de la transformation digitale et apprenez à piloter le changement dans votre organisation.',
-    instructor: 'M. Koné Ibrahim',
-    duration: '7 semaines',
-    students: 203,
-    rating: 4.6,
-    thumbnail: '/apprenant.png',
-    category: 'Technologie',
-    level: 'Intermédiaire',
-    price: 0,
-  },
-  {
-    id: '5',
-    title: 'Formation de Formateurs',
-    description: 'Devenez un formateur professionnel et apprenez les techniques pédagogiques modernes pour transmettre efficacement vos connaissances.',
-    instructor: 'Dr. Diabaté Fatou',
-    duration: '12 semaines',
-    students: 134,
-    rating: 4.8,
-    thumbnail: '/apprenant.png',
-    category: 'Pédagogie',
-    level: 'Avancé',
-    price: 20000,
-  },
-  {
-    id: '6',
-    title: 'Initiation à l\'Apprentissage en Ligne',
-    description: 'Découvrez les fondamentaux de l\'e-learning et apprenez à tirer le meilleur parti des plateformes de formation en ligne.',
-    instructor: 'Mme. Ouattara Mariam',
-    duration: '4 semaines',
-    students: 312,
-    rating: 4.9,
-    thumbnail: '/apprenant.png',
-    category: 'E-learning',
-    level: 'Débutant',
-    price: 0,
-  },
-];
-
 const categories = [
   'Toutes les catégories',
   'Management',
@@ -172,7 +90,7 @@ export default function CoursesPage() {
         const response = await CourseService.getAllCourses();
         
         // Extraire les cours de la réponse
-        const serviceCourses = response.courses || (Array.isArray(response) ? response : []);
+        const serviceCourses = response.courses || (Array.isArray(response.data) ? response.data : []);
         const convertedCourses = Array.isArray(serviceCourses) 
           ? serviceCourses.map(convertToCourse)
           : [];

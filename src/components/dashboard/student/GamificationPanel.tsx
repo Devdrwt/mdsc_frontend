@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Trophy, Award, Target, Star, TrendingUp, Users, Clock, BookOpen } from 'lucide-react';
-import { gamificationService, UserProgress, Badge, LeaderboardEntry } from '../../../lib/services/gamificationService';
+import { gamificationService, UserProgress, LeaderboardEntry } from '../../../lib/services/gamificationService';
+import { Badge } from '../../../types';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { BadgeCollection } from '../../../components/gamification';
 
@@ -30,7 +31,7 @@ export default function GamificationPanel() {
         setBadges(availableBadges);
 
         // Charger le classement
-        const leaderboardData = await gamificationService.getLeaderboard(10);
+        const leaderboardData = await gamificationService.getLeaderboard({ limit: 10 });
         setLeaderboard(leaderboardData);
 
       } catch (error) {
@@ -51,10 +52,15 @@ export default function GamificationPanel() {
     );
   }
 
-  // Extraire les points du format de réponse de l'API
-  // Les points peuvent être un nombre ou un objet { total: number }
-  const userPoints = typeof progress?.points === 'object' && progress.points ? (progress.points as any).total : (progress?.points || 0);
-  const currentLevel = userPoints ? gamificationService.calculateLevel(userPoints) : { level: 1, levelName: 'Débutant', pointsToNext: 100 };
+  // Utiliser les données de progress directement
+  const userPoints = progress?.total_xp || 0;
+  const level = progress?.current_level || 1;
+  const levelNames = ['Débutant', 'Intermédiaire', 'Avancé', 'Expert', 'Maître'];
+  const currentLevel = {
+    level: level,
+    levelName: levelNames[Math.min(level - 1, levelNames.length - 1)],
+    pointsToNext: progress?.xp_for_next_level || 100
+  };
   const userRank = Array.isArray(leaderboard) ? leaderboard.findIndex(entry => entry.userId === user?.id?.toString()) + 1 : 0;
 
   return (
@@ -98,7 +104,7 @@ export default function GamificationPanel() {
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">
           <Award className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">{progress?.badges?.length || badges?.length || 0}</div>
+          <div className="text-2xl font-bold text-gray-900">{progress?.badges_earned || badges?.length || 0}</div>
           <div className="text-sm text-gray-500">Badges obtenus</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 text-center">
@@ -151,14 +157,14 @@ export default function GamificationPanel() {
                          <BookOpen className="h-5 w-5 text-blue-500" />
                          <span className="text-sm font-medium">Cours terminés</span>
                        </div>
-                       <span className="font-bold text-gray-900">{progress.stats?.coursesCompleted || progress.statistics?.coursesCompleted || 0}</span>
+                       <span className="font-bold text-gray-900">{progress?.courses_completed || 0}</span>
                      </div>
                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                        <div className="flex items-center space-x-3">
                          <Target className="h-5 w-5 text-green-500" />
                          <span className="text-sm font-medium">Quiz réussis</span>
                        </div>
-                       <span className="font-bold text-gray-900">{progress.stats?.quizzesPassed || progress.statistics?.quizzesPassed || 0}</span>
+                       <span className="font-bold text-gray-900">{progress?.quizzes_passed || 0}</span>
                       </div>
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -238,7 +244,7 @@ export default function GamificationPanel() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-900">{entry.points || 0} pts</p>
+                        <p className="font-bold text-gray-900">{entry.total_xp || 0} pts</p>
                         <p className="text-sm text-gray-500">Niveau {entry.level}</p>
                       </div>
                     </div>

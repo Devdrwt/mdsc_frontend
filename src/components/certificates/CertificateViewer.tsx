@@ -22,7 +22,7 @@ export default function CertificateViewer({
   const handleDownload = async () => {
     setLoading(true);
     try {
-      const blob = await certificateService.downloadCertificate(certificate.id);
+      const blob = await certificateService.downloadCertificate(certificate.id.toString());
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

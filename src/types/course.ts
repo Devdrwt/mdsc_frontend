@@ -206,6 +206,8 @@ export interface QuizAttempt {
   quizId?: string | number;
   passed?: boolean;
   completedAt?: string;
+  timeSpent?: number; // Pour compatibilité
+  badgesEarned?: Badge[]; // Badges obtenus
 }
 
 export interface Badge {

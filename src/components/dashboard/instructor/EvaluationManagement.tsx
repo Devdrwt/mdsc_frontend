@@ -489,7 +489,19 @@ export default function EvaluationManagement() {
                   initialQuiz={undefined}
                   onSave={async (quiz) => {
                     try {
-                      await quizService.createQuiz(quiz);
+                      const quizData = {
+                        ...quiz,
+                        course_id: parseInt(selectedCourseId, 10),
+                        questions: quiz.questions.map((q, idx) => ({
+                          question_text: q.question_text,
+                          question_type: q.question_type,
+                          options: q.options,
+                          correct_answer: q.correct_answer,
+                          points: q.points,
+                          order_index: idx + 1
+                        }))
+                      };
+                      await quizService.createQuiz(quizData as any);
                       setShowCreateModal(false);
                       setSelectedCourseId('');
                       loadEvaluations();

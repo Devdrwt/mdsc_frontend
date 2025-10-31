@@ -1,21 +1,23 @@
 // Types pour les cours (selon nouvelle architecture)
 export interface Course {
-  id: string;
+  id: number | string; // Supporté pour compatibilité
   title: string;
   slug: string;
   description: string;
   shortDescription?: string;
-  category: 'sante' | 'education' | 'gouvernance' | 'environnement' | 'economie';
-  level: 'debutant' | 'intermediaire' | 'avance';
-  duration: number; // en minutes
+  category: 'sante' | 'education' | 'gouvernance' | 'environnement' | 'economie' | string;
+  level: 'debutant' | 'intermediaire' | 'avance' | string;
+  duration: number | string; // en minutes ou string "X semaines"
   language: string;
   thumbnail_url?: string;
-  instructor: {
+  thumbnail?: string; // Alias pour CourseCard
+  instructor: string | {
     id: string;
     name: string;
     avatar?: string;
   };
-  prerequisite_course_id?: string;
+  students?: number; // Alias pour enrollment_count pour CourseCard
+  prerequisite_course_id?: string | number;
   is_published: boolean;
   enrollment_count: number;
   rating: number;
@@ -26,8 +28,8 @@ export interface Course {
 
 // Module selon architecture
 export interface Module {
-  id: string;
-  course_id: string;
+  id: number;
+  course_id: number;
   title: string;
   description?: string;
   order_index: number;
@@ -35,12 +37,13 @@ export interface Module {
   image_url?: string; // Image d'identification du module
   lessons?: Lesson[];
   createdAt?: string;
+  duration?: number; // Pour compatibilité
 }
 
 // Leçon selon architecture
 export interface Lesson {
-  id: string;
-  module_id: string;
+  id: number;
+  module_id: number;
   title: string;
   content_type: 'video' | 'text' | 'quiz' | 'h5p' | 'forum' | 'assignment' | 'document' | 'audio' | 'presentation';
   media_file_id?: string;

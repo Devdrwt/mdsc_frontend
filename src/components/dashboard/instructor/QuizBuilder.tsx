@@ -208,6 +208,7 @@ export default function QuizBuilder({
       <FormSection title="Informations générales" icon={FileQuestion}>
         <div className="space-y-4">
           <FormInput
+            name="title"
             label="Titre du quiz"
             type="text"
             value={formData.title}

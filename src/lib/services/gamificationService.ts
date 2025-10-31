@@ -27,11 +27,13 @@ export class GamificationService {
   static async getUserProgress(userId?: string): Promise<UserProgress> {
     try {
       const userXP = await this.getUserXP(userId);
+      // UserXP a current_level et xp_to_next_level, pas xp_in_current_level/xp_for_next_level
+      const xpInLevel = userXP.total_xp % 100; // Calcul approximatif
       return {
         total_xp: userXP.total_xp || 0,
         current_level: userXP.current_level || 1,
-        xp_in_current_level: userXP.xp_in_current_level || 0,
-        xp_for_next_level: userXP.xp_for_next_level || 100,
+        xp_in_current_level: xpInLevel,
+        xp_for_next_level: userXP.xp_to_next_level || 100,
         badges_earned: 0, // TODO: Récupérer depuis l'API
         courses_completed: 0, // TODO: Récupérer depuis l'API
         quizzes_passed: 0, // TODO: Récupérer depuis l'API

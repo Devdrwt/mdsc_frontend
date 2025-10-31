@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 
 interface RecentCoursesProps {
   courses: Course[];
-  onCourseClick?: (courseId: string) => void;
+  onCourseClick?: (courseId: string | number) => void;
 }
 
 export default function RecentCourses({ courses, onCourseClick }: RecentCoursesProps) {
@@ -66,7 +66,7 @@ export default function RecentCourses({ courses, onCourseClick }: RecentCoursesP
                       {course.title}
                     </h4>
                     <p className="text-sm text-mdsc-gray mt-1">
-                      Par {course.instructor}
+                      Par {typeof course.instructor === 'string' ? course.instructor : course.instructor?.name || 'Instructeur'}
                     </p>
                     
                     {/* Métadonnées */}
