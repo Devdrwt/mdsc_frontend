@@ -30,22 +30,16 @@ export default function CourseDetailPage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Chargement du cours avec slug:', slug);
       
       // Si le slug est un nombre, utiliser getCourseById, sinon getCourseBySlug
       const isNumeric = !isNaN(Number(slug));
-      console.log('🔍 Slug est numérique?', isNumeric);
-      
       const data = isNumeric 
         ? await CourseService.getCourseById(slug)
         : await CourseService.getCourseBySlug(slug);
       
-      console.log('📦 Cours chargé:', data);
-      console.log('🔍 ID du cours:', data.id, 'Type:', typeof data.id);
-      console.log('🔍 Toutes les clés:', Object.keys(data));
       setCourse(data);
     } catch (err: any) {
-      console.error('❌ Erreur chargement cours:', err);
+      console.error('Erreur chargement cours:', err);
       setError(err.message || 'Erreur lors du chargement du cours');
       toast.error('Erreur', err.message || 'Impossible de charger le cours');
     } finally {
@@ -54,16 +48,18 @@ export default function CourseDetailPage() {
   };
 
   const handleEnroll = async () => {
-    if (!course) return;
+    if (!course) {
+      toast.error('Erreur', 'Cours non chargé');
+      return;
+    }
     
     try {
-      console.log('📝 Inscription au cours:', course.id);
-      await EnrollmentService.enrollInCourse(course.id.toString());
+      const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+      await EnrollmentService.enrollInCourse(courseId);
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
-      setShowPlayer(true);
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
-      console.error('❌ Erreur inscription:', err);
+      console.error('Erreur inscription:', err);
       toast.error('Erreur', err.message || 'Impossible de s\'inscrire au cours');
     }
   };

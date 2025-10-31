@@ -110,9 +110,6 @@ const levels = [
 
 // Fonction pour convertir ServiceCourse en Course (pour CourseCard)
 const convertToCourse = (serviceCourse: ServiceCourse): any => {
-  console.log('🔄 Conversion cours:', serviceCourse);
-  console.log('🔗 Slug brut:', serviceCourse.slug, 'ID:', serviceCourse.id);
-  
   // Convertir la durée en string pour CourseCard
   const durationInWeeks = Math.ceil((serviceCourse.duration || 0) / 60 / 7); // Convertir minutes en semaines
   const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
@@ -136,7 +133,7 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     instructorData = { id: '', name: 'Instructeur' };
   }
 
-  const converted = {
+  return {
     id: serviceCourse.id,
     title: serviceCourse.title,
     slug: serviceCourse.slug || serviceCourse.id, // Utiliser le slug s'il existe, sinon l'id
@@ -157,9 +154,6 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     students: serviceCourse.totalStudents || 0,
     price: serviceCourse.price || 0,
   };
-  
-  console.log('✅ Cours converti:', converted);
-  return converted;
 };
 
 export default function CoursesPage() {
@@ -175,21 +169,17 @@ export default function CoursesPage() {
     const loadCourses = async () => {
       try {
         setIsLoading(true);
-        console.log('🔄 Chargement des cours depuis l\'API...');
         const response = await CourseService.getAllCourses();
-        console.log('📦 Réponse API:', response);
         
         // Extraire les cours de la réponse
         const serviceCourses = response.courses || (Array.isArray(response) ? response : []);
-        console.log('📚 Cours extraits:', serviceCourses.length, 'cours');
-        
         const convertedCourses = Array.isArray(serviceCourses) 
           ? serviceCourses.map(convertToCourse)
           : [];
-        console.log('✅ Cours convertis:', convertedCourses.length, 'cours');
+        
         setCourses(convertedCourses);
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des cours:', error);
+        console.error('Erreur lors du chargement des cours:', error);
         setCourses([]);
       } finally {
         setIsLoading(false);

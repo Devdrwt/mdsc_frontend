@@ -92,10 +92,6 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   }
   
   if (!response.ok) {
-    // Log temporaire pour identifier toutes les routes 404
-    if (response.status === 404) {
-      console.error(`❌ [404] ${response.url}`);
-    }
     const error = new ApiError(
       data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
       response.status,

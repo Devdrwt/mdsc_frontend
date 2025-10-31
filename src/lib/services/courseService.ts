@@ -164,7 +164,6 @@ export class CourseService {
     const response = await apiRequest(`/courses/${id}`, {
       method: 'GET',
     });
-    console.log('🔍 Response getCourseById:', response);
     // Le backend renvoie { course, modules, lessons, quizzes }
     return response.data.course || response.data;
   }
@@ -174,7 +173,6 @@ export class CourseService {
     const response = await apiRequest(`/courses/slug/${slug}`, {
       method: 'GET',
     });
-    console.log('🔍 Response getCourseBySlug:', response);
     // Le backend renvoie { course, modules, lessons, quizzes }
     return response.data.course || response.data;
   }
