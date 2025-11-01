@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { forgotPassword, ApiError } from '../../lib/services/authService';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
@@ -24,13 +25,20 @@ export default function ForgotPasswordForm() {
     setIsLoading(true);
 
     try {
-      // TODO: Intégrer avec l'API pour l'envoi d'email de réinitialisation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await forgotPassword(email);
       
-      setIsEmailSent(true);
+      if (response.success) {
+        setIsEmailSent(true);
+      } else {
+        setError(response.message || 'Erreur lors de l\'envoi de l\'email.');
+      }
     } catch (err) {
-      setError('Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
       console.error('Password reset error:', err);
+      if (err instanceof ApiError) {
+        setError(err.message || 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
+      } else {
+        setError('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+      }
     } finally {
       setIsLoading(false);
     }

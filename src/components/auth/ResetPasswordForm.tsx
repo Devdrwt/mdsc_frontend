@@ -222,9 +222,9 @@ function ResetPasswordContent() {
               </p>
               <ul className="text-blue-700 space-y-1">
                 <li>• Au moins 8 caractères</li>
-                <li>• Contient des lettres majuscules et minuscules</li>
+                <li>• Contient au moins une majuscule</li>
+                <li>• Contient au moins une minuscule</li>
                 <li>• Contient au moins un chiffre</li>
-                <li>• Contient au moins un caractère spécial</li>
               </ul>
             </div>
           </div>
