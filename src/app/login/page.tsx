@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Image de fond avec opacité réduite */}
+      {/* Image de fond pour l'étudiant */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
         style={{
-          backgroundImage: 'url(/arri_plan.png)'
+          backgroundImage: 'url(/Colleagues.png)'
         }}
       />
       

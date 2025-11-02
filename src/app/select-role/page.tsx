@@ -98,36 +98,45 @@ export default function SelectRolePage() {
                 key={role.type}
                 className={`bg-white rounded-2xl shadow-lg border-2 ${role.borderColor} ${role.hoverBorder} hover:shadow-2xl transition-all duration-300 overflow-hidden group`}
               >
-                {/* Card Header with Gradient */}
-                <div className={`bg-gradient-to-br ${role.bgGradient} text-white p-8 text-center`}>
-                  {/* Avatar Circle */}
-                  <div className="inline-flex items-center justify-center w-32 h-32 bg-white rounded-full mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                    <div className="w-28 h-28 rounded-full flex items-center justify-center" style={{ backgroundColor: role.bgColor }}>
-                      {role.type === 'student' ? (
-                        // Avatar Apprenant
-                        <div className="relative">
-                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                            <Icon className="h-10 w-10" style={{ color: role.bgColor }} />
+                {/* Card Header with Gradient and Background Image */}
+                <div className={`bg-gradient-to-br ${role.bgGradient} text-white p-8 text-center relative overflow-hidden`}>
+                  {/* Background Image */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+                    style={{
+                      backgroundImage: role.type === 'student' ? 'url(/Colleagues.png)' : 'url(/Woman.png)'
+                    }}
+                  />
+                  <div className="relative z-10">
+                    {/* Avatar Circle */}
+                    <div className="inline-flex items-center justify-center w-32 h-32 bg-white rounded-full mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                      <div className="w-28 h-28 rounded-full flex items-center justify-center" style={{ backgroundColor: role.bgColor }}>
+                        {role.type === 'student' ? (
+                          // Avatar Apprenant
+                          <div className="relative">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                              <Icon className="h-10 w-10" style={{ color: role.bgColor }} />
+                            </div>
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
+                              <BookOpen className="h-5 w-5" style={{ color: role.bgColor }} />
+                            </div>
                           </div>
-                          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
-                            <BookOpen className="h-5 w-5" style={{ color: role.bgColor }} />
+                        ) : (
+                          // Avatar Formateur
+                          <div className="relative">
+                            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                              <Icon className="h-10 w-10" style={{ color: role.bgColor }} />
+                            </div>
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
+                              <Award className="h-5 w-5" style={{ color: role.bgColor }} />
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        // Avatar Formateur
-                        <div className="relative">
-                          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                            <Icon className="h-10 w-10" style={{ color: role.bgColor }} />
-                          </div>
-                          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md">
-                            <Award className="h-5 w-5" style={{ color: role.bgColor }} />
-                          </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
+                    <h2 className="text-3xl font-bold mb-2">{role.title}</h2>
+                    <p className="text-white text-opacity-90">{role.subtitle}</p>
                   </div>
-                  <h2 className="text-3xl font-bold mb-2">{role.title}</h2>
-                  <p className="text-white text-opacity-90">{role.subtitle}</p>
                 </div>
 
                 {/* Card Body */}
