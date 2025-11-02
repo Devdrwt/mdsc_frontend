@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '../ui/Button';
 import EmailVerification from './EmailVerification';
 import { register, ApiError } from '../../lib/services/authService';
 import { countries } from '../../lib/constants/countries';
-import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, AlertCircle, ArrowLeft, GraduationCap, Users } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, AlertCircle, GraduationCap, Users } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 
 interface FormData {
@@ -233,47 +232,36 @@ const SimpleRegisterForm = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl w-full space-y-8">
-        {/* En-tête */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 rounded-lg hover:bg-orange-200 transition-colors"
-              aria-label="Retour à l'accueil"
-              title="Retour à l'accueil"
-            >
-              <ArrowLeft className="h-5 w-5 text-mdsc-blue-dark" />
-            </button>
-            <h2 className="text-3xl font-bold text-mdsc-blue-dark">
-              Créer un compte
-            </h2>
-          </div>
-          <p className="mt-2 text-sm text-gray-600">
-            Rejoignez la communauté MdSC et commencez votre parcours d'apprentissage
-          </p>
-        </div>
+    <div className="w-full">
+      {/* En-tête */}
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-teal-600">
+          Créer un compte
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Rejoignez la communauté MdSC et commencez votre parcours d'apprentissage
+        </p>
+      </div>
 
-        {/* Badge du rôle sélectionné */}
-        <div className="text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-            {selectedRole === 'student' ? (
-              <>
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Inscription en tant qu'Apprenant
-              </>
-            ) : (
-              <>
-                <Users className="h-4 w-4 mr-2" />
-                Inscription en tant que Formateur
-              </>
-            )}
-          </div>
+      {/* Badge du rôle sélectionné */}
+      <div className="text-center mt-4">
+        <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-800 rounded-full text-sm font-medium">
+          {selectedRole === 'student' ? (
+            <>
+              <GraduationCap className="h-4 w-4 mr-2" />
+              Inscription en tant qu'Apprenant
+            </>
+          ) : (
+            <>
+              <Users className="h-4 w-4 mr-2" />
+              Inscription en tant que Formateur
+            </>
+          )}
         </div>
+      </div>
 
-        {/* Formulaire */}
-        <div className="bg-white shadow-lg rounded-lg p-8">
+      {/* Formulaire */}
+      <div className="mt-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Message d'erreur global */}
             {error && (
@@ -608,16 +596,14 @@ const SimpleRegisterForm = () => {
 
             {/* Bouton de soumission */}
             <div className="pt-4">
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
+                className="w-full bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -626,7 +612,7 @@ const SimpleRegisterForm = () => {
                 ) : (
                   'Créer mon compte'
                 )}
-              </Button>
+              </button>
             </div>
 
             {/* Séparateur "Ou" */}
@@ -650,7 +636,7 @@ const SimpleRegisterForm = () => {
             <div className="text-center mt-6">
               <p className="text-sm text-gray-600">
                 Vous avez déjà un compte ?{' '}
-                <a href="/login" className="font-medium text-mdsc-blue-dark hover:text-mdsc-blue-primary">
+                <a href="/login" className="font-medium text-teal-600 hover:text-teal-700">
                   Se connecter
                 </a>
               </p>
@@ -659,19 +645,18 @@ const SimpleRegisterForm = () => {
         </div>
 
         {/* Note de sécurité */}
-        <div className="text-center">
+        <div className="text-center mt-4">
           <p className="text-xs text-gray-500">
             En créant un compte, vous acceptez nos{' '}
-            <a href="/terms" className="text-mdsc-blue-dark hover:underline">
+            <a href="/terms" className="text-teal-600 hover:underline">
               Conditions d'utilisation
             </a>{' '}
             et notre{' '}
-            <a href="/privacy" className="text-mdsc-blue-dark hover:underline">
+            <a href="/privacy" className="text-teal-600 hover:underline">
               Politique de confidentialité
             </a>
           </p>
         </div>
-      </div>
     </div>
   );
 };

@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '../ui/Button';
 import { useAuthStore } from '../../lib/stores/authStore';
 import { ApiError } from '../../lib/services/authService';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 
 export default function LoginForm() {
@@ -48,26 +47,15 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="card-mdsc">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => router.push('/')}
-              className="p-2 rounded-lg hover:bg-orange-200 transition-colors"
-              aria-label="Retour à l'accueil"
-              title="Retour à l'accueil"
-            >
-              <ArrowLeft className="h-5 w-5 text-mdsc-blue-dark" />
-            </button>
-            <h2 className="text-2xl font-bold text-mdsc-blue mb-0">
-              Se connecter
-            </h2>
-          </div>
-          <p className="text-gray-700">
-            Accédez à votre espace de formation
-          </p>
-        </div>
+    <div className="w-full">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-teal-600 mb-0">
+          Se connecter
+        </h2>
+        <p className="text-gray-600">
+          Accédez à votre espace de formation
+        </p>
+      </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-600 border border-red-700 rounded-lg flex items-center space-x-2">
@@ -91,7 +79,7 @@ export default function LoginForm() {
                 type="email"
                 autoComplete="email"
                 required
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 placeholder="votre@email.com"
               />
             </div>
@@ -111,7 +99,7 @@ export default function LoginForm() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 required
-                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue focus:border-transparent"
+                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 placeholder="••••••••"
               />
               <button
@@ -142,20 +130,19 @@ export default function LoginForm() {
             </div>
 
             <div className="text-sm">
-              <a href="/forgot-password" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-2 py-1 rounded transition-colors">
+              <a href="/forgot-password" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
                 Mot de passe oublié ?
               </a>
             </div>
           </div>
 
-          <Button
+          <button
             type="submit"
-            className="w-full"
-            loading={isLoading}
+            className="w-full bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isLoading}
           >
             {isLoading ? 'Connexion...' : 'Se connecter'}
-          </Button>
+          </button>
         </form>
 
         <div className="mt-6">
@@ -180,12 +167,11 @@ export default function LoginForm() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-700">
             Vous n'avez pas encore de compte ?{' '}
-            <a href="/select-role" className="font-medium text-mdsc-blue hover:bg-white/20 hover:text-mdsc-blue px-2 py-1 rounded transition-colors">
+            <a href="/select-role" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
               S'inscrire gratuitement
             </a>
           </p>
         </div>
-      </div>
     </div>
   );
 }
