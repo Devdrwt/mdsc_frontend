@@ -40,17 +40,17 @@ export default function Footer() {
               de la société civile pour renforcer leur crédibilité et leur innovation.
             </p>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2 text-sm text-white">
-                <MapPin className="h-4 w-4 text-mdsc-orange" />
-                <span>Abidjan, Côte d'Ivoire</span>
+              <div className="flex items-start space-x-2 text-sm text-white">
+                <MapPin className="h-4 w-4 text-mdsc-orange flex-shrink-0 mt-0.5" />
+                <span>Quartier Sikècodji Rue N°216, Carré 00350<br />U Boulevard des Armées<br />Direction Etoile Rouge, 2ème Rue à droite après le Carrefour Cossi<br />Boîte postale : 01 BP 414 Cotonou</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-white">
                 <Phone className="h-4 w-4 text-mdsc-orange" />
-                <span>+225 XX XX XX XX</span>
+                <span>(+229) 43 05 00 00</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-white">
                 <Mail className="h-4 w-4 text-mdsc-orange" />
-                <span>contact@mdsc.ci</span>
+                <span>info@mdscbenin.org</span>
               </div>
             </div>
           </div>
