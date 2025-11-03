@@ -230,7 +230,18 @@ export default function InstructorCourseDetailPage() {
                     e.preventDefault();
                     setSaving(true);
                     try {
-                      await courseService.updateCourse(courseIdParam, courseSettings as any);
+                      // Inclure les données existantes du cours pour éviter les erreurs de validation
+                      const updateData: any = {
+                        ...courseSettings,
+                        // Inclure les champs requis qui existent déjà dans le cours
+                        title: course?.title || course?.name || '',
+                        description: course?.description || course?.long_description || '',
+                        short_description: course?.short_description || course?.shortDescription || course?.description?.substring(0, 200) || '',
+                        // S'assurer que max_students est un entier positif si défini
+                        max_students: courseSettings.max_students && courseSettings.max_students > 0 ? courseSettings.max_students : undefined,
+                      };
+                      
+                      await courseService.updateCourse(courseIdParam, updateData);
                       success?.('Paramètres enregistrés avec succès');
                       const updated = await courseService.getCourseById(courseIdParam);
                       setCourse(updated);

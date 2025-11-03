@@ -68,25 +68,33 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
   const loadData = async () => {
     try {
       setLoading(true);
-      const [courseData, modulesData] = await Promise.all([
+      
+      // Charger les modules et les leçons en parallèle
+      const [courseData, modulesData, lessonsData] = await Promise.all([
         courseService.getCourseById(courseId),
         moduleService.getCourseModules(Number(courseId)),
+        courseService.getCourseLessons(courseId.toString()),
       ]);
-      // Les leçons peuvent être dans courseData.lessons ou dans les modules
-      const lessonsFromCourse = (courseData as any).lessons || [];
-      const lessonsFromModules = modulesData.flatMap(m => m.lessons || []);
-      const allLessons = lessonsFromCourse.length > 0 ? lessonsFromCourse : lessonsFromModules;
+      
+      console.log('📦 courseData:', courseData);
+      console.log('📦 modulesData:', modulesData);
+      console.log('📦 lessonsData:', lessonsData);
+      
+      // Les leçons sont maintenant récupérées directement via getCourseLessons
+      const allLessons = Array.isArray(lessonsData) ? lessonsData : [];
+      
+      console.log('✅ allLessons:', allLessons);
+      
       setLessons(allLessons);
       setModules(modulesData);
       setFormData(prev => ({ ...prev, order: allLessons.length + 1 }));
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
-      // Fallback: essayer de charger uniquement les modules
+      // En cas d'erreur, charger au moins les modules
       try {
         const modulesData = await moduleService.getCourseModules(Number(courseId));
         setModules(modulesData);
-        const lessonsFromModules = modulesData.flatMap(m => m.lessons || []);
-        setLessons(lessonsFromModules);
+        setLessons([]);
       } catch (err) {
         console.error('Erreur lors du chargement des modules:', err);
         setLessons([]);

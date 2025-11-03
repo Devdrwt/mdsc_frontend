@@ -9,6 +9,8 @@ export class ModuleService {
     const response = await apiRequest(`/modules/courses/${courseId}/modules`, {
       method: 'GET',
     });
+    console.log('📦 getCourseModules response:', response);
+    console.log('📦 getCourseModules data:', response.data);
     return response.data;
   }
 
@@ -19,7 +21,34 @@ export class ModuleService {
     const response = await apiRequest(`/modules/${moduleId}`, {
       method: 'GET',
     });
+    console.log('📦 getModule response:', response);
     return response.data;
+  }
+
+  /**
+   * Récupérer les leçons d'un module (pour instructeurs)
+   * Note: Le backend doit inclure les leçons dans la réponse de getModule ou getCourseModules
+   * pour que cela fonctionne. Sinon, il faut créer un endpoint spécifique.
+   */
+  static async getModuleLessons(moduleId: number): Promise<any[]> {
+    try {
+      // Essayer d'abord de récupérer le module complet qui pourrait inclure les leçons
+      const module = await this.getModule(moduleId);
+      console.log('📚 getModuleLessons - module:', module);
+      
+      // Vérifier si le module a des leçons dans sa réponse
+      if ((module as any).lessons && Array.isArray((module as any).lessons)) {
+        return (module as any).lessons;
+      }
+      
+      // Si pas de leçons dans le module, retourner un tableau vide
+      // Le backend doit être modifié pour inclure les leçons dans la réponse
+      console.warn('⚠️ Le module ne contient pas de leçons dans sa réponse. Le backend doit être modifié pour inclure les leçons pour les instructeurs.');
+      return [];
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération du module:', error);
+      return [];
+    }
   }
 
   /**

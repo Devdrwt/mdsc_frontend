@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Clock, Users, Star, Play, BookOpen, Award, User } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
@@ -14,6 +14,15 @@ export default function CourseCard({
   onEnroll, 
   showEnrollButton = true 
 }: CourseCardProps) {
+  // État pour gérer l'erreur de chargement d'image
+  const [imageError, setImageError] = useState(false);
+  
+  // Image par défaut si l'image du cours ne peut pas être chargée
+  const defaultImage = '/apprenant.png';
+  
+  // Utiliser l'image du cours ou l'image par défaut
+  const imageSrc = imageError || !course.thumbnail ? defaultImage : course.thumbnail;
+
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'Débutant':
@@ -45,9 +54,13 @@ export default function CourseCard({
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
         <img
-          src={course.thumbnail}
+          src={imageSrc}
           alt={course.title}
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={() => {
+            // Si l'image ne peut pas être chargée, utiliser l'image par défaut
+            setImageError(true);
+          }}
         />
         {/* Badge de niveau - en haut à droite */}
         <div className="absolute top-3 right-3">

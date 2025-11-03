@@ -405,7 +405,11 @@ export class CourseService {
     const response = await apiRequest(`/courses/${courseId}/lessons`, {
       method: 'GET',
     });
-    return response.data;
+    console.log('📚 getCourseLessons response:', response);
+    // Le backend peut renvoyer les leçons dans response.data ou response.data.data
+    const lessons = response.data?.lessons || response.data?.data || response.data || [];
+    console.log('📚 getCourseLessons lessons:', lessons);
+    return Array.isArray(lessons) ? lessons : [];
   }
 
   // Créer une leçon
