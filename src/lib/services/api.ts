@@ -102,19 +102,21 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   
   if (!response.ok) {
     // Logger l'erreur pour debug
-    console.error('❌ API Error:', {
+    const errorLog = {
       status: response.status,
-      url: response.url,
-      message: data.message || data.error,
+      url: response.url || 'URL unknown',
+      statusText: response.statusText,
+      message: data?.message || data?.error || 'No error message',
       data: data,
-      responseText: responseText.substring(0, 500) // Limiter la longueur du log
-    });
+      responseText: responseText ? responseText.substring(0, 500) : 'No response text'
+    };
+    console.error('❌ API Error:', errorLog);
     
     const error = new ApiError(
-      data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
+      data?.message || data?.error || `HTTP ${response.status}: ${response.statusText}`,
       response.status,
-      data.code,
-      data.details
+      data?.code,
+      data?.details
     );
     
     // Gérer les erreurs d'authentification
