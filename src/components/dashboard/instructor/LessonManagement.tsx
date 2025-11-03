@@ -359,23 +359,23 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
       {/* Modal de création/édition */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-mdsc-gold/10 rounded-lg">
                   <FileText className="h-5 w-5 text-mdsc-gold" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-gray-900">
                     {editingLesson ? 'Modifier la leçon' : 'Nouvelle leçon'}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Remplissez les informations de la leçon</p>
+                  <p className="text-sm text-gray-600">Remplissez les informations de la leçon</p>
                 </div>
               </div>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -386,7 +386,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
               {/* Titre et Description */}
               <div className="grid grid-cols-1 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Titre de la leçon *
                   </label>
                   <input
@@ -394,20 +394,20 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                     placeholder="Ex: Introduction aux bases de données"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Description
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors resize-none"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors resize-none"
                     placeholder="Description courte de la leçon..."
                   />
                 </div>
@@ -416,14 +416,14 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
               {/* Configuration de base */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Type de contenu *
                   </label>
                   <select
                     required
                     value={formData.content_type}
                     onChange={(e) => setFormData({ ...formData, content_type: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                   >
                     {CONTENT_TYPES.map(type => {
                       const Icon = type.icon;
@@ -437,13 +437,13 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Module (optionnel)
                   </label>
                   <select
                     value={formData.module_id}
                     onChange={(e) => setFormData({ ...formData, module_id: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                   >
                     <option value="">Aucun module (leçon directe)</option>
                     {modules.map(m => (
@@ -456,7 +456,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
               {/* Contenu selon le type */}
               {formData.content_type === 'text' ? (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Contenu HTML *
                   </label>
                   <textarea
@@ -464,30 +464,30 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     value={formData.content_text}
                     onChange={(e) => setFormData({ ...formData, content_text: e.target.value })}
                     rows={10}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors font-mono text-sm resize-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors font-mono text-sm resize-none"
                     placeholder="<div>Contenu HTML de la leçon...</div>"
                   />
                 </div>
               ) : (
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-900/30">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
                   <div className="flex items-center space-x-3 mb-4">
                     <Upload className="h-5 w-5 text-blue-600" />
                     <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white">Contenu média</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Téléchargez un fichier ou utilisez une URL</p>
+                      <h4 className="font-semibold text-gray-900">Contenu média</h4>
+                      <p className="text-sm text-gray-600">Téléchargez un fichier ou utilisez une URL</p>
                     </div>
                   </div>
 
                   <div className="space-y-4">
                     {/* Upload de fichier */}
                     <div>
-                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-blue-300 dark:border-blue-700 border-dashed rounded-xl cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all bg-white dark:bg-gray-800">
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-blue-300 border-dashed rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all bg-white">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           {uploadingMedia ? (
                             <>
                               <Loader className="h-12 w-12 text-blue-500 animate-spin" />
-                              <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">Upload en cours...</p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Veuillez patienter</p>
+                              <p className="mt-4 text-sm font-medium text-gray-700">Upload en cours...</p>
+                              <p className="mt-1 text-xs text-gray-500">Veuillez patienter</p>
                             </>
                           ) : mediaFile ? (
                             <>
@@ -501,8 +501,8 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                                       controls={false}
                                     />
                                   ) : formData.content_type === 'audio' ? (
-                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30">
-                                      <PlayCircle className="h-20 w-20 text-purple-600 dark:text-purple-400" />
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200">
+                                      <PlayCircle className="h-20 w-20 text-purple-600" />
                                     </div>
                                   ) : mediaFile.type.startsWith('image/') ? (
                                     <img 
@@ -511,26 +511,26 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                                       className="w-full h-full object-contain"
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/30 dark:to-indigo-800/30">
-                                      <FileText className="h-20 w-20 text-blue-600 dark:text-blue-400" />
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
+                                      <FileText className="h-20 w-20 text-blue-600" />
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-3">
-                                  <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                                <div className="p-3 bg-blue-100 rounded-full mb-3">
+                                  <FileText className="h-8 w-8 text-blue-600" />
                                 </div>
                               )}
                               
                               {/* Info fichier */}
                               <div className="space-y-2">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate px-2">
+                                <p className="text-sm font-medium text-gray-900 truncate px-2">
                                   {mediaFile.name}
                                 </p>
-                                <div className="flex items-center justify-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                                <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
                                   <span>📏 {(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
                                   <span>•</span>
-                                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
                                     {formData.content_type}
                                   </span>
                                 </div>
@@ -540,7 +540,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                                     setMediaFile(null);
                                     setMediaPreview('');
                                   }}
-                                  className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium flex items-center space-x-1 mx-auto"
+                                  className="mt-2 text-xs text-red-600 hover:text-red-700 font-medium flex items-center space-x-1 mx-auto"
                                 >
                                   <X className="h-3 w-3" />
                                   <span>Retirer ce fichier</span>
@@ -549,16 +549,16 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                             </>
                           ) : (
                             <>
-                              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                                <Upload className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+                              <div className="p-3 bg-blue-100 rounded-full">
+                                <Upload className="h-10 w-10 text-blue-600" />
                               </div>
-                              <p className="mt-4 text-sm font-medium text-gray-900 dark:text-white">
+                              <p className="mt-4 text-sm font-medium text-gray-900">
                                 Cliquez pour télécharger
                               </p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              <p className="mt-1 text-xs text-gray-500">
                                 ou glissez-déposez votre fichier ici
                               </p>
-                              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                              <p className="mt-2 text-xs text-gray-400 font-medium">
                                 {formData.content_type === 'video' && 'Formats: MP4, MOV, AVI'}
                                 {formData.content_type === 'audio' && 'Formats: MP3, WAV, OGG'}
                                 {formData.content_type === 'document' && 'Formats: PDF, DOC, DOCX'}
@@ -593,10 +593,10 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                       <>
                         <div className="relative">
                           <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                            <div className="w-full border-t border-gray-300"></div>
                           </div>
                           <div className="relative flex justify-center text-sm">
-                            <span className="px-3 bg-blue-50 dark:bg-blue-900/10 text-gray-700 dark:text-gray-300 font-medium">
+                            <span className="px-3 bg-blue-50 text-gray-700 font-medium">
                               OU
                             </span>
                           </div>
@@ -604,17 +604,17 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                         
                         {/* URL du contenu */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             URL du contenu
                           </label>
                           <input
                             type="url"
                             value={formData.content_url}
                             onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                             placeholder="https://..."
                           />
-                          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="mt-2 text-xs text-gray-500">
                             Saisissez l'URL si le fichier est hébergé ailleurs (YouTube, Vimeo, Dropbox, etc.)
                           </p>
                         </div>
@@ -626,50 +626,50 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
 
               {/* Aperçu du contenu */}
               {(formData.title || formData.description || formData.content_text || mediaPreview || formData.content_url) && (
-                <div className="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-6 border border-gray-200">
                   <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-lg">
-                      <Eye className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    <div className="p-2 bg-gray-200/50 rounded-lg">
+                      <Eye className="h-5 w-5 text-gray-600" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Aperçu de la leçon</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">Voir comment la leçon apparaîtra aux étudiants</p>
+                      <h4 className="text-lg font-semibold text-gray-900">Aperçu de la leçon</h4>
+                      <p className="text-sm text-gray-600">Voir comment la leçon apparaîtra aux étudiants</p>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4 shadow-sm">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 shadow-sm">
                     {formData.title && (
                       <div>
-                        <h5 className="font-bold text-xl text-gray-900 dark:text-white mb-2">{formData.title}</h5>
+                        <h5 className="font-bold text-xl text-gray-900 mb-2">{formData.title}</h5>
                       </div>
                     )}
                     {formData.description && (
                       <div>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{formData.description}</p>
+                        <p className="text-gray-700 leading-relaxed">{formData.description}</p>
                       </div>
                     )}
                     {formData.content_type === 'text' && formData.content_text && (
-                      <div className="prose max-w-none dark:prose-invert">
+                      <div className="prose max-w-none">
                         <div 
-                          className="text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50"
+                          className="text-gray-700 border border-gray-200 rounded-lg p-4 bg-gray-50"
                           dangerouslySetInnerHTML={{ __html: formData.content_text }}
                         />
                       </div>
                     )}
                     {(mediaPreview || formData.content_url) && formData.content_type !== 'text' && (
-                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50">
+                      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                         {formData.content_type === 'video' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                            <div className="flex items-center space-x-2 text-gray-900">
                               <Video className="h-6 w-6 text-blue-600" />
                               <span className="font-medium">Contenu vidéo</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                              <p className="text-sm text-blue-600 truncate">
                                 🔗 {formData.content_url}
                               </p>
                             )}
@@ -677,17 +677,17 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                         )}
                         {formData.content_type === 'document' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                            <div className="flex items-center space-x-2 text-gray-900">
                               <FileText className="h-6 w-6 text-red-600" />
                               <span className="font-medium">Document PDF</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                              <p className="text-sm text-blue-600 truncate">
                                 🔗 {formData.content_url}
                               </p>
                             )}
@@ -695,17 +695,17 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                         )}
                         {formData.content_type === 'audio' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                            <div className="flex items-center space-x-2 text-gray-900">
                               <PlayCircle className="h-6 w-6 text-purple-600" />
                               <span className="font-medium">Contenu audio</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                              <p className="text-sm text-blue-600 truncate">
                                 🔗 {formData.content_url}
                               </p>
                             )}
@@ -713,17 +713,17 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                         )}
                         {['presentation', 'quiz', 'h5p', 'assignment'].includes(formData.content_type) && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                            <div className="flex items-center space-x-2 text-gray-900">
                               <FileText className="h-6 w-6 text-orange-600" />
                               <span className="font-medium capitalize">{formData.content_type}</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                              <p className="text-sm text-gray-600">
                                 📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                              <p className="text-sm text-blue-600 truncate">
                                 🔗 {formData.content_url}
                               </p>
                             )}
@@ -731,18 +731,18 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                         )}
                       </div>
                     )}
-                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full">
+                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center space-x-1 text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
                         <Clock className="h-4 w-4" />
                         <span className="font-medium">{formData.duration || 0} min</span>
                       </div>
                       {formData.is_required && (
-                        <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                        <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                           Obligatoire
                         </span>
                       )}
                       {formData.is_published && (
-                        <span className="inline-flex items-center px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
+                        <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                           Publié
                         </span>
                       )}
@@ -754,7 +754,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
               {/* Durée et ordre */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Durée (minutes) *
                   </label>
                   <input
@@ -763,13 +763,13 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     min="1"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                     placeholder="15"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Ordre dans le cours *
                   </label>
                   <input
@@ -778,46 +778,46 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     min="1"
                     value={formData.order}
                     onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
-                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                     placeholder="1"
                   />
                 </div>
               </div>
 
               {/* Options */}
-              <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-6 border border-amber-100 dark:border-amber-900/30">
+              <div className="bg-amber-50/50 rounded-xl p-6 border border-amber-100">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="p-2 bg-amber-500/10 rounded-lg">
                     <Clock className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900 dark:text-white">Options d'affichage</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Contrôlez l'accès et la visibilité</p>
+                    <h4 className="font-semibold text-gray-900">Options d'affichage</h4>
+                    <p className="text-sm text-gray-600">Contrôlez l'accès et la visibilité</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                  <label className="flex items-center space-x-3 p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
                     <input
                       type="checkbox"
                       checked={formData.is_required}
                       onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                      className="rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
                     />
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">Leçon obligatoire</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Les étudiants doivent la compléter</div>
+                      <div className="font-medium text-gray-900">Leçon obligatoire</div>
+                      <div className="text-sm text-gray-500">Les étudiants doivent la compléter</div>
                     </div>
                   </label>
-                  <label className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                  <label className="flex items-center space-x-3 p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
                     <input
                       type="checkbox"
                       checked={formData.is_published}
                       onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                      className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                      className="rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
                     />
                     <div>
-                      <div className="font-medium text-gray-900 dark:text-white">Publier immédiatement</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">Rendre visible aux étudiants</div>
+                      <div className="font-medium text-gray-900">Publier immédiatement</div>
+                      <div className="text-sm text-gray-500">Rendre visible aux étudiants</div>
                     </div>
                   </label>
                 </div>
@@ -825,11 +825,11 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
             </form>
 
             {/* Footer avec boutons */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
+                className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
               >
                 Annuler
               </button>

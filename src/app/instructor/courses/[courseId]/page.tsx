@@ -98,7 +98,7 @@ export default function InstructorCourseDetailPage() {
             {(['modules', 'lessons', 'medias', 'settings'] as const).map(tab => (
               <button
                 key={tab}
-                className={`px-3 py-2 rounded-lg text-sm border ${activeTab === tab ? 'bg-gray-900 text-white' : 'bg-white'}`}
+                className={`px-3 py-2 rounded-lg text-sm border transition-colors ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900 : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50
                 onClick={() => setActiveTab(tab)}
               >
                 {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : 'Paramètres'}
@@ -107,7 +107,7 @@ export default function InstructorCourseDetailPage() {
           </div>
         </div>
 
-        {loading && (<div className="bg-white rounded-lg border p-6">Chargement...</div>)}
+        {loading && (<div className="bg-white rounded-lg border p-6 text-gray-700">Chargement...</div>)}
         {error && (<div className="bg-red-50 rounded-lg border border-red-200 p-6 text-red-700">{error}</div>)}
 
         {!loading && !error && (
@@ -139,7 +139,7 @@ export default function InstructorCourseDetailPage() {
             {activeTab === 'medias' && (
               <div className="space-y-4">
                 <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">Ajouter un média au cours</h3>
+                  <h3 className="font-semibold mb-3 text-gray-900">Ajouter un média au cours</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <MediaUpload
                       contentType="document"
@@ -161,16 +161,16 @@ export default function InstructorCourseDetailPage() {
 
                 {/* Liste des médias du cours */}
                 <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">Médias du cours</h3>
+                  <h3 className="font-semibold mb-3 text-gray-900">Médias du cours</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {courseMedia.map((mf: any) => (
-                      <div key={mf.id} className="border rounded p-3 flex items-center justify-between">
+                      <div key={mf.id} className="border rounded p-3 flex items-center justify-between bg-gray-50">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{mf.original_filename || mf.filename}</div>
                           <div className="text-xs text-gray-500">{mf.file_category} • {(mf.file_size/1024/1024).toFixed(2)} MB</div>
                         </div>
                         <button
-                          className="text-red-600 text-sm"
+                          className="text-red-600 hover:text-red-700 text-sm transition-colors"
                           onClick={async () => {
                             try {
                               await mediaService.deleteMediaFile(mf.id);
@@ -193,7 +193,7 @@ export default function InstructorCourseDetailPage() {
 
                 {modules.map((m) => (
                   <div key={m.id} className="bg-white border rounded-lg p-4">
-                    <h4 className="font-medium mb-3">Module: {m.title}</h4>
+                    <h4 className="font-medium mb-3 text-gray-900">Module: {m.title}</h4>
                     {m.lessons?.map((lesson: any) => (
                       <div key={lesson.id} className="mb-3">
                         <div className="text-sm text-gray-700 mb-2">Leçon: {lesson.title}</div>
@@ -211,16 +211,16 @@ export default function InstructorCourseDetailPage() {
 
             {activeTab === 'settings' && (
               <div className="space-y-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                   {/* Header */}
-                  <div className="bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-mdsc-gold/10 rounded-lg">
                         <Settings className="h-5 w-5 text-mdsc-gold" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paramètres du Cours</h2>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Configurez les options de visibilité, prix et accès</p>
+                        <h2 className="text-xl font-bold text-gray-900">Paramètres du Cours</h2>
+                        <p className="text-sm text-gray-600">Configurez les options de visibilité, prix et accès</p>
                       </div>
                     </div>
                   </div>
@@ -241,63 +241,63 @@ export default function InstructorCourseDetailPage() {
                     }
                   }} className="p-6 space-y-8">
                     {/* Statut et visibilité */}
-                    <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-6 border border-blue-100 dark:border-blue-900/30">
+                    <div className="bg-blue-50/50 rounded-lg p-6 border border-blue-100">
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-blue-500/10 rounded-lg">
                           <Eye className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">Visibilité</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Contrôlez qui peut voir ce cours</p>
+                          <h3 className="font-semibold text-gray-900">Visibilité</h3>
+                          <p className="text-sm text-gray-600">Contrôlez qui peut voir ce cours</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className="relative flex items-start p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                        <label className="relative flex items-start p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
                           <input
                             type="checkbox"
                             checked={courseSettings.is_published}
                             onChange={(e) => setCourseSettings({ ...courseSettings, is_published: e.target.checked })}
-                            className="mt-1 rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                            className="mt-1 rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
                           />
                           <div className="ml-3 flex-1">
-                            <div className="font-medium text-gray-900 dark:text-white mb-1">Publier le cours</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Rendre le cours visible et accessible aux étudiants</div>
+                            <div className="font-medium text-gray-900 mb-1">Publier le cours</div>
+                            <div className="text-sm text-gray-600">Rendre le cours visible et accessible aux étudiants</div>
                           </div>
                         </label>
-                        <label className="relative flex items-start p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                        <label className="relative flex items-start p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
                           <input
                             type="checkbox"
                             checked={courseSettings.is_featured}
                             onChange={(e) => setCourseSettings({ ...courseSettings, is_featured: e.target.checked })}
-                            className="mt-1 rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                            className="mt-1 rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
                           />
                           <div className="ml-3 flex-1">
-                            <div className="font-medium text-gray-900 dark:text-white mb-1">Mettre en vedette</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Afficher le cours en page d'accueil</div>
+                            <div className="font-medium text-gray-900 mb-1">Mettre en vedette</div>
+                            <div className="text-sm text-gray-600">Afficher le cours en page d'accueil</div>
                           </div>
                         </label>
                       </div>
                     </div>
 
                     {/* Paramètres linguistiques */}
-                    <div className="bg-green-50/50 dark:bg-green-900/10 rounded-lg p-6 border border-green-100 dark:border-green-900/30">
+                    <div className="bg-green-50/50 rounded-lg p-6 border border-green-100">
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-green-500/10 rounded-lg">
                           <Globe className="h-5 w-5 text-green-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">Paramètres linguistiques</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Langue principale du cours</p>
+                          <h3 className="font-semibold text-gray-900">Paramètres linguistiques</h3>
+                          <p className="text-sm text-gray-600">Langue principale du cours</p>
                         </div>
                       </div>
                       <div className="max-w-md">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Langue du cours
                         </label>
                         <select
                           value={courseSettings.language}
                           onChange={(e) => setCourseSettings({ ...courseSettings, language: e.target.value })}
-                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                         >
                           <option value="fr">🇫🇷 Français</option>
                           <option value="en">🇬🇧 Anglais</option>
@@ -306,19 +306,19 @@ export default function InstructorCourseDetailPage() {
                     </div>
 
                     {/* Prix et paiement */}
-                    <div className="bg-yellow-50/50 dark:bg-yellow-900/10 rounded-lg p-6 border border-yellow-100 dark:border-yellow-900/30">
+                    <div className="bg-yellow-50/50 rounded-lg p-6 border border-yellow-100">
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-yellow-500/10 rounded-lg">
                           <DollarSign className="h-5 w-5 text-yellow-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">Prix et Paiement</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Tarification du cours</p>
+                          <h3 className="font-semibold text-gray-900">Prix et Paiement</h3>
+                          <p className="text-sm text-gray-600">Tarification du cours</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Prix du cours
                           </label>
                           <div className="relative">
@@ -328,19 +328,19 @@ export default function InstructorCourseDetailPage() {
                               step="0.01"
                               value={courseSettings.price}
                               onChange={(e) => setCourseSettings({ ...courseSettings, price: parseFloat(e.target.value) || 0 })}
-                              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                               placeholder="0.00"
                             />
                           </div>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Devise
                           </label>
                           <select
                             value={courseSettings.currency}
                             onChange={(e) => setCourseSettings({ ...courseSettings, currency: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                           >
                             <option value="XOF">XOF - Franc CFA</option>
                             <option value="EUR">EUR - Euro</option>
@@ -351,66 +351,66 @@ export default function InstructorCourseDetailPage() {
                     </div>
 
                     {/* Dates importantes */}
-                    <div className="bg-purple-50/50 dark:bg-purple-900/10 rounded-lg p-6 border border-purple-100 dark:border-purple-900/30">
+                    <div className="bg-purple-50/50 rounded-lg p-6 border border-purple-100">
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-purple-500/10 rounded-lg">
                           <Calendar className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">Dates importantes</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Calendrier du cours</p>
+                          <h3 className="font-semibold text-gray-900">Dates importantes</h3>
+                          <p className="text-sm text-gray-600">Calendrier du cours</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Date limite d'inscription
                           </label>
                           <input
                             type="datetime-local"
                             value={courseSettings.enrollment_deadline}
                             onChange={(e) => setCourseSettings({ ...courseSettings, enrollment_deadline: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Date de début
                           </label>
                           <input
                             type="datetime-local"
                             value={courseSettings.course_start_date}
                             onChange={(e) => setCourseSettings({ ...courseSettings, course_start_date: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Date de fin
                           </label>
                           <input
                             type="datetime-local"
                             value={courseSettings.course_end_date}
                             onChange={(e) => setCourseSettings({ ...courseSettings, course_end_date: e.target.value })}
-                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* Limites */}
-                    <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-lg p-6 border border-indigo-100 dark:border-indigo-900/30">
+                    <div className="bg-indigo-50/50 rounded-lg p-6 border border-indigo-100">
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="p-2 bg-indigo-500/10 rounded-lg">
                           <Users className="h-5 w-5 text-indigo-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">Limites d'inscription</h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Contrôle des effectifs</p>
+                          <h3 className="font-semibold text-gray-900">Limites d'inscription</h3>
+                          <p className="text-sm text-gray-600">Contrôle des effectifs</p>
                         </div>
                       </div>
                       <div className="max-w-md">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Nombre maximum d'étudiants
                         </label>
                         <input
@@ -418,21 +418,21 @@ export default function InstructorCourseDetailPage() {
                           min="1"
                           value={courseSettings.max_students || ''}
                           onChange={(e) => setCourseSettings({ ...courseSettings, max_students: e.target.value ? parseInt(e.target.value) : null })}
-                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
                           placeholder="Illimité"
                         />
-                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-2 text-sm text-gray-500">
                           Laissez vide pour une inscription illimitée
                         </p>
                       </div>
                     </div>
 
                     {/* Boutons d'action */}
-                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                       <button
                         type="button"
                         onClick={() => window.location.reload()}
-                        className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
+                        className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
                       >
                         Annuler
                       </button>
