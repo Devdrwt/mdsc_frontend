@@ -92,6 +92,15 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   }
   
   if (!response.ok) {
+    // Logger l'erreur pour debug
+    console.error('❌ API Error:', {
+      status: response.status,
+      url: response.url,
+      message: data.message || data.error,
+      data: data,
+      responseText: responseText.substring(0, 500) // Limiter la longueur du log
+    });
+    
     const error = new ApiError(
       data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
       response.status,
@@ -147,6 +156,14 @@ export async function apiRequest<T = any>(
   }
   
   try {
+    // Logger pour debug sur POST/PUT
+    if (method === 'POST' || method === 'PUT') {
+      console.log(`📤 [${method}] ${url}`, {
+        headers: requestHeaders,
+        body: body instanceof FormData ? '[FormData]' : body
+      });
+    }
+    
     // Faire la requête
     const response = await fetch(url, {
       method,

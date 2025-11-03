@@ -15,10 +15,13 @@ import {
   Filter,
   Users,
   GripVertical,
-  Image
+  Image,
+  Upload,
+  Loader
 } from 'lucide-react';
 import { moduleService } from '../../../lib/services/moduleService';
 import { courseService, Course } from '../../../lib/services/courseService';
+import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
@@ -43,6 +46,11 @@ export default function ModuleManagement() {
 
   const [inlineEditId, setInlineEditId] = useState<number | null>(null);
   const [inlineTitle, setInlineTitle] = useState<string>('');
+  
+  // États pour l'upload d'image
+  const [moduleImageFile, setModuleImageFile] = useState<File | null>(null);
+  const [moduleImagePreview, setModuleImagePreview] = useState<string>('');
+  const [uploadingModuleImage, setUploadingModuleImage] = useState(false);
 
   useEffect(() => {
     loadCourses();
@@ -137,6 +145,8 @@ export default function ModuleManagement() {
       order_index: module.order_index || 0,
       image_url: module.image_url || '',
     });
+    setModuleImageFile(null);
+    setModuleImagePreview(module.image_url || '');
     setShowCreateModal(true);
   };
 
@@ -147,6 +157,39 @@ export default function ModuleManagement() {
       order_index: 0,
       image_url: '',
     });
+    setModuleImageFile(null);
+    setModuleImagePreview('');
+  };
+
+  const handleModuleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.warning('Format invalide', 'Veuillez sélectionner une image');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning('Fichier trop volumineux', 'L\'image ne doit pas dépasser 5 MB');
+      return;
+    }
+
+    setUploadingModuleImage(true);
+    try {
+      const uploaded = await FileService.uploadFile(file, { category: 'module_identification' });
+      const photoUrl = uploaded.url || (uploaded as any).storage_path;
+      if (photoUrl) {
+        setModuleImageFile(file);
+        setModuleImagePreview(photoUrl);
+        setFormData({ ...formData, image_url: photoUrl });
+        toast.success('Image uploadée', 'Votre image de module a été uploadée avec succès');
+      }
+    } catch (error: any) {
+      console.error('Error uploading module image:', error);
+      toast.error('Erreur', error.message || 'Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploadingModuleImage(false);
+    }
   };
 
   const filteredModules = modules.filter(module => {
@@ -447,6 +490,7 @@ export default function ModuleManagement() {
                 onClick={() => {
                   setShowCreateModal(false);
                   setEditingModule(null);
+                  resetForm();
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -485,34 +529,43 @@ export default function ModuleManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    URL de l'image d'identification
+                    Image d'identification
                   </label>
-                  <input
-                    type="url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="https://exemple.com/module-image.jpg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Image pour identifier le module</p>
-                </div>
-
-                {formData.image_url && (
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Image className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-700">Aperçu</span>
+                  {moduleImagePreview ? (
+                    <div className="relative mb-2">
+                      <img
+                        src={moduleImagePreview}
+                        alt="Aperçu"
+                        className="w-full h-32 object-cover rounded-lg border-2 border-gray-300"
+                      />
+                      {uploadingModuleImage && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                          <Loader className="h-6 w-6 text-white animate-spin" />
+                        </div>
+                      )}
                     </div>
-                    <img
-                      src={formData.image_url}
-                      alt="Aperçu"
-                      className="w-full h-32 object-cover rounded border border-gray-200"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-2">
+                      <Image className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Aucune image sélectionnée</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleModuleImageUpload}
+                    className="hidden"
+                    id="module-image-upload"
+                  />
+                  <label
+                    htmlFor="module-image-upload"
+                    className="inline-flex items-center px-4 py-2 bg-mdsc-gold text-white rounded-lg hover:bg-yellow-600 transition-colors cursor-pointer"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {moduleImagePreview ? 'Changer l\'image' : 'Uploader une image'}
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">Formats acceptés : JPG, PNG (Max 5 MB)</p>
+                </div>
 
                 <div className="flex justify-end space-x-4 pt-4 border-t">
                   <button

@@ -70,7 +70,7 @@ export interface CreateCourseData {
   title: string;
   description: string;
   short_description: string;
-  category_id: string;
+  category_id: string | number;
   thumbnail_url?: string;
   video_url?: string;
   duration_minutes: number;
@@ -78,6 +78,10 @@ export interface CreateCourseData {
   language: string;
   price: number;
   currency?: string;
+  prerequisite_course_id?: string | number;
+  enrollment_deadline?: string;
+  course_start_date?: string;
+  course_end_date?: string;
 }
 
 export interface UpdateCourseData {
@@ -284,6 +288,14 @@ export class CourseService {
       body: JSON.stringify({ rating, comment }),
     });
     return response.data;
+  }
+
+  // Récupérer toutes les catégories
+  static async getCategories(): Promise<any[]> {
+    const response = await apiRequest('/categories', {
+      method: 'GET',
+    });
+    return response.data?.categories || response.data || [];
   }
 
   // Ajouter un cours aux favoris
