@@ -98,7 +98,7 @@ export default function InstructorCourseDetailPage() {
             {(['modules', 'lessons', 'medias', 'settings'] as const).map(tab => (
               <button
                 key={tab}
-                className={`px-3 py-2 rounded-lg text-sm border transition-colors ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900 : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50
+                className={`px-3 py-2 rounded-lg text-sm border transition-colors ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
                 onClick={() => setActiveTab(tab)}
               >
                 {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : 'Paramètres'}

@@ -190,6 +190,15 @@ export async function apiRequest<T = any>(
       throw error;
     }
     
+    // Logger les erreurs réseau
+    console.error('❌ [API] Network Error:', {
+      url,
+      method,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error instanceof TypeError ? 'TypeError' : 'Unknown',
+      isCORS: error instanceof TypeError && error.message.includes('Failed to fetch') ? 'Possibly CORS' : 'No'
+    });
+    
     // Erreur de réseau ou autre
     throw new ApiError(
       error instanceof Error ? error.message : 'Erreur de réseau',
