@@ -54,7 +54,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000"
-          style={{
+        style={{
             backgroundImage: currentSlide === 0 ? 'url(/Colleagues.png)' : 'url(/Woman.png)'
           }}
         />
@@ -138,7 +138,7 @@ export default function LoginPage() {
       {/* Colonne droite - Formulaire */}
       <div className="flex-1 flex items-center justify-center bg-white">
         <div className="w-full max-w-md p-8">
-          <LoginForm />
+        <LoginForm />
         </div>
       </div>
     </div>

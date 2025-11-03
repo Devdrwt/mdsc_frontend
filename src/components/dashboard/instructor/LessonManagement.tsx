@@ -358,76 +358,92 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
 
       {/* Modal de création/édition */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 my-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
-                {editingLesson ? 'Modifier la leçon' : 'Nouvelle leçon'}
-              </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-mdsc-gold/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-mdsc-gold" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {editingLesson ? 'Modifier la leçon' : 'Nouvelle leçon'}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Remplissez les informations de la leçon</p>
+                </div>
+              </div>
               <button
                 onClick={closeModal}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Titre */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Titre *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
-                  placeholder="Titre de la leçon"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
-                  placeholder="Description courte de la leçon"
-                />
-              </div>
-
-              {/* Type de contenu et Module */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Form Content - Scrollable */}
+            <form id="lesson-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Titre et Description */}
+              <div className="grid grid-cols-1 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Titre de la leçon *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="Ex: Introduction aux bases de données"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors resize-none"
+                    placeholder="Description courte de la leçon..."
+                  />
+                </div>
+              </div>
+
+              {/* Configuration de base */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Type de contenu *
                   </label>
                   <select
                     required
                     value={formData.content_type}
                     onChange={(e) => setFormData({ ...formData, content_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
                   >
-                    {CONTENT_TYPES.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
+                    {CONTENT_TYPES.map(type => {
+                      const Icon = type.icon;
+                      return (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Module (optionnel)
                   </label>
                   <select
                     value={formData.module_id}
                     onChange={(e) => setFormData({ ...formData, module_id: e.target.value ? Number(e.target.value) : '' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
                   >
                     <option value="">Aucun module (leçon directe)</option>
                     {modules.map(m => (
@@ -440,189 +456,257 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
               {/* Contenu selon le type */}
               {formData.content_type === 'text' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Contenu HTML *
                   </label>
                   <textarea
                     required
                     value={formData.content_text}
                     onChange={(e) => setFormData({ ...formData, content_text: e.target.value })}
-                    rows={8}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
-                    placeholder="Contenu HTML de la leçon"
+                    rows={10}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors font-mono text-sm resize-none"
+                    placeholder="<div>Contenu HTML de la leçon...</div>"
                   />
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {/* URL ou Upload de fichier */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fichier média
-                    </label>
-                    <div className="space-y-3">
-                      {/* Upload de fichier */}
-                      <div>
-                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            {uploadingMedia ? (
-                              <Loader className="h-8 w-8 text-gray-400 animate-spin" />
-                            ) : mediaFile ? (
-                              <FileText className="h-8 w-8 text-gray-400" />
-                            ) : (
-                              <Upload className="h-8 w-8 text-gray-400" />
-                            )}
-                            {uploadingMedia ? (
-                              <p className="mt-2 text-sm text-gray-500">Upload en cours...</p>
-                            ) : mediaFile ? (
-                              <p className="mt-2 text-sm text-gray-500">{mediaFile.name}</p>
-                            ) : (
-                              <p className="mt-2 text-sm text-gray-500">
-                                <span className="font-semibold">Cliquez pour uploader</span> ou glissez-déposez
-                              </p>
-                            )}
-                          </div>
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={handleMediaFileSelect}
-                            accept={
-                              formData.content_type === 'video' ? 'video/*' :
-                              formData.content_type === 'audio' ? 'audio/*' :
-                              formData.content_type === 'document' ? '.pdf,.doc,.docx' :
-                              formData.content_type === 'presentation' ? '.ppt,.pptx' :
-                              '*/*'
-                            }
-                          />
-                        </label>
-                      </div>
-
-                      {/* OU URL */}
-                      <div className="text-center text-sm text-gray-500">OU</div>
-                      
-                      {/* URL du contenu */}
-                      <div>
-                        <input
-                          type="url"
-                          value={formData.content_url}
-                          onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
-                          placeholder="https://..."
-                        />
-                        <p className="mt-1 text-xs text-gray-500">
-                          Saisissez l'URL si le fichier est hébergé ailleurs
-                        </p>
-                      </div>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 rounded-xl p-6 border border-blue-100 dark:border-blue-900/30">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Upload className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Contenu média</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Téléchargez un fichier ou utilisez une URL</p>
                     </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Upload de fichier */}
+                    <div>
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-blue-300 dark:border-blue-700 border-dashed rounded-xl cursor-pointer hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all bg-white dark:bg-gray-800">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {uploadingMedia ? (
+                            <>
+                              <Loader className="h-12 w-12 text-blue-500 animate-spin" />
+                              <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">Upload en cours...</p>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Veuillez patienter</p>
+                            </>
+                          ) : mediaFile ? (
+                            <>
+                              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                                <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{mediaFile.name}</p>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                                <Upload className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+                              </div>
+                              <p className="mt-4 text-sm font-medium text-gray-900 dark:text-white">
+                                Cliquez pour télécharger
+                              </p>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                ou glissez-déposez votre fichier ici
+                              </p>
+                              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                                {formData.content_type === 'video' && 'Formats: MP4, MOV, AVI'}
+                                {formData.content_type === 'audio' && 'Formats: MP3, WAV, OGG'}
+                                {formData.content_type === 'document' && 'Formats: PDF, DOC, DOCX'}
+                                {formData.content_type === 'presentation' && 'Formats: PPT, PPTX'}
+                                {formData.content_type === 'quiz' && 'Formats: JSON, PDF'}
+                                {formData.content_type === 'h5p' && 'Formats: H5P'}
+                                {formData.content_type === 'assignment' && 'Formats: PDF, DOC, DOCX'}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={handleMediaFileSelect}
+                          accept={
+                            formData.content_type === 'video' ? 'video/*' :
+                            formData.content_type === 'audio' ? 'audio/*' :
+                            formData.content_type === 'document' ? '.pdf,.doc,.docx' :
+                            formData.content_type === 'presentation' ? '.ppt,.pptx' :
+                            formData.content_type === 'quiz' ? '.json,.pdf' :
+                            formData.content_type === 'h5p' ? '.h5p' :
+                            formData.content_type === 'assignment' ? '.pdf,.doc,.docx' :
+                            '*/*'
+                          }
+                        />
+                      </label>
+                    </div>
+
+                    {/* OU URL */}
+                    {!mediaFile && (
+                      <>
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                          </div>
+                          <div className="relative flex justify-center text-sm">
+                            <span className="px-3 bg-blue-50 dark:bg-blue-900/10 text-gray-700 dark:text-gray-300 font-medium">
+                              OU
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* URL du contenu */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            URL du contenu
+                          </label>
+                          <input
+                            type="url"
+                            value={formData.content_url}
+                            onChange={(e) => setFormData({ ...formData, content_url: e.target.value })}
+                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                            placeholder="https://..."
+                          />
+                          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            Saisissez l'URL si le fichier est hébergé ailleurs (YouTube, Vimeo, Dropbox, etc.)
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Aperçu du contenu */}
               {(formData.title || formData.description || formData.content_text || mediaPreview || formData.content_url) && (
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                    <Eye className="h-4 w-4 mr-2" />
-                    Aperçu
-                  </h4>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-lg">
+                      <Eye className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Aperçu de la leçon</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Voir comment la leçon apparaîtra aux étudiants</p>
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-4 shadow-sm">
                     {formData.title && (
                       <div>
-                        <h5 className="font-semibold text-lg text-gray-900">{formData.title}</h5>
+                        <h5 className="font-bold text-xl text-gray-900 dark:text-white mb-2">{formData.title}</h5>
                       </div>
                     )}
                     {formData.description && (
                       <div>
-                        <p className="text-sm text-gray-600">{formData.description}</p>
+                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{formData.description}</p>
                       </div>
                     )}
                     {formData.content_type === 'text' && formData.content_text && (
-                      <div className="prose max-w-none">
+                      <div className="prose max-w-none dark:prose-invert">
                         <div 
-                          className="text-sm text-gray-700 border border-gray-200 rounded p-3 bg-white"
+                          className="text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50"
                           dangerouslySetInnerHTML={{ __html: formData.content_text }}
                         />
                       </div>
                     )}
                     {(mediaPreview || formData.content_url) && formData.content_type !== 'text' && (
-                      <div className="border border-gray-200 rounded p-3 bg-white">
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50">
                         {formData.content_type === 'video' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <Video className="h-5 w-5 text-blue-600" />
-                              <span>Contenu vidéo</span>
+                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                              <Video className="h-6 w-6 text-blue-600" />
+                              <span className="font-medium">Contenu vidéo</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-xs text-gray-500">Fichier: {mediaFile.name} ({(mediaFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-xs text-blue-600 truncate">{formData.content_url}</p>
+                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                                🔗 {formData.content_url}
+                              </p>
                             )}
                           </div>
                         )}
                         {formData.content_type === 'document' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <FileText className="h-5 w-5 text-red-600" />
-                              <span>Document PDF</span>
+                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                              <FileText className="h-6 w-6 text-red-600" />
+                              <span className="font-medium">Document PDF</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-xs text-gray-500">Fichier: {mediaFile.name} ({(mediaFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-xs text-blue-600 truncate">{formData.content_url}</p>
+                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                                🔗 {formData.content_url}
+                              </p>
                             )}
                           </div>
                         )}
                         {formData.content_type === 'audio' && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <PlayCircle className="h-5 w-5 text-purple-600" />
-                              <span>Contenu audio</span>
+                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                              <PlayCircle className="h-6 w-6 text-purple-600" />
+                              <span className="font-medium">Contenu audio</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-xs text-gray-500">Fichier: {mediaFile.name} ({(mediaFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-xs text-blue-600 truncate">{formData.content_url}</p>
+                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                                🔗 {formData.content_url}
+                              </p>
                             )}
                           </div>
                         )}
                         {['presentation', 'quiz', 'h5p', 'assignment'].includes(formData.content_type) && (
                           <div className="space-y-2">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <FileText className="h-5 w-5 text-orange-600" />
-                              <span className="capitalize">{formData.content_type}</span>
+                            <div className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                              <FileText className="h-6 w-6 text-orange-600" />
+                              <span className="font-medium capitalize">{formData.content_type}</span>
                             </div>
                             {mediaFile && (
-                              <p className="text-xs text-gray-500">Fichier: {mediaFile.name} ({(mediaFile.size / 1024 / 1024).toFixed(2)} MB)</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                📁 {mediaFile.name} • {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             )}
                             {formData.content_url && (
-                              <p className="text-xs text-blue-600 truncate">{formData.content_url}</p>
+                              <p className="text-sm text-blue-600 dark:text-blue-400 truncate">
+                                🔗 {formData.content_url}
+                              </p>
                             )}
                           </div>
                         )}
                       </div>
                     )}
-                    <div className="flex items-center space-x-4 text-xs text-gray-500 pt-2 border-t border-gray-200">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{formData.duration} min</span>
+                    <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 px-3 py-1 rounded-full">
+                        <Clock className="h-4 w-4" />
+                        <span className="font-medium">{formData.duration || 0} min</span>
                       </div>
                       {formData.is_required && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Obligatoire</span>
+                        <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                          Obligatoire
+                        </span>
                       )}
                       {formData.is_published && (
-                        <span className="px-2 py-1 bg-green-100 text-green-700 rounded">Publié</span>
+                        <span className="inline-flex items-center px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
+                          Publié
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Durée, Ordre et Options */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Durée et ordre */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Durée (minutes) *
                   </label>
                   <input
@@ -631,13 +715,14 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     min="1"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="15"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ordre *
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Ordre dans le cours *
                   </label>
                   <input
                     type="number"
@@ -645,60 +730,75 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     min="1"
                     value={formData.order}
                     onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white transition-colors"
+                    placeholder="1"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Options
-                  </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_required}
-                        onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
-                        className="rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold"
-                      />
-                      <span className="text-sm text-gray-700">Obligatoire</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_published}
-                        onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                        className="rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold"
-                      />
-                      <span className="text-sm text-gray-700">Publié</span>
-                    </label>
+              {/* Options */}
+              <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-6 border border-amber-100 dark:border-amber-900/30">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-amber-500/10 rounded-lg">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Options d'affichage</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Contrôlez l'accès et la visibilité</p>
                   </div>
                 </div>
-              </div>
-
-              {/* Boutons d'action */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploadingMedia}
-                  className="flex items-center space-x-2 px-4 py-2 bg-mdsc-gold text-white rounded-md hover:bg-yellow-600 transition-colors disabled:opacity-50"
-                >
-                  {uploadingMedia ? (
-                    <Loader className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  <span>{editingLesson ? 'Enregistrer' : 'Créer'}</span>
-                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_required}
+                      onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
+                      className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">Leçon obligatoire</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Les étudiants doivent la compléter</div>
+                    </div>
+                  </label>
+                  <label className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_published}
+                      onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
+                      className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">Publier immédiatement</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Rendre visible aux étudiants</div>
+                    </div>
+                  </label>
+                </div>
               </div>
             </form>
+
+            {/* Footer avec boutons */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                form="lesson-form"
+                disabled={uploadingMedia}
+                className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-mdsc-gold to-yellow-600 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg font-medium"
+              >
+                {uploadingMedia ? (
+                  <Loader className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Save className="h-5 w-5" />
+                )}
+                <span>{uploadingMedia ? 'Upload...' : editingLesson ? 'Enregistrer' : 'Créer la leçon'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

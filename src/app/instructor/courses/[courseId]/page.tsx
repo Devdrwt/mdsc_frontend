@@ -211,12 +211,21 @@ export default function InstructorCourseDetailPage() {
 
             {activeTab === 'settings' && (
               <div className="space-y-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex items-center space-x-3 mb-6">
-                    <Settings className="h-6 w-6 text-mdsc-gold" />
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paramètres du Cours</h2>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-mdsc-gold/10 rounded-lg">
+                        <Settings className="h-5 w-5 text-mdsc-gold" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Paramètres du Cours</h2>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Configurez les options de visibilité, prix et accès</p>
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Form Content */}
                   <form onSubmit={async (e) => {
                     e.preventDefault();
                     setSaving(true);
@@ -230,81 +239,99 @@ export default function InstructorCourseDetailPage() {
                     } finally {
                       setSaving(false);
                     }
-                  }} className="space-y-6">
+                  }} className="p-6 space-y-8">
                     {/* Statut et visibilité */}
-                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <Eye className="h-5 w-5 mr-2 text-blue-600" />
-                        Visibilité
-                      </h3>
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-6 border border-blue-100 dark:border-blue-900/30">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-blue-500/10 rounded-lg">
+                          <Eye className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Visibilité</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Contrôlez qui peut voir ce cours</p>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className="flex items-center space-x-3 cursor-pointer">
+                        <label className="relative flex items-start p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
                           <input
                             type="checkbox"
                             checked={courseSettings.is_published}
                             onChange={(e) => setCourseSettings({ ...courseSettings, is_published: e.target.checked })}
-                            className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                            className="mt-1 rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
                           />
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">Publier le cours</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Rendre le cours accessible aux étudiants</div>
+                          <div className="ml-3 flex-1">
+                            <div className="font-medium text-gray-900 dark:text-white mb-1">Publier le cours</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Rendre le cours visible et accessible aux étudiants</div>
                           </div>
                         </label>
-                        <label className="flex items-center space-x-3 cursor-pointer">
+                        <label className="relative flex items-start p-4 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 cursor-pointer hover:border-mdsc-gold dark:hover:border-mdsc-gold transition-colors">
                           <input
                             type="checkbox"
                             checked={courseSettings.is_featured}
                             onChange={(e) => setCourseSettings({ ...courseSettings, is_featured: e.target.checked })}
-                            className="rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
+                            className="mt-1 rounded border-gray-300 dark:border-gray-600 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5 dark:bg-gray-700"
                           />
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">Mettre en vedette</div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">Afficher le cours en avant-première</div>
+                          <div className="ml-3 flex-1">
+                            <div className="font-medium text-gray-900 dark:text-white mb-1">Mettre en vedette</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">Afficher le cours en page d'accueil</div>
                           </div>
                         </label>
                       </div>
                     </div>
 
                     {/* Paramètres linguistiques */}
-                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <Globe className="h-5 w-5 mr-2 text-green-600" />
-                        Paramètres linguistiques
-                      </h3>
-                      <div>
+                    <div className="bg-green-50/50 dark:bg-green-900/10 rounded-lg p-6 border border-green-100 dark:border-green-900/30">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-green-500/10 rounded-lg">
+                          <Globe className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Paramètres linguistiques</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Langue principale du cours</p>
+                        </div>
+                      </div>
+                      <div className="max-w-md">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Langue du cours
                         </label>
                         <select
                           value={courseSettings.language}
                           onChange={(e) => setCourseSettings({ ...courseSettings, language: e.target.value })}
-                          className="w-full md:w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
                         >
-                          <option value="fr">Français</option>
-                          <option value="en">Anglais</option>
+                          <option value="fr">🇫🇷 Français</option>
+                          <option value="en">🇬🇧 Anglais</option>
                         </select>
                       </div>
                     </div>
 
                     {/* Prix et paiement */}
-                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <DollarSign className="h-5 w-5 mr-2 text-yellow-600" />
-                        Prix et Paiement
-                      </h3>
+                    <div className="bg-yellow-50/50 dark:bg-yellow-900/10 rounded-lg p-6 border border-yellow-100 dark:border-yellow-900/30">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-yellow-500/10 rounded-lg">
+                          <DollarSign className="h-5 w-5 text-yellow-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Prix et Paiement</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Tarification du cours</p>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Prix
+                            Prix du cours
                           </label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={courseSettings.price}
-                            onChange={(e) => setCourseSettings({ ...courseSettings, price: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
-                          />
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={courseSettings.price}
+                              onChange={(e) => setCourseSettings({ ...courseSettings, price: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                              placeholder="0.00"
+                            />
+                          </div>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -313,22 +340,27 @@ export default function InstructorCourseDetailPage() {
                           <select
                             value={courseSettings.currency}
                             onChange={(e) => setCourseSettings({ ...courseSettings, currency: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
                           >
-                            <option value="XOF">XOF (Franc CFA)</option>
-                            <option value="EUR">EUR (Euro)</option>
-                            <option value="USD">USD (Dollar)</option>
+                            <option value="XOF">XOF - Franc CFA</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="USD">USD - Dollar</option>
                           </select>
                         </div>
                       </div>
                     </div>
 
                     {/* Dates importantes */}
-                    <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <Calendar className="h-5 w-5 mr-2 text-purple-600" />
-                        Dates importantes
-                      </h3>
+                    <div className="bg-purple-50/50 dark:bg-purple-900/10 rounded-lg p-6 border border-purple-100 dark:border-purple-900/30">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-purple-500/10 rounded-lg">
+                          <Calendar className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Dates importantes</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Calendrier du cours</p>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -338,71 +370,76 @@ export default function InstructorCourseDetailPage() {
                             type="datetime-local"
                             value={courseSettings.enrollment_deadline}
                             onChange={(e) => setCourseSettings({ ...courseSettings, enrollment_deadline: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Date de début du cours
+                            Date de début
                           </label>
                           <input
                             type="datetime-local"
                             value={courseSettings.course_start_date}
                             onChange={(e) => setCourseSettings({ ...courseSettings, course_start_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
                           />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Date de fin du cours
+                            Date de fin
                           </label>
                           <input
                             type="datetime-local"
                             value={courseSettings.course_end_date}
                             onChange={(e) => setCourseSettings({ ...courseSettings, course_end_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
+                            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
                           />
                         </div>
                       </div>
                     </div>
 
                     {/* Limites */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <Users className="h-5 w-5 mr-2 text-indigo-600" />
-                        Limites d'inscription
-                      </h3>
+                    <div className="bg-indigo-50/50 dark:bg-indigo-900/10 rounded-lg p-6 border border-indigo-100 dark:border-indigo-900/30">
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-indigo-500/10 rounded-lg">
+                          <Users className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">Limites d'inscription</h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">Contrôle des effectifs</p>
+                        </div>
+                      </div>
                       <div className="max-w-md">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Nombre maximum d'étudiants (optionnel)
+                          Nombre maximum d'étudiants
                         </label>
                         <input
                           type="number"
                           min="1"
                           value={courseSettings.max_students || ''}
                           onChange={(e) => setCourseSettings({ ...courseSettings, max_students: e.target.value ? parseInt(e.target.value) : null })}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:bg-gray-700 dark:text-white"
-                          placeholder="Illimité si vide"
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-mdsc-gold dark:text-white transition-colors"
+                          placeholder="Illimité"
                         />
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                           Laissez vide pour une inscription illimitée
                         </p>
                       </div>
                     </div>
 
                     {/* Boutons d'action */}
-                    <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                       <button
                         type="button"
                         onClick={() => window.location.reload()}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-medium"
                       >
                         Annuler
                       </button>
                       <button
                         type="submit"
                         disabled={saving}
-                        className="flex items-center space-x-2 px-6 py-2 bg-mdsc-gold text-white rounded-md hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                        className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-mdsc-gold to-yellow-600 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg font-medium"
                       >
                         {saving ? (
                           <LoaderIcon className="h-5 w-5 animate-spin" />
