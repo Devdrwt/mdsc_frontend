@@ -26,9 +26,12 @@ import {
   Settings,
   AlertTriangle,
   Link as LinkIcon,
-  X
+  X,
+  Upload,
+  Loader
 } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
+import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
 import toast from '../../../lib/utils/toast';
@@ -52,6 +55,17 @@ export default function CourseManagement() {
   const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
   const [showCreateModal, setShowCreateModal] = useState(false);
   
+  // États pour les listes déroulantes
+  const [categories, setCategories] = useState<Array<{ id: number; name: string; color: string; icon: string }>>([]);
+  const [availableCourses, setAvailableCourses] = useState<Array<{ id: number; title: string }>>([]);
+  
+  // États pour les uploads de fichiers
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  
   // État du formulaire de création
   const [createFormData, setCreateFormData] = useState({
     title: '',
@@ -65,7 +79,6 @@ export default function CourseManagement() {
     language: 'fr',
     price: 0,
     currency: 'XOF',
-    is_featured: false,
     prerequisite_course_id: '',
     enrollment_deadline: '',
     course_start_date: '',
@@ -98,6 +111,36 @@ export default function CourseManagement() {
     loadCourses();
   }, [user, page, limit, filterStatus]);
 
+  // Charger les catégories et les cours disponibles pour les listes déroulantes
+  useEffect(() => {
+    const loadFormData = async () => {
+      try {
+        // Charger les catégories
+        const catsResponse = await courseService.getCategories();
+        const categoriesData = Array.isArray(catsResponse) 
+          ? catsResponse 
+          : (catsResponse as any)?.data?.categories || (catsResponse as any)?.categories || [];
+        setCategories(categoriesData);
+
+        // Charger tous les cours pour le prérequis
+        const coursesResponse = await courseService.getAllCourses();
+        const coursesData = Array.isArray(coursesResponse?.courses) 
+          ? coursesResponse.courses 
+          : Array.isArray(coursesResponse)
+          ? coursesResponse
+          : [];
+        setAvailableCourses(coursesData.map((c: any) => ({ id: c.id, title: c.title })));
+      } catch (error) {
+        console.error('Erreur lors du chargement des données du formulaire:', error);
+        // En cas d'erreur, initialiser avec des tableaux vides
+        setCategories([]);
+        setAvailableCourses([]);
+      }
+    };
+
+    loadFormData();
+  }, []);
+
   useEffect(() => {
     let filtered = courses;
     if (searchTerm) {
@@ -115,6 +158,68 @@ export default function CourseManagement() {
     setFilteredCourses(filtered);
   }, [courses, searchTerm]);
 
+  // Handlers pour les uploads de fichiers
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.warning('Format invalide', 'Veuillez sélectionner une image');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning('Fichier trop volumineux', 'L\'image ne doit pas dépasser 5 MB');
+      return;
+    }
+
+    setUploadingThumbnail(true);
+    try {
+      const uploaded = await FileService.uploadFile(file, { category: 'course_thumbnail' });
+      const photoUrl = uploaded.url || (uploaded as any).storage_path;
+      if (photoUrl) {
+        setThumbnailFile(file);
+        setThumbnailPreview(photoUrl);
+        setCreateFormData({ ...createFormData, thumbnail_url: photoUrl });
+        toast.success('Image uploadée', 'Votre image de couverture a été uploadée avec succès');
+      }
+    } catch (error: any) {
+      console.error('Error uploading thumbnail:', error);
+      toast.error('Erreur', error.message || 'Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('video/')) {
+      toast.warning('Format invalide', 'Veuillez sélectionner une vidéo');
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.warning('Fichier trop volumineux', 'La vidéo ne doit pas dépasser 100 MB');
+      return;
+    }
+
+    setUploadingVideo(true);
+    try {
+      const uploaded = await FileService.uploadFile(file, { category: 'course_intro_video' });
+      const videoUrl = uploaded.url || (uploaded as any).storage_path;
+      if (videoUrl) {
+        setVideoFile(file);
+        setCreateFormData({ ...createFormData, video_url: videoUrl });
+        toast.success('Vidéo uploadée', 'Votre vidéo a été uploadée avec succès');
+      }
+    } catch (error: any) {
+      console.error('Error uploading video:', error);
+      toast.error('Erreur', error.message || 'Erreur lors de l\'upload de la vidéo');
+    } finally {
+      setUploadingVideo(false);
+    }
+  };
+
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -125,7 +230,18 @@ export default function CourseManagement() {
 
     setCreating(true);
     try {
-      const newCourse = await courseService.createCourse(createFormData);
+      // Nettoyer les champs vides optionnels avant l'envoi
+      const cleanedData = {
+        ...createFormData,
+        prerequisite_course_id: createFormData.prerequisite_course_id || undefined,
+        enrollment_deadline: createFormData.enrollment_deadline || undefined,
+        course_start_date: createFormData.course_start_date || undefined,
+        course_end_date: createFormData.course_end_date || undefined,
+      };
+      
+      // Logger les données envoyées pour debug
+      console.log('📤 Envoi des données du cours:', cleanedData);
+      const newCourse = await courseService.createCourse(cleanedData);
       toast.success('Cours créé', 'Votre cours a été créé avec succès !');
       setShowCreateModal(false);
       // Réinitialiser le formulaire
@@ -141,12 +257,15 @@ export default function CourseManagement() {
         language: 'fr',
         price: 0,
         currency: 'XOF',
-        is_featured: false,
         prerequisite_course_id: '',
         enrollment_deadline: '',
         course_start_date: '',
         course_end_date: '',
       });
+      // Réinitialiser les états de preview
+      setThumbnailFile(null);
+      setThumbnailPreview('');
+      setVideoFile(null);
       // Recharger la liste des cours
       const instructorCourses = await courseService.getMyCourses();
       setCourses(instructorCourses || []);
@@ -514,7 +633,12 @@ export default function CourseManagement() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setThumbnailFile(null);
+                    setThumbnailPreview('');
+                    setVideoFile(null);
+                  }}
                   className="text-white/80 hover:text-white transition-colors p-2"
                   type="button"
                 >
@@ -583,15 +707,20 @@ export default function CourseManagement() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ID Catégorie
+                        Catégorie
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={createFormData.category_id}
                         onChange={(e) => setCreateFormData({ ...createFormData, category_id: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        placeholder="Ex: 1"
-                      />
+                      >
+                        <option value="">Sélectionner une catégorie</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
@@ -649,32 +778,92 @@ export default function CourseManagement() {
                     </div>
                   </div>
 
-                  {/* URL de l'image et de la vidéo */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Upload de l'image et de la vidéo */}
+                  <div className="space-y-4">
+                    {/* Image de couverture */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        URL de l'image de couverture
+                        Image de couverture
                       </label>
+                      {thumbnailPreview ? (
+                        <div className="relative mb-2">
+                          <img
+                            src={thumbnailPreview}
+                            alt="Aperçu"
+                            className="w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+                          />
+                          {uploadingThumbnail && (
+                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                              <Loader className="h-8 w-8 text-white animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                          <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Aucune image sélectionnée</p>
+                        </div>
+                      )}
                       <input
-                        type="url"
-                        value={createFormData.thumbnail_url}
-                        onChange={(e) => setCreateFormData({ ...createFormData, thumbnail_url: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        placeholder="https://exemple.com/image.jpg"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleThumbnailUpload}
+                        className="hidden"
+                        id="thumbnail-upload"
                       />
+                      <label
+                        htmlFor="thumbnail-upload"
+                        className="inline-flex items-center px-4 py-2 bg-mdsc-gold text-white rounded-lg hover:bg-yellow-600 transition-colors cursor-pointer"
+                      >
+                        <Upload className="h-5 w-5 mr-2" />
+                        {thumbnailPreview ? 'Changer l\'image' : 'Uploader une image'}
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Formats acceptés : JPG, PNG (Max 5 MB)</p>
                     </div>
 
+                    {/* Vidéo introductive */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        URL de la vidéo (optionnel)
+                        Vidéo introductive (optionnel)
                       </label>
+                      {videoFile ? (
+                        <div className="border border-gray-300 rounded-lg p-4 mb-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <Video className="h-8 w-8 text-mdsc-gold" />
+                              <div>
+                                <p className="font-medium text-gray-900">{videoFile.name}</p>
+                                <p className="text-xs text-gray-600">
+                                  {(videoFile.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
+                            {uploadingVideo && (
+                              <Loader className="h-6 w-6 text-mdsc-gold animate-spin" />
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                          <Video className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Aucune vidéo sélectionnée</p>
+                        </div>
+                      )}
                       <input
-                        type="url"
-                        value={createFormData.video_url}
-                        onChange={(e) => setCreateFormData({ ...createFormData, video_url: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        placeholder="https://exemple.com/video.mp4"
+                        type="file"
+                        accept="video/*"
+                        onChange={handleVideoUpload}
+                        className="hidden"
+                        id="video-upload"
                       />
+                      <label
+                        htmlFor="video-upload"
+                        className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors cursor-pointer"
+                      >
+                        <Upload className="h-5 w-5 mr-2" />
+                        {videoFile ? 'Changer la vidéo' : 'Uploader une vidéo'}
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">Formats acceptés : MP4, AVI, MOV (Max 100 MB)</p>
                     </div>
                   </div>
 
@@ -691,20 +880,6 @@ export default function CourseManagement() {
                       placeholder="fr"
                     />
                   </div>
-
-                  {/* Cours mis en vedette */}
-                  <div className="flex items-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <input
-                      type="checkbox"
-                      id="is_featured"
-                      checked={createFormData.is_featured}
-                      onChange={(e) => setCreateFormData({ ...createFormData, is_featured: e.target.checked })}
-                      className="h-5 w-5 text-mdsc-gold focus:ring-mdsc-gold border-gray-300 rounded cursor-pointer"
-                    />
-                    <label htmlFor="is_featured" className="ml-3 block text-sm text-gray-700 cursor-pointer">
-                      Mettre ce cours en vedette
-                    </label>
-                  </div>
                 </div>
               </div>
 
@@ -720,15 +895,20 @@ export default function CourseManagement() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ID du cours prérequis
+                        Cours prérequis
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={createFormData.prerequisite_course_id}
                         onChange={(e) => setCreateFormData({ ...createFormData, prerequisite_course_id: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        placeholder="Ex: 1 (optionnel)"
-                      />
+                      >
+                        <option value="">Aucun cours prérequis</option>
+                        {availableCourses.map((course) => (
+                          <option key={course.id} value={course.id}>
+                            {course.title}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div>
@@ -775,7 +955,12 @@ export default function CourseManagement() {
             <div className="border-t border-gray-200 bg-white p-6 flex justify-end space-x-4 shadow-lg flex-shrink-0">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setThumbnailFile(null);
+                  setThumbnailPreview('');
+                  setVideoFile(null);
+                }}
                 disabled={creating}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
               >
