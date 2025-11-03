@@ -89,15 +89,21 @@ export default function CoursesPage() {
         setIsLoading(true);
         const response = await CourseService.getAllCourses();
         
-        // Extraire les cours de la réponse
-        const serviceCourses = response.courses || (Array.isArray(response.data) ? response.data : []);
+        console.log('📦 Réponse API getAllCourses:', response);
+        
+        // Extraire les cours de la réponse - la structure est { data: { courses: [...], pagination: {...} } }
+        const serviceCourses = response.data?.courses || response.courses || response.data || (Array.isArray(response) ? response : []);
+        console.log('📚 Cours extraits:', serviceCourses);
+        
         const convertedCourses = Array.isArray(serviceCourses) 
           ? serviceCourses.map(convertToCourse)
           : [];
         
+        console.log('✅ Cours convertis:', convertedCourses.length, 'cours');
+        
         setCourses(convertedCourses);
       } catch (error) {
-        console.error('Erreur lors du chargement des cours:', error);
+        console.error('❌ Erreur lors du chargement des cours:', error);
         setCourses([]);
       } finally {
         setIsLoading(false);

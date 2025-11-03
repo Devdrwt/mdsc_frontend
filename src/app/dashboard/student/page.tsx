@@ -95,17 +95,20 @@ export default function StudentDashboard() {
         ).length;
 
         const inProgressCourses = userCourses.filter(course => {
-          const courseProgress = progress.find(p => p.courseId === course.id);
-          return courseProgress && courseProgress.progress > 0 && courseProgress.progress < 100;
+          const progressData = courseProgress.find(p => p.courseId === course.id);
+          return progressData && progressData.progress > 0 && progressData.progress < 100;
         }).length;
 
-        const totalPoints = courseProgress.reduce((sum, p) => sum + (p.progress * 10), 0);
+        const totalPoints = courseProgress.reduce((sum, p) => {
+          const progressValue = p.progress || 0;
+          return sum + (progressValue * 10);
+        }, 0);
 
         setStats({
-          totalCourses: userCourses.length,
-          completedCourses,
-          inProgressCourses,
-          totalPoints,
+          totalCourses: userCourses.length || 0,
+          completedCourses: completedCourses || 0,
+          inProgressCourses: inProgressCourses || 0,
+          totalPoints: totalPoints || 0,
           currentLevel: totalPoints > 500 ? 'Expert' : totalPoints > 200 ? 'Intermédiaire' : 'Débutant',
           streak: Math.floor(Math.random() * 15) + 1,
           weeklyGoal: 5,

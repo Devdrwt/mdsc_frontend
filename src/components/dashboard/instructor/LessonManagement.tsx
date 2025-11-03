@@ -491,13 +491,61 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                             </>
                           ) : mediaFile ? (
                             <>
-                              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                                <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                              {/* Aperçu visuel selon le type */}
+                              {mediaPreview ? (
+                                <div className="w-full h-48 overflow-hidden rounded-lg mb-3">
+                                  {formData.content_type === 'video' ? (
+                                    <video 
+                                      src={mediaPreview} 
+                                      className="w-full h-full object-cover"
+                                      controls={false}
+                                    />
+                                  ) : formData.content_type === 'audio' ? (
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30">
+                                      <PlayCircle className="h-20 w-20 text-purple-600 dark:text-purple-400" />
+                                    </div>
+                                  ) : mediaFile.type.startsWith('image/') ? (
+                                    <img 
+                                      src={mediaPreview} 
+                                      alt={mediaFile.name}
+                                      className="w-full h-full object-contain"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/30 dark:to-indigo-800/30">
+                                      <FileText className="h-20 w-20 text-blue-600 dark:text-blue-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-3">
+                                  <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                                </div>
+                              )}
+                              
+                              {/* Info fichier */}
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate px-2">
+                                  {mediaFile.name}
+                                </p>
+                                <div className="flex items-center justify-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                                  <span>📏 {(mediaFile.size / 1024 / 1024).toFixed(2)} MB</span>
+                                  <span>•</span>
+                                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                    {formData.content_type}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMediaFile(null);
+                                    setMediaPreview('');
+                                  }}
+                                  className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium flex items-center space-x-1 mx-auto"
+                                >
+                                  <X className="h-3 w-3" />
+                                  <span>Retirer ce fichier</span>
+                                </button>
                               </div>
-                              <p className="mt-3 text-sm font-medium text-gray-900 dark:text-white">{mediaFile.name}</p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {(mediaFile.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
                             </>
                           ) : (
                             <>
