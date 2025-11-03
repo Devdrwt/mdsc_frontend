@@ -11,6 +11,7 @@ import { mediaService } from '../../../../lib/services/mediaService';
 import ModuleList from '../../../../components/courses/ModuleList';
 import MediaUpload from '../../../../components/media/MediaUpload';
 import LessonEditor from '../../../../components/instructor/LessonEditor';
+import LessonManagement from '../../../../components/dashboard/instructor/LessonManagement';
 import { Settings, Save, Globe, DollarSign, Calendar, Users, Lock, Eye, EyeOff, Loader as LoaderIcon } from 'lucide-react';
 
 export default function InstructorCourseDetailPage() {
@@ -24,7 +25,7 @@ export default function InstructorCourseDetailPage() {
   const [course, setCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [courseMedia, setCourseMedia] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'modules' | 'medias' | 'settings'>('modules');
+  const [activeTab, setActiveTab] = useState<'modules' | 'lessons' | 'medias' | 'settings'>('modules');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
@@ -94,13 +95,13 @@ export default function InstructorCourseDetailPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Cours'}</h1>
           <div className="flex items-center gap-2">
-            {(['modules','medias','settings'] as const).map(tab => (
+            {(['modules', 'lessons', 'medias', 'settings'] as const).map(tab => (
               <button
                 key={tab}
                 className={`px-3 py-2 rounded-lg text-sm border ${activeTab === tab ? 'bg-gray-900 text-white' : 'bg-white'}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'modules' ? 'Modules' : tab === 'medias' ? 'Médias' : 'Paramètres'}
+                {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : 'Paramètres'}
               </button>
             ))}
           </div>
@@ -126,23 +127,12 @@ export default function InstructorCourseDetailPage() {
                     try { success?.('Modules réordonnés'); } catch {}
                   }}
                 />
+              </div>
+            )}
 
-                {/* Édition rapide: premier module/première leçon si dispo */}
-                {modules[0]?.lessons?.[0] && (
-                  <div>
-                    <h2 className="text-lg font-semibold mb-3">Édition rapide: {modules[0].lessons[0].title}</h2>
-                    <LessonEditor
-                      courseId={course?.id}
-                      lesson={modules[0].lessons[0]}
-                      onSaved={(l) => {
-                        // rafraîchir minimalement en mémoire
-                        const updated = modules.slice();
-                        updated[0].lessons[0] = l;
-                        setModules(updated);
-                      }}
-                    />
-                  </div>
-                )}
+            {activeTab === 'lessons' && (
+              <div>
+                <LessonManagement courseId={courseIdParam} />
               </div>
             )}
 
