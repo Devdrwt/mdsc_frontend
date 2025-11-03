@@ -29,13 +29,20 @@ export interface Course {
 export interface Lesson {
   id: string;
   courseId: string;
+  moduleId?: string | number;
   title: string;
   description: string;
   content: string;
+  content_type?: 'video' | 'text' | 'quiz' | 'h5p' | 'assignment' | 'document' | 'audio' | 'presentation';
+  content_url?: string;
+  content_text?: string;
+  media_file_id?: string | number;
   duration: number;
   order: number;
   isCompleted?: boolean;
   videoUrl?: string;
+  isRequired?: boolean;
+  isPublished?: boolean;
   attachments?: Attachment[];
 }
 
@@ -99,19 +106,37 @@ export interface UpdateCourseData {
 export interface CreateLessonData {
   title: string;
   description: string;
-  content: string;
+  content?: string;
+  content_type: 'video' | 'text' | 'quiz' | 'h5p' | 'assignment' | 'document' | 'audio' | 'presentation';
+  content_url?: string;
+  content_text?: string;
+  media_file_id?: number;
+  module_id?: number;
   duration: number;
+  duration_minutes?: number;
   order: number;
-  videoUrl?: string;
+  order_index?: number;
+  is_required?: boolean;
+  is_published?: boolean;
+  videoUrl?: string; // Deprecated, use content_url
 }
 
 export interface UpdateLessonData {
   title?: string;
   description?: string;
   content?: string;
+  content_type?: 'video' | 'text' | 'quiz' | 'h5p' | 'assignment' | 'document' | 'audio' | 'presentation';
+  content_url?: string;
+  content_text?: string;
+  media_file_id?: number;
+  module_id?: number;
   duration?: number;
+  duration_minutes?: number;
   order?: number;
-  videoUrl?: string;
+  order_index?: number;
+  is_required?: boolean;
+  is_published?: boolean;
+  videoUrl?: string; // Deprecated, use content_url
 }
 
 export interface CourseAnalytics {
