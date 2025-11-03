@@ -65,6 +65,15 @@ function getAuthHeaders(): Record<string, string> {
     return {};
   }
   
+  // Logger pour debug du format de token
+  console.log('🔐 [API] Token format check:', {
+    hasToken: !!token,
+    tokenLength: token?.length,
+    tokenPreview: token?.substring(0, 20) + '...',
+    isJWT: token?.includes('.') && token.split('.').length === 3,
+    isLaravelSanctum: token?.includes('|') && !token.includes('.')
+  });
+  
   return {
     'Authorization': `Bearer ${token}`,
   };
