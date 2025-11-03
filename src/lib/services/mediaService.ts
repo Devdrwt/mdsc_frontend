@@ -1,5 +1,6 @@
 import { apiRequest } from './api';
 import { MediaFile, UploadFileData } from '../../types/course';
+import { useAuthStore } from '../stores/authStore';
 
 export class MediaService {
   /**
@@ -12,23 +13,13 @@ export class MediaService {
     if (data.lessonId) formData.append('lesson_id', data.lessonId);
     if (data.courseId) formData.append('course_id', data.courseId);
 
-    // Utiliser fetch avec onProgress pour le tracking
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/media/upload`, {
+    // Utiliser apiRequest qui gère déjà l'auth correctement
+    const response = await apiRequest('/media/upload', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
       body: formData,
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erreur lors de l\'upload');
-    }
-
-    const result = await response.json();
-    return result.data;
+    
+    return response.data;
   }
 
   /**
@@ -46,22 +37,13 @@ export class MediaService {
     formData.append('content_type', contentType);
     if (courseId) formData.append('course_id', courseId);
 
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/media/upload-bulk`, {
+    // Utiliser apiRequest qui gère déjà l'auth correctement
+    const response = await apiRequest('/media/upload-bulk', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
       body: formData,
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Erreur lors de l\'upload');
-    }
-
-    const result = await response.json();
-    return result.data;
+    
+    return response.data;
   }
 
   /**
@@ -87,7 +69,7 @@ export class MediaService {
    * Télécharger un fichier
    */
   static getDownloadUrl(id: string): string {
-    const token = localStorage.getItem('token');
+    const { token } = useAuthStore.getState();
     return `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/media/${id}/download?token=${token}`;
   }
 
