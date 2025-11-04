@@ -22,109 +22,332 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       // Récupérer le rôle sélectionné (si disponible)
       const selectedRole = sessionStorage.getItem('selectedRole') || 'student';
       
+      // Construire l'URL de l'API
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google/callback`);
+      const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
+      
+      console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
+      console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
+      
       // Ouvrir la popup Google OAuth
       const width = 500;
       const height = 600;
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
       
-      const googleAuthUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/google?role=${selectedRole}`;
-      
       const popup = window.open(
         googleAuthUrl,
         'Google Login',
-        `width=${width},height=${height},left=${left},top=${top}`
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
       );
+
+      // Vérifier si la popup a été bloquée
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        setIsLoading(false);
+        const errorMsg = 'La popup a été bloquée par votre navigateur. Veuillez autoriser les popups pour ce site.';
+        console.error('❌ [GOOGLE AUTH] Popup blocked');
+        if (onError) {
+          onError(errorMsg);
+        }
+        return;
+      }
+
+      console.log('✅ [GOOGLE AUTH] Popup opened successfully');
+
+      // Extraire l'origine de l'API pour vérifier les messages
+      const apiOrigin = new URL(apiUrl).origin;
+      const frontendOrigin = window.location.origin;
+      
+      console.log('🔍 [GOOGLE AUTH] Listening for messages from:', { apiOrigin, frontendOrigin });
+
+      // Variable pour suivre si on a déjà reçu une réponse
+      let messageReceived = false;
 
       // Écouter les messages de la popup
       const messageListener = (event: MessageEvent) => {
-        // Vérifier l'origine du message pour la sécurité
-        if (event.origin !== window.location.origin) {
+        console.log('📨 [GOOGLE AUTH] Message received:', {
+          origin: event.origin,
+          type: event.data?.type,
+          hasData: !!event.data,
+          messageReceived
+        });
+
+        // Accepter les messages seulement depuis le frontend (page de callback)
+        // Ignorer les autres origines pour la sécurité
+        if (event.origin !== frontendOrigin) {
+          console.warn('⚠️ [GOOGLE AUTH] Ignoring message from wrong origin:', event.origin);
+          console.warn('⚠️ [GOOGLE AUTH] Expected origin:', frontendOrigin);
           return;
         }
 
-        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        // Ignorer si on a déjà reçu une réponse
+        if (messageReceived) {
+          console.log('⚠️ [GOOGLE AUTH] Already received a message, ignoring duplicate');
+          return;
+        }
+
+        if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+          messageReceived = true;
           const { user, token } = event.data;
           
-          console.log('Google Auth Success - User data:', user);
-          console.log('Google Auth Success - Token:', token);
+          console.log('✅ [GOOGLE AUTH] Success - User data:', user);
+          console.log('✅ [GOOGLE AUTH] Success - Token:', token ? 'Token present' : 'Token missing');
+          
+          // Vérifier que les données nécessaires sont présentes
+          if (!user || !token) {
+            console.error('❌ [GOOGLE AUTH] Missing user or token in response');
+            const errorMsg = 'Données d\'authentification incomplètes';
+            if (popup) popup.close();
+            window.removeEventListener('message', messageListener);
+            setIsLoading(false);
+            if (onError) {
+              onError(errorMsg);
+            }
+            return;
+          }
           
           // Mettre à jour le store d'authentification
-          const userData = {
-            id: user.id.toString(),
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            phone: user.phone,
-            organization: user.organization,
-            country: user.country,
-            isEmailVerified: user.emailVerified || true,
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          
-          console.log('Setting user in store:', userData);
-          setUser(userData);
-          setTokens(token, token); // Utiliser le même token pour refresh token temporairement
-          
-          console.log('Store updated, redirecting to dashboard...');
-          
-          // Fermer la popup
-          if (popup) {
-            popup.close();
+          try {
+            const userData = {
+              id: typeof user.id === 'number' ? user.id : parseInt(user.id, 10),
+              email: user.email,
+              firstName: user.firstName || user.first_name || '',
+              lastName: user.lastName || user.last_name || '',
+              role: (user.role || selectedRole) as 'student' | 'instructor' | 'admin',
+              phone: user.phone || '',
+              organization: user.organization || '',
+              country: user.country || '',
+              isEmailVerified: user.emailVerified || user.email_verified || true,
+              isActive: user.isActive || user.is_active !== false,
+              createdAt: user.createdAt || user.created_at || new Date().toISOString(),
+              updatedAt: user.updatedAt || user.updated_at || new Date().toISOString()
+            };
+            
+            console.log('💾 [GOOGLE AUTH] Setting user in store:', userData);
+            setUser(userData);
+            setTokens(token, token); // Utiliser le même token pour refresh token temporairement
+            
+            console.log('✅ [GOOGLE AUTH] Store updated successfully');
+            
+            // Fermer la popup
+            if (popup) {
+              popup.close();
+            }
+            
+            // Nettoyer le listener et l'interval
+            window.removeEventListener('message', messageListener);
+            if (checkPopupClosed) {
+              clearInterval(checkPopupClosed);
+            }
+            
+            // Callback de succès
+            if (onSuccess) {
+              onSuccess();
+            }
+            
+            setIsLoading(false);
+            
+            // Attendre un peu pour que le store soit mis à jour
+            setTimeout(() => {
+              console.log('🔄 [GOOGLE AUTH] Redirecting to dashboard...');
+              router.push('/dashboard');
+            }, 100);
+            
+          } catch (error) {
+            console.error('❌ [GOOGLE AUTH] Error updating store:', error);
+            const errorMsg = 'Erreur lors de la mise à jour de la session';
+            if (popup) popup.close();
+            window.removeEventListener('message', messageListener);
+            setIsLoading(false);
+            if (onError) {
+              onError(errorMsg);
+            }
           }
-          
-          // Callback de succès
-          if (onSuccess) {
-            onSuccess();
-          }
-          
-          // Attendre un peu pour que le store soit mis à jour
-          setTimeout(() => {
-            // Rediriger vers le dashboard
-            router.push('/dashboard');
-          }, 100);
-          
-          // Nettoyer le listener
-          window.removeEventListener('message', messageListener);
-        } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+        } else if (event.data?.type === 'GOOGLE_AUTH_ERROR') {
+          messageReceived = true;
           const errorMessage = event.data.error || 'Erreur lors de la connexion avec Google';
           
+          console.error('❌ [GOOGLE AUTH] Error from popup:', errorMessage);
+          
           // Fermer la popup
           if (popup) {
             popup.close();
           }
+          
+          // Nettoyer le listener et l'interval
+          window.removeEventListener('message', messageListener);
+          if (checkPopupClosed) {
+            clearInterval(checkPopupClosed);
+          }
+          
+          setIsLoading(false);
           
           // Callback d'erreur
           if (onError) {
             onError(errorMessage);
           }
-          
-          // Nettoyer le listener
-          window.removeEventListener('message', messageListener);
         }
       };
 
       window.addEventListener('message', messageListener);
       
-      // Vérifier si la popup a été fermée manuellement
-      const checkPopupClosed = setInterval(() => {
-        if (popup && popup.closed) {
-          clearInterval(checkPopupClosed);
+      // Vérifier si la popup a été fermée manuellement ou si elle a changé d'URL
+      let checkPopupClosed: NodeJS.Timeout | null = setInterval(() => {
+        if (!popup) {
+          clearInterval(checkPopupClosed!);
+          return;
+        }
+
+        if (popup.closed) {
+          console.log('🔒 [GOOGLE AUTH] Popup closed');
+          clearInterval(checkPopupClosed!);
           window.removeEventListener('message', messageListener);
           setIsLoading(false);
+          
+          // Ne pas afficher d'erreur immédiatement, la page de callback peut avoir fermé la popup
+          // Attendre un peu pour voir si un message arrive
+          setTimeout(() => {
+            // Si on n'a pas reçu de message après 2 secondes, c'est que l'utilisateur a fermé manuellement
+            console.log('⏱️ [GOOGLE AUTH] Popup closed and no message received');
+          }, 2000);
+          return;
+        }
+
+        // Vérifier si l'URL de la popup contient notre callback
+        try {
+          if (popup.location && popup.location.href) {
+            const popupUrl = popup.location.href;
+            console.log('🔍 [GOOGLE AUTH] Popup URL:', popupUrl);
+            
+            if (popupUrl.includes('/auth/google/callback')) {
+              console.log('✅ [GOOGLE AUTH] Popup navigated to callback page:', popupUrl);
+              // La popup est sur la page de callback, elle va envoyer un message
+            }
+            
+            // Vérifier si l'URL contient des données de succès (backend pourrait rediriger directement)
+            if (popupUrl.includes('token=') || popupUrl.includes('success=true')) {
+              console.log('✅ [GOOGLE AUTH] Popup URL contains success data');
+              // Extraire les données de l'URL si possible
+              try {
+                const url = new URL(popupUrl);
+                const token = url.searchParams.get('token');
+                const userStr = url.searchParams.get('user');
+                
+                if (token && userStr && !messageReceived) {
+                  console.log('✅ [GOOGLE AUTH] Found data in popup URL');
+                  const user = JSON.parse(decodeURIComponent(userStr));
+                  
+                  // Traiter les données comme un message de succès
+                  const syntheticEvent = {
+                    origin: window.location.origin,
+                    data: {
+                      type: 'GOOGLE_AUTH_SUCCESS',
+                      user,
+                      token
+                    }
+                  };
+                  messageListener(syntheticEvent as MessageEvent);
+                }
+              } catch (parseError) {
+                console.warn('⚠️ [GOOGLE AUTH] Could not parse data from URL:', parseError);
+              }
+            }
+            
+            // Détecter si le backend affiche un message de succès
+            try {
+              // Essayer de lire le contenu de la page (peut échouer si cross-origin)
+              const popupDoc = popup.document;
+              if (popupDoc && popupDoc.body) {
+                const bodyText = popupDoc.body.innerText || popupDoc.body.textContent || '';
+                if (bodyText.includes('Authentification réussie') || bodyText.includes('success')) {
+                  console.log('✅ [GOOGLE AUTH] Detected success message in popup content');
+                  
+                  // Si on n'a pas encore reçu de message, attendre un peu et vérifier l'URL
+                  if (!messageReceived) {
+                    setTimeout(() => {
+                      try {
+                        const currentUrl = popup.location.href;
+                        const url = new URL(currentUrl);
+                        const token = url.searchParams.get('token');
+                        const userStr = url.searchParams.get('user');
+                        
+                        if (token && userStr) {
+                          const user = JSON.parse(decodeURIComponent(userStr));
+                          const syntheticEvent = {
+                            origin: window.location.origin,
+                            data: {
+                              type: 'GOOGLE_AUTH_SUCCESS',
+                              user,
+                              token
+                            }
+                          };
+                          messageListener(syntheticEvent as MessageEvent);
+                        } else {
+                          // Essayer de récupérer les données depuis le backend via une API
+                          console.log('🔍 [GOOGLE AUTH] Trying to fetch user data from backend...');
+                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/me`, {
+                            credentials: 'include'
+                          })
+                          .then(res => res.json())
+                          .then(data => {
+                            if (data.success && data.data && data.token) {
+                              console.log('✅ [GOOGLE AUTH] Retrieved user data from backend API');
+                              const syntheticEvent = {
+                                origin: window.location.origin,
+                                data: {
+                                  type: 'GOOGLE_AUTH_SUCCESS',
+                                  user: data.data,
+                                  token: data.token
+                                }
+                              };
+                              messageListener(syntheticEvent as MessageEvent);
+                            }
+                          })
+                          .catch(err => {
+                            console.error('❌ [GOOGLE AUTH] Failed to fetch user data:', err);
+                          });
+                        }
+                      } catch (e) {
+                        console.error('❌ [GOOGLE AUTH] Error processing success message:', e);
+                      }
+                    }, 1000);
+                  }
+                }
+              }
+            } catch (e) {
+              // Cross-origin error, c'est normal
+              // Le backend doit rediriger vers notre page de callback
+            }
+          }
+        } catch (e) {
+          // Cross-origin error, c'est normal quand la popup est sur Google ou le backend
+          // Ignorer cette erreur
         }
       }, 500);
+
+      // Timeout après 5 minutes si rien ne se passe
+      setTimeout(() => {
+        if (popup && !popup.closed) {
+          console.warn('⚠️ [GOOGLE AUTH] Timeout - closing popup');
+          popup.close();
+          window.removeEventListener('message', messageListener);
+          if (checkPopupClosed) {
+            clearInterval(checkPopupClosed);
+          }
+          setIsLoading(false);
+          if (onError) {
+            onError('Timeout : la connexion a pris trop de temps');
+          }
+        }
+      }, 5 * 60 * 1000); // 5 minutes
       
     } catch (error) {
-      console.error('Google login error:', error);
-      if (onError) {
-        onError('Erreur lors de l\'ouverture de la fenêtre de connexion Google');
-      }
-    } finally {
+      console.error('❌ [GOOGLE AUTH] Error:', error);
       setIsLoading(false);
+      if (onError) {
+        onError(error instanceof Error ? error.message : 'Erreur lors de l\'ouverture de la fenêtre de connexion Google');
+      }
     }
   };
 
@@ -133,7 +356,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       type="button"
       onClick={handleGoogleLogin}
       disabled={isLoading}
-      className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 font-medium hover:bg-orange-200 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-mdsc-blue-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white text-gray-700 font-medium hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <FcGoogle className="h-5 w-5 mr-3" />
       {isLoading ? 'Connexion en cours...' : 'Continuer avec Google'}
