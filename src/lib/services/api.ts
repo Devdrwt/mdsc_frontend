@@ -101,20 +101,130 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   }
   
   if (!response.ok) {
-    // Logger l'erreur pour debug
-    console.error('❌ API Error:', {
-      status: response.status,
-      url: response.url,
-      message: data.message || data.error,
-      data: data,
-      responseText: responseText.substring(0, 500) // Limiter la longueur du log
-    });
+    // Extraire le message d'erreur de différentes sources possibles
+    let errorMessage = 'Erreur serveur';
+    
+    // Vérifier si data existe et est un objet valide
+    const hasValidData = data && typeof data === 'object' && data !== null && !Array.isArray(data);
+    
+    // Essayer plusieurs sources pour le message d'erreur
+    if (hasValidData && data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      // Gérer les erreurs de validation sous forme de tableau (format: [{field, message}])
+      try {
+        const errorMessages = data.errors
+          .filter((err: any) => err && (err.message || err.error))
+          .map((err: any) => {
+            const field = err.field ? `${err.field}: ` : '';
+            const msg = err.message || err.error || 'Erreur de validation';
+            return `${field}${msg}`;
+          });
+        
+        if (errorMessages.length > 0) {
+          // Si plusieurs erreurs, les combiner
+          if (errorMessages.length === 1) {
+            errorMessage = errorMessages[0];
+          } else {
+            errorMessage = errorMessages.join(' | ');
+          }
+        } else if (hasValidData && data.message && typeof data.message === 'string') {
+          errorMessage = data.message;
+        }
+      } catch (err) {
+        // Si l'extraction des erreurs échoue, continuer avec le message par défaut
+        console.warn('Erreur lors de l\'extraction des erreurs de validation (tableau):', err);
+        if (hasValidData && data.message && typeof data.message === 'string') {
+          errorMessage = data.message;
+        }
+      }
+    } else if (hasValidData && data.message && typeof data.message === 'string') {
+      errorMessage = data.message;
+    } else if (hasValidData && data.error && typeof data.error === 'string') {
+      errorMessage = data.error;
+    } else if (hasValidData && data.errors && typeof data.errors === 'object' && data.errors !== null && !Array.isArray(data.errors)) {
+      // Gérer les erreurs de validation Laravel (format objet: {field: [messages]})
+      try {
+        const errorKeys = Object.keys(data.errors);
+        if (errorKeys.length > 0) {
+          const firstErrorValue = data.errors[errorKeys[0]];
+          if (Array.isArray(firstErrorValue) && firstErrorValue.length > 0) {
+            errorMessage = String(firstErrorValue[0]);
+          } else if (firstErrorValue) {
+            errorMessage = String(firstErrorValue);
+          }
+        }
+      } catch (err) {
+        // Si l'extraction des erreurs échoue, continuer avec le message par défaut
+        console.warn('Erreur lors de l\'extraction des erreurs de validation (objet):', err);
+      }
+    } else if (responseText && typeof responseText === 'string' && responseText.trim()) {
+      // Utiliser le texte de réponse si disponible
+      errorMessage = responseText.length > 200 ? responseText.substring(0, 200) + '...' : responseText;
+    } else {
+      // Message par défaut basé sur le code de statut
+      errorMessage = `HTTP ${response.status}: ${response.statusText || 'Erreur serveur'}`;
+    }
+    
+    // Construire un objet d'erreur plus informatif pour les logs
+    const errorLog: any = {
+      status: response.status || 0,
+      statusText: response.statusText || 'Unknown status',
+      url: response.url || 'URL unknown',
+      message: errorMessage || 'Erreur inconnue',
+    };
+    
+    // Ajouter les données seulement si elles contiennent quelque chose d'utile
+    if (hasValidData) {
+      const usefulData: any = {};
+      let hasUsefulData = false;
+      
+      if (data.message && typeof data.message === 'string') {
+        usefulData.message = data.message;
+        hasUsefulData = true;
+      }
+      if (data.error && typeof data.error === 'string') {
+        usefulData.error = data.error;
+        hasUsefulData = true;
+      }
+      if (data.errors && typeof data.errors === 'object' && data.errors !== null) {
+        usefulData.errors = data.errors;
+        hasUsefulData = true;
+      }
+      if (data.code !== undefined) {
+        usefulData.code = data.code;
+        hasUsefulData = true;
+      }
+      if (data.details) {
+        usefulData.details = data.details;
+        hasUsefulData = true;
+      }
+      
+      if (hasUsefulData) {
+        errorLog.data = usefulData;
+      }
+    }
+    
+    // Ajouter le texte de réponse seulement s'il est utile
+    if (responseText && typeof responseText === 'string') {
+      const trimmedText = responseText.trim();
+      if (trimmedText && trimmedText.length < 500) {
+        errorLog.responseText = trimmedText;
+      } else if (trimmedText && trimmedText.length >= 500) {
+        errorLog.responseTextPreview = trimmedText.substring(0, 500) + '...';
+      }
+    }
+    
+    // S'assurer que errorLog a toujours au moins les informations de base
+    if (!errorLog.message || !errorLog.status || !errorLog.url) {
+      console.warn('⚠️ Erreur lors de la construction du log d\'erreur:', { errorLog, data, responseText });
+    }
+    
+    console.error('❌ API Error:', errorLog);
     
     const error = new ApiError(
-      data.message || data.error || `HTTP ${response.status}: ${response.statusText}`,
+      errorMessage,
       response.status,
-      data.code,
-      data.details
+      hasValidData ? data.code : undefined,
+      hasValidData ? (data.details || data.errors) : undefined
     );
     
     // Gérer les erreurs d'authentification
@@ -189,6 +299,15 @@ export async function apiRequest<T = any>(
     if (error instanceof ApiError) {
       throw error;
     }
+    
+    // Logger les erreurs réseau
+    console.error('❌ [API] Network Error:', {
+      url,
+      method,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error instanceof TypeError ? 'TypeError' : 'Unknown',
+      isCORS: error instanceof TypeError && error.message.includes('Failed to fetch') ? 'Possibly CORS' : 'No'
+    });
     
     // Erreur de réseau ou autre
     throw new ApiError(

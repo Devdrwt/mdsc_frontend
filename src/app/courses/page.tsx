@@ -51,6 +51,12 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     instructorData = { id: '', name: 'Instructeur' };
   }
 
+  // Gérer l'image du cours - utiliser thumbnail_url, thumbnail, ou une image par défaut
+  const courseImage = (serviceCourse as any).thumbnail_url 
+    || serviceCourse.thumbnail 
+    || (serviceCourse as any).thumbnailUrl
+    || '/apprenant.png'; // Image par défaut
+
   return {
     id: serviceCourse.id,
     title: serviceCourse.title,
@@ -62,13 +68,13 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
     duration: durationString, // String pour CourseCard
     language: 'fr',
-    thumbnail_url: serviceCourse.thumbnail,
+    thumbnail_url: courseImage,
     instructor: instructorData,
     is_published: serviceCourse.isPublished !== undefined ? serviceCourse.isPublished : true,
     enrollment_count: serviceCourse.totalStudents || 0,
     rating: serviceCourse.rating || 0,
     // Conversions pour CourseCard
-    thumbnail: serviceCourse.thumbnail || '/apprenant.png',
+    thumbnail: courseImage,
     students: serviceCourse.totalStudents || 0,
     price: serviceCourse.price || 0,
   };
@@ -89,15 +95,21 @@ export default function CoursesPage() {
         setIsLoading(true);
         const response = await CourseService.getAllCourses();
         
-        // Extraire les cours de la réponse
-        const serviceCourses = response.courses || (Array.isArray(response.data) ? response.data : []);
+        console.log('📦 Réponse API getAllCourses:', response);
+        
+        // Extraire les cours de la réponse - la structure est { data: { courses: [...], pagination: {...} } }
+        const serviceCourses = response.data?.courses || response.courses || response.data || (Array.isArray(response) ? response : []);
+        console.log('📚 Cours extraits:', serviceCourses);
+        
         const convertedCourses = Array.isArray(serviceCourses) 
           ? serviceCourses.map(convertToCourse)
           : [];
         
+        console.log('✅ Cours convertis:', convertedCourses.length, 'cours');
+        
         setCourses(convertedCourses);
       } catch (error) {
-        console.error('Erreur lors du chargement des cours:', error);
+        console.error('❌ Erreur lors du chargement des cours:', error);
         setCourses([]);
       } finally {
         setIsLoading(false);

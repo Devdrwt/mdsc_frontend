@@ -279,18 +279,25 @@ export default function CourseManagement() {
   };
 
   const getStatusBadge = (course: Course) => {
-    if (course.updatedAt && new Date(course.updatedAt) < new Date()) {
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-          <Pause className="h-3 w-3 mr-1" />
-          Archivé
-        </span>
-      );
-    } else if (course.progress > 0) {
+    // Vérifier si le cours est publié (gérer différents formats du backend)
+    const courseAny = course as any;
+    const isPublishedValue = courseAny.is_published ?? course.isPublished ?? courseAny.isPublished ?? false;
+    
+    // Convertir différents formats en booléen
+    let isPublished = false;
+    if (typeof isPublishedValue === 'boolean') {
+      isPublished = isPublishedValue;
+    } else if (typeof isPublishedValue === 'number') {
+      isPublished = isPublishedValue === 1;
+    } else if (typeof isPublishedValue === 'string') {
+      isPublished = isPublishedValue === 'true' || isPublishedValue === '1' || isPublishedValue.toLowerCase() === 'published';
+    }
+    
+    if (isPublished) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <Play className="h-3 w-3 mr-1" />
-          Actif
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Publié
         </span>
       );
     } else {
