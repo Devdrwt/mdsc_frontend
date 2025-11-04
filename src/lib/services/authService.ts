@@ -1,4 +1,6 @@
 // Service d'authentification pour communiquer avec l'API backend
+import { useAuthStore } from '../stores/authStore';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 interface RegisterData {
@@ -64,9 +66,49 @@ async function fetchAPI<T>(
   }
 
   // Ajouter le token d'authentification si disponible
-  const token = localStorage.getItem('authToken');
+  // Priorité : token passé en paramètre > store Zustand > localStorage (fallback)
+  let token: string | null = null;
+  
+  // Vérifier d'abord dans les headers passés en paramètre (pour getProfile avec token explicite)
+  if (options.headers && 'Authorization' in options.headers) {
+    const authHeader = (options.headers as any)['Authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+  
+  // Sinon, récupérer depuis le store Zustand
+  if (!token) {
+    try {
+      const { token: storeToken } = useAuthStore.getState();
+      token = storeToken;
+    } catch (error) {
+      console.warn('⚠️ [AUTH SERVICE] Could not access Zustand store, trying localStorage fallback');
+    }
+  }
+  
+  // Fallback vers localStorage si le store n'est pas disponible
+  if (!token) {
+    token = localStorage.getItem('authToken');
+  }
+  
+  // Ajouter le token au header si trouvé
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
+    // Log pour debug (seulement en développement)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔐 [AUTH SERVICE] Token added to request:', {
+        endpoint,
+        hasToken: true,
+        tokenLength: token.length,
+        tokenPreview: token.substring(0, 20) + '...'
+      });
+    }
+  } else {
+    // Log si pas de token trouvé
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('⚠️ [AUTH SERVICE] No token found for request:', endpoint);
+    }
   }
 
   const config: RequestInit = {
@@ -218,8 +260,24 @@ export async function logout(): Promise<void> {
 // Récupérer le profil utilisateur
 export async function getProfile(token?: string): Promise<ApiResponse> {
   const headers: HeadersInit = {};
+  
+  // Si un token est fourni explicitement, l'utiliser
+  // Sinon, fetchAPI récupérera le token du store Zustand ou localStorage
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+    console.log('🔐 [AUTH SERVICE] getProfile called with explicit token');
+  } else {
+    // Récupérer le token du store pour vérification
+    try {
+      const { token: storeToken } = useAuthStore.getState();
+      if (storeToken) {
+        console.log('🔐 [AUTH SERVICE] getProfile will use token from store');
+      } else {
+        console.warn('⚠️ [AUTH SERVICE] getProfile called without token and no token in store');
+      }
+    } catch (error) {
+      console.warn('⚠️ [AUTH SERVICE] Could not access store in getProfile');
+    }
   }
   
   return await fetchAPI('/users/me', {

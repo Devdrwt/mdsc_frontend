@@ -59,7 +59,23 @@ function buildUrl(endpoint: string): string {
 
 // Fonction utilitaire pour obtenir les en-têtes d'authentification
 function getAuthHeaders(): Record<string, string> {
-  const { token } = useAuthStore.getState();
+  let token: string | null = null;
+  
+  // Essayer d'abord de récupérer le token depuis le store Zustand
+  try {
+    const state = useAuthStore.getState();
+    token = state.token;
+  } catch (error) {
+    // Si le store n'est pas disponible (par exemple pendant le SSR), utiliser localStorage
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('authToken');
+    }
+  }
+  
+  // Fallback vers localStorage si le store n'a pas de token
+  if (!token && typeof window !== 'undefined') {
+    token = localStorage.getItem('authToken');
+  }
   
   if (!token) {
     return {};
