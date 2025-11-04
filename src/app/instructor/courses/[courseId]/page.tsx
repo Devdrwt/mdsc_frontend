@@ -58,16 +58,17 @@ export default function InstructorCourseDetailPage() {
         setCategories(cats);
         
         // Charger les paramètres du cours
+        const courseData = c as any; // Type assertion pour gérer les deux formats (snake_case et camelCase)
         setCourseSettings({
-          is_published: c.is_published || c.isPublished || false,
-          is_featured: c.is_featured || false,
-          language: c.language || 'fr',
-          price: c.price || 0,
-          currency: c.currency || 'XOF',
-          max_students: c.max_students || null,
-          enrollment_deadline: c.enrollment_deadline || '',
-          course_start_date: c.course_start_date || '',
-          course_end_date: c.course_end_date || '',
+          is_published: courseData.is_published || courseData.isPublished || false,
+          is_featured: courseData.is_featured || courseData.isFeatured || false,
+          language: courseData.language || 'fr',
+          price: courseData.price || 0,
+          currency: courseData.currency || 'XOF',
+          max_students: courseData.max_students || courseData.maxStudents || null,
+          enrollment_deadline: courseData.enrollment_deadline || courseData.enrollmentDeadline || '',
+          course_start_date: courseData.course_start_date || courseData.courseStartDate || '',
+          course_end_date: courseData.course_end_date || courseData.courseEndDate || '',
         });
         
         if (courseIdNum) {

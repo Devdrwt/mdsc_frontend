@@ -126,17 +126,18 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
 
   const openEditModal = (lesson: Lesson) => {
     setEditingLesson(lesson);
+    const lessonData = lesson as any; // Type assertion pour gérer les deux formats (snake_case et camelCase)
     setFormData({
       title: lesson.title,
       description: lesson.description || '',
       content_type: lesson.content_type || 'text',
       content_url: lesson.content_url || '',
       content_text: lesson.content_text || lesson.content || '',
-      module_id: lesson.module_id ? Number(lesson.module_id) : '',
-      duration: lesson.duration_minutes || lesson.duration || 0,
-      order: lesson.order_index || lesson.order || 1,
-      is_required: lesson.is_required ?? true,
-      is_published: lesson.is_published ?? false,
+      module_id: lessonData.module_id || lessonData.moduleId ? Number(lessonData.module_id || lessonData.moduleId) : '',
+      duration: lessonData.duration_minutes || lesson.duration || 0,
+      order: lessonData.order_index || lesson.order || 1,
+      is_required: lessonData.is_required ?? true,
+      is_published: lessonData.is_published ?? false,
     });
     setMediaPreview(lesson.content_url || '');
     setShowModal(true);
@@ -292,9 +293,9 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                       {getContentTypeIcon(lesson.content_type || 'text')}
                       <h3 className="font-semibold text-gray-900">{lesson.title}</h3>
                       <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                        Leçon {lesson.order_index || lesson.order}
+                        Leçon {(lesson as any).order_index || lesson.order}
                       </span>
-                      {lesson.is_published ? (
+                      {(lesson as any).is_published ? (
                         <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center">
                           <Eye className="h-3 w-3 mr-1" />
                           Publié
@@ -305,7 +306,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                           Brouillon
                         </span>
                       )}
-                      {lesson.is_required && (
+                      {(lesson as any).is_required && (
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                           Obligatoire
                         </span>
@@ -317,12 +318,12 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
-                        <span>{lesson.duration_minutes || lesson.duration} min</span>
+                        <span>{(lesson as any).duration_minutes || lesson.duration} min</span>
                       </div>
-                      {lesson.module_title && (
+                      {(lesson as any).module_title && (
                         <div className="flex items-center space-x-1">
                           <FileText className="h-4 w-4" />
-                          <span>{lesson.module_title}</span>
+                          <span>{(lesson as any).module_title}</span>
                         </div>
                       )}
                     </div>
