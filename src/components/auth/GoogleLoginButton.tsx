@@ -28,9 +28,15 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
       
       console.log('🔐 [GOOGLE AUTH] Selected role:', selectedRole);
+      console.log('🔐 [GOOGLE AUTH] Role source:', {
+        fromSessionStorage: typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null,
+        finalRole: selectedRole,
+        defaultUsed: !sessionStorage.getItem('selectedRole'),
+      });
       
       console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
       console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
+      console.log('🔐 [GOOGLE AUTH] API URL:', apiUrl);
       
       // Ouvrir la popup Google OAuth
       const width = 500;
@@ -111,8 +117,25 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           
           // Mettre à jour le store d'authentification
           try {
-            // Priorité: rôle retourné par le backend > rôle sélectionné > 'student'
-            const finalRole = (user.role || user.role_name || selectedRole || 'student') as 'student' | 'instructor' | 'admin';
+            // Récupérer le rôle depuis sessionStorage au moment du callback (plus fiable)
+            const roleFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null;
+            
+            // Priorité: rôle retourné par le backend > rôle dans sessionStorage > rôle sélectionné au démarrage > 'student'
+            const backendRole = user.role || user.role_name;
+            const storageRole = roleFromStorage as 'student' | 'instructor' | 'admin' | null;
+            const finalRole = (backendRole || storageRole || selectedRole || 'student') as 'student' | 'instructor' | 'admin';
+            
+            console.log('🔐 [GOOGLE AUTH] Role resolution:', {
+              backendRole,
+              storageRole,
+              selectedRoleAtStart: selectedRole,
+              finalRole,
+            });
+            
+            // Si le backend n'a pas retourné de rôle, utiliser celui de sessionStorage
+            if (!backendRole && storageRole) {
+              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a role, using role from sessionStorage:', storageRole);
+            }
             
             // Normaliser les données utilisateur en remplaçant undefined par null ou des valeurs par défaut
             const userData = {
@@ -136,15 +159,17 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             }
             
             console.log('💾 [GOOGLE AUTH] Setting user in store:', userData);
+            console.log('💾 [GOOGLE AUTH] User role in store:', userData.role);
             setUser(userData);
             setTokens(token, token); // Utiliser le même token pour refresh token temporairement
             
             // Stocker le rôle dans sessionStorage pour les prochaines fois
             if (typeof window !== 'undefined') {
               sessionStorage.setItem('selectedRole', finalRole);
+              console.log('💾 [GOOGLE AUTH] Role stored in sessionStorage:', finalRole);
             }
             
-            console.log('✅ [GOOGLE AUTH] Store updated successfully');
+            console.log('✅ [GOOGLE AUTH] Store updated successfully with role:', finalRole);
             
             // Fermer la popup
             if (popup) {
@@ -206,6 +231,23 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
                                  lowerError.includes('account does not exist') ||
                                  lowerError.includes('utilisateur introuvable') ||
                                  lowerError.includes('no account found');
+          
+          // Détecter les erreurs d'autorisation (Unauthorized)
+          const isUnauthorized = lowerError.includes('unauthorized') ||
+                                lowerError.includes('non autorisé') ||
+                                lowerError.includes('401') ||
+                                lowerError.includes('403') ||
+                                lowerError.includes('autorisation') ||
+                                lowerError.includes('configuration du serveur');
+          
+          if (isUnauthorized) {
+            console.error('❌ [GOOGLE AUTH] Unauthorized error detected');
+            console.error('❌ [GOOGLE AUTH] This is likely a backend configuration issue:');
+            console.error('   - Check Google Cloud Console callback URLs');
+            console.error('   - Check backend GOOGLE_CALLBACK_URL environment variable');
+            console.error('   - Check if oauth_role_tokens table exists');
+            console.error('   - Check backend logs for more details');
+          }
           
           if (isUserNotFound) {
             // Rediriger vers la page de sélection de rôle avec un message
