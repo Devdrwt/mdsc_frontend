@@ -35,6 +35,7 @@ import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
 import toast from '../../../lib/utils/toast';
+import Modal from '../../ui/Modal';
 
 interface CourseStats {
   totalStudents: number;
@@ -54,6 +55,8 @@ export default function CourseManagement() {
   const [limit, setLimit] = useState<number>(10);
   const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [courseToDelete, setCourseToDelete] = useState<number | null>(null);
   
   // États pour les listes déroulantes
   const [categories, setCategories] = useState<Array<{ id: number; name: string; color: string; icon: string }>>([]);
@@ -79,6 +82,8 @@ export default function CourseManagement() {
     language: 'fr',
     price: 0,
     currency: 'XOF',
+    course_type: 'on_demand' as 'live' | 'on_demand',
+    max_students: 0,
     prerequisite_course_id: '',
     enrollment_deadline: '',
     course_start_date: '',
@@ -228,15 +233,25 @@ export default function CourseManagement() {
       return;
     }
 
+    // Validation conditionnelle selon le type de cours
+    if (createFormData.course_type === 'live') {
+      if (!createFormData.enrollment_deadline || !createFormData.course_start_date || !createFormData.course_end_date || !createFormData.max_students || createFormData.max_students <= 0) {
+        toast.warning('Formulaire incomplet', 'Pour un cours en Live, les dates et le nombre maximum d\'étudiants sont obligatoires');
+        return;
+      }
+    }
+
     setCreating(true);
     try {
       // Nettoyer les champs vides optionnels avant l'envoi
-      const cleanedData = {
+      const cleanedData: any = {
         ...createFormData,
         prerequisite_course_id: createFormData.prerequisite_course_id || undefined,
-        enrollment_deadline: createFormData.enrollment_deadline || undefined,
-        course_start_date: createFormData.course_start_date || undefined,
-        course_end_date: createFormData.course_end_date || undefined,
+        // Pour les cours on_demand, les dates sont optionnelles
+        enrollment_deadline: createFormData.course_type === 'live' ? createFormData.enrollment_deadline : (createFormData.enrollment_deadline || undefined),
+        course_start_date: createFormData.course_type === 'live' ? createFormData.course_start_date : (createFormData.course_start_date || undefined),
+        course_end_date: createFormData.course_type === 'live' ? createFormData.course_end_date : (createFormData.course_end_date || undefined),
+        max_students: createFormData.course_type === 'live' ? createFormData.max_students : (createFormData.max_students || undefined),
       };
       
       // Logger les données envoyées pour debug
@@ -257,6 +272,8 @@ export default function CourseManagement() {
         language: 'fr',
         price: 0,
         currency: 'XOF',
+        course_type: 'on_demand',
+        max_students: 0,
         prerequisite_course_id: '',
         enrollment_deadline: '',
         course_start_date: '',
@@ -272,7 +289,7 @@ export default function CourseManagement() {
       setFilteredCourses(instructorCourses || []);
     } catch (error: any) {
       console.error('Erreur lors de la création du cours:', error);
-      toast.error('Erreur', error.message || 'Erreur lors de la création du cours');
+      toast.errorFromApi('Erreur de création', error, 'Erreur lors de la création du cours');
     } finally {
       setCreating(false);
     }
@@ -320,17 +337,20 @@ export default function CourseManagement() {
     };
   };
 
-  const handleDeleteCourse = async (courseId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce cours ? Cette action est irréversible.')) {
-      return;
-    }
+  const handleDeleteClick = (courseId: number) => {
+    setCourseToDelete(courseId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteCourse = async () => {
+    if (!courseToDelete) return;
 
     try {
-      await courseService.deleteCourse(courseId.toString());
+      await courseService.deleteCourse(courseToDelete.toString());
       toast.success('Cours supprimé', 'Le cours a été supprimé avec succès');
       // Mettre à jour la liste locale
-      setCourses(prev => prev.filter(course => course.id !== courseId.toString()));
-      setFilteredCourses(prev => prev.filter(course => course.id !== courseId.toString()));
+      setCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
+      setFilteredCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
       // Recharger les cours depuis l'API
       if (user) {
         const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
@@ -338,6 +358,8 @@ export default function CourseManagement() {
         setCourses(arr);
         setFilteredCourses(arr);
       }
+      setShowDeleteModal(false);
+      setCourseToDelete(null);
     } catch (error: any) {
       console.error('Erreur lors de la suppression du cours:', error);
       toast.error('Erreur', error.message || 'Impossible de supprimer le cours. Veuillez réessayer.');
@@ -547,7 +569,7 @@ export default function CourseManagement() {
                           <BarChart3 className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteCourse(parseInt(course.id))}
+                          onClick={() => handleDeleteClick(parseInt(course.id))}
                           className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                           title="Supprimer le cours"
                         >
@@ -890,67 +912,126 @@ export default function CourseManagement() {
                 </div>
               </div>
 
+              {/* Section: Type de cours et Configuration */}
+              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
+                  <Settings className="h-5 w-5 text-mdsc-gold" />
+                  <h3 className="text-lg font-semibold text-gray-900">Type de cours</h3>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Type de cours */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type de cours <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={createFormData.course_type}
+                      onChange={(e) => setCreateFormData({ ...createFormData, course_type: e.target.value as 'live' | 'on_demand' })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                    >
+                      <option value="on_demand">Cours à la demande (On-demand)</option>
+                      <option value="live">Cours en Live (en direct)</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {createFormData.course_type === 'live' 
+                        ? '⚠️ Les dates et le nombre maximum d\'étudiants sont obligatoires pour les cours en Live'
+                        : 'Les dates sont optionnelles pour les cours à la demande'
+                      }
+                    </p>
+                  </div>
+
+                  {/* Nombre maximum d'étudiants (conditionnel pour Live) */}
+                  {createFormData.course_type === 'live' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre maximum d'étudiants <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={createFormData.max_students}
+                        onChange={(e) => setCreateFormData({ ...createFormData, max_students: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        placeholder="Ex: 50"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Section: Dates et prérequis */}
               <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
                 <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
                   <Calendar className="h-5 w-5 text-mdsc-gold" />
-                  <h3 className="text-lg font-semibold text-gray-900">Dates et prérequis</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Dates et prérequis
+                    {createFormData.course_type === 'live' && <span className="text-red-500 ml-1">*</span>}
+                  </h3>
                 </div>
 
                 <div className="space-y-4">
-                  {/* Cours prérequis, dates et deadline */}
+                  {/* Cours prérequis */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cours prérequis
+                    </label>
+                    <select
+                      value={createFormData.prerequisite_course_id}
+                      onChange={(e) => setCreateFormData({ ...createFormData, prerequisite_course_id: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                    >
+                      <option value="">Aucun cours prérequis</option>
+                      {availableCourses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Dates conditionnelles */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Cours prérequis
-                      </label>
-                      <select
-                        value={createFormData.prerequisite_course_id}
-                        onChange={(e) => setCreateFormData({ ...createFormData, prerequisite_course_id: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                      >
-                        <option value="">Aucun cours prérequis</option>
-                        {availableCourses.map((course) => (
-                          <option key={course.id} value={course.id}>
-                            {course.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Date limite d'inscription
+                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
                       </label>
                       <input
                         type="datetime-local"
                         value={createFormData.enrollment_deadline}
                         onChange={(e) => setCreateFormData({ ...createFormData, enrollment_deadline: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        required={createFormData.course_type === 'live'}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Date de début du cours
+                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
                       </label>
                       <input
                         type="datetime-local"
                         value={createFormData.course_start_date}
                         onChange={(e) => setCreateFormData({ ...createFormData, course_start_date: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        required={createFormData.course_type === 'live'}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Date de fin du cours
+                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
                       </label>
                       <input
                         type="datetime-local"
                         value={createFormData.course_end_date}
                         onChange={(e) => setCreateFormData({ ...createFormData, course_end_date: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
+                        required={createFormData.course_type === 'live'}
                       />
                     </div>
                   </div>
@@ -995,6 +1076,53 @@ export default function CourseManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setCourseToDelete(null);
+        }}
+        title="Confirmer la suppression"
+        size="sm"
+      >
+        <div className="py-4">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <p className="text-gray-700 mb-4">
+                Êtes-vous sûr de vouloir supprimer ce cours ? Cette action est irréversible.
+              </p>
+              <p className="text-sm text-gray-500">
+                Toutes les données associées à ce cours (leçons, quiz, inscriptions, etc.) seront également supprimées.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setCourseToDelete(null);
+              }}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleDeleteCourse}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

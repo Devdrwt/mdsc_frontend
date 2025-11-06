@@ -4,8 +4,10 @@ export interface Message {
   id: string;
   senderId: number;
   senderName: string;
+  senderEmail?: string;
   receiverId?: number;
   receiverName?: string;
+  receiverEmail?: string; // Email comme identifiant unique
   courseId?: string;
   subject: string;
   content: string;
@@ -22,18 +24,41 @@ export interface MessageStats {
 }
 
 export class MessageService {
-  // Envoyer un message
+  // Envoyer un message (avec email comme identifiant)
   static async sendMessage(data: {
-    receiverId: number;
+    receiverEmail: string; // Email comme identifiant unique
     subject: string;
     content: string;
     type?: 'direct' | 'announcement' | 'system';
+    recipientId?: number; // ID du destinataire (optionnel)
   }): Promise<Message> {
+    // Mapper receiverEmail vers recipient_email pour correspondre à l'API backend
+    const requestData: any = {
+      subject: data.subject,
+      content: data.content,
+      type: data.type || 'direct',
+    };
+
+    // Le backend accepte recipient_email ou recipient_id
+    if (data.recipientId) {
+      requestData.recipient_id = data.recipientId;
+    } else if (data.receiverEmail) {
+      requestData.recipient_email = data.receiverEmail;
+    }
+
     const response = await apiRequest('/messages/send', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestData),
     });
     return response.data;
+  }
+
+  // Rechercher un utilisateur par email
+  static async searchUserByEmail(email: string): Promise<{ id: number; name: string; email: string; role: string }[]> {
+    const response = await apiRequest(`/messages/search?email=${encodeURIComponent(email)}`, {
+      method: 'GET',
+    });
+    return response.data || [];
   }
 
   // Récupérer les messages reçus

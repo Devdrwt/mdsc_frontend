@@ -63,9 +63,23 @@ function GoogleCallbackContent() {
 
     // Gestion des erreurs
     if (error) {
-      console.error('❌ [GOOGLE CALLBACK] Error from query params:', error);
+      const decodedError = decodeURIComponent(error);
+      console.error('❌ [GOOGLE CALLBACK] Error from query params:', decodedError);
+      console.error('❌ [GOOGLE CALLBACK] Full error details:', {
+        raw: error,
+        decoded: decodedError,
+        url: window.location.href,
+      });
+      
+      // Détecter si c'est une erreur de paramètres SQL undefined
+      if (decodedError.includes('Bind parameters must not contain undefined')) {
+        console.error('❌ [GOOGLE CALLBACK] SQL undefined parameter error detected');
+        console.error('❌ [GOOGLE CALLBACK] This is a backend issue - the backend is trying to insert undefined values into the database');
+        console.error('❌ [GOOGLE CALLBACK] The backend should convert undefined to null before database insertion');
+      }
+      
       sendMessageToParent('GOOGLE_AUTH_ERROR', {
-        error: decodeURIComponent(error),
+        error: decodedError,
       });
       setTimeout(closePopup, 500);
       return;
@@ -78,6 +92,19 @@ function GoogleCallbackContent() {
         console.log('✅ [GOOGLE CALLBACK] Success data from query params');
         console.log('✅ [GOOGLE CALLBACK] User data:', user);
         console.log('✅ [GOOGLE CALLBACK] Token:', token ? 'Token present' : 'Token missing');
+        
+        // Vérifier que les données utilisateur ne contiennent pas d'undefined
+        const userKeys = Object.keys(user);
+        const undefinedKeys = userKeys.filter(key => user[key] === undefined);
+        if (undefinedKeys.length > 0) {
+          console.warn('⚠️ [GOOGLE CALLBACK] User data contains undefined values:', undefinedKeys);
+          console.warn('⚠️ [GOOGLE CALLBACK] This might cause issues. Normalizing data...');
+          
+          // Normaliser les valeurs undefined en null
+          undefinedKeys.forEach(key => {
+            user[key] = null;
+          });
+        }
 
         sendMessageToParent('GOOGLE_AUTH_SUCCESS', {
           user,

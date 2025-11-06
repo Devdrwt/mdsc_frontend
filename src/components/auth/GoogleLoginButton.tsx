@@ -20,12 +20,14 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
     
     try {
       // Récupérer le rôle sélectionné (si disponible)
-      const selectedRole = sessionStorage.getItem('selectedRole') || 'student';
+      const selectedRole = (typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null) || 'student';
       
       // Construire l'URL de l'API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google/callback`);
       const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
+      
+      console.log('🔐 [GOOGLE AUTH] Selected role:', selectedRole);
       
       console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
       console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
@@ -109,24 +111,38 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           
           // Mettre à jour le store d'authentification
           try {
+            // Priorité: rôle retourné par le backend > rôle sélectionné > 'student'
+            const finalRole = (user.role || user.role_name || selectedRole || 'student') as 'student' | 'instructor' | 'admin';
+            
+            // Normaliser les données utilisateur en remplaçant undefined par null ou des valeurs par défaut
             const userData = {
-              id: typeof user.id === 'number' ? user.id : parseInt(user.id, 10),
-              email: user.email,
+              id: typeof user.id === 'number' ? user.id : (user.id ? parseInt(String(user.id), 10) : 0),
+              email: user.email || '',
               firstName: user.firstName || user.first_name || '',
               lastName: user.lastName || user.last_name || '',
-              role: (user.role || selectedRole) as 'student' | 'instructor' | 'admin',
-              phone: user.phone || '',
-              organization: user.organization || '',
-              country: user.country || '',
-              isEmailVerified: user.emailVerified || user.email_verified || true,
-              isActive: user.isActive || user.is_active !== false,
+              role: finalRole,
+              phone: user.phone || null,
+              organization: user.organization || null,
+              country: user.country || null,
+              isEmailVerified: user.emailVerified ?? user.email_verified ?? true,
+              isActive: user.isActive ?? user.is_active ?? true,
               createdAt: user.createdAt || user.created_at || new Date().toISOString(),
               updatedAt: user.updatedAt || user.updated_at || new Date().toISOString()
             };
             
+            // Vérifier que les champs requis ne sont pas undefined
+            if (userData.id === 0 || !userData.email) {
+              throw new Error('Données utilisateur incomplètes: id ou email manquant');
+            }
+            
             console.log('💾 [GOOGLE AUTH] Setting user in store:', userData);
             setUser(userData);
             setTokens(token, token); // Utiliser le même token pour refresh token temporairement
+            
+            // Stocker le rôle dans sessionStorage pour les prochaines fois
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('selectedRole', finalRole);
+            }
             
             console.log('✅ [GOOGLE AUTH] Store updated successfully');
             
@@ -183,7 +199,22 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           
           setIsLoading(false);
           
-          // Callback d'erreur
+          // Détecter si l'utilisateur n'existe pas (nouveau compte)
+          const lowerError = errorMessage.toLowerCase();
+          const isUserNotFound = lowerError.includes('user not found') || 
+                                 lowerError.includes('compte n\'existe pas') ||
+                                 lowerError.includes('account does not exist') ||
+                                 lowerError.includes('utilisateur introuvable') ||
+                                 lowerError.includes('no account found');
+          
+          if (isUserNotFound) {
+            // Rediriger vers la page de sélection de rôle avec un message
+            console.log('🔄 [GOOGLE AUTH] User not found, redirecting to select-role page');
+            router.push('/select-role?from=google&message=' + encodeURIComponent('Veuillez choisir votre rôle pour continuer votre inscription avec Google'));
+            return;
+          }
+          
+          // Callback d'erreur pour les autres erreurs
           if (onError) {
             onError(errorMessage);
           }

@@ -12,13 +12,18 @@ import {
   Building
 } from 'lucide-react';
 import { ProfessionalService, Domain } from '../../../lib/services/professionalService';
+import ConfirmModal from '../../ui/ConfirmModal';
+import { useNotification } from '../../../lib/hooks/useNotification';
 
 export default function DomainManagement() {
+  const { success: showSuccess, error: showError } = useNotification();
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [domainToDelete, setDomainToDelete] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -48,10 +53,10 @@ export default function DomainManagement() {
     try {
       if (editingDomain) {
         await ProfessionalService.updateDomain(editingDomain.id, formData);
-        alert('Domaine mis à jour avec succès');
+        showSuccess('Domaine mis à jour', 'Le domaine a été mis à jour avec succès');
       } else {
         await ProfessionalService.createDomain(formData);
-        alert('Domaine créé avec succès');
+        showSuccess('Domaine créé', 'Le domaine a été créé avec succès');
       }
       setShowCreateModal(false);
       setEditingDomain(null);
@@ -59,20 +64,27 @@ export default function DomainManagement() {
       loadDomains();
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'opération');
+      showError('Erreur', 'Erreur lors de l\'opération');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce domaine ?')) return;
+  const handleDeleteClick = (id: number) => {
+    setDomainToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!domainToDelete) return;
     
     try {
-      await ProfessionalService.deleteDomain(id);
-      alert('Domaine supprimé avec succès');
+      await ProfessionalService.deleteDomain(domainToDelete);
+      showSuccess('Domaine supprimé', 'Le domaine a été supprimé avec succès');
       loadDomains();
+      setShowDeleteModal(false);
+      setDomainToDelete(null);
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la suppression');
+      showError('Erreur', 'Erreur lors de la suppression');
     }
   };
 
@@ -173,7 +185,7 @@ export default function DomainManagement() {
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(domain.id)}
+                  onClick={() => handleDeleteClick(domain.id)}
                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                   title="Supprimer"
                 >
@@ -315,6 +327,19 @@ export default function DomainManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDomainToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer ce domaine ? Cette action est irréversible."
+        confirmText="Supprimer"
+      />
     </div>
   );
 }

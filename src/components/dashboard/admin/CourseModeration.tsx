@@ -20,6 +20,8 @@ import {
   Award
 } from 'lucide-react';
 import DataTable from '../shared/DataTable';
+import { adminService } from '../../../lib/services/adminService';
+import toast from '../../../lib/utils/toast';
 
 interface Course {
   id: string;
@@ -56,114 +58,54 @@ export default function CourseModeration() {
       try {
         setLoading(true);
         
-        // Simulation des données de cours - dans un vrai projet, on récupérerait depuis l'API
-        const mockCourses: Course[] = [
-          {
-            id: '1',
-            title: 'Leadership et Management d\'Équipe',
-            description: 'Développez vos compétences en leadership et apprenez à gérer des équipes performantes.',
-            instructor: 'Dr. Kouassi Jean',
-            instructorEmail: 'jean.kouassi@example.com',
-            category: 'Management',
-            level: 'Intermédiaire',
-            status: 'published',
-            createdAt: '2024-01-10',
-            updatedAt: '2024-01-15',
-            studentsEnrolled: 45,
-            averageRating: 4.5,
-            totalLessons: 12,
-            duration: '8 semaines',
-            price: 0,
-            tags: ['leadership', 'management', 'équipe'],
-            isPublic: true,
-            hasCertificate: true
-          },
-          {
-            id: '2',
-            title: 'Communication Efficace et Prise de Parole',
-            description: 'Maîtrisez l\'art de la communication professionnelle et développez votre aisance à l\'oral.',
-            instructor: 'Mme. Traoré Aminata',
-            instructorEmail: 'aminata.traore@example.com',
-            category: 'Communication',
-            level: 'Débutant',
-            status: 'pending',
-            createdAt: '2024-01-14',
-            updatedAt: '2024-01-14',
-            studentsEnrolled: 0,
-            averageRating: 0,
-            totalLessons: 8,
-            duration: '6 semaines',
-            price: 15000,
-            tags: ['communication', 'prise de parole', 'professionnel'],
-            isPublic: false,
-            hasCertificate: true
-          },
-          {
-            id: '3',
-            title: 'Gestion de Projet Agile',
-            description: 'Apprenez les méthodologies agiles et devenez un chef de projet efficace.',
-            instructor: 'Prof. N\'Guessan Paul',
-            instructorEmail: 'paul.nguessan@example.com',
-            category: 'Gestion de projet',
-            level: 'Avancé',
-            status: 'approved',
-            createdAt: '2024-01-12',
-            updatedAt: '2024-01-15',
-            studentsEnrolled: 32,
-            averageRating: 4.2,
-            totalLessons: 15,
-            duration: '10 semaines',
-            price: 25000,
-            tags: ['agile', 'gestion projet', 'méthodologie'],
-            isPublic: true,
-            hasCertificate: true
-          },
-          {
-            id: '4',
-            title: 'Mobilisation communautaire',
-            description: 'Techniques éprouvées pour mobiliser et engager efficacement les communautés.',
-            instructor: 'M. Koné Ibrahim',
-            instructorEmail: 'ibrahim.kone@example.com',
-            category: 'Mobilisation',
-            level: 'Intermédiaire',
-            status: 'draft',
-            createdAt: '2024-01-13',
-            updatedAt: '2024-01-13',
-            studentsEnrolled: 0,
-            averageRating: 0,
-            totalLessons: 6,
-            duration: '5 semaines',
-            price: 0,
-            tags: ['mobilisation', 'communauté', 'engagement'],
-            isPublic: false,
-            hasCertificate: false
-          },
-          {
-            id: '5',
-            title: 'Cours de qualité insuffisante',
-            description: 'Description très courte et peu détaillée.',
-            instructor: 'M. Test',
-            instructorEmail: 'test@example.com',
-            category: 'Test',
-            level: 'Débutant',
-            status: 'rejected',
-            createdAt: '2024-01-11',
-            updatedAt: '2024-01-15',
-            studentsEnrolled: 0,
-            averageRating: 0,
-            totalLessons: 2,
-            duration: '1 semaine',
-            price: 1000,
-            tags: ['test'],
-            isPublic: false,
-            hasCertificate: false
-          }
-        ];
-
-        setCourses(mockCourses);
-        setFilteredCourses(mockCourses);
-      } catch (error) {
+        // Récupérer les cours depuis l'API
+        const response = await adminService.getAllCourses();
+        
+        // Extraire les cours de la réponse (format avec pagination)
+        const coursesData: any[] = response.courses || [];
+        
+        // Normaliser les données de l'API vers le format Course
+        const apiCourses: Course[] = coursesData.map((course: any) => ({
+          id: String(course.id || course.course_id || ''),
+          title: course.title || course.course_title || 'Sans titre',
+          description: course.description || course.short_description || '',
+          instructor: course.instructor_name || 
+                     (course.instructor_first_name && course.instructor_last_name 
+                       ? `${course.instructor_first_name} ${course.instructor_last_name}` 
+                       : course.instructor || 'Instructeur inconnu'),
+          instructorEmail: course.instructor_email || course.instructorEmail || '',
+          category: course.category_name || course.category || 'Non catégorisé',
+          level: course.level || 'Débutant',
+          status: course.status || 'draft',
+          createdAt: course.created_at || course.createdAt || new Date().toISOString(),
+          updatedAt: course.updated_at || course.updatedAt || course.created_at || new Date().toISOString(),
+          studentsEnrolled: course.students_enrolled || course.enrollment_count || course.studentsEnrolled || 0,
+          averageRating: course.average_rating || course.rating || course.averageRating || 0,
+          totalLessons: course.total_lessons || course.lessons_count || course.totalLessons || 0,
+          duration: course.duration || course.duration_minutes 
+            ? `${Math.round((course.duration_minutes || course.duration || 0) / 60)} heures` 
+            : 'Non spécifié',
+          price: course.price || course.price_amount || 0,
+          tags: course.tags || course.tag_names || [],
+          isPublic: course.is_public !== undefined ? course.is_public : (course.isPublic !== undefined ? course.isPublic : true),
+          hasCertificate: course.has_certificate !== undefined ? course.has_certificate : (course.hasCertificate !== undefined ? course.hasCertificate : false)
+        }));
+        
+        setCourses(apiCourses);
+        setFilteredCourses(apiCourses);
+      } catch (error: any) {
         console.error('Erreur lors du chargement des cours:', error);
+        
+        // Ne pas afficher d'erreur pour les 404 (route non trouvée) - c'est normal si l'endpoint n'existe pas encore
+        if (error.status !== 404) {
+          toast.error('Erreur', error.message || 'Impossible de charger les cours depuis la base de données');
+        } else {
+          console.warn('⚠️ [CourseModeration] Endpoint non disponible, affichage d\'une liste vide');
+        }
+        
+        // En cas d'erreur, initialiser avec un tableau vide (pas de fallback)
+        setCourses([]);
+        setFilteredCourses([]);
       } finally {
         setLoading(false);
       }
@@ -288,7 +230,7 @@ export default function CourseModeration() {
       key: 'course',
       label: 'Cours',
       sortable: true,
-      render: (course: Course) => (
+      render: (value: any, course: Course) => (
         <div className="flex items-start space-x-3">
           <div className="h-12 w-12 bg-mdsc-gold rounded-lg flex items-center justify-center text-white font-semibold">
             <BookOpen className="h-6 w-6" />
@@ -309,19 +251,19 @@ export default function CourseModeration() {
       key: 'level',
       label: 'Niveau',
       sortable: true,
-      render: (course: Course) => getLevelBadge(course.level)
+      render: (value: any, course: Course) => getLevelBadge(course.level)
     },
     {
       key: 'status',
       label: 'Statut',
       sortable: true,
-      render: (course: Course) => getStatusBadge(course.status)
+      render: (value: any, course: Course) => getStatusBadge(course.status)
     },
     {
       key: 'metrics',
       label: 'Métriques',
       sortable: true,
-      render: (course: Course) => (
+      render: (value: any, course: Course) => (
         <div className="text-sm">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
@@ -343,7 +285,7 @@ export default function CourseModeration() {
       key: 'pricing',
       label: 'Tarification',
       sortable: true,
-      render: (course: Course) => (
+      render: (value: any, course: Course) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
             {course.price === 0 ? 'Gratuit' : `${course.price.toLocaleString()} FCFA`}
@@ -358,7 +300,7 @@ export default function CourseModeration() {
       key: 'created',
       label: 'Créé le',
       sortable: true,
-      render: (course: Course) => (
+      render: (value: any, course: Course) => (
         <div className="text-sm text-gray-600">
           {new Date(course.createdAt).toLocaleDateString('fr-FR')}
         </div>
@@ -367,7 +309,7 @@ export default function CourseModeration() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (course: Course) => (
+      render: (value: any, course: Course) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={() => handleCourseAction(course.id, 'view')}

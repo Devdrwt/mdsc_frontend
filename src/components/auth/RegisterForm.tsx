@@ -6,7 +6,8 @@ import Button from '../ui/Button';
 import EmailVerification from './EmailVerification';
 import { register, ApiError } from '../../lib/services/authService';
 import { countries } from '../../lib/constants/countries';
-import { Mail, Lock, User, Building, Phone, MapPin, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Building, Phone, MapPin, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 interface RegisterFormData {
   email: string;
@@ -23,10 +24,10 @@ interface RegisterFormData {
 
 export default function RegisterForm() {
   const router = useRouter();
+  const { error: showError, success: showSuccess } = useNotification();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
 
@@ -39,7 +40,7 @@ export default function RegisterForm() {
     organization: '',
     phone: '',
     city: '',
-    country: 'AF', // Afghanistan (premier pays alphabétiquement)
+    country: 'BJ', // Bénin par défaut
     acceptTerms: false,
   });
 
@@ -74,11 +75,10 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
 
     const validationError = validateForm();
     if (validationError) {
-      setError(validationError);
+      showError('Erreur de validation', validationError);
       return;
     }
 
@@ -94,6 +94,7 @@ export default function RegisterForm() {
       });
 
       if (response.success) {
+        showSuccess('Inscription réussie', 'Veuillez vérifier votre email pour activer votre compte');
         // Montrer la page de vérification d'email
         setShowEmailVerification(true);
       }
@@ -102,12 +103,12 @@ export default function RegisterForm() {
         // Gérer les erreurs de validation de l'API
         if (err.errors && err.errors.length > 0) {
           const errorMessages = err.errors.map(e => `${e.field}: ${e.message}`).join('\n');
-          setError(errorMessages);
+          showError('Erreur de validation', errorMessages);
         } else {
-          setError(err.message);
+          showError('Erreur d\'inscription', err.message);
         }
       } else {
-        setError('Erreur lors de l\'inscription. Veuillez réessayer.');
+        showError('Erreur d\'inscription', 'Erreur lors de l\'inscription. Veuillez réessayer.');
       }
       console.error('Registration error:', err);
       console.error('Error details:', JSON.stringify(err, null, 2));
@@ -130,7 +131,6 @@ export default function RegisterForm() {
 
   const handleBackToRegistration = () => {
     setShowEmailVerification(false);
-    setError(null);
   };
 
   // Afficher la vérification email si nécessaire
@@ -175,13 +175,6 @@ export default function RegisterForm() {
             Rejoignez la communauté MdSC
           </p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-600 border border-red-700 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            <span className="text-white text-sm">{error}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -280,7 +273,7 @@ export default function RegisterForm() {
                 value={formData.phone}
                 onChange={handleInputChange}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue focus:border-transparent"
-                placeholder="+225 XX XX XX XX"
+                placeholder="+229 XX XX XX XX"
               />
             </div>
           </div>

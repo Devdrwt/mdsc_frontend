@@ -12,7 +12,11 @@ import ModuleList from '../../../../components/courses/ModuleList';
 import MediaUpload from '../../../../components/media/MediaUpload';
 import LessonEditor from '../../../../components/instructor/LessonEditor';
 import LessonManagement from '../../../../components/dashboard/instructor/LessonManagement';
-import { Settings, Save, Globe, DollarSign, Calendar, Users, Lock, Eye, EyeOff, Loader as LoaderIcon } from 'lucide-react';
+import EvaluationBuilder from '../../../../components/dashboard/instructor/EvaluationBuilder';
+import ModuleQuizBuilder from '../../../../components/dashboard/instructor/ModuleQuizBuilder';
+import { evaluationService } from '../../../../lib/services/evaluationService';
+import { quizService } from '../../../../lib/services/quizService';
+import { Settings, Save, Globe, DollarSign, Calendar, Users, Lock, Eye, EyeOff, Loader as LoaderIcon, FileText, Send, CheckCircle2, AlertCircle, XCircle, Award } from 'lucide-react';
 
 export default function InstructorCourseDetailPage() {
   const params = useParams();
@@ -25,17 +29,22 @@ export default function InstructorCourseDetailPage() {
   const [course, setCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [courseMedia, setCourseMedia] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'modules' | 'lessons' | 'medias' | 'settings'>('modules');
+  const [evaluation, setEvaluation] = useState<any | null>(null);
+  const [courseStatus, setCourseStatus] = useState<'draft' | 'pending_approval' | 'approved' | 'rejected' | 'published'>('draft');
+  const [activeTab, setActiveTab] = useState<'modules' | 'lessons' | 'medias' | 'evaluations' | 'settings'>('modules');
+  const [selectedModuleForQuiz, setSelectedModuleForQuiz] = useState<{ moduleId: string; quiz: any | null } | null>(null);
+  const [selectedModuleForLesson, setSelectedModuleForLesson] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quizReloadTrigger, setQuizReloadTrigger] = useState(0); // Pour forcer le rechargement des quiz
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [saving, setSaving] = useState(false);
+  const [requestingPublication, setRequestingPublication] = useState(false);
   const { success, error: notifyError } = useNotification() as any;
   
   // Paramètres du cours
   const [courseSettings, setCourseSettings] = useState({
     is_published: false,
-    is_featured: false,
     language: 'fr',
     price: 0,
     currency: 'XOF',
@@ -58,17 +67,22 @@ export default function InstructorCourseDetailPage() {
         setCategories(cats);
         
         // Charger les paramètres du cours
+        const courseAny = c as any;
         setCourseSettings({
-          is_published: c.is_published || c.isPublished || false,
-          is_featured: c.is_featured || false,
-          language: c.language || 'fr',
-          price: c.price || 0,
-          currency: c.currency || 'XOF',
-          max_students: c.max_students || null,
-          enrollment_deadline: c.enrollment_deadline || '',
-          course_start_date: c.course_start_date || '',
-          course_end_date: c.course_end_date || '',
+          is_published: courseAny.is_published || courseAny.isPublished || false,
+          language: courseAny.language || 'fr',
+          price: courseAny.price || 0,
+          currency: courseAny.currency || 'XOF',
+          max_students: courseAny.max_students || courseAny.maxStudents || null,
+          enrollment_deadline: courseAny.enrollment_deadline || courseAny.enrollmentDeadline || '',
+          course_start_date: courseAny.course_start_date || courseAny.courseStartDate || '',
+          course_end_date: courseAny.course_end_date || courseAny.courseEndDate || '',
         });
+        
+        // Déterminer le statut du cours
+        const status = courseAny.status || courseAny.publication_status || 
+          (courseAny.is_published || courseAny.isPublished ? 'published' : 'draft');
+        setCourseStatus(status);
         
         if (courseIdNum) {
           const m = await moduleService.getCourseModules(courseIdNum);
@@ -76,6 +90,10 @@ export default function InstructorCourseDetailPage() {
           try {
             const media = await mediaService.getCourseMedia(courseIdNum.toString());
             setCourseMedia(media);
+          } catch {}
+          try {
+            const evalData = await evaluationService.getCourseEvaluation(courseIdParam);
+            setEvaluation(evalData);
           } catch {}
         }
       } catch (e: any) {
@@ -95,13 +113,19 @@ export default function InstructorCourseDetailPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Cours'}</h1>
           <div className="flex items-center gap-2">
-            {(['modules', 'lessons', 'medias', 'settings'] as const).map(tab => (
+            {(['modules', 'lessons', 'medias', 'evaluations', 'settings'] as const).map(tab => (
               <button
                 key={tab}
-                className={`px-3 py-2 rounded-lg text-sm border transition-colors ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                className={`px-3 py-2 rounded-lg text-sm border transition-colors flex items-center space-x-2 ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : 'Paramètres'}
+                {tab === 'evaluations' && <FileText className="h-4 w-4" />}
+                <span>
+                  {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : tab === 'evaluations' ? 'Évaluations' : 'Paramètres'}
+                </span>
+                {tab === 'evaluations' && !evaluation && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">⚠️</span>
+                )}
               </button>
             ))}
           </div>
@@ -117,6 +141,7 @@ export default function InstructorCourseDetailPage() {
                 <ModuleList
                   courseId={courseIdNum || Number(course?.id)}
                   modules={modules}
+                  quizReloadTrigger={quizReloadTrigger}
                   onReorder={async (ordered) => {
                     // Recalculer order_index et persister
                     const updates = ordered.map((m: any, idx: number) => ({ id: m.id, order_index: idx + 1 }));
@@ -126,13 +151,113 @@ export default function InstructorCourseDetailPage() {
                     setModules(ordered.map((m: any, i: number) => ({ ...m, order_index: i + 1 })));
                     try { success?.('Modules réordonnés'); } catch {}
                   }}
+                  onQuizClick={(moduleId: string) => {
+                    // Charger le quiz existant si disponible
+                    quizService.getModuleQuiz(moduleId).then((quiz) => {
+                      setSelectedModuleForQuiz({ moduleId, quiz });
+                    }).catch(() => {
+                      setSelectedModuleForQuiz({ moduleId, quiz: null });
+                    });
+                  }}
+                  onAddLessonClick={(moduleId: number) => {
+                    // Basculer vers l'onglet "Leçons" et pré-sélectionner le module
+                    setSelectedModuleForLesson(moduleId);
+                    setActiveTab('lessons');
+                  }}
                 />
+                
+                {/* Modal pour créer/modifier un quiz */}
+                {selectedModuleForQuiz && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                      <div className="p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xl font-bold text-gray-900">
+                            {selectedModuleForQuiz.quiz ? 'Modifier le quiz du module' : 'Créer un quiz pour le module'}
+                          </h3>
+                          <button
+                            onClick={() => setSelectedModuleForQuiz(null)}
+                            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <ModuleQuizBuilder
+                          moduleId={selectedModuleForQuiz.moduleId}
+                          courseId={courseIdParam}
+                          initialQuiz={selectedModuleForQuiz.quiz}
+                          onSave={async () => {
+                            setSelectedModuleForQuiz(null);
+                            // Recharger les modules pour mettre à jour les informations (quiz, durée, etc.)
+                            if (courseIdNum) {
+                              try {
+                                const updatedModules = await moduleService.getCourseModules(courseIdNum);
+                                setModules(updatedModules);
+                                // Recharger aussi le cours complet pour mettre à jour les leçons
+                                const updatedCourse = await courseService.getCourseById(courseIdParam);
+                                const courseAny = updatedCourse as any;
+                                const allLessons = courseAny.lessons || [];
+                                // Mettre à jour les leçons par module
+                                const lessonsMap: Record<number, any[]> = {};
+                                updatedModules.forEach((module: any) => {
+                                  const moduleLessons = allLessons.filter((lesson: any) => 
+                                    lesson.module_id === module.id || lesson.moduleId === module.id
+                                  );
+                                  lessonsMap[module.id] = moduleLessons;
+                                });
+                                // Note: Si ModuleList utilise moduleLessons, il faudrait le passer en prop
+                                // Pour l'instant, on recharge juste les modules
+                                // Forcer le rechargement des quiz dans ModuleList
+                                setQuizReloadTrigger(prev => prev + 1);
+                              } catch (error) {
+                                console.error('Erreur lors du rechargement des modules:', error);
+                              }
+                            }
+                            success?.('Quiz sauvegardé avec succès');
+                          }}
+                          onCancel={() => setSelectedModuleForQuiz(null)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'lessons' && (
               <div>
-                <LessonManagement courseId={courseIdParam} />
+                <LessonManagement 
+                  courseId={courseIdParam} 
+                  moduleId={selectedModuleForLesson ? String(selectedModuleForLesson) : undefined}
+                  onLessonCreated={() => {
+                    setSelectedModuleForLesson(null);
+                    // Recharger les modules pour mettre à jour les leçons
+                    if (courseIdNum) {
+                      moduleService.getCourseModules(courseIdNum).then(setModules);
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {activeTab === 'evaluations' && (
+              <div>
+                <EvaluationBuilder
+                  courseId={courseIdParam}
+                  initialEvaluation={evaluation}
+                  onSave={async () => {
+                    try {
+                      const evalData = await evaluationService.getCourseEvaluation(courseIdParam);
+                      setEvaluation(evalData);
+                      success?.('Évaluation sauvegardée avec succès');
+                    } catch (e) {
+                      notifyError?.('Erreur', 'Impossible de recharger l\'évaluation');
+                    }
+                  }}
+                  onCancel={() => setActiveTab('modules')}
+                />
               </div>
             )}
 
@@ -273,18 +398,6 @@ export default function InstructorCourseDetailPage() {
                           <div className="ml-3 flex-1">
                             <div className="font-medium text-gray-900 mb-1">Publier le cours</div>
                             <div className="text-sm text-gray-600">Rendre le cours visible et accessible aux étudiants</div>
-                          </div>
-                        </label>
-                        <label className="relative flex items-start p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={courseSettings.is_featured}
-                            onChange={(e) => setCourseSettings({ ...courseSettings, is_featured: e.target.checked })}
-                            className="mt-1 rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
-                          />
-                          <div className="ml-3 flex-1">
-                            <div className="font-medium text-gray-900 mb-1">Mettre en vedette</div>
-                            <div className="text-sm text-gray-600">Afficher le cours en page d'accueil</div>
                           </div>
                         </label>
                       </div>
@@ -436,6 +549,175 @@ export default function InstructorCourseDetailPage() {
                           Laissez vide pour une inscription illimitée
                         </p>
                       </div>
+                    </div>
+
+                    {/* Section : Demande de publication */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                      <div className="flex items-center space-x-3 mb-4">
+                        <div className="p-2 bg-blue-500/10 rounded-lg">
+                          <Send className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900">Publication du cours</h3>
+                          <p className="text-sm text-gray-600">Demander la validation pour publier le cours</p>
+                        </div>
+                        {/* Badge de statut */}
+                        {courseStatus === 'pending_approval' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <Lock className="h-3 w-3 mr-1" />
+                            En attente de validation
+                          </span>
+                        )}
+                        {courseStatus === 'approved' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Approuvé
+                          </span>
+                        )}
+                        {courseStatus === 'rejected' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Rejeté
+                          </span>
+                        )}
+                        {courseStatus === 'published' && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Publié
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Vérification des conditions */}
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Conditions de publication :</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-sm">
+                            {modules.length > 0 ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={modules.length > 0 ? 'text-gray-700' : 'text-red-600'}>
+                              Au moins un module créé {modules.length > 0 && `(${modules.length})`}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            {evaluation ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={evaluation ? 'text-gray-700' : 'text-red-600'}>
+                              Évaluation finale créée {evaluation ? '(Obligatoire)' : '(⚠️ Obligatoire)'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            {course?.title && course.title.length >= 5 ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={course?.title && course.title.length >= 5 ? 'text-gray-700' : 'text-red-600'}>
+                              Titre valide (min. 5 caractères)
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm">
+                            {course?.description && course.description.length >= 10 ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={course?.description && course.description.length >= 10 ? 'text-gray-700' : 'text-red-600'}>
+                              Description valide (min. 10 caractères)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bouton de demande de publication */}
+                      {courseStatus === 'draft' || courseStatus === 'rejected' ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            // Vérifier les conditions
+                            if (modules.length === 0) {
+                              notifyError?.('Conditions non remplies', 'Vous devez créer au moins un module pour ce cours');
+                              return;
+                            }
+                            if (!evaluation) {
+                              notifyError?.('Évaluation requise', 'Vous devez créer une évaluation finale avant de demander la publication');
+                              setActiveTab('evaluations');
+                              return;
+                            }
+                            if (!course?.title || course.title.length < 5) {
+                              notifyError?.('Titre invalide', 'Le titre doit contenir au moins 5 caractères');
+                              return;
+                            }
+                            if (!course?.description || course.description.length < 10) {
+                              notifyError?.('Description invalide', 'La description doit contenir au moins 10 caractères');
+                              return;
+                            }
+
+                            setRequestingPublication(true);
+                            try {
+                              await courseService.requestCoursePublication(courseIdParam);
+                              success?.('Demande envoyée', 'Votre demande de publication a été envoyée. Elle sera examinée par un administrateur.');
+                              const updated = await courseService.getCourseById(courseIdParam);
+                              setCourse(updated);
+                              const courseAny = updated as any;
+                              setCourseStatus(courseAny.status || 'pending_approval');
+                            } catch (error: any) {
+                              console.error('Erreur lors de la demande de publication:', error);
+                              notifyError?.('Erreur', error.message || 'Impossible d\'envoyer la demande de publication');
+                            } finally {
+                              setRequestingPublication(false);
+                            }
+                          }}
+                          disabled={requestingPublication || modules.length === 0 || !evaluation}
+                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
+                        >
+                          {requestingPublication ? (
+                            <>
+                              <LoaderIcon className="h-5 w-5 animate-spin" />
+                              <span>Envoi de la demande...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-5 w-5" />
+                              <span>Demander la publication</span>
+                            </>
+                          )}
+                        </button>
+                      ) : courseStatus === 'pending_approval' ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <Lock className="h-5 w-5 text-yellow-600 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-yellow-900">
+                                Demande en attente de validation
+                              </p>
+                              <p className="text-xs text-yellow-700 mt-1">
+                                Votre demande de publication est en cours d'examen par un administrateur.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : courseStatus === ('rejected' as typeof courseStatus) ? (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-red-900">
+                                Demande rejetée
+                              </p>
+                              <p className="text-xs text-red-700 mt-1">
+                                Votre demande a été rejetée. Vous pouvez corriger les problèmes et renvoyer une demande.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Boutons d'action */}

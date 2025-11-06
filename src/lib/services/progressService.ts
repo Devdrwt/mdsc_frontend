@@ -91,6 +91,69 @@ export class ProgressService {
   static async getStudentCourseProgress(courseId: string | number): Promise<CourseProgressStats> {
     return this.getCourseProgress(Number(courseId));
   }
+
+  /**
+   * Vérifier l'accès à une leçon (progression séquentielle)
+   */
+  static async checkLessonAccess(
+    enrollmentId: number,
+    lessonId: number
+  ): Promise<{ hasAccess: boolean; reason?: string }> {
+    try {
+      const response = await apiRequest(
+        `/enrollments/${enrollmentId}/lessons/${lessonId}/access`,
+        {
+          method: 'GET',
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la vérification d\'accès:', error);
+      // En cas d'erreur, permettre l'accès pour ne pas bloquer l'utilisateur
+      return { hasAccess: true };
+    }
+  }
+
+  /**
+   * Compléter une leçon et déverrouiller la suivante
+   */
+  static async completeLesson(
+    enrollmentId: number,
+    lessonId: number,
+    timeSpent?: number
+  ): Promise<{ success: boolean; nextLessonUnlocked?: boolean }> {
+    const response = await apiRequest(
+      `/enrollments/${enrollmentId}/lessons/${lessonId}/complete`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ time_spent: timeSpent }),
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Obtenir la liste des leçons déverrouillées pour un cours
+   */
+  static async getUnlockedLessons(
+    enrollmentId: number,
+    courseId: number
+  ): Promise<number[]> {
+    try {
+      const response = await apiRequest(
+        `/enrollments/${enrollmentId}/progress`,
+        {
+          method: 'GET',
+        }
+      );
+      // Retourner les IDs des leçons déverrouillées
+      const progress = response.data;
+      return progress.unlocked_lessons || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des leçons déverrouillées:', error);
+      return [];
+    }
+  }
 }
 
 export const progressService = ProgressService;

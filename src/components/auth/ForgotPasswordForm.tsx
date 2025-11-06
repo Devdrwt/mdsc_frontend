@@ -5,20 +5,20 @@ import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { forgotPassword, ApiError } from '../../lib/services/authService';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
+  const { error: showError, success: showSuccess } = useNotification();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
 
     if (!email.trim()) {
-      setError('Veuillez saisir votre adresse email.');
+      showError('Email requis', 'Veuillez saisir votre adresse email.');
       return;
     }
 
@@ -28,16 +28,17 @@ export default function ForgotPasswordForm() {
       const response = await forgotPassword(email);
       
       if (response.success) {
+        showSuccess('Email envoyé', 'Un lien de réinitialisation a été envoyé à votre adresse email');
         setIsEmailSent(true);
       } else {
-        setError(response.message || 'Erreur lors de l\'envoi de l\'email.');
+        showError('Erreur d\'envoi', response.message || 'Erreur lors de l\'envoi de l\'email.');
       }
     } catch (err) {
       console.error('Password reset error:', err);
       if (err instanceof ApiError) {
-        setError(err.message || 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
+        showError('Erreur d\'envoi', err.message || 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
       } else {
-        setError('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+        showError('Erreur de connexion', 'Impossible de se connecter au serveur. Vérifiez votre connexion.');
       }
     } finally {
       setIsLoading(false);
@@ -107,13 +108,6 @@ export default function ForgotPasswordForm() {
             Saisissez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
           </p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-600 border border-red-700 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-white" />
-            <span className="text-white text-sm">{error}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

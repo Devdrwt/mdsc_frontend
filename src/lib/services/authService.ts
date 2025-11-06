@@ -237,6 +237,162 @@ export async function refreshToken(): Promise<ApiResponse<{ token: string }>> {
   return response;
 }
 
+// Connexion Admin (séparée, avec 2FA obligatoire)
+export async function adminLogin(email: string, password: string): Promise<ApiResponse<AuthData & { requires2FA?: boolean; sessionId?: string }>> {
+  // Pour le login admin, on ne doit PAS envoyer de token (c'est une connexion initiale)
+  // Utiliser fetch directement au lieu de fetchAPI pour éviter l'ajout automatique du token
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  
+  // Endpoint principal (le backend a ajouté des alias pour compatibilité)
+  const endpoint = '/admin/auth/login';
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  console.log(`🔐 [AdminLogin] Connexion admin avec endpoint: ${endpoint}`);
+  console.log(`🔐 [AdminLogin] URL complète: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        // Ne PAS ajouter Authorization header pour le login
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    
+    const responseText = await response.text();
+    let data: any = {};
+    
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch (parseError) {
+      data = { message: responseText || 'Erreur serveur' };
+    }
+    
+    if (!response.ok) {
+      const errorMessage = data.message || data.error || 'Une erreur est survenue';
+      console.error(`❌ [AdminLogin] Erreur ${response.status}:`, errorMessage);
+      throw new ApiError(
+        errorMessage,
+        response.status,
+        data.errors
+      );
+    }
+    
+    // Succès !
+    console.log(`✅ [AdminLogin] Succès avec endpoint: ${endpoint}`);
+    console.log(`✅ [AdminLogin] Réponse:`, {
+      success: data.success,
+      requires2FA: data.data?.requires2FA || data.requires2FA,
+      hasSessionId: !!(data.data?.sessionId || data.sessionId),
+      hasToken: !!(data.data?.token || data.token),
+    });
+    
+    const apiResponse: ApiResponse<AuthData & { requires2FA?: boolean; sessionId?: string }> = {
+      success: data.success !== false,
+      message: data.message,
+      data: data.data || data,
+    };
+
+    // Ne pas stocker les tokens ici si 2FA est requis
+    if (apiResponse.success && apiResponse.data && !apiResponse.data.requires2FA) {
+      localStorage.setItem('authToken', apiResponse.data.token);
+      localStorage.setItem('refreshToken', apiResponse.data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(apiResponse.data.user));
+    }
+
+    return apiResponse;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(
+      error instanceof Error ? error.message : 'Erreur lors de la connexion admin',
+      0
+    );
+  }
+}
+
+// Vérification 2FA pour Admin
+export async function verify2FA(sessionId: string, code: string, email?: string): Promise<ApiResponse<AuthData>> {
+  // Si sessionId est un nombre (adminId), utiliser adminId, sinon utiliser sessionId
+  const isNumericId = /^\d+$/.test(sessionId);
+  
+  // Construire le body selon le type d'identifiant
+  let body: string;
+  if (isNumericId) {
+    // Si on a un adminId numérique, essayer d'abord avec admin_id (snake_case)
+    // car certains backends (Laravel, etc.) utilisent snake_case
+    const payload: any = { 
+      admin_id: parseInt(sessionId, 10), // Essayer admin_id en premier
+      code 
+    };
+    // Si on a aussi un email, l'ajouter (certains backends peuvent le requérir)
+    if (email) {
+      payload.email = email;
+    }
+    body = JSON.stringify(payload);
+  } else {
+    // Sinon, utiliser sessionId (peut être un email ou autre identifiant)
+    body = JSON.stringify({ sessionId, code });
+  }
+  
+  console.log('🔐 [verify2FA] Envoi requête:', {
+    endpoint: '/admin/auth/verify-2fa',
+    body,
+    isNumericId,
+    sessionId,
+    email,
+  });
+  
+  // Pour la vérification 2FA, on ne doit PAS envoyer de token (c'est encore une étape d'authentification)
+  // Utiliser fetch directement au lieu de fetchAPI pour éviter l'ajout automatique du token
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  const url = `${API_BASE_URL}/admin/auth/verify-2fa`;
+  
+  const fetchResponse = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      // Ne PAS ajouter Authorization header pour la vérification 2FA
+    },
+    body,
+  });
+  
+  const responseText = await fetchResponse.text();
+  let data: any = {};
+  
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch (parseError) {
+    data = { message: responseText || 'Erreur serveur' };
+  }
+  
+  if (!fetchResponse.ok) {
+    throw new ApiError(
+      data.message || data.error || 'Une erreur est survenue',
+      fetchResponse.status,
+      data.errors
+    );
+  }
+  
+  const response: ApiResponse<AuthData> = {
+    success: data.success !== false,
+    message: data.message,
+    data: data.data || data,
+  };
+
+  // Stocker les tokens après vérification 2FA réussie
+  if (response.success && response.data) {
+    localStorage.setItem('authToken', response.data.token);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(response.data.user));
+  }
+
+  return response;
+}
+
 // Déconnexion
 export async function logout(): Promise<void> {
   const refreshToken = localStorage.getItem('refreshToken');

@@ -7,10 +7,12 @@ import { moduleService } from '../../../lib/services/moduleService';
 import { Module } from '../../../types/course';
 import { MediaService } from '../../../lib/services/mediaService';
 import toast from '../../../lib/utils/toast';
+import ConfirmModal from '../../ui/ConfirmModal';
 
 interface LessonManagementProps {
   courseId: string;
   moduleId?: string | number;
+  onLessonCreated?: () => void;
 }
 
 const CONTENT_TYPES = [
@@ -24,13 +26,15 @@ const CONTENT_TYPES = [
   { value: 'assignment', label: 'Devoir', icon: FileText },
 ] as const;
 
-export default function LessonManagement({ courseId, moduleId }: LessonManagementProps) {
+export default function LessonManagement({ courseId, moduleId, onLessonCreated }: LessonManagementProps) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [deletingLesson, setDeletingLesson] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<{
     title: string;
@@ -64,6 +68,21 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
   useEffect(() => {
     loadData();
   }, [courseId]);
+
+  // Si un moduleId est fourni, ouvrir automatiquement le modal de création
+  useEffect(() => {
+    if (moduleId && modules.length > 0) {
+      const moduleIdNum = typeof moduleId === 'string' ? Number(moduleId) : moduleId;
+      const moduleExists = modules.some(m => m.id === moduleIdNum);
+      if (moduleExists && !showModal) {
+        setFormData(prev => ({
+          ...prev,
+          module_id: moduleIdNum,
+        }));
+        setShowModal(true);
+      }
+    }
+  }, [moduleId, modules]);
 
   const loadData = async () => {
     try {
@@ -126,17 +145,18 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
 
   const openEditModal = (lesson: Lesson) => {
     setEditingLesson(lesson);
+    const lessonAny = lesson as any;
     setFormData({
       title: lesson.title,
       description: lesson.description || '',
       content_type: lesson.content_type || 'text',
       content_url: lesson.content_url || '',
       content_text: lesson.content_text || lesson.content || '',
-      module_id: lesson.module_id ? Number(lesson.module_id) : '',
-      duration: lesson.duration_minutes || lesson.duration || 0,
-      order: lesson.order_index || lesson.order || 1,
-      is_required: lesson.is_required ?? true,
-      is_published: lesson.is_published ?? false,
+      module_id: lessonAny.module_id ? Number(lessonAny.module_id) : (lesson.moduleId ? Number(lesson.moduleId) : ''),
+      duration: lessonAny.duration_minutes || lesson.duration || 0,
+      order: lessonAny.order_index || lesson.order || 1,
+      is_required: lessonAny.is_required ?? lesson.isRequired ?? true,
+      is_published: lessonAny.is_published ?? lesson.isPublished ?? false,
     });
     setMediaPreview(lesson.content_url || '');
     setShowModal(true);
@@ -197,13 +217,27 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
         }
       }
 
+      // Validation : le module est requis pour créer une leçon
+      const moduleIdValue = formData.module_id;
+      if (!moduleIdValue || (typeof moduleIdValue === 'string')) {
+        toast.error('Module requis', 'Veuillez sélectionner un module pour cette leçon');
+        return;
+      }
+
+      // Convertir en nombre si nécessaire
+      const moduleId = typeof moduleIdValue === 'number' ? moduleIdValue : Number(moduleIdValue);
+      if (isNaN(moduleId) || moduleId <= 0) {
+        toast.error('Module invalide', 'Veuillez sélectionner un module valide');
+        return;
+      }
+
       const payload: CreateLessonData | UpdateLessonData = {
         title: formData.title,
         description: formData.description,
         content_type: formData.content_type as any,
         content_url: formData.content_type !== 'text' ? finalContentUrl : undefined,
         content_text: formData.content_type === 'text' ? formData.content_text : undefined,
-        module_id: formData.module_id || undefined,
+        module_id: moduleId,
         media_file_id: finalMediaFileId,
         duration: formData.duration,
         duration_minutes: formData.duration,
@@ -223,6 +257,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
       
       await loadData();
       closeModal();
+      onLessonCreated?.();
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde de la leçon:', error);
       toast.error('Erreur', error.message || 'Impossible de sauvegarder la leçon');
@@ -231,14 +266,21 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
     }
   };
 
-  const handleDelete = async (lessonId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette leçon ?')) return;
+  const handleDeleteClick = (lessonId: string) => {
+    setLessonToDelete(lessonId);
+    setShowDeleteModal(true);
+  };
 
-    setDeletingLesson(lessonId);
+  const handleDelete = async () => {
+    if (!lessonToDelete) return;
+
+    setDeletingLesson(lessonToDelete);
     try {
-      await courseService.deleteLesson(lessonId);
+      await courseService.deleteLesson(lessonToDelete);
       toast.success('Leçon supprimée', 'La leçon a été supprimée avec succès');
       await loadData();
+      setShowDeleteModal(false);
+      setLessonToDelete(null);
     } catch (error: any) {
       console.error('Erreur lors de la suppression de la leçon:', error);
       toast.error('Erreur', error.message || 'Impossible de supprimer la leçon');
@@ -292,9 +334,9 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                       {getContentTypeIcon(lesson.content_type || 'text')}
                       <h3 className="font-semibold text-gray-900">{lesson.title}</h3>
                       <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                        Leçon {lesson.order_index || lesson.order}
+                        Leçon {(lesson as any).order_index || lesson.order}
                       </span>
-                      {lesson.is_published ? (
+                      {((lesson as any).is_published ?? lesson.isPublished) ? (
                         <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center">
                           <Eye className="h-3 w-3 mr-1" />
                           Publié
@@ -305,7 +347,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                           Brouillon
                         </span>
                       )}
-                      {lesson.is_required && (
+                      {((lesson as any).is_required ?? lesson.isRequired) && (
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                           Obligatoire
                         </span>
@@ -317,12 +359,12 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
-                        <span>{lesson.duration_minutes || lesson.duration} min</span>
+                        <span>{(lesson as any).duration_minutes || lesson.duration} min</span>
                       </div>
-                      {lesson.module_title && (
+                      {(lesson as any).module_title && (
                         <div className="flex items-center space-x-1">
                           <FileText className="h-4 w-4" />
-                          <span>{lesson.module_title}</span>
+                          <span>{(lesson as any).module_title}</span>
                         </div>
                       )}
                     </div>
@@ -337,7 +379,7 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(lesson.id.toString())}
+                    onClick={() => handleDeleteClick(lesson.id.toString())}
                     disabled={deletingLesson === lesson.id.toString()}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
                     title="Supprimer"
@@ -446,18 +488,30 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Module (optionnel)
+                    Module * <span className="text-gray-500 text-xs font-normal">(requis pour organiser le cours)</span>
                   </label>
                   <select
                     value={formData.module_id}
                     onChange={(e) => setFormData({ ...formData, module_id: e.target.value ? Number(e.target.value) : '' })}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-gold transition-colors"
+                    required
                   >
-                    <option value="">Aucun module (leçon directe)</option>
-                    {modules.map(m => (
-                      <option key={m.id} value={m.id}>{m.title}</option>
-                    ))}
+                    <option value="">-- Sélectionner un module --</option>
+                    {modules.length === 0 ? (
+                      <option value="" disabled>Aucun module disponible. Créez d'abord un module.</option>
+                    ) : (
+                      modules.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.title} {m.order_index ? `(Module ${m.order_index})` : ''}
+                        </option>
+                      ))
+                    )}
                   </select>
+                  {modules.length === 0 && (
+                    <p className="mt-2 text-sm text-amber-600">
+                      ⚠️ Vous devez créer au moins un module avant de pouvoir créer des leçons.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -858,6 +912,20 @@ export default function LessonManagement({ courseId, moduleId }: LessonManagemen
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setLessonToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer cette leçon ? Cette action est irréversible."
+        confirmText="Supprimer"
+        isLoading={deletingLesson !== null}
+      />
     </div>
   );
 }
