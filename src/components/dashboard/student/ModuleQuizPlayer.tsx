@@ -83,9 +83,12 @@ export default function ModuleQuizPlayer({
         if (!quiz) {
           throw new Error('Quiz non trouvé');
         }
-        quizData = quiz;
+        // S'assurer que l'ID est défini
+        quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
       } else {
-        quizData = await quizService.getQuizForStudent(quizId);
+        const quiz = await quizService.getQuizForStudent(quizId);
+        // S'assurer que l'ID est défini
+        quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
       }
       setQuiz(quizData);
       

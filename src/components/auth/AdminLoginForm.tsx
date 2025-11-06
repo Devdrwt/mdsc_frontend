@@ -35,14 +35,14 @@ export default function AdminLoginForm() {
       // Appeler l'API de connexion admin
       const response = await adminLogin(emailValue, passwordValue);
       
+      const responseData = response.data as any;
       console.log('🔐 [AdminLogin] Réponse API complète:', {
         success: response.success,
         message: response.message,
         hasData: !!response.data,
         requires2FA: response.data?.requires2FA,
-        requires2fa: response.data?.requires2fa,
-        hasSessionId: !!(response.data?.sessionId || response.data?.session_id),
-        sessionId: response.data?.sessionId || response.data?.session_id,
+        hasSessionId: !!(response.data?.sessionId || responseData?.session_id),
+        sessionId: response.data?.sessionId || responseData?.session_id,
         hasToken: !!response.data?.token,
         tokenType: typeof response.data?.token,
         tokenValue: response.data?.token ? response.data.token.substring(0, 20) + '...' : 'N/A',
@@ -53,12 +53,13 @@ export default function AdminLoginForm() {
       if (response.success && response.data) {
         // Pour les admins, 2FA est toujours requis si la connexion réussit
         // Détecter si 2FA est requis : soit explicitement, soit par la présence d'un sessionId, soit par l'absence de token
-        const has2FA = response.data.requires2FA || response.data.requires2fa;
-        const sessionId = response.data.sessionId || response.data.session_id || response.data.session;
+        const responseData = response.data as any;
+        const has2FA = response.data.requires2FA;
+        const sessionId = response.data.sessionId || responseData.session_id || responseData.session;
         // Le backend attend probablement un adminId (ID numérique) plutôt qu'un email
-        const adminId = response.data.adminId || response.data.admin_id || response.data.id || response.data.user?.id;
-        const hasToken = !!(response.data.token || response.data.accessToken || response.data.access_token);
-        const message = response.message || response.data.message || '';
+        const adminId = responseData.adminId || responseData.admin_id || responseData.id || responseData.user?.id;
+        const hasToken = !!(response.data.token || responseData.accessToken || responseData.access_token);
+        const message = response.message || responseData.message || '';
         const codeSent = message.toLowerCase().includes('code') || message.toLowerCase().includes('2fa') || message.toLowerCase().includes('envoyé');
         
         // Pour les admins : si pas de token, on considère que 2FA est requis (comportement par défaut)
@@ -81,9 +82,9 @@ export default function AdminLoginForm() {
           // Le message sera affiché dans le formulaire 2FA
         } else {
           // Si pas de 2FA (non recommandé), connecter directement
-          const user = response.data.user;
-          const token = response.data.token || response.data.accessToken || response.data.access_token;
-          const refreshToken = response.data.refreshToken || response.data.refresh_token;
+          const user = responseData.user;
+          const token = response.data.token || responseData.accessToken || responseData.access_token;
+          const refreshToken = response.data.refreshToken || responseData.refresh_token;
           
           // Vérifier que le token existe et n'est pas "undefined"
           if (!token || token === 'undefined' || token === 'null') {

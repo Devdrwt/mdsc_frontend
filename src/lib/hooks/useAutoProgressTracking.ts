@@ -128,7 +128,8 @@ export function useAutoProgressTracking({
       if (isComplete && !certificateGenerated) {
         // Générer le certificat automatiquement
         try {
-          const certificate = await certificateService.generateCertificate(courseId);
+          // generateCertificate n'existe pas, utiliser requestCertificateByCourseId
+          const certificate = await certificateService.requestCertificateByCourseId(courseId);
           console.log('🎉 Certificat généré automatiquement:', certificate);
           
           setCertificateGenerated(true);

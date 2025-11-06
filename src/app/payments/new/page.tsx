@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import PaymentForm from '../../../components/payments/PaymentForm';
 import { paymentService } from '../../../lib/services/paymentService';
@@ -8,7 +8,7 @@ import { courseService } from '../../../lib/services/courseService';
 import { Loader, AlertCircle } from 'lucide-react';
 import toast from '../../../lib/utils/toast';
 
-export default function NewPaymentPage() {
+function NewPaymentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const courseId = searchParams?.get('courseId');
@@ -88,3 +88,17 @@ export default function NewPaymentPage() {
   );
 }
 
+export default function NewPaymentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <NewPaymentContent />
+    </Suspense>
+  );
+}

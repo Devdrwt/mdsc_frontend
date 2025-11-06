@@ -73,17 +73,6 @@ export class ProgressService {
   }
 
   // Méthodes de compatibilité avec l'ancien format
-  static async completeLesson(courseId: string | number, lessonId: string | number, timeSpent?: number): Promise<LessonProgress> {
-    // Méthode de compatibilité - utiliser enrollmentId si disponible
-    console.warn('completeLesson est déprécié, utilisez markLessonCompleted avec enrollmentId');
-    // Pour compatibilité, essayer de trouver l'enrollment
-    const response = await apiRequest(`/progress/lesson/${lessonId}/complete`, {
-      method: 'POST',
-      body: JSON.stringify({ time_spent: timeSpent }),
-    });
-    return response.data;
-  }
-
   static async getCourseProgressStats(courseId: string | number): Promise<CourseProgressStats> {
     return this.getCourseProgress(Number(courseId));
   }

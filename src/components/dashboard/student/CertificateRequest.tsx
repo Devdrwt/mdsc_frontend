@@ -3,20 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Award, CheckCircle, Clock, AlertCircle, Download, Loader, GraduationCap, User, Calendar } from 'lucide-react';
 import { certificateService } from '../../../lib/services/certificateService';
+import { Certificate } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
-
-interface Certificate {
-  id: string;
-  course_id: string;
-  course_title?: string;
-  student_name?: string;
-  student_email?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'issued';
-  issued_at?: string;
-  certificate_code?: string;
-  rejection_reason?: string;
-  created_at: string;
-}
 
 interface CertificateRequestProps {
   courseId?: string;
@@ -87,20 +75,15 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (certificate: Certificate) => {
+    // Utiliser is_valid et verified pour déterminer le statut
+    const status = certificate.is_valid ? (certificate.verified ? 'issued' : 'pending') : 'rejected';
     switch (status) {
       case 'issued':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Émis
-          </span>
-        );
-      case 'approved':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Approuvé
           </span>
         );
       case 'pending':
@@ -171,10 +154,10 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                         {certificate.course_title || `Certificat du cours`}
                       </h3>
                       <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                        {certificate.student_name && (
+                        {(certificate.first_name || certificate.last_name) && (
                           <div className="flex items-center space-x-1">
                             <User className="h-4 w-4" />
-                            <span>{certificate.student_name}</span>
+                            <span>{[certificate.first_name, certificate.last_name].filter(Boolean).join(' ')}</span>
                           </div>
                         )}
                         {certificate.issued_at && (
@@ -185,7 +168,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                         )}
                       </div>
                     </div>
-                    {getStatusBadge(certificate.status)}
+                    {getStatusBadge(certificate)}
                   </div>
 
                   {certificate.certificate_code && (
@@ -195,19 +178,19 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                     </div>
                   )}
 
-                  {certificate.status === 'rejected' && certificate.rejection_reason && (
+                  {!certificate.is_valid && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                       <div className="flex items-start space-x-2">
                         <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-red-900">Raison du rejet</p>
-                          <p className="text-sm text-red-700 mt-1">{certificate.rejection_reason}</p>
+                          <p className="text-sm font-medium text-red-900">Certificat invalide</p>
+                          <p className="text-sm text-red-700 mt-1">Ce certificat n'est plus valide.</p>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {certificate.status === 'pending' && (
+                  {certificate.is_valid && !certificate.verified && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                       <div className="flex items-start space-x-2">
                         <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
@@ -223,9 +206,9 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                 </div>
 
                 <div className="flex items-center space-x-2 ml-4">
-                  {certificate.status === 'issued' && (
+                  {certificate.is_valid && certificate.verified && (
                     <button
-                      onClick={() => handleDownloadCertificate(certificate.id)}
+                      onClick={() => handleDownloadCertificate(String(certificate.id))}
                       className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
                     >
                       <Download className="h-4 w-4" />

@@ -19,15 +19,27 @@ export default function CertificateCard({
 }: CertificateCardProps) {
   const handleDownload = async () => {
     try {
-      const blob = await certificateService.downloadCertificate(certificate.id.toString());
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `certificat-${certificate.certificateCode}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      const downloadUrl = await certificateService.downloadCertificate(certificate.id.toString());
+      // Si c'est une URL, l'ouvrir directement, sinon traiter comme un blob
+      if (typeof downloadUrl === 'string') {
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `certificat-${certificate.certificateCode}.pdf`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        // Si c'est un Blob (ancien format)
+        const url = window.URL.createObjectURL(downloadUrl);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `certificat-${certificate.certificateCode}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
       
       onDownload?.();
     } catch (error) {
@@ -37,7 +49,7 @@ export default function CertificateCard({
   };
 
   const handleVerify = () => {
-    const verifyUrl = certificateService.getVerificationUrl(certificate.certificateCode);
+    const verifyUrl = `/verify-certificate/${certificate.certificateCode}`;
     window.open(verifyUrl, '_blank');
   };
 

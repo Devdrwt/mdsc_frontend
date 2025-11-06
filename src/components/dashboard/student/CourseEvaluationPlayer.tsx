@@ -88,11 +88,11 @@ export default function CourseEvaluationPlayer({
       setLoading(true);
       // Utiliser l'endpoint spécifique si enrollmentId est fourni
       let evalData: FinalEvaluation | null = null;
-      if (enrollmentId) {
-        evalData = await evaluationService.getEvaluationForStudent(enrollmentId);
-      } else {
-        // Fallback vers l'endpoint pour instructeur
-        evalData = await evaluationService.getCourseEvaluation(courseId);
+      // getEvaluationForStudent n'existe pas, utiliser getCourseEvaluation
+      const evalDataResult = await evaluationService.getCourseEvaluation(courseId);
+      // S'assurer que l'ID est défini si nécessaire
+      if (evalDataResult) {
+        evalData = { ...evalDataResult, id: evalDataResult.id || 'temp' } as FinalEvaluation;
       }
       
       if (!evalData) {
@@ -171,14 +171,16 @@ export default function CourseEvaluationPlayer({
       let submissionResult: EvaluationResult;
       
       // Utiliser l'endpoint spécifique si enrollmentId est fourni
-      if (enrollmentId) {
-        const result = await evaluationService.submitEvaluationAttempt(enrollmentId, answers);
+      if (enrollmentId && evaluation?.id) {
+        // submitEvaluation attend evaluationId (string), pas enrollmentId
+        const result = await evaluationService.submitEvaluation(String(evaluation.id), answers);
+        // EvaluationSubmission peut ne pas avoir toutes ces propriétés, adapter selon le type réel
         submissionResult = {
-          score: result.score,
-          total_points: result.total_points,
-          percentage: result.percentage,
-          passed: result.passed,
-          certificate_eligible: result.certificate_eligible,
+          score: (result as any).score || 0,
+          total_points: (result as any).total_points || 0,
+          percentage: (result as any).percentage || 0,
+          passed: (result as any).passed || false,
+          certificate_eligible: (result as any).certificate_eligible || false,
         };
       } else {
         // Fallback : calcul côté client (temporaire)

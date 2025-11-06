@@ -40,7 +40,7 @@ export default function PaymentPage() {
         setStep('success');
         // S'assurer que l'inscription est créée
         try {
-          await enrollmentService.enrollInCourse(paymentData.course_id);
+          await enrollmentService.enrollInCourse(Number(paymentData.course_id));
         } catch (error) {
           // L'inscription existe peut-être déjà
           console.log('Inscription déjà existante ou erreur:', error);
@@ -69,7 +69,7 @@ export default function PaymentPage() {
           clearInterval(checkInterval);
           // Créer l'inscription automatiquement
           try {
-            await enrollmentService.enrollInCourse(paymentStatus.course_id);
+            await enrollmentService.enrollInCourse(Number(paymentStatus.course_id));
             setPayment(paymentStatus);
             setStep('success');
             toast.success('Paiement réussi', 'Votre inscription a été créée avec succès');

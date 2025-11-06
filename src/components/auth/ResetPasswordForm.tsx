@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '../ui/Button';
-import { Lock, Eye, EyeOff, CheckCircle, Loader } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, Loader, AlertCircle } from 'lucide-react';
 import { useNotification } from '../../lib/hooks/useNotification';
 import { resetPassword } from '../../lib/services/authService';
 

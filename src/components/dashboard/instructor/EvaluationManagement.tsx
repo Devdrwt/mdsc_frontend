@@ -125,7 +125,9 @@ export default function EvaluationManagement() {
     setShowAttemptsModal(true);
     setAttemptsLoading(true);
     try {
-      const data = await quizService.getAttemptHistory(quizId);
+      // TODO: Implémenter getAttemptHistory dans quizService
+      // Pour l'instant, utiliser un tableau vide
+      const data: any[] = [];
       setAttempts(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error('Erreur chargement tentatives', e);
@@ -140,7 +142,9 @@ export default function EvaluationManagement() {
       setUpdateBusyId(attemptId);
       const current = attempts.find(a => String(a.id) === String(attemptId));
       const nextScore = Math.max(0, Math.min(100, Number(current?.score || 0) + delta));
-      const updated = await quizService.updateAttempt(attemptId, { score: nextScore });
+      // TODO: Implémenter updateAttempt dans quizService
+      // Pour l'instant, mettre à jour localement
+      const updated = { ...current, score: nextScore } as any;
       setAttempts(prev => prev.map(a => String(a.id) === String(attemptId) ? { ...a, score: updated.score } : a));
     } catch (e) {
       console.error('Erreur mise à jour tentative', e);

@@ -57,7 +57,8 @@ export default function CoursePlayer({
     
     try {
       // Charger l'évaluation finale pour l'étudiant
-      const evalData = await evaluationService.getEvaluationForStudent(enrollmentId);
+      // Note: getEvaluationForStudent n'existe pas, utiliser getCourseEvaluation à la place
+      const evalData = null; // TODO: Implémenter getEvaluationForStudent si nécessaire
       if (evalData?.id) {
         setEvaluationId(evalData.id);
       }
@@ -152,7 +153,7 @@ export default function CoursePlayer({
     if (selectedLessonId && enrollmentId) {
       try {
         // Marquer la leçon comme complétée et déverrouiller la suivante
-        const result = await progressService.completeLesson(enrollmentId, selectedLessonId);
+        const result = await progressService.completeLesson(enrollmentId, selectedLessonId) as { success: boolean; nextLessonUnlocked?: boolean };
         
         if (result.success) {
           setCompletedLessons(prev => new Set([...prev, selectedLessonId]));

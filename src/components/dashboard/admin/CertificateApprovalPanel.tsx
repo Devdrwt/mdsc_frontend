@@ -56,10 +56,10 @@ export default function CertificateApprovalPanel() {
     setProcessing(true);
     try {
       if (approvalAction === 'approve') {
-        await certificateService.approveCertificate(selectedCertificate.id, comments);
+        await certificateService.approveCertificate(String(selectedCertificate.id), comments);
         toast.success('Certificat approuvé', 'Le certificat a été approuvé et sera émis.');
       } else {
-        await certificateService.rejectCertificate(selectedCertificate.id, rejectionReason, comments);
+        await certificateService.rejectCertificate(String(selectedCertificate.id), rejectionReason, comments);
         toast.success('Certificat rejeté', 'Le certificat a été rejeté. L\'étudiant a été notifié.');
       }
       setShowApprovalModal(false);
@@ -121,20 +121,20 @@ export default function CertificateApprovalPanel() {
                         {certificate.course_title || `Cours #${certificate.course_id}`}
                       </h3>
                       <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                        {certificate.student_name && (
+                        {(certificate.first_name || certificate.last_name) && (
                           <div className="flex items-center space-x-1">
                             <User className="h-4 w-4" />
-                            <span>{certificate.student_name}</span>
+                            <span>{[certificate.first_name, certificate.last_name].filter(Boolean).join(' ')}</span>
                           </div>
                         )}
-                        {certificate.student_email && (
+                        {certificate.email && (
                           <div className="flex items-center space-x-1">
-                            <span>{certificate.student_email}</span>
+                            <span>{certificate.email}</span>
                           </div>
                         )}
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
-                          <span>Demandé le {new Date(certificate.created_at).toLocaleDateString('fr-FR')}</span>
+                          <span>Émis le {new Date(certificate.issued_at).toLocaleDateString('fr-FR')}</span>
                         </div>
                       </div>
                     </div>
@@ -204,16 +204,18 @@ export default function CertificateApprovalPanel() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Étudiant:</span>
-                    <span className="font-medium text-gray-900">{selectedCertificate.student_name}</span>
+                    <span className="font-medium text-gray-900">
+                      {[selectedCertificate.first_name, selectedCertificate.last_name].filter(Boolean).join(' ') || 'N/A'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Email:</span>
-                    <span className="font-medium text-gray-900">{selectedCertificate.student_email}</span>
+                    <span className="font-medium text-gray-900">{selectedCertificate.email || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date de demande:</span>
                     <span className="font-medium text-gray-900">
-                      {new Date(selectedCertificate.created_at).toLocaleDateString('fr-FR')}
+                      {new Date(selectedCertificate.issued_at).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                 </div>

@@ -54,10 +54,42 @@ export default function QuizComponent({
 
   const loadQuiz = async () => {
     try {
-      const quizData = await quizService.getQuizByLessonId(lessonId);
-      setQuiz(quizData);
-      setQuestions(quizData.questions || []);
-      setStartTime(new Date());
+      // Utiliser getQuizForStudent si quizId est disponible, sinon essayer via lessonId
+      if (quizId) {
+        const moduleQuiz = await quizService.getQuizForStudent(quizId);
+        // Convertir ModuleQuiz en Quiz pour compatibilité
+        const quizData: Quiz = {
+          id: Number(moduleQuiz.id || quizId),
+          course_id: Number(moduleQuiz.course_id),
+          lesson_id: Number(lessonId),
+          title: moduleQuiz.title,
+          description: moduleQuiz.description || '',
+          passing_score: moduleQuiz.passing_score,
+          max_attempts: 3,
+          time_limit_minutes: moduleQuiz.duration_minutes,
+          is_final: false,
+          is_published: true,
+          created_at: new Date().toISOString(),
+          question_count: moduleQuiz.questions?.length || 0,
+        };
+        setQuiz(quizData);
+        // Convertir les questions
+        const convertedQuestions: QuizQuestion[] = (moduleQuiz.questions || []).map((q, idx) => ({
+          id: Number(q.id || idx + 1),
+          quiz_id: Number(moduleQuiz.id || quizId),
+          question: q.question_text,
+          question_type: q.question_type,
+          options: q.options || [],
+          correct_answer: q.correct_answer,
+          points: q.points,
+          order_index: q.order_index || idx + 1,
+        }));
+        setQuestions(convertedQuestions);
+        setStartTime(new Date());
+      } else {
+        // Si pas de quizId, essayer de récupérer via lessonId (nécessite un endpoint backend)
+        setError('Quiz ID requis pour charger le quiz');
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement du quiz');
     }
@@ -85,7 +117,24 @@ export default function QuizComponent({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const attempt = await quizService.submitAttempt(quizId, answers);
+      // Utiliser submitQuiz avec le format attendu
+      const result = await quizService.submitQuiz({
+        quiz_id: quizId,
+        answers: answers as Record<string, string>,
+      });
+      
+      // Convertir QuizResult en QuizAttempt
+      const attempt: QuizAttempt = {
+        id: Date.now(),
+        user_id: 0,
+        quiz_id: Number(quizId),
+        answers: answers as Record<string, any>,
+        score: result.score,
+        total_points: result.total_points,
+        percentage: result.percentage,
+        is_passed: result.passed,
+        completed_at: new Date().toISOString(),
+      };
       
       setAttemptResult(attempt);
       onComplete?.(attempt);

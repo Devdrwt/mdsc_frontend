@@ -1,18 +1,8 @@
 import { apiRequest } from './api';
+import { Certificate } from '../../types/course';
 
-export interface Certificate {
-  id: string;
-  course_id: string;
-  course_title?: string;
-  student_id: string;
-  student_name?: string;
-  student_email?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'issued';
-  issued_at?: string;
-  certificate_code?: string;
-  rejection_reason?: string;
-  created_at: string;
-}
+// Alias pour compatibilité avec l'ancien code
+export type { Certificate };
 
 export class CertificateService {
   // Demander un certificat pour un cours (via enrollmentId)
@@ -85,12 +75,60 @@ export class CertificateService {
     return response.data.download_url || response.data.url;
   }
 
-  // Vérifier un certificat par code
-  static async verifyCertificate(code: string): Promise<Certificate> {
-    const response = await apiRequest(`/certificates/verify/${code}`, {
-      method: 'GET',
-    });
-    return response.data;
+  // Vérifier un certificat par code (endpoint public, pas d'auth)
+  static async verifyCertificate(code: string): Promise<{ valid: boolean; certificate?: Certificate; message?: string }> {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'}/certificates/verify/${code}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          valid: false,
+          message: errorData.message || 'Certificat invalide ou expiré',
+        };
+      }
+      
+      const data = await response.json();
+      // Si l'API retourne directement un certificat, on le wrap
+      if (data.certificate || data.id) {
+        const cert = data.certificate || data;
+        // Convertir vers le format Certificate de types/course.ts
+        const certificate: Certificate = {
+          id: cert.id || Number(cert.id) || 0,
+          user_id: cert.user_id || cert.userId || 0,
+          course_id: cert.course_id || cert.courseId || 0,
+          certificate_code: cert.certificate_code || cert.certificateCode || code,
+          certificate_number: cert.certificate_number || cert.certificateNumber || String(cert.id || ''),
+          pdf_url: cert.pdf_url || cert.pdfUrl,
+          qr_code_url: cert.qr_code_url || cert.qrCodeUrl,
+          issued_at: cert.issued_at || cert.issuedAt || new Date().toISOString(),
+          expires_at: cert.expires_at || cert.expiresAt,
+          verified: cert.verified !== false,
+          is_valid: data.valid !== false && (cert.is_valid !== false),
+          course_title: cert.course_title || cert.courseTitle,
+          first_name: cert.first_name || cert.firstName,
+          last_name: cert.last_name || cert.lastName,
+          email: cert.email || cert.student_email || cert.studentEmail,
+        };
+        return {
+          valid: certificate.is_valid,
+          certificate,
+          message: data.message,
+        };
+      }
+      
+      return data;
+    } catch (error: any) {
+      return {
+        valid: false,
+        message: error.message || 'Erreur lors de la vérification',
+      };
+    }
   }
 
   // Récupérer les certificats en attente (admin)
