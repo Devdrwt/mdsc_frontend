@@ -4,19 +4,19 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '../../lib/stores/authStore';
 import { ApiError } from '../../lib/services/authService';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 export default function LoginForm() {
   const router = useRouter();
   const { login: authLogin, isLoading: authLoading } = useAuthStore();
+  const { error: showError } = useNotification();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
 
     try {
@@ -31,14 +31,12 @@ export default function LoginForm() {
       router.push('/dashboard');
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
-        
-        // Si l'email n'est pas vérifié, proposer de renvoyer l'email
-        if (err.statusCode === 403) {
-          setError(err.message + ' Voulez-vous renvoyer l\'email de vérification ?');
-        }
+        const errorMessage = err.statusCode === 403 
+          ? err.message + ' Voulez-vous renvoyer l\'email de vérification ?'
+          : err.message;
+        showError('Erreur de connexion', errorMessage);
       } else {
-        setError('Erreur lors de la connexion. Veuillez réessayer.');
+        showError('Erreur de connexion', 'Erreur lors de la connexion. Veuillez réessayer.');
       }
       console.error('Login error:', err);
     } finally {
@@ -56,13 +54,6 @@ export default function LoginForm() {
           Accédez à votre espace de formation
         </p>
       </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-600 border border-red-700 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            <span className="text-white text-sm">{error}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -157,7 +148,7 @@ export default function LoginForm() {
 
           <div className="mt-6">
             <GoogleLoginButton 
-              onError={(err) => setError(err)}
+              onError={(err) => showError('Erreur Google', err)}
             />
           </div>
         </div>

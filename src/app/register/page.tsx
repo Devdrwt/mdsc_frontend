@@ -2,40 +2,62 @@
 
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  
-  const slides = [
-    {
-      title: 'APPRENANT',
-      subtitle: 'Suivre des formations',
-      features: [
-        'Accès à tous les cours',
-        'Certifications reconnues',
-        'Assistant IA personnel',
-        'Suivi de progression'
-      ]
-    },
-    {
-      title: 'FORMATEUR',
-      subtitle: 'Créer et animer des formations',
-      features: [
-        'Création de cours',
-        'Gestion des apprenants',
-        'Support IA pour formateurs',
-        'Évaluation et certification'
-      ]
-    }
-  ];
+  const router = useRouter();
+  const [selectedRole, setSelectedRole] = useState<'student' | 'instructor' | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000); // Changer de slide toutes les 5 secondes
+    // Récupérer le rôle sélectionné depuis sessionStorage
+    const role = sessionStorage.getItem('selectedRole') as 'student' | 'instructor' | null;
+    if (role === 'student' || role === 'instructor') {
+      setSelectedRole(role);
+    } else {
+      // Si aucun rôle n'est sélectionné, rediriger vers la page de sélection
+      router.push('/select-role');
+    }
+  }, [router]);
 
-    return () => clearInterval(interval);
-  }, [slides.length]);
+  // Contenu selon le rôle
+  const studentContent = {
+    image: '/Colleagues.png',
+    title: 'APPRENANT',
+    subtitle: 'Suivre des formations',
+    features: [
+      'Accès à tous les cours',
+      'Certifications reconnues',
+      'Assistant IA personnel',
+      'Suivi de progression'
+    ]
+  };
+
+  const instructorContent = {
+    image: '/Woman.png',
+    title: 'FORMATEUR',
+    subtitle: 'Créer et animer des formations',
+    features: [
+      'Création de cours',
+      'Gestion des apprenants',
+      'Support IA pour formateurs',
+      'Évaluation et certification'
+    ]
+  };
+
+  // Sélectionner le contenu selon le rôle (par défaut student si null)
+  const content = selectedRole === 'instructor' ? instructorContent : studentContent;
+
+  // Si aucun rôle n'est sélectionné, ne rien afficher (redirection en cours)
+  if (!selectedRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirection...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex relative">
@@ -53,84 +75,24 @@ export default function RegisterPage() {
       {/* Colonne gauche - Image de fond avec texte */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: currentSlide === 0 ? 'url(/Colleagues.png)' : 'url(/Woman.png)'
+            backgroundImage: `url(${content.image})`
           }}
         />
         {/* Overlay avec texte */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/70 to-cyan-900/70 z-10">
-          <div className="h-full flex flex-col justify-center items-center text-white p-12 relative overflow-hidden">
-            <div 
-              className="absolute inset-x-0 transition-all duration-700 ease-in-out"
-              style={{
-                transform: currentSlide === 0 ? 'translateX(0)' : 'translateX(-100%)',
-                opacity: currentSlide === 0 ? 1 : 0
-              }}
-            >
-              <h1 className="text-5xl font-bold mb-4 text-center">APPRENANT</h1>
-              <p className="text-2xl mb-8 text-center">Suivre des formations</p>
-              <ul className="space-y-4 text-lg text-center">
-                <li className="flex items-center justify-center">
+          <div className="h-full flex flex-col justify-center items-center text-white p-12">
+            <h1 className="text-5xl font-bold mb-4 text-center">{content.title}</h1>
+            <p className="text-2xl mb-8 text-center">{content.subtitle}</p>
+            <ul className="space-y-4 text-lg text-center">
+              {content.features.map((feature, index) => (
+                <li key={index} className="flex items-center justify-center">
                   <span className="mr-3">•</span>
-                  <span>Accès à tous les cours</span>
+                  <span>{feature}</span>
                 </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Certifications reconnues</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Assistant IA personnel</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Suivi de progression</span>
-                </li>
-              </ul>
-            </div>
-            <div 
-              className="absolute inset-x-0 transition-all duration-700 ease-in-out"
-              style={{
-                transform: currentSlide === 1 ? 'translateX(0)' : 'translateX(100%)',
-                opacity: currentSlide === 1 ? 1 : 0
-              }}
-            >
-              <h1 className="text-5xl font-bold mb-4 text-center">FORMATEUR</h1>
-              <p className="text-2xl mb-8 text-center">Créer et animer des formations</p>
-              <ul className="space-y-4 text-lg text-center">
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Création de cours</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Gestion des apprenants</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Support IA pour formateurs</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Évaluation et certification</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-          
-          {/* Indicateurs de slide */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentSlide === index ? 'w-8 bg-white' : 'w-2 bg-white/50'
-                }`}
-                aria-label={`Aller au slide ${index + 1}`}
-              />
-            ))}
+              ))}
+            </ul>
           </div>
         </div>
       </div>

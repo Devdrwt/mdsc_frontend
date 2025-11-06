@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
+import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
+import CourseEvaluationPlayer from '../dashboard/student/CourseEvaluationPlayer';
 import { progressService } from '../../lib/services/progressService';
+import { quizService } from '../../lib/services/quizService';
+import { evaluationService } from '../../lib/services/evaluationService';
 import { useRouter } from 'next/navigation';
 
 interface CoursePlayerProps {
@@ -28,19 +32,88 @@ export default function CoursePlayer({
     initialLessonId ? parseInt(initialLessonId, 10) : null
   );
   const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
+  const [unlockedLessons, setUnlockedLessons] = useState<Set<number>>(new Set());
   const [courseProgress, setCourseProgress] = useState(0);
+  const [enrollmentId, setEnrollmentId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'lesson' | 'quiz' | 'evaluation'>('lesson');
+  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
+  const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
+  const [moduleQuizzes, setModuleQuizzes] = useState<Map<number, string>>(new Map()); // moduleId -> quizId
+  const [evaluationId, setEvaluationId] = useState<string | null>(null);
 
   useEffect(() => {
     loadProgress();
   }, [course.id]);
+
+  useEffect(() => {
+    if (enrollmentId) {
+      loadCourseQuizzesAndEvaluation();
+    }
+  }, [enrollmentId, course.id]);
+
+  // Charger les quiz des modules et l'évaluation finale
+  const loadCourseQuizzesAndEvaluation = async () => {
+    if (!enrollmentId) return; // Pas d'enrollment, pas de quiz/évaluation à charger
+    
+    try {
+      // Charger l'évaluation finale pour l'étudiant
+      const evalData = await evaluationService.getEvaluationForStudent(enrollmentId);
+      if (evalData?.id) {
+        setEvaluationId(evalData.id);
+      }
+
+      // Charger les quiz de chaque module
+      if (course.modules && enrollmentId) {
+        const quizzesMap = new Map<number, string>();
+        for (const module of course.modules) {
+          // Vérifier si le module contient déjà l'ID du quiz
+          const moduleAny = module as any;
+          if (moduleAny.quiz_id) {
+            quizzesMap.set(module.id, moduleAny.quiz_id);
+          } else {
+            // Essayer de récupérer le quiz via l'API pour les étudiants
+            try {
+              const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
+              if (quiz?.id) {
+                quizzesMap.set(module.id, quiz.id);
+              }
+            } catch (error) {
+              // Pas de quiz pour ce module, continuer
+            }
+          }
+        }
+        setModuleQuizzes(quizzesMap);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des quiz et évaluation:', error);
+    }
+  };
 
   const loadProgress = async () => {
     try {
       const progress = await progressService.getCourseProgress(course.id);
       setCourseProgress(progress.progress_percentage || 0);
       
-      // Note: completed_lessons est un nombre total, pas un array
-      // Pour obtenir la liste, il faudrait une autre API call
+      // Récupérer l'enrollmentId depuis le cours
+      const courseAny = course as any;
+      const enrollment = courseAny.enrollment || courseAny.enrollmentId;
+      if (enrollment) {
+        setEnrollmentId(typeof enrollment === 'object' ? enrollment.id : enrollment);
+        
+        // Récupérer les leçons déverrouillées
+        if (enrollmentId) {
+          const unlocked = await progressService.getUnlockedLessons(enrollmentId, course.id);
+          setUnlockedLessons(new Set(unlocked));
+        }
+      }
+      
+      // Récupérer les leçons complétées depuis la progression
+      if (progress.completed_lessons) {
+        const completed = Array.isArray(progress.completed_lessons) 
+          ? progress.completed_lessons 
+          : [];
+        setCompletedLessons(new Set(completed.map((l: any) => typeof l === 'object' ? l.id : l)));
+      }
     } catch (error) {
       console.error('Erreur lors du chargement de la progression:', error);
     }
@@ -63,47 +136,116 @@ export default function CoursePlayer({
     }
   }, [selectedModuleId]);
 
-  const handleLessonSelect = (lesson: Lesson) => {
+  const handleLessonSelect = async (lesson: Lesson) => {
+    // Vérifier l'accès à la leçon
+    if (enrollmentId && !isLessonUnlocked(lesson)) {
+      // Afficher un message d'erreur
+      alert('Cette leçon est verrouillée. Vous devez compléter la leçon précédente pour y accéder.');
+      return;
+    }
+
     setSelectedLessonId(lesson.id);
     router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${lesson.id}`);
   };
 
-  const handleLessonComplete = () => {
-    if (selectedLessonId) {
-      setCompletedLessons(prev => new Set([...prev, selectedLessonId]));
-      loadProgress();
+  const handleLessonComplete = async () => {
+    if (selectedLessonId && enrollmentId) {
+      try {
+        // Marquer la leçon comme complétée et déverrouiller la suivante
+        const result = await progressService.completeLesson(enrollmentId, selectedLessonId);
+        
+        if (result.success) {
+          setCompletedLessons(prev => new Set([...prev, selectedLessonId]));
+          
+          // Recharger les leçons déverrouillées
+          if (enrollmentId) {
+            const unlocked = await progressService.getUnlockedLessons(enrollmentId, course.id);
+            setUnlockedLessons(new Set(unlocked));
+          }
+          
+          loadProgress();
+          
+          // Si la prochaine leçon a été déverrouillée, afficher un message
+          if (result.nextLessonUnlocked) {
+            // Optionnel : afficher une notification
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la complétion de la leçon:', error);
+      }
     }
   };
 
-  const isLessonLocked = (lesson: Lesson, moduleIndex: number): boolean => {
-    if (lesson.orderIndex === 1 && moduleIndex === 0) {
-      return false; // Première leçon du premier module
+  const isLessonUnlocked = (lesson: Lesson): boolean => {
+    // Si pas d'enrollment, toutes les leçons sont déverrouillées (pour preview)
+    if (!enrollmentId) return true;
+    
+    // Vérifier si la leçon est dans la liste des leçons déverrouillées
+    if (unlockedLessons.has(lesson.id)) {
+      return true;
     }
-
-    // Si c'est la première leçon d'un module, vérifier que toutes les leçons du module précédent sont complétées
-    if (lesson.orderIndex === 1 && moduleIndex > 0 && course.modules) {
-      const previousModule = course.modules[moduleIndex - 1];
-      if (previousModule.lessons) {
-        const allPreviousCompleted = previousModule.lessons.every(l => completedLessons.has(l.id));
-        return !allPreviousCompleted;
+    
+    // La première leçon du cours est toujours déverrouillée
+    if (course.modules && course.modules.length > 0) {
+      const firstModule = course.modules[0];
+      if (firstModule.lessons && firstModule.lessons.length > 0) {
+        const firstLesson = firstModule.lessons[0];
+        if (firstLesson.id === lesson.id) {
+          return true;
+        }
       }
     }
-
-    // Sinon, vérifier que la leçon précédente est complétée
-    if (lesson.orderIndex > 1 && selectedModule?.lessons) {
-      const previousLesson = selectedModule.lessons.find(l => l.orderIndex === lesson.orderIndex - 1);
-      if (previousLesson) {
-        return !completedLessons.has(previousLesson.id);
-      }
-    }
-
+    
     return false;
+  };
+
+  const isLessonLocked = (lesson: Lesson): boolean => {
+    return !isLessonUnlocked(lesson);
   };
 
   const getModuleProgress = (module: Module): number => {
     if (!module.lessons || module.lessons.length === 0) return 0;
     const completed = module.lessons.filter(l => completedLessons.has(l.id)).length;
     return (completed / module.lessons.length) * 100;
+  };
+
+  const isModuleCompleted = (module: Module): boolean => {
+    return getModuleProgress(module) === 100;
+  };
+
+  const handleQuizClick = (moduleId: number) => {
+    const quizId = moduleQuizzes.get(moduleId);
+    if (quizId) {
+      setSelectedQuizId(quizId);
+      setViewMode('quiz');
+    }
+  };
+
+  const handleEvaluationClick = () => {
+    if (evaluationId) {
+      setSelectedEvaluationId(evaluationId);
+      setViewMode('evaluation');
+    }
+  };
+
+  const handleBackToLesson = () => {
+    setViewMode('lesson');
+    setSelectedQuizId(null);
+    setSelectedEvaluationId(null);
+  };
+
+  const handleQuizComplete = (result: any) => {
+    // Recharger la progression après complétion du quiz
+    loadProgress();
+    // Retourner aux leçons
+    handleBackToLesson();
+  };
+
+  const handleEvaluationComplete = (result: any) => {
+    // Recharger la progression après complétion de l'évaluation
+    loadProgress();
+    // Retourner aux leçons
+    handleBackToLesson();
   };
 
   return (
@@ -137,6 +279,22 @@ export default function CoursePlayer({
         </div>
 
         <div className="p-4 space-y-2">
+          {/* Bouton Évaluation Finale */}
+          {evaluationId && courseProgress >= 100 && (
+            <button
+              onClick={handleEvaluationClick}
+              className="w-full p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md mb-4"
+            >
+              <div className="flex items-center space-x-3">
+                <GraduationCap className="h-5 w-5" />
+                <div className="text-left">
+                  <p className="font-semibold">Évaluation Finale</p>
+                  <p className="text-xs text-blue-100">Passer l'évaluation pour obtenir un certificat</p>
+                </div>
+              </div>
+            </button>
+          )}
+
           {course.modules?.map((module, moduleIndex) => {
             const moduleProgress = getModuleProgress(module);
             const isExpanded = selectedModuleId === module.id;
@@ -171,11 +329,28 @@ export default function CoursePlayer({
                   />
                 </button>
 
-                {isExpanded && module.lessons && (
+                {isExpanded && (
                   <div className="border-t border-gray-200 bg-gray-50">
-                    {module.lessons.map((lesson, lessonIndex) => {
+                    {/* Quiz du module (si disponible et module complété) */}
+                    {isModuleCompleted(module) && moduleQuizzes.has(module.id) && (
+                      <button
+                        onClick={() => handleQuizClick(module.id)}
+                        className="w-full p-3 text-left text-sm transition-colors border-b border-gray-200 bg-purple-50 hover:bg-purple-100"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Award className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="font-medium text-purple-900">Quiz du module</p>
+                            <p className="text-xs text-purple-600">Passer le quiz pour obtenir un badge</p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+
+                    {/* Liste des leçons */}
+                    {module.lessons && module.lessons.map((lesson, lessonIndex) => {
                       const isCompleted = completedLessons.has(lesson.id);
-                      const isLocked = isLessonLocked(lesson, moduleIndex);
+                      const isLocked = isLessonLocked(lesson);
                       const isSelected = selectedLessonId === lesson.id;
 
                       return (
@@ -206,6 +381,15 @@ export default function CoursePlayer({
                                 <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
                                   {lesson.duration || 0} min
                                 </p>
+                                {isLocked && (
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    isSelected 
+                                      ? 'bg-white/20 text-white' 
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    Verrouillée
+                                  </span>
+                                )}
                                 {lesson.contentType && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     isSelected 
@@ -231,7 +415,45 @@ export default function CoursePlayer({
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto">
-        {selectedLesson ? (
+        {viewMode === 'quiz' && selectedQuizId ? (
+          <div className="p-8">
+            <div className="mb-4">
+              <button
+                onClick={handleBackToLesson}
+                className="text-blue-600 hover:text-blue-700 flex items-center space-x-2"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                <span>Retour aux leçons</span>
+              </button>
+            </div>
+            <ModuleQuizPlayer
+              quizId={selectedQuizId}
+              moduleId={selectedModuleId?.toString() || ''}
+              enrollmentId={enrollmentId || undefined}
+              onComplete={handleQuizComplete}
+              onCancel={handleBackToLesson}
+            />
+          </div>
+        ) : viewMode === 'evaluation' && selectedEvaluationId ? (
+          <div className="p-8">
+            <div className="mb-4">
+              <button
+                onClick={handleBackToLesson}
+                className="text-blue-600 hover:text-blue-700 flex items-center space-x-2"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                <span>Retour aux leçons</span>
+              </button>
+            </div>
+            <CourseEvaluationPlayer
+              evaluationId={selectedEvaluationId}
+              courseId={course.id.toString()}
+              enrollmentId={enrollmentId || undefined}
+              onComplete={handleEvaluationComplete}
+              onCancel={handleBackToLesson}
+            />
+          </div>
+        ) : selectedLesson ? (
           <div className="p-8">
             <LessonContent
               lesson={selectedLesson}
@@ -250,6 +472,15 @@ export default function CoursePlayer({
               <p className="text-gray-500">
                 Choisissez un module dans la barre latérale pour voir les leçons disponibles
               </p>
+              {evaluationId && (
+                <button
+                  onClick={handleEvaluationClick}
+                  className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 mx-auto"
+                >
+                  <GraduationCap className="h-5 w-5" />
+                  <span>Passer l'évaluation finale</span>
+                </button>
+              )}
             </div>
           </div>
         )}

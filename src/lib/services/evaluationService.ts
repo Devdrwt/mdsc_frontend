@@ -35,7 +35,120 @@ export interface EvaluationStats {
   earnedPoints: number;
 }
 
+// Interface pour l'évaluation finale
+export interface FinalEvaluation {
+  id?: string;
+  course_id: string;
+  title: string;
+  description: string;
+  passing_score: number;
+  duration_minutes?: number;
+  max_attempts: number;
+  questions: EvaluationQuestion[];
+}
+
+export interface EvaluationQuestion {
+  id?: string;
+  question_text: string;
+  question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+  options: string[];
+  correct_answer: string;
+  points: number;
+  order_index: number;
+}
+
 export class EvaluationService {
+  // Créer une évaluation finale pour un cours (OBLIGATOIRE)
+  static async createEvaluation(data: FinalEvaluation): Promise<FinalEvaluation> {
+    const response = await apiRequest(`/instructor/courses/${data.course_id}/evaluation`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
+  // Récupérer l'évaluation finale d'un cours (pour instructeur)
+  static async getCourseEvaluation(courseId: string): Promise<FinalEvaluation | null> {
+    try {
+      // Essayer d'abord l'endpoint /evaluations/courses/{courseId} qui retourne une liste
+      try {
+        const response = await apiRequest(`/evaluations/courses/${courseId}`, {
+          method: 'GET',
+        });
+        // Si la réponse est un tableau, prendre la première évaluation finale
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          // Chercher une évaluation de type "exam" ou "final" ou la première
+          const finalEval = response.data.find((e: any) => 
+            e.type === 'exam' || e.type === 'final' || e.is_final
+          ) || response.data[0];
+          
+          // Convertir au format FinalEvaluation si nécessaire
+          if (finalEval) {
+            return {
+              id: String(finalEval.id),
+              course_id: String(finalEval.courseId || finalEval.course_id || courseId),
+              title: finalEval.title,
+              description: finalEval.description || '',
+              passing_score: finalEval.passing_score || finalEval.passingScore || 70,
+              duration_minutes: finalEval.duration_minutes || finalEval.durationMinutes,
+              max_attempts: finalEval.max_attempts || finalEval.maxAttempts || 1,
+              questions: finalEval.questions || [],
+            };
+          }
+        }
+        // Si c'est un objet unique, le retourner directement
+        if (response.data && !Array.isArray(response.data)) {
+          return response.data;
+        }
+      } catch (evaluationsError: any) {
+        // Si cet endpoint ne fonctionne pas (404, 500, etc.), essayer les endpoints spécifiques
+        // Ne pas logger les erreurs pour cet endpoint optionnel - c'est normal s'il n'existe pas ou s'il y a un problème serveur
+        // Les erreurs seront gérées silencieusement et on essaiera les autres endpoints
+      }
+      
+      // Essayer l'endpoint spécifique instructeur (peut ne pas exister)
+      try {
+        const response = await apiRequest(`/instructor/courses/${courseId}/evaluation`, {
+          method: 'GET',
+        });
+        return response.data;
+      } catch (instructorError: any) {
+        // 404 est attendu si l'endpoint n'existe pas ou s'il n'y a pas d'évaluation
+        if (instructorError?.status !== 404 && instructorError?.response?.status !== 404) {
+          console.warn(`Erreur lors de la récupération de l'évaluation (instructor) pour le cours ${courseId}:`, instructorError);
+        }
+      }
+      
+      // Essayer l'endpoint général (peut ne pas exister)
+      try {
+        const response = await apiRequest(`/courses/${courseId}/evaluation`, {
+          method: 'GET',
+        });
+        return response.data;
+      } catch (generalError: any) {
+        // 404 est attendu si l'endpoint n'existe pas ou s'il n'y a pas d'évaluation
+        if (generalError?.status !== 404 && generalError?.response?.status !== 404) {
+          console.warn(`Erreur lors de la récupération de l'évaluation (general) pour le cours ${courseId}:`, generalError);
+        }
+      }
+      
+      // Aucune évaluation trouvée, retourner null silencieusement
+      return null;
+    } catch (error) {
+      // Erreur inattendue, retourner null silencieusement
+      return null;
+    }
+  }
+
+  // Mettre à jour une évaluation finale
+  static async updateEvaluation(evaluationId: string, data: Partial<FinalEvaluation>): Promise<FinalEvaluation> {
+    const response = await apiRequest(`/instructor/evaluations/${evaluationId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data;
+  }
+
   // Récupérer toutes les évaluations d'un cours
   static async getCourseEvaluations(courseId: string): Promise<Evaluation[]> {
     const response = await apiRequest(`/courses/${courseId}/evaluations`, {
@@ -108,8 +221,8 @@ export class EvaluationService {
   }
 
   // CRUD pour instructeurs
-  // Créer une évaluation
-  static async createEvaluation(courseId: string, data: {
+  // Créer une évaluation générique
+  static async createGenericEvaluation(courseId: string, data: {
     title: string;
     description: string;
     type: 'quiz' | 'assignment' | 'project' | 'exam';
@@ -124,8 +237,8 @@ export class EvaluationService {
     return response.data;
   }
 
-  // Mettre à jour une évaluation
-  static async updateEvaluation(evaluationId: string, data: {
+  // Mettre à jour une évaluation générique
+  static async updateGenericEvaluation(evaluationId: string, data: {
     title?: string;
     description?: string;
     dueDate?: string;

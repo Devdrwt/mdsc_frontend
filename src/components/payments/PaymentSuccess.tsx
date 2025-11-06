@@ -1,0 +1,109 @@
+'use client';
+
+import React from 'react';
+import { CheckCircle, Download, ArrowRight, Info } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { isDemoMode } from '../../lib/services/paymentService';
+
+interface PaymentSuccessProps {
+  paymentId: string;
+  courseId: string;
+  courseTitle: string;
+  amount: number;
+  currency: string;
+}
+
+export default function PaymentSuccess({
+  paymentId,
+  courseId,
+  courseTitle,
+  amount,
+  currency,
+}: PaymentSuccessProps) {
+  const router = useRouter();
+  const demoMode = isDemoMode();
+  const isDemoPayment = paymentId.startsWith('demo_');
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+        {/* Bannière Mode Démo */}
+        {(demoMode || isDemoPayment) && (
+          <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 text-left">
+            <div className="flex items-start space-x-3">
+              <Info className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-yellow-900 mb-1">
+                  🎭 PAIEMENT SIMULÉ (MODE DÉMO)
+                </p>
+                <p className="text-xs text-yellow-800">
+                  Ce paiement a été simulé. Aucun paiement réel n'a été effectué.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Icône de succès */}
+        <div className="flex justify-center mb-6">
+          <div className="p-4 bg-green-100 rounded-full">
+            <CheckCircle className="h-16 w-16 text-green-600" />
+          </div>
+        </div>
+
+        {/* Message de succès */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {isDemoPayment ? 'Paiement simulé avec succès !' : 'Paiement réussi !'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {isDemoPayment 
+            ? 'Le paiement a été simulé avec succès. Vous pouvez maintenant accéder au cours.'
+            : 'Votre paiement a été traité avec succès. Vous pouvez maintenant accéder au cours.'}
+        </p>
+
+        {/* Détails */}
+        <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Cours</span>
+              <span className="font-medium text-gray-900">{courseTitle}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Montant payé</span>
+              <span className="font-medium text-gray-900">
+                {amount.toLocaleString('fr-FR')} {currency}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Référence de paiement</span>
+              <span className="font-mono text-sm text-gray-600">{paymentId}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-center space-x-4">
+          <button
+            onClick={() => router.push(`/courses/${courseId}`)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          >
+            <span>Accéder au cours</span>
+            <ArrowRight className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/student/courses')}
+            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Mes cours
+          </button>
+        </div>
+
+        {/* Note */}
+        <p className="text-xs text-gray-500 mt-6">
+          Un email de confirmation a été envoyé à votre adresse email
+        </p>
+      </div>
+    </div>
+  );
+}
+

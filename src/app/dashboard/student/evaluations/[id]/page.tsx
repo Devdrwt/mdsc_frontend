@@ -6,10 +6,13 @@ import DashboardLayout from '../../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../../lib/middleware/auth';
 import { evaluationService, Evaluation } from '../../../../../lib/services/evaluationService';
 import { Clock, Save, Send, AlertCircle, CheckCircle } from 'lucide-react';
+import ConfirmModal from '../../../../../components/ui/ConfirmModal';
+import { useNotification } from '../../../../../lib/hooks/useNotification';
 
 export default function EvaluationSubmissionPage() {
   const params = useParams();
   const router = useRouter();
+  const { success: showSuccess, error: showError } = useNotification();
   const evaluationId = params.id as string;
   
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
@@ -17,6 +20,7 @@ export default function EvaluationSubmissionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [timeRemaining, setTimeRemaining] = useState(3600); // 60 minutes en secondes
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   useEffect(() => {
     const loadEvaluation = async () => {
@@ -61,25 +65,27 @@ export default function EvaluationSubmissionPage() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (timeRemaining <= 0) {
-      alert('Le temps imparti est écoulé.');
+      showError('Temps écoulé', 'Le temps imparti est écoulé.');
       return;
     }
 
-    const confirmSubmit = window.confirm('Êtes-vous sûr de vouloir soumettre cette évaluation ? Vous ne pourrez plus la modifier.');
-    
-    if (!confirmSubmit) return;
+    setShowSubmitModal(true);
+  };
 
+  const handleSubmit = async () => {
     setSubmitting(true);
+    setShowSubmitModal(false);
     try {
       await evaluationService.submitEvaluation(evaluationId, answers);
+      showSuccess('Évaluation soumise', 'Votre évaluation a été soumise avec succès');
       router.push(`/dashboard/student/evaluations/${evaluationId}/results`);
     } catch (error) {
       console.error('Erreur lors de la soumission:', error);
-      alert('Erreur lors de la soumission. Veuillez réessayer.');
+      showError('Erreur de soumission', 'Erreur lors de la soumission. Veuillez réessayer.');
     } finally {
       setSubmitting(false);
     }
@@ -88,10 +94,10 @@ export default function EvaluationSubmissionPage() {
   const handleSaveDraft = async () => {
     try {
       await evaluationService.saveDraft(evaluationId, answers);
-      alert('Brouillon sauvegardé avec succès.');
+      showSuccess('Brouillon sauvegardé', 'Votre brouillon a été sauvegardé avec succès');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du brouillon:', error);
-      alert('Erreur lors de la sauvegarde du brouillon.');
+      showError('Erreur', 'Erreur lors de la sauvegarde du brouillon.');
     }
   };
 
@@ -204,7 +210,8 @@ export default function EvaluationSubmissionPage() {
               </button>
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmitClick}
                 disabled={submitting || timeRemaining <= 0}
                 className="flex items-center space-x-2 px-6 py-2 bg-mdsc-blue-primary text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
@@ -222,6 +229,19 @@ export default function EvaluationSubmissionPage() {
               </button>
             </div>
           </form>
+
+          {/* Modal de confirmation de soumission */}
+          <ConfirmModal
+            isOpen={showSubmitModal}
+            onClose={() => setShowSubmitModal(false)}
+            onConfirm={handleSubmit}
+            title="Confirmer la soumission"
+            message="Êtes-vous sûr de vouloir soumettre cette évaluation ? Vous ne pourrez plus la modifier."
+            confirmText="Soumettre"
+            cancelText="Annuler"
+            confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+            isLoading={submitting}
+          />
         </div>
       </DashboardLayout>
     </AuthGuard>

@@ -3,12 +3,14 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '../ui/Button';
-import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, Loader } from 'lucide-react';
+import { useNotification } from '../../lib/hooks/useNotification';
 import { resetPassword } from '../../lib/services/authService';
 
 function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { error: showError, success: showSuccess } = useNotification();
   const token = searchParams.get('token');
   
   const [formData, setFormData] = useState({
@@ -18,7 +20,6 @@ function ResetPasswordContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,11 +48,10 @@ function ResetPasswordContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
 
     const validationError = validateForm();
     if (validationError) {
-      setError(validationError);
+      showError('Erreur de validation', validationError);
       return;
     }
 
@@ -61,15 +61,16 @@ function ResetPasswordContent() {
       const response = await resetPassword(token!, formData.password);
       
       if (response.success) {
+        showSuccess('Mot de passe réinitialisé', 'Votre mot de passe a été mis à jour avec succès');
         setSuccess(true);
         setTimeout(() => {
           router.push('/login?reset=success');
         }, 3000);
       } else {
-        setError(response.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
+        showError('Erreur de réinitialisation', response.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
       }
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
+      showError('Erreur de réinitialisation', err.message || 'Erreur lors de la réinitialisation. Veuillez réessayer.');
       console.error('Password reset error:', err);
     } finally {
       setIsLoading(false);
@@ -80,7 +81,9 @@ function ResetPasswordContent() {
     return (
       <div className="max-w-md mx-auto">
         <div className="card-mdsc text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <div className="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="h-8 w-8 text-red-600" />
+          </div>
           <h2 className="text-2xl font-bold text-mdsc-blue mb-2">
             Lien invalide
           </h2>
@@ -128,13 +131,6 @@ function ResetPasswordContent() {
             Définissez votre nouveau mot de passe sécurisé
           </p>
         </div>
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-600 border border-red-700 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-white" />
-            <span className="text-white text-sm">{error}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

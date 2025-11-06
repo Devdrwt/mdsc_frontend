@@ -268,6 +268,14 @@ export class CourseService {
     return response.data;
   }
 
+  // Demander la publication d'un cours (pour validation admin)
+  static async requestCoursePublication(courseId: string): Promise<Course> {
+    const response = await apiRequest(`/instructor/courses/${courseId}/request-publication`, {
+      method: 'POST',
+    });
+    return response.data;
+  }
+
   // S'inscrire à un cours
   static async enrollInCourse(courseId: string): Promise<Enrollment> {
     const response = await apiRequest(`/courses/${courseId}/enroll`, {

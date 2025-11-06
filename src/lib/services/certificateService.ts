@@ -1,84 +1,129 @@
 import { apiRequest } from './api';
-import { Certificate } from '../../types/course';
+
+export interface Certificate {
+  id: string;
+  course_id: string;
+  course_title?: string;
+  student_id: string;
+  student_name?: string;
+  student_email?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'issued';
+  issued_at?: string;
+  certificate_code?: string;
+  rejection_reason?: string;
+  created_at: string;
+}
 
 export class CertificateService {
-  /**
-   * Récupérer les certificats de l'utilisateur connecté
-   */
-  static async getUserCertificates(): Promise<Certificate[]> {
-    const response = await apiRequest('/certificates', {
-      method: 'GET',
-    });
-    return response.data;
-  }
-
-  /**
-   * Générer un certificat pour un cours complété
-   */
-  static async generateCertificate(courseId: string): Promise<Certificate> {
-    const response = await apiRequest('/certificates/generate', {
+  // Demander un certificat pour un cours (via enrollmentId)
+  static async requestCertificate(enrollmentId: number): Promise<Certificate> {
+    const response = await apiRequest(`/enrollments/${enrollmentId}/certificate/request`, {
       method: 'POST',
-      body: JSON.stringify({ courseId }),
     });
     return response.data;
   }
 
-  /**
-   * Vérifier un certificat via code QR (PUBLIQUE - pas besoin d'auth)
-   */
-  static async verifyCertificate(code: string): Promise<{
-    valid: boolean;
-    certificate?: Certificate;
-    message?: string;
-  }> {
-    // Route publique, donc pas d'auth header
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-    const response = await fetch(`${apiUrl}/certificates/verify/${code}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+  // Demander un certificat via courseId (fallback)
+  static async requestCertificateByCourseId(courseId: string): Promise<Certificate> {
+    const response = await apiRequest(`/certificates/request`, {
+      method: 'POST',
+      body: JSON.stringify({ course_id: courseId }),
     });
-
-    if (!response.ok) {
-      return {
-        valid: false,
-        message: 'Certificat invalide ou non trouvé',
-      };
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   }
 
-  /**
-   * Télécharger le PDF d'un certificat
-   */
-  static async downloadCertificate(certificateId: string): Promise<Blob> {
-    const token = localStorage.getItem('token');
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/certificates/${certificateId}/download`,
-      {
+  // Récupérer mes certificats
+  static async getMyCertificates(): Promise<Certificate[]> {
+    const response = await apiRequest('/certificates/my-certificates', {
       method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Erreur lors du téléchargement');
-    }
-
-    return response.blob();
+    });
+    return response.data || [];
   }
 
-  /**
-   * Obtenir l'URL de vérification publique (pour QR code)
-   */
-  static getVerificationUrl(code: string): string {
-    return `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify-certificate/${code}`;
+  // Alias pour compatibilité
+  static async getUserCertificates(): Promise<Certificate[]> {
+    return this.getMyCertificates();
+  }
+
+  // Récupérer le certificat d'un cours spécifique (via enrollmentId)
+  static async getCourseCertificate(enrollmentId: number): Promise<Certificate | null> {
+    try {
+      const response = await apiRequest(`/enrollments/${enrollmentId}/certificate/request`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      // Si l'endpoint n'existe pas, essayer l'ancien endpoint
+      try {
+        const response = await apiRequest(`/certificates/course/${enrollmentId}`, {
+          method: 'GET',
+        });
+        return response.data;
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  // Récupérer le certificat d'un cours via courseId (fallback)
+  static async getCourseCertificateByCourseId(courseId: string): Promise<Certificate | null> {
+    try {
+      const response = await apiRequest(`/certificates/course/${courseId}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // Télécharger un certificat
+  static async downloadCertificate(certificateId: string): Promise<string> {
+    const response = await apiRequest(`/certificates/${certificateId}/download`, {
+      method: 'GET',
+    });
+    return response.data.download_url || response.data.url;
+  }
+
+  // Vérifier un certificat par code
+  static async verifyCertificate(code: string): Promise<Certificate> {
+    const response = await apiRequest(`/certificates/verify/${code}`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Récupérer les certificats en attente (admin)
+  static async getPendingCertificates(): Promise<Certificate[]> {
+    const response = await apiRequest('/admin/certificates/requests', {
+      method: 'GET',
+    });
+    return response.data || [];
+  }
+
+  // Approuver un certificat (admin)
+  static async approveCertificate(requestId: string, comments?: string): Promise<void> {
+    await apiRequest(`/admin/certificates/requests/${requestId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comments }),
+    });
+  }
+
+  // Rejeter un certificat (admin)
+  static async rejectCertificate(
+    requestId: string,
+    rejectionReason: string,
+    comments?: string
+  ): Promise<void> {
+    await apiRequest(`/admin/certificates/requests/${requestId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ rejection_reason: rejectionReason, comments }),
+    });
   }
 }
 
+// Export par défaut
+export default CertificateService;
+
+// Export nommé pour compatibilité
 export const certificateService = CertificateService;

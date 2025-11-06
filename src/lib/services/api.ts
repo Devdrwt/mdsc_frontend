@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/authStore';
+import { refreshToken as refreshAuthToken } from './authService';
 
 // Configuration de base de l'API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -33,6 +34,7 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   details?: any;
+  refreshToken?: boolean; // Indique si un rafraîchissement de token est nécessaire
 
   constructor(message: string, status: number, code?: string, details?: any) {
     super(message);
@@ -77,7 +79,8 @@ function getAuthHeaders(): Record<string, string> {
     token = localStorage.getItem('authToken');
   }
   
-  if (!token) {
+  // Vérifier que le token existe et n'est pas "undefined" ou "null" (string)
+  if (!token || token === 'undefined' || token === 'null') {
     return {};
   }
   
@@ -234,7 +237,69 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       console.warn('⚠️ Erreur lors de la construction du log d\'erreur:', { errorLog, data, responseText });
     }
     
-    console.error('❌ API Error:', errorLog);
+    // Ne pas logger les 404 de manière verbeuse (c'est normal pour les ressources qui n'existent pas encore)
+    // Les 404 sont généralement des ressources qui n'existent pas encore ou des endpoints optionnels
+    const is404 = response.status === 404;
+    const hasSimple404Message = errorLog.message && (
+      errorLog.message.toLowerCase().includes('route non trouvée') ||
+      errorLog.message.toLowerCase().includes('not found') ||
+      errorLog.message.toLowerCase().includes('non trouvée') ||
+      errorLog.message.toLowerCase().includes('404')
+    );
+    
+    const hasSimple404Data = errorLog.data?.message && (
+      errorLog.data.message.toLowerCase().includes('route non trouvée') ||
+      errorLog.data.message.toLowerCase().includes('not found') ||
+      errorLog.data.message.toLowerCase().includes('non trouvée') ||
+      errorLog.data.message.toLowerCase().includes('404')
+    );
+    
+    // Considérer tous les 404 comme simples sauf s'ils ont des détails d'erreur importants
+    const isSimple404 = is404 && (
+      !errorLog.data || 
+      Object.keys(errorLog.data).length === 0 ||
+      hasSimple404Message ||
+      hasSimple404Data ||
+      // Si le message d'erreur est juste "Route non trouvée" ou similaire, c'est un 404 simple
+      (errorLog.data?.message && errorLog.data.message.length < 100)
+    );
+    
+    // Détecter les erreurs 403 simples (accès refusé, peut être normal selon les permissions)
+    const is403 = response.status === 403;
+    const hasSimple403Message = errorLog.message && (
+      errorLog.message.toLowerCase().includes('non autorisé') ||
+      errorLog.message.toLowerCase().includes('unauthorized') ||
+      errorLog.message.toLowerCase().includes('forbidden') ||
+      errorLog.message.toLowerCase().includes('vous n\'êtes pas autorisé')
+    );
+    
+    const isSimple403 = is403 && (
+      !errorLog.data || 
+      Object.keys(errorLog.data).length === 0 ||
+      hasSimple403Message ||
+      // Ne pas traiter les 403 "Token expiré" comme simples (ils sont gérés séparément)
+      !errorMessage.toLowerCase().includes('token expiré')
+    );
+    
+    if (isSimple404) {
+      // Ne pas logger les 404 simples - c'est normal pour les ressources qui n'existent pas encore
+      // ou pour les endpoints optionnels qui sont testés avec des fallbacks
+    } else if (is404) {
+      // Logger les 404 avec des détails importants (mais pas comme une erreur critique)
+      console.warn('⚠️ Resource not found (404) with details:', errorLog.url, errorLog.data);
+    } else if (isSimple403) {
+      // Ne pas logger les 403 simples - c'est normal pour les endpoints nécessitant des permissions spécifiques
+      // ou pour les ressources avec accès restreint
+    } else if (is403 && errorMessage.toLowerCase().includes('token expiré')) {
+      // Ne pas logger les 403 "Token expiré" - ils sont gérés par le mécanisme de refresh automatique
+      // Le refresh sera tenté automatiquement, et si ça échoue, l'utilisateur sera déconnecté
+    } else if (is403) {
+      // Logger les 403 avec des détails importants (mais pas comme une erreur critique)
+      console.warn('⚠️ Access forbidden (403) with details:', errorLog.url, errorLog.data);
+    } else {
+      // Logger les autres erreurs (non-404, non-403) comme des erreurs critiques
+      console.error('❌ API Error:', errorLog);
+    }
     
     const error = new ApiError(
       errorMessage,
@@ -248,6 +313,12 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       const { logout } = useAuthStore.getState();
       logout();
       throw error;
+    }
+    
+    // Gérer les erreurs 403 "Token expiré" - tenter de rafraîchir le token
+    if (response.status === 403 && errorMessage.toLowerCase().includes('token expiré')) {
+      // Retourner une erreur spéciale pour indiquer qu'un rafraîchissement est nécessaire
+      error.refreshToken = true;
     }
     
     throw error;
@@ -290,7 +361,10 @@ export async function apiRequest<T = any>(
     requestHeaders['Content-Type'] = 'application/json';
   }
   
-  try {
+  // Variable pour suivre si on a déjà tenté de rafraîchir le token
+  let hasTriedRefresh = false;
+  
+  const makeRequest = async (): Promise<ApiResponse<T>> => {
     // Logger pour debug sur POST/PUT
     if (method === 'POST' || method === 'PUT') {
       console.log(`📤 [${method}] ${url}`, {
@@ -310,7 +384,58 @@ export async function apiRequest<T = any>(
     
     // Gérer la réponse
     return await handleResponse<T>(response);
+  };
+  
+  try {
+    return await makeRequest();
   } catch (error) {
+    // Si c'est une erreur 403 "Token expiré" et qu'on n'a pas encore tenté de rafraîchir
+    if (error instanceof ApiError && error.status === 403 && error.refreshToken && !hasTriedRefresh) {
+      try {
+        console.log('🔄 [API] Token expiré, tentative de rafraîchissement...');
+        hasTriedRefresh = true;
+        
+        // Tenter de rafraîchir le token
+        const refreshResponse = await refreshAuthToken();
+        
+        if (refreshResponse.success && refreshResponse.data?.token) {
+          // Mettre à jour le token dans le store
+          const { setTokens } = useAuthStore.getState();
+          const refreshTokenValue = localStorage.getItem('refreshToken');
+          if (refreshTokenValue) {
+            setTokens(refreshResponse.data.token, refreshTokenValue);
+          }
+          
+          // Mettre à jour les en-têtes avec le nouveau token
+          requestHeaders['Authorization'] = `Bearer ${refreshResponse.data.token}`;
+          
+          console.log('✅ [API] Token rafraîchi avec succès, nouvelle tentative...');
+          
+          // Réessayer la requête avec le nouveau token
+          return await makeRequest();
+        } else {
+          // Si le rafraîchissement échoue, déconnecter l'utilisateur
+          console.error('❌ [API] Échec du rafraîchissement du token');
+          const { logout } = useAuthStore.getState();
+          logout();
+          throw error;
+        }
+      } catch (refreshError) {
+        // Si le rafraîchissement échoue, déconnecter l'utilisateur silencieusement
+        // et créer une erreur plus explicite pour l'utilisateur
+        console.warn('⚠️ [API] Échec du rafraîchissement du token, déconnexion...');
+        const { logout } = useAuthStore.getState();
+        logout();
+        // Créer une nouvelle erreur avec un message plus clair
+        throw new ApiError(
+          'Votre session a expiré. Veuillez vous reconnecter.',
+          error.status,
+          'SESSION_EXPIRED',
+          undefined
+        );
+      }
+    }
+    
     // Gérer les erreurs de réseau
     if (error instanceof ApiError) {
       throw error;

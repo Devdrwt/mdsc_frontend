@@ -1,18 +1,47 @@
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { GraduationCap, Users, BookOpen, Award, TrendingUp, MessageSquare, ArrowRight, Home } from 'lucide-react';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { GraduationCap, Users, BookOpen, Award, TrendingUp, MessageSquare, ArrowRight, Home, AlertCircle } from 'lucide-react';
 import Button from '../../components/ui/Button';
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
-export default function SelectRolePage() {
+function SelectRoleContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [selectedRole, setSelectedRole] = useState<'student' | 'instructor' | null>(null);
+  const [fromGoogle, setFromGoogle] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur vient de Google
+    const from = searchParams?.get('from');
+    const msg = searchParams?.get('message');
+    if (from === 'google') {
+      setFromGoogle(true);
+      if (msg) {
+        setMessage(decodeURIComponent(msg));
+      }
+    }
+    
+    // Récupérer le rôle déjà sélectionné si disponible
+    const storedRole = sessionStorage.getItem('selectedRole');
+    if (storedRole === 'student' || storedRole === 'instructor') {
+      setSelectedRole(storedRole);
+    }
+  }, [searchParams]);
 
   const handleRoleSelection = (role: 'student' | 'instructor') => {
-    // Stocker le rôle sélectionné dans sessionStorage pour l'utiliser lors de l'inscription
+    // Stocker le rôle sélectionné dans sessionStorage
     sessionStorage.setItem('selectedRole', role);
-    // Rediriger vers la page d'inscription
-    router.push('/register');
+    setSelectedRole(role);
+    
+    // Si l'utilisateur vient de Google, ne pas rediriger vers /register
+    // Il pourra utiliser le bouton "Continuer avec Google"
+    if (!fromGoogle) {
+      router.push('/register');
+    }
   };
 
   const roles = [
@@ -90,6 +119,18 @@ export default function SelectRolePage() {
 
       {/* Role Selection Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Message d'alerte si l'utilisateur vient de Google */}
+        {fromGoogle && message && (
+          <div className="mb-8 max-w-3xl mx-auto">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-blue-800 text-sm font-medium">{message}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {roles.map((role) => {
             const Icon = role.icon;
@@ -174,6 +215,34 @@ export default function SelectRolePage() {
           })}
         </div>
 
+        {/* Bouton Google si l'utilisateur vient de Google et a sélectionné un rôle */}
+        {fromGoogle && selectedRole && (
+          <div className="mt-8 max-w-md mx-auto">
+            <div className="bg-white rounded-lg border-2 border-gray-200 p-6 shadow-sm">
+              <p className="text-center text-gray-700 mb-4 font-medium">
+                Rôle sélectionné : <span className="text-mdsc-blue-dark capitalize">{selectedRole === 'student' ? 'Apprenant' : 'Formateur'}</span>
+              </p>
+              {googleError && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-red-800 text-sm">{googleError}</p>
+                </div>
+              )}
+              <GoogleLoginButton
+                onSuccess={() => {
+                  // Le GoogleLoginButton gère déjà la redirection vers /dashboard
+                  console.log('✅ [SELECT ROLE] Google authentication successful');
+                }}
+                onError={(error) => {
+                  setGoogleError(error);
+                }}
+              />
+              <p className="text-center text-sm text-gray-500 mt-4">
+                Vous pouvez modifier votre choix ci-dessus avant de continuer
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Already have an account */}
         <div className="mt-12 text-center">
           <p className="text-gray-700 mb-4">
@@ -228,3 +297,19 @@ export default function SelectRolePage() {
   );
 }
 
+export default function SelectRolePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-orange-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-dark mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement...</p>
+          </div>
+        </div>
+      }
+    >
+      <SelectRoleContent />
+    </Suspense>
+  );
+}

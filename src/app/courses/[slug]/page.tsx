@@ -26,6 +26,7 @@ import {
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
+import { paymentService } from '../../../lib/services/paymentService';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
@@ -134,6 +135,17 @@ export default function CourseDetailPage() {
       }
     }
     
+    // Vérifier si le cours est payant
+    const coursePrice = courseAny.price || course.price || 0;
+    const isPaidCourse = coursePrice > 0;
+    
+    if (isPaidCourse) {
+      // Rediriger vers la page de paiement
+      router.push(`/payments/new?courseId=${course.id}`);
+      return;
+    }
+    
+    // Cours gratuit : inscription directe
     try {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
@@ -275,6 +287,55 @@ export default function CourseDetailPage() {
     avance: 'Avancé',
   };
 
+  // Fonction utilitaire pour extraire la valeur de catégorie/niveau (peut être string ou objet)
+  const getCategoryValue = (category: any): string => {
+    if (typeof category === 'string') {
+      return category.toLowerCase();
+    }
+    if (category && typeof category === 'object') {
+      return (category.name || category.category_name || '').toLowerCase();
+    }
+    return '';
+  };
+
+  const getCategoryLabel = (category: any): string => {
+    const value = getCategoryValue(category);
+    if (value && categoryLabels[value]) {
+      return categoryLabels[value];
+    }
+    if (typeof category === 'string') {
+      return category;
+    }
+    if (category && typeof category === 'object') {
+      return category.name || category.category_name || 'Non spécifié';
+    }
+    return 'Non spécifié';
+  };
+
+  const getLevelValue = (level: any): string => {
+    if (typeof level === 'string') {
+      return level.toLowerCase();
+    }
+    if (level && typeof level === 'object') {
+      return (level.name || level.level_name || '').toLowerCase();
+    }
+    return '';
+  };
+
+  const getLevelLabel = (level: any): string => {
+    const value = getLevelValue(level);
+    if (value && levelLabels[value]) {
+      return levelLabels[value];
+    }
+    if (typeof level === 'string') {
+      return level;
+    }
+    if (level && typeof level === 'object') {
+      return level.name || level.level_name || 'Non spécifié';
+    }
+    return 'Non spécifié';
+  };
+
   // Calculer la durée totale du cours (en heures)
   const totalDurationHours = course.duration ? Math.round(course.duration / 60) : 0;
   const totalDurationMinutes = course.duration ? course.duration % 60 : 0;
@@ -320,10 +381,10 @@ export default function CourseDetailPage() {
                 <div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      {categoryLabels[course.category?.toLowerCase()] || course.category}
+                      {getCategoryLabel(course.category)}
                     </span>
                     <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      {levelLabels[course.level?.toLowerCase()] || course.level}
+                      {getLevelLabel(course.level)}
                     </span>
                     {price === 0 && (
                       <span className="inline-block px-3 py-1 bg-green-500/80 rounded-full text-sm font-medium">
@@ -683,7 +744,7 @@ export default function CourseDetailPage() {
                         Niveau
                       </span>
                       <span className="font-medium">
-                        {levelLabels[course.level?.toLowerCase()] || course.level}
+                        {getLevelLabel(course.level)}
                       </span>
                     </div>
                   </div>

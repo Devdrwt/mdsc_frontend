@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import EmailVerification from './EmailVerification';
 import { register, ApiError } from '../../lib/services/authService';
 import { countries } from '../../lib/constants/countries';
-import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, AlertCircle, GraduationCap, Users } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, GraduationCap, Users } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 interface FormData {
   email: string;
@@ -21,6 +22,7 @@ interface FormData {
 
 const SimpleRegisterForm = () => {
   const router = useRouter();
+  const { error: showError, success: showSuccess } = useNotification();
   
   // Récupérer le rôle sélectionné depuis sessionStorage
   const [selectedRole, setSelectedRole] = useState<'student' | 'instructor'>('student');
@@ -41,14 +43,13 @@ const SimpleRegisterForm = () => {
     lastName: '',
     phone: '',
     organization: '',
-    country: 'CI', // Côte d'Ivoire par défaut
+    country: 'BJ', // Bénin par défaut
     password: '',
     confirmPassword: ''
   });
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailVerification, setShowEmailVerification] = useState(false);
@@ -182,10 +183,9 @@ const SimpleRegisterForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (!validateForm()) {
-      setError('Veuillez corriger les erreurs dans le formulaire');
+      showError('Erreur de validation', 'Veuillez corriger les erreurs dans le formulaire');
       return;
     }
 
@@ -208,6 +208,7 @@ const SimpleRegisterForm = () => {
         setVerificationToken(response.data.verificationToken);
       }
 
+      showSuccess('Inscription réussie', 'Veuillez vérifier votre email pour activer votre compte');
       setShowEmailVerification(true);
     } catch (err) {
       const apiError = err as ApiError;
@@ -218,9 +219,9 @@ const SimpleRegisterForm = () => {
           newFieldErrors[error.field] = error.message;
         });
         setFieldErrors(newFieldErrors);
-        setError('Veuillez corriger les erreurs dans le formulaire');
+        showError('Erreur de validation', 'Veuillez corriger les erreurs dans le formulaire');
       } else {
-        setError(apiError.message || 'Une erreur est survenue lors de l\'inscription');
+        showError('Erreur d\'inscription', apiError.message || 'Une erreur est survenue lors de l\'inscription');
       }
     } finally {
       setIsLoading(false);
@@ -263,14 +264,6 @@ const SimpleRegisterForm = () => {
       {/* Formulaire */}
       <div className="mt-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Message d'erreur global */}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-start space-x-2">
-                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
             {/* Section : Informations Personnelles */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -365,7 +358,7 @@ const SimpleRegisterForm = () => {
                       className={`w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent ${
                         fieldErrors.phone ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="+225 XX XX XX XX"
+                      placeholder="+229 XX XX XX XX"
                     />
                   </div>
                   {fieldErrors.phone && (
@@ -627,9 +620,9 @@ const SimpleRegisterForm = () => {
 
             {/* Bouton Google */}
             <div>
-              <GoogleLoginButton 
-                onError={(err) => setError(err)}
-              /> 
+            <GoogleLoginButton 
+              onError={(err) => showError('Erreur Google', err)}
+            />
             </div>
 
             {/* Lien vers la connexion */}

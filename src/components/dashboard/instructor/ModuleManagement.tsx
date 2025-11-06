@@ -17,7 +17,9 @@ import {
   GripVertical,
   Image,
   Upload,
-  Loader
+  Loader,
+  Clock,
+  FileQuestion
 } from 'lucide-react';
 import { moduleService } from '../../../lib/services/moduleService';
 import { courseService, Course } from '../../../lib/services/courseService';
@@ -25,6 +27,8 @@ import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
+import ConfirmModal from '../../ui/ConfirmModal';
+import { quizService } from '../../../lib/services/quizService';
 
 export default function ModuleManagement() {
   const { user } = useAuthStore();
@@ -36,6 +40,8 @@ export default function ModuleManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [moduleToDelete, setModuleToDelete] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -46,6 +52,8 @@ export default function ModuleManagement() {
 
   const [inlineEditId, setInlineEditId] = useState<number | null>(null);
   const [inlineTitle, setInlineTitle] = useState<string>('');
+  const [moduleQuizzes, setModuleQuizzes] = useState<Record<number, boolean>>({}); // moduleId -> hasQuiz
+  const [moduleLessons, setModuleLessons] = useState<Record<number, any[]>>({}); // moduleId -> lessons
   
   // États pour l'upload d'image
   const [moduleImageFile, setModuleImageFile] = useState<File | null>(null);
@@ -85,6 +93,50 @@ export default function ModuleManagement() {
       setLoading(true);
       const modulesData = await moduleService.getCourseModules(Number(courseId));
       setModules(modulesData || []);
+      
+      // Charger les leçons et quiz pour chaque module
+      if (modulesData && modulesData.length > 0) {
+        const lessonsMap: Record<number, any[]> = {};
+        const quizzesMap: Record<number, boolean> = {};
+        
+        // Charger le cours complet pour avoir les leçons
+        try {
+          const fullCourse = await courseService.getCourseById(courseId);
+          const courseAny = fullCourse as any;
+          const allLessons = courseAny.lessons || [];
+          
+          // Grouper les leçons par module
+          modulesData.forEach((module: Module) => {
+            const moduleLessons = allLessons.filter((lesson: any) => 
+              lesson.module_id === module.id || lesson.moduleId === module.id
+            );
+            lessonsMap[module.id] = moduleLessons;
+          });
+          
+          setModuleLessons(lessonsMap);
+        } catch (error) {
+          console.error('Erreur lors du chargement des leçons:', error);
+        }
+        
+        // Charger les quiz pour chaque module
+        await Promise.all(
+          modulesData.map(async (module: Module) => {
+            try {
+              const quiz = await quizService.getModuleQuiz(String(module.id));
+              // Vérifier strictement si le quiz existe et est valide (a un id ou des questions)
+              const hasQuiz = quiz !== null && 
+                             quiz !== undefined && 
+                             (quiz.id || (quiz.questions && Array.isArray(quiz.questions) && quiz.questions.length > 0));
+              quizzesMap[module.id] = !!hasQuiz;
+            } catch (error) {
+              // Si pas de quiz, c'est normal (404)
+              quizzesMap[module.id] = false;
+            }
+          })
+        );
+        
+        setModuleQuizzes(quizzesMap);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des modules:', error);
       setModules([]);
@@ -124,13 +176,20 @@ export default function ModuleManagement() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce module ?')) return;
+  const handleDeleteClick = (id: number) => {
+    setModuleToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!moduleToDelete) return;
     
     try {
-      await moduleService.deleteModule(id);
+      await moduleService.deleteModule(moduleToDelete);
       toast.success('Module supprimé', 'Le module a été supprimé avec succès');
       if (selectedCourseId) loadModules(selectedCourseId);
+      setShowDeleteModal(false);
+      setModuleToDelete(null);
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur', 'Erreur lors de la suppression');
@@ -282,12 +341,34 @@ export default function ModuleManagement() {
           {/* Informations du module */}
           <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
             <div className="flex items-center space-x-3">
-              {module.lessons_count !== undefined && (
-                <div className="flex items-center space-x-1">
-                  <BookOpen className="h-4 w-4" />
-                  <span>{module.lessons_count} leçons</span>
-                </div>
-              )}
+              {(() => {
+                const lessons = moduleLessons[module.id] || [];
+                const totalMinutes = lessons.reduce((sum, l) => sum + (l.duration || l.duration_minutes || 0), 0);
+                const lessonsCount = lessons.length || module.lessons_count || 0;
+                // Vérifier strictement si le module a un quiz (doit être explicitement true)
+                const hasQuiz = moduleQuizzes[module.id] === true;
+                
+                return (
+                  <>
+                    {totalMinutes > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{totalMinutes} min</span>
+                      </div>
+                    )}
+                    {lessonsCount > 0 && (
+                      <div className="flex items-center space-x-1">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{lessonsCount} leçons</span>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-1">
+                      <FileQuestion className="h-4 w-4" />
+                      <span>{hasQuiz ? 1 : 0} quiz</span>
+                    </div>
+                  </>
+                );
+              })()}
               {module.is_unlocked ? (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                   Déverrouillé
@@ -319,7 +400,7 @@ export default function ModuleManagement() {
               <Edit className="h-4 w-4" />
             </button>
             <button
-              onClick={() => handleDelete(module.id)}
+              onClick={() => handleDeleteClick(module.id)}
               className="p-2 text-gray-400 hover:text-red-600 transition-colors rounded"
               title="Supprimer"
             >
@@ -590,6 +671,19 @@ export default function ModuleManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setModuleToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer ce module ? Cette action est irréversible."
+        confirmText="Supprimer"
+      />
     </div>
   );
 }

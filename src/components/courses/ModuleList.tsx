@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Lock, CheckCircle, Clock, BookOpen } from 'lucide-react';
+import { ChevronRight, Lock, CheckCircle, Clock, BookOpen, Award, Plus, FileQuestion } from 'lucide-react';
 import { Module, Enrollment, Progress } from '../../types/course';
 import { moduleService } from '../../lib/services/moduleService';
 import { progressService } from '../../lib/services/progressService';
+import { useAuthStore } from '../../lib/stores/authStore';
+import { quizService } from '../../lib/services/quizService';
 
 interface ModuleListProps {
   courseId: number;
@@ -12,6 +14,9 @@ interface ModuleListProps {
   enrollmentId?: number;
   onModuleSelect?: (module: Module) => void;
   onReorder?: (modules: Module[]) => void;
+  onQuizClick?: (moduleId: string) => void; // Pour les instructeurs
+  onAddLessonClick?: (moduleId: number) => void; // Pour les instructeurs - créer une leçon pour un module
+  quizReloadTrigger?: number; // Clé pour forcer le rechargement des quiz
   className?: string;
 }
 
@@ -21,16 +26,43 @@ export default function ModuleList({
   enrollmentId,
   onModuleSelect,
   onReorder,
+  onQuizClick,
+  onAddLessonClick,
+  quizReloadTrigger = 0,
   className = '',
 }: ModuleListProps) {
+  const { user } = useAuthStore();
+  const isInstructor = user?.role === 'instructor';
   const [unlockStatus, setUnlockStatus] = useState<Record<number, boolean>>({});
   const [progress, setProgress] = useState<Progress[]>([]);
   const [loading, setLoading] = useState(true);
   const [localModules, setLocalModules] = useState<Module[]>(modules);
+  const [moduleQuizzes, setModuleQuizzes] = useState<Record<number, boolean>>({}); // moduleId -> hasQuiz
   // DnD basique pour réordonner les modules
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   useEffect(() => { setLocalModules(modules); }, [modules]);
+
+  // Fonction pour recharger les quiz (peut être appelée depuis le parent)
+  const reloadQuizzes = React.useCallback(async () => {
+    if (!isInstructor) return;
+    try {
+      const quizzesMap: Record<number, boolean> = {};
+      await Promise.all(
+        modules.map(async (module) => {
+          try {
+            const quiz = await quizService.getModuleQuiz(String(module.id));
+            quizzesMap[module.id] = !!quiz;
+          } catch (error) {
+            quizzesMap[module.id] = false;
+          }
+        })
+      );
+      setModuleQuizzes(quizzesMap);
+    } catch (error) {
+      console.error('Erreur lors du rechargement des quiz:', error);
+    }
+  }, [modules, isInstructor]);
 
   useEffect(() => {
     const loadUnlockStatus = async () => {
@@ -58,11 +90,47 @@ export default function ModuleList({
       }
     };
 
+    const loadModuleQuizzes = async () => {
+      if (!isInstructor) return; // Seulement pour les instructeurs
+      try {
+        const quizzesMap: Record<number, boolean> = {};
+        // Charger les quiz pour chaque module
+        await Promise.all(
+          modules.map(async (module) => {
+            try {
+              const quiz = await quizService.getModuleQuiz(String(module.id));
+              // Vérifier strictement si le quiz existe et est valide (a un id ou des questions)
+              const hasQuiz = quiz !== null && 
+                             quiz !== undefined && 
+                             (quiz.id || (quiz.questions && Array.isArray(quiz.questions) && quiz.questions.length > 0));
+              quizzesMap[module.id] = !!hasQuiz;
+            } catch (error) {
+              // Si pas de quiz, c'est normal (404)
+              quizzesMap[module.id] = false;
+            }
+          })
+        );
+        setModuleQuizzes(quizzesMap);
+      } catch (error) {
+        console.error('Erreur lors du chargement des quiz:', error);
+      }
+    };
+
     loadUnlockStatus();
     if (enrollmentId) {
       loadProgress();
     }
-  }, [courseId, enrollmentId, modules]);
+    if (isInstructor) {
+      loadModuleQuizzes();
+    }
+  }, [courseId, enrollmentId, modules, isInstructor, quizReloadTrigger]);
+
+  // Recharger les quiz quand la clé change (depuis le parent)
+  useEffect(() => {
+    if (isInstructor && quizReloadTrigger > 0) {
+      reloadQuizzes();
+    }
+  }, [quizReloadTrigger, isInstructor, reloadQuizzes]);
 
   const getModuleProgress = (module: Module): number => {
     if (!module.lessons || module.lessons.length === 0) return 0;
@@ -174,15 +242,38 @@ export default function ModuleList({
                       </p>
                     )}
                     <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
-                      <span className="flex items-center space-x-1">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                          {module.lessons?.reduce((sum, l) => sum + (l.duration || l.duration_minutes || 0), 0) || 0} min
-                        </span>
-                      </span>
-                      <span>
-                        {module.lessons?.length || module.lessons_count || 0} leçons
-                      </span>
+                      {(() => {
+                        const totalMinutes = module.lessons?.reduce((sum, l) => {
+                          const duration = l.duration || l.duration_minutes || 0;
+                          return sum + (typeof duration === 'number' ? duration : 0);
+                        }, 0) || 0;
+                        const lessonsCount = module.lessons?.length || module.lessons_count || 0;
+                        // Vérifier strictement si le module a un quiz (doit être explicitement true)
+                        const hasQuiz = moduleQuizzes[module.id] === true;
+                        
+                        return (
+                          <>
+                            {totalMinutes > 0 && (
+                              <span className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{totalMinutes} min</span>
+                              </span>
+                            )}
+                            {lessonsCount > 0 && (
+                              <span className="flex items-center space-x-1">
+                                <BookOpen className="h-3 w-3" />
+                                <span>{lessonsCount} leçons</span>
+                              </span>
+                            )}
+                            {isInstructor && (
+                              <span className="flex items-center space-x-1">
+                                <FileQuestion className="h-3 w-3" />
+                                <span>{hasQuiz ? 1 : 0} quiz</span>
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     
                     {/* Barre de progression */}
@@ -206,6 +297,50 @@ export default function ModuleList({
                 <div className="flex items-center space-x-2">
                   {moduleProgress === 100 && isUnlocked && (
                     <CheckCircle className="h-5 w-5 text-green-600" />
+                  )}
+                  {isInstructor && onAddLessonClick && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onAddLessonClick(module.id);
+                      }}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Ajouter une leçon à ce module"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onAddLessonClick(module.id);
+                        }
+                      }}
+                    >
+                      <Plus className="h-5 w-5" />
+                    </div>
+                  )}
+                  {isInstructor && onQuizClick && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onQuizClick(String(module.id));
+                      }}
+                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors cursor-pointer"
+                      title="Créer/Modifier le quiz du module"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          onQuizClick(String(module.id));
+                        }
+                      }}
+                    >
+                      <Award className="h-5 w-5" />
+                    </div>
                   )}
                   <ChevronRight className={`h-5 w-5 transition-transform ${
                     isExpanded ? 'rotate-90' : ''

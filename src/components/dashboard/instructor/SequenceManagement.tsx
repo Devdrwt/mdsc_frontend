@@ -21,8 +21,11 @@ import {
 } from 'lucide-react';
 import { ProfessionalService, Sequence } from '../../../lib/services/professionalService';
 import { courseService, Course } from '../../../lib/services/courseService';
+import ConfirmModal from '../../ui/ConfirmModal';
+import { useNotification } from '../../../lib/hooks/useNotification';
 
 export default function SequenceManagement() {
+  const { success: showSuccess, error: showError } = useNotification();
   const [sequences, setSequences] = useState<Sequence[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,8 @@ export default function SequenceManagement() {
   const [filterCourse, setFilterCourse] = useState<number | 'all'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSequence, setEditingSequence] = useState<Sequence | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [sequenceToDelete, setSequenceToDelete] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     course_id: '',
@@ -76,13 +81,13 @@ export default function SequenceManagement() {
           ...formData,
           course_id: parseInt(formData.course_id),
         });
-        alert('Séquence mise à jour avec succès');
+        showSuccess('Séquence mise à jour', 'La séquence a été mise à jour avec succès');
       } else {
         await ProfessionalService.createSequence({
           ...formData,
           course_id: parseInt(formData.course_id),
         });
-        alert('Séquence créée avec succès');
+        showSuccess('Séquence créée', 'La séquence a été créée avec succès');
       }
       setShowCreateModal(false);
       setEditingSequence(null);
@@ -90,20 +95,27 @@ export default function SequenceManagement() {
       loadData();
     } catch (error: any) {
       console.error('Erreur:', error);
-      alert(error.message || 'Erreur lors de l\'opération');
+      showError('Erreur', error.message || 'Erreur lors de l\'opération');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette séquence ?')) return;
+  const handleDeleteClick = (id: number) => {
+    setSequenceToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!sequenceToDelete) return;
     
     try {
-      await ProfessionalService.deleteSequence(id);
-      alert('Séquence supprimée avec succès');
+      await ProfessionalService.deleteSequence(sequenceToDelete);
+      showSuccess('Séquence supprimée', 'La séquence a été supprimée avec succès');
       loadData();
+      setShowDeleteModal(false);
+      setSequenceToDelete(null);
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de la suppression');
+      showError('Erreur', 'Erreur lors de la suppression');
     }
   };
 
@@ -287,7 +299,7 @@ export default function SequenceManagement() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(sequence.id)}
+                      onClick={() => handleDeleteClick(sequence.id)}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                       title="Supprimer"
                     >
@@ -443,6 +455,19 @@ export default function SequenceManagement() {
           </div>
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSequenceToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Confirmer la suppression"
+        message="Êtes-vous sûr de vouloir supprimer cette séquence ? Cette action est irréversible."
+        confirmText="Supprimer"
+      />
     </div>
   );
 }
