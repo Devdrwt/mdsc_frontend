@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Clock, Users, Star, Play, BookOpen, Award, User } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
+import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
 
 interface CourseCardProps {
   course: Course;
@@ -17,11 +18,39 @@ export default function CourseCard({
   // État pour gérer l'erreur de chargement d'image
   const [imageError, setImageError] = useState(false);
   
-  // Image par défaut si l'image du cours ne peut pas être chargée
-  const defaultImage = '/apprenant.png';
-  
-  // Utiliser l'image du cours ou l'image par défaut
-  const imageSrc = imageError || !course.thumbnail ? defaultImage : course.thumbnail;
+  const courseAny = course as any;
+  const rawThumbnail = course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url;
+  const resolvedThumbnail = resolveMediaUrl(rawThumbnail) || DEFAULT_COURSE_IMAGE;
+  const imageSrc = imageError ? DEFAULT_COURSE_IMAGE : resolvedThumbnail;
+
+  const instructorName = useMemo(() => {
+    if (typeof course.instructor === 'string') {
+      return course.instructor;
+    }
+
+    if (course.instructor?.name) {
+      return course.instructor.name;
+    }
+
+    const instructorAny = course.instructor as any;
+    const firstName =
+      instructorAny?.firstName ||
+      instructorAny?.first_name ||
+      courseAny.instructor_first_name ||
+      '';
+    const lastName =
+      instructorAny?.lastName ||
+      instructorAny?.last_name ||
+      courseAny.instructor_last_name ||
+      '';
+
+    const fallback =
+      courseAny.instructor_name ||
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      'Instructeur';
+
+    return fallback;
+  }, [course.instructor, courseAny]);
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -98,11 +127,7 @@ export default function CourseCard({
           </div>
           <div className="flex items-center space-x-1">
             <User className="h-4 w-4" />
-            <span>
-              {typeof course.instructor === 'string' 
-                ? course.instructor 
-                : course.instructor?.name || 'Instructeur'}
-            </span>
+            <span>{instructorName}</span>
           </div>
         </div>
 

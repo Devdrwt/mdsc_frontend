@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   BookOpen, 
@@ -32,6 +32,7 @@ import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
+import { DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR, resolveMediaUrl } from '../../../lib/utils/media';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -198,9 +199,6 @@ export default function CourseDetailPage() {
     }
   };
 
-  // Image par défaut si l'image du cours ne peut pas être chargée
-  const defaultImage = '/apprenant.png';
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -232,26 +230,85 @@ export default function CourseDetailPage() {
       </div>
     );
   }
-
-  // Récupérer l'image du cours en vérifiant plusieurs champs possibles
-  // Cette fonction est appelée uniquement après avoir vérifié que course n'est pas null
-  const getCourseImage = () => {
-    if (imageError) return defaultImage;
     
     const courseAny = course as any;
-    // Vérifier plusieurs champs possibles pour l'image
-    const imageUrl = courseAny?.thumbnail_url 
-      || course?.thumbnail 
-      || courseAny?.thumbnailUrl
-      || null;
-    
-    return imageUrl || defaultImage;
-  };
-  
-  const courseImage = getCourseImage();
+
+  const courseImageRaw =
+    courseAny?.thumbnail_url ||
+    course?.thumbnail ||
+    courseAny?.thumbnailUrl ||
+    courseAny?.image_url ||
+    null;
+
+  const courseImage = imageError
+    ? DEFAULT_COURSE_IMAGE
+    : resolveMediaUrl(courseImageRaw) || DEFAULT_COURSE_IMAGE;
+
+  const instructorInfo = useMemo(() => {
+    const rawInstructor = courseAny?.instructor || {};
+
+    const firstName =
+      rawInstructor.firstName ||
+      rawInstructor.first_name ||
+      courseAny?.instructor_first_name ||
+      '';
+    const lastName =
+      rawInstructor.lastName ||
+      rawInstructor.last_name ||
+      courseAny?.instructor_last_name ||
+      '';
+
+    const name =
+      rawInstructor.name ||
+      courseAny?.instructor_name ||
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      'Instructeur';
+
+    const title =
+      rawInstructor.title ||
+      rawInstructor.jobTitle ||
+      rawInstructor.job_title ||
+      courseAny?.instructor_title ||
+      courseAny?.instructor_role ||
+      '';
+
+    const organization =
+      rawInstructor.organization ||
+      rawInstructor.company ||
+      courseAny?.instructor_organization ||
+      courseAny?.instructor_company ||
+      '';
+
+    const email =
+      rawInstructor.email ||
+      courseAny?.instructor_email ||
+      '';
+
+    const bio =
+      rawInstructor.bio ||
+      rawInstructor.description ||
+      courseAny?.instructor_bio ||
+      courseAny?.instructor_description ||
+      '';
+
+    const avatarRaw =
+      rawInstructor.avatar ||
+      rawInstructor.avatar_url ||
+      courseAny?.instructor_avatar ||
+      courseAny?.instructorAvatar ||
+      null;
+
+    return {
+      name,
+      title,
+      organization,
+      email,
+      bio,
+      avatar: resolveMediaUrl(avatarRaw),
+    };
+  }, [courseAny]);
 
   const isEnrolled = course.enrollment !== undefined;
-  const courseAny = course as any;
   
   // Extraire toutes les informations du cours
   const price = courseAny.price || course.price || 0;
@@ -404,7 +461,7 @@ export default function CourseDetailPage() {
                     <User className="h-5 w-5 text-white/80" />
                     <div>
                       <p className="text-sm text-white/70">Instructeur</p>
-                      <p className="font-semibold">{course.instructor?.name || 'Instructeur'}</p>
+                      <p className="font-semibold">{instructorInfo.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -621,27 +678,35 @@ export default function CourseDetailPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Votre instructeur</h2>
                 <div className="flex items-start space-x-4">
-                  {course.instructor?.avatar ? (
+                  <div className="flex-shrink-0">
                     <img
-                      src={course.instructor.avatar}
-                      alt={course.instructor.name}
-                      className="w-16 h-16 rounded-full object-cover"
+                      src={instructorInfo.avatar || DEFAULT_INSTRUCTOR_AVATAR}
+                      alt={instructorInfo.name}
+                      className="w-16 h-16 rounded-full object-cover bg-mdsc-blue-primary/10"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/default-avatar.png';
+                        (e.target as HTMLImageElement).src = DEFAULT_INSTRUCTOR_AVATAR;
                       }}
                     />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-mdsc-blue-primary/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-mdsc-blue-primary" />
                     </div>
-                  )}
+                  <div className="space-y-2">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {course.instructor?.name || 'Instructeur'}
+                        {instructorInfo.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mt-1">
-                      Instructeur certifié
-                    </p>
+                      {(instructorInfo.title || instructorInfo.organization) && (
+                        <p className="text-gray-600 text-sm">
+                          {[instructorInfo.title, instructorInfo.organization].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                      {instructorInfo.email && (
+                        <p className="text-gray-500 text-sm">{instructorInfo.email}</p>
+                      )}
+                    </div>
+                    {instructorInfo.bio && (
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {instructorInfo.bio}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

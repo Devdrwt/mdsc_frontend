@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { Search, Clock, Users } from 'lucide-react';
 import { Course } from '../../types';
 import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
+import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
 
 const categories = [
   'Toutes les catégories',
@@ -37,25 +38,44 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     : serviceCourse.level === 'intermediate' ? 'Intermédiaire' 
     : 'Avancé';
 
-  // Gérer l'instructeur correctement
-  let instructorData;
-  if (typeof serviceCourse.instructor === 'string') {
-    instructorData = { id: '', name: serviceCourse.instructor };
-  } else if (serviceCourse.instructor && typeof serviceCourse.instructor === 'object') {
-    instructorData = {
-      id: serviceCourse.instructor.id || '',
-      name: serviceCourse.instructor.name || 'Instructeur',
-      avatar: serviceCourse.instructor.avatar
-    };
-  } else {
-    instructorData = { id: '', name: 'Instructeur' };
-  }
+  const courseAny = serviceCourse as any;
 
-  // Gérer l'image du cours - utiliser thumbnail_url, thumbnail, ou une image par défaut
-  const courseImage = (serviceCourse as any).thumbnail_url 
-    || serviceCourse.thumbnail 
-    || (serviceCourse as any).thumbnailUrl
-    || '/apprenant.png'; // Image par défaut
+  const instructorFirstName =
+    courseAny.instructor_first_name ||
+    courseAny.instructorFirstName ||
+    courseAny.instructor?.firstName ||
+    '';
+  const instructorLastName =
+    courseAny.instructor_last_name ||
+    courseAny.instructorLastName ||
+    courseAny.instructor?.lastName ||
+    '';
+  const instructorName =
+    courseAny.instructor?.name ||
+    courseAny.instructor_name ||
+    [instructorFirstName, instructorLastName].filter(Boolean).join(' ') ||
+    'Instructeur';
+
+  const instructorAvatarRaw =
+    courseAny.instructor?.avatar ||
+    courseAny.instructor_avatar ||
+    courseAny.instructorAvatar ||
+    null;
+
+  const instructorData = {
+    id: courseAny.instructor?.id || courseAny.instructor_id || '',
+    name: instructorName,
+    avatar: resolveMediaUrl(instructorAvatarRaw) || undefined,
+  };
+
+  // Gérer l'image du cours - utiliser thumbnail_url, thumbnail, etc.
+  const courseImageRaw =
+    courseAny.thumbnail_url ||
+    serviceCourse.thumbnail ||
+    courseAny.thumbnailUrl ||
+    null;
+
+  const courseImage = resolveMediaUrl(courseImageRaw) || DEFAULT_COURSE_IMAGE;
 
   return {
     id: serviceCourse.id,
