@@ -1982,8 +1982,8 @@ export default function AdminDashboard() {
                 )}
 
                 <div className="divide-y divide-gray-200 rounded-lg border border-gray-200">
-                  {serviceStatus.map((service) => (
-                    <div key={service.id} className="flex items-start justify-between px-4 py-3">
+                  {serviceStatus.map((service, index) => (
+                    <div key={`${service.id ?? index}-${service.name ?? 'service'}`} className="flex items-start justify-between px-4 py-3">
                       <div>
                         <p className="font-medium text-gray-900">{service.name}</p>
                         {service.message && (

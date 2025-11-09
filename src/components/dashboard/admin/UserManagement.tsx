@@ -262,11 +262,12 @@ export default function UserManagement() {
       render: (user: User) => (
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-mdsc-blue-dark rounded-full flex items-center justify-center text-white font-semibold">
-            {user.firstName[0]}{user.lastName[0]}
+            {((user?.firstName ?? user?.name ?? user?.email ?? '?').toString().charAt(0) || '?').toUpperCase()}
+            {((user?.lastName ?? user?.role ?? '').toString().charAt(0) || '').toUpperCase()}
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</div>
-            <div className="text-sm text-gray-500">{user.email}</div>
+            <div className="text-sm font-medium text-gray-900">{[user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.name || user?.email || 'Utilisateur'}</div>
+            <div className="text-sm text-gray-500">{user?.email || 'Email indisponible'}</div>
           </div>
         </div>
       )
@@ -289,8 +290,8 @@ export default function UserManagement() {
       sortable: true,
       render: (user: User) => (
         <div className="text-sm">
-          <div className="text-gray-900">{user.coursesEnrolled} cours</div>
-          <div className="text-gray-500">Dernière connexion: {user.lastLogin}</div>
+          <div className="text-gray-900">{(user as any)?.coursesEnrolled ?? (user as any)?.courses ?? 0} cours</div>
+          <div className="text-gray-500">Dernière connexion: {(user as any)?.lastLogin || (user as any)?.last_login || 'Inconnue'}</div>
         </div>
       )
     },
