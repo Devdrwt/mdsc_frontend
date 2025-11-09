@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { buildMediaUrl } from '../../utils/media';
+import { resolveMediaUrl } from '../utils/media';
 
 export interface InstructorDashboardStats {
   courses?: {
@@ -168,7 +168,7 @@ export class InstructorService {
       return {
         courses: courses.map((course: any) => ({
           ...course,
-          thumbnail_url: buildMediaUrl(course.thumbnail_url || course.thumbnail),
+          thumbnail_url: resolveMediaUrl(course.thumbnail_url || course.thumbnail),
         })),
         pagination: data.pagination,
       };
@@ -185,7 +185,7 @@ export class InstructorService {
     if (response.success !== false && response.data) {
       const data = response.data || {};
       if (data.course) {
-        data.course.thumbnail_url = buildMediaUrl(data.course.thumbnail_url || data.course.thumbnail);
+        data.course.thumbnail_url = resolveMediaUrl(data.course.thumbnail_url || data.course.thumbnail);
       }
       if (Array.isArray(data.trend)) {
         data.trend = data.trend;

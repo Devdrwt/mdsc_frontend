@@ -199,6 +199,23 @@ export default function InstructorDashboard() {
     };
   };
 
+  const toNumber = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (value && typeof value === 'object') {
+      if ('total' in value) return toNumber((value as any).total);
+      if ('count' in value) return toNumber((value as any).count);
+      if ('value' in value) return toNumber((value as any).value);
+      if ('amount' in value) return toNumber((value as any).amount);
+    }
+    return 0;
+  };
+
   const unreadNotificationsCount = useMemo(
     () => notifications.filter((notification) => !notification.is_read).length,
     [notifications]
@@ -241,31 +258,31 @@ export default function InstructorDashboard() {
             .filter((item): item is { currency?: string; amount?: number } => Boolean(item?.currency))
             .map((item) => ({
               currency: item.currency ?? 'XOF',
-              amount: item.amount ?? 0,
+              amount: toNumber(item.amount ?? (item as any).total ?? (item as any).value),
             }));
 
           setStats({
-            totalCourses: coursesStats.total ?? 0,
-            publishedCourses: coursesStats.published ?? 0,
-            pendingCourses: coursesStats.pending ?? 0,
-            draftCourses: coursesStats.draft ?? 0,
-            totalStudents: studentsStats.total ?? 0,
-            activeStudents: studentsStats.active ?? 0,
-            totalRevenue: revenueStats.reduce((sum, item) => sum + (item?.amount ?? 0), 0),
+            totalCourses: toNumber(coursesStats.total),
+            publishedCourses: toNumber(coursesStats.published),
+            pendingCourses: toNumber(coursesStats.pending),
+            draftCourses: toNumber(coursesStats.draft),
+            totalStudents: toNumber(studentsStats.total),
+            activeStudents: toNumber(studentsStats.active),
+            totalRevenue: revenueStats.reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
             revenueByCurrency,
-            averageRating: ratingStats.average ?? 0,
-            totalViews: viewsStats.total ?? 0,
+            averageRating: toNumber(ratingStats.average),
+            totalViews: toNumber(viewsStats.total),
           });
 
           setCoursePerformance((dashboardData.top_courses ?? []).map((course: InstructorTopCourse, index) => ({
             id: String(course.course_id ?? index),
             title: course.title ?? 'Cours',
             status: course.status,
-            students: course.enrollments ?? 0,
-            completionRate: course.completion_rate ?? 0,
-            rating: course.rating ?? 0,
-            revenue: (course.revenue ?? []).reduce((sum, item) => sum + (item?.amount ?? 0), 0),
-            views: course.views ?? 0,
+            students: toNumber(course.enrollments),
+            completionRate: toNumber(course.completion_rate),
+            rating: toNumber(course.rating),
+            revenue: (course.revenue ?? []).reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
+            views: toNumber(course.views),
           })));
 
           setRecentEnrollments((dashboardData.recent_enrollments ?? []).map((item: InstructorRecentEnrollment, index) => ({
@@ -279,7 +296,7 @@ export default function InstructorDashboard() {
             id: item.payment_id ?? index,
             courseTitle: item.course_title ?? 'Cours',
             studentName: item.student_name ?? 'Étudiant',
-            amount: item.amount ?? 0,
+            amount: toNumber(item.amount),
             currency: item.currency ?? 'XOF',
             paidAt: formatDateTime(item.paid_at),
           })));
@@ -316,7 +333,7 @@ export default function InstructorDashboard() {
         if (trendResult.status === 'fulfilled') {
           const trend = trendResult.value ?? [];
           const limitedTrend = trend.slice(-8);
-          setWeeklyEnrollments(limitedTrend.map((point) => Number(point.enrollments ?? 0)));
+          setWeeklyEnrollments(limitedTrend.map((point) => toNumber(point.enrollments ?? (point as any).total ?? (point as any).value)));
         } else {
           setWeeklyEnrollments([]);
         }

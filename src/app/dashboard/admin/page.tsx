@@ -234,6 +234,21 @@ export default function AdminDashboard() {
     }));
   };
 
+  const toNumber = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (value && typeof value === 'object') {
+      if ('total' in value) return toNumber((value as any).total);
+      if ('value' in value) return toNumber((value as any).value);
+      if ('count' in value) return toNumber((value as any).count);
+      if ('amount' in value) return toNumber((value as any).amount);
+    }
+    return 0;
+  };
+
   const mapActivityEntry = (entry: any): RecentActivity => {
     const type = entry.type || 'system_event';
 
@@ -623,50 +638,52 @@ export default function AdminDashboard() {
         const getLatestValue = (series: Array<{ value?: number; total_amount?: number }>) => {
           if (!series.length) return 0;
           const last = series[series.length - 1];
-          return Number(
-            last?.value ??
-            (last as { total_amount?: number })?.total_amount ??
+          return toNumber(
+            (last as any)?.value ??
+            (last as any)?.total_amount ??
+            (last as any)?.amount ??
             0
           );
         };
 
         const totalRevenueAmount = revenueTotals.reduce((sum, item) => {
-          const base = item?.amount ?? item?.total_amount ?? 0;
-          return sum + Number(base || 0);
+          const base = toNumber(item?.amount ?? item?.total_amount ?? (item as any)?.value);
+          return sum + base;
         }, 0);
 
         const systemHealth = (() => {
-          if (usersTotals.total && usersTotals.total > 0) {
-            const active = usersTotals.active ?? 0;
-            return Math.min(100, Math.max(0, Math.round((active / usersTotals.total) * 100)));
+          const totalUsersCount = toNumber(usersTotals.total);
+          if (totalUsersCount > 0) {
+            const active = toNumber(usersTotals.active);
+            return Math.min(100, Math.max(0, Math.round((active / totalUsersCount) * 100)));
           }
           return 100;
         })();
 
         setStats({
-          totalUsers: usersTotals.total ?? 0,
-          totalCourses: coursesTotals.total ?? 0,
+          totalUsers: toNumber(usersTotals.total),
+          totalCourses: toNumber(coursesTotals.total),
           totalRevenue: totalRevenueAmount,
-          activeUsers: usersTotals.active ?? 0,
+          activeUsers: toNumber(usersTotals.active),
           systemHealth,
           averageRating: 0,
           monthlyUserGrowth: getLatestValue(monthlyUsers),
           monthlyCourseGrowth: getLatestValue(monthlyCourses),
           monthlyRevenueGrowth: getLatestValue(monthlyRevenue),
-          pendingModerations: coursesTotals.pending ?? 0
+          pendingModerations: toNumber(coursesTotals.pending)
         });
 
         const coursesMap = new Map<string, number>();
         monthlyCourses.forEach((item) => {
           if (item?.month) {
-            coursesMap.set(item.month, Number(item.value ?? 0));
+            coursesMap.set(item.month, toNumber(item.value ?? (item as any).total ?? (item as any).count));
           }
         });
         const revenueMap = new Map<string, number>();
         monthlyRevenue.forEach((item) => {
           if (item?.month) {
-            const val = item.total_amount ?? item.value ?? 0;
-            revenueMap.set(item.month, Number(val ?? 0));
+            const val = item.total_amount ?? item.value ?? (item as any).amount ?? 0;
+            revenueMap.set(item.month, toNumber(val));
           }
         });
 
@@ -683,8 +700,11 @@ export default function AdminDashboard() {
         setUserGrowth(
           months.map((month) => ({
             month,
-            users: Number(
-              monthlyUsers.find((item) => (item.month ?? '') === month)?.value ?? 0
+            users: toNumber(
+              monthlyUsers.find((item) => (item.month ?? '') === month)?.value ??
+              (monthlyUsers.find((item) => (item.month ?? '') === month) as any)?.total ??
+              (monthlyUsers.find((item) => (item.month ?? '') === month) as any)?.count ??
+              0
             ),
             courses: coursesMap.get(month) ?? 0,
             revenue: revenueMap.get(month) ?? 0,
@@ -785,7 +805,10 @@ export default function AdminDashboard() {
 
       if (servicesResult.status === 'fulfilled') {
         const servicesData: AdminServiceStatusResponse = servicesResult.value ?? {};
-        setServiceStatus(servicesData.services ?? []);
+        setServiceStatus((servicesData.services ?? []).map((service) => ({
+          ...service,
+          details: service.details,
+        })));
         setServiceStatusSummary(servicesData.summary ?? null);
         setServiceStatusCheckedAt(servicesData.checked_at ?? null);
         setServiceStatusError(null);
@@ -850,7 +873,7 @@ export default function AdminDashboard() {
     loadAdminNotifications();
     loadAdminEvents();
   }, [user, loadAdminNotifications, loadAdminEvents]);
- 
+
   if (loading) {
     return (
       <AuthGuard requiredRole="admin">
@@ -1108,7 +1131,7 @@ export default function AdminDashboard() {
                   Aucune alerte récente.
                 </div>
               ) : (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   {alerts.map((alert) => (
                     <div
                       key={alert.id}
@@ -1120,7 +1143,7 @@ export default function AdminDashboard() {
                           : 'border-blue-200 bg-blue-50'
                       }`}
                     >
-                      <div className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-3">
                         <div
                           className={`mt-0.5 rounded-full p-2 ${
                             alert.severity === 'danger'
@@ -1132,9 +1155,9 @@ export default function AdminDashboard() {
                         >
                           <AlertTriangle className="h-4 w-4" />
                         </div>
-                        <div className="flex-1">
+                      <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-gray-900">{alert.title}</h4>
+                        <h4 className="font-medium text-gray-900">{alert.title}</h4>
                             <span className="text-xs text-gray-500">
                               {formatDateTime(alert.created_at)}
                             </span>
@@ -1147,11 +1170,11 @@ export default function AdminDashboard() {
                               {JSON.stringify(alert.metadata, null, 2)}
                             </pre>
                           )}
-                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
               )}
             </div>
 

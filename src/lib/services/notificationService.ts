@@ -1,5 +1,14 @@
 import { apiRequest } from './api';
 
+export interface Notification {
+  id: string;
+  title: string;
+  message?: string;
+  type: 'success' | 'error' | 'warning' | 'info' | string;
+  timestamp: number;
+  duration?: number;
+}
+
 export interface NotificationEntry {
   id: number | string;
   type: string;
@@ -31,6 +40,59 @@ export interface NotificationFilters {
 }
 
 export class NotificationService {
+  private static notifications: Notification[] = [];
+  private static listeners = new Set<(notifications: Notification[]) => void>();
+
+  private static emit() {
+    const snapshot = [...NotificationService.notifications];
+    NotificationService.listeners.forEach((listener) => listener(snapshot));
+  }
+
+  static subscribe(listener: (notifications: Notification[]) => void) {
+    NotificationService.listeners.add(listener);
+    listener([...NotificationService.notifications]);
+    return () => {
+      NotificationService.listeners.delete(listener);
+    };
+  }
+
+  static add(notification: Omit<Notification, 'id' | 'timestamp'>) {
+    const newNotification: Notification = {
+      id: Math.random().toString(36).substring(2, 11),
+      timestamp: Date.now(),
+      ...notification,
+    };
+    NotificationService.notifications = [newNotification, ...NotificationService.notifications];
+    NotificationService.emit();
+    return newNotification.id;
+  }
+
+  static remove(id: string) {
+    NotificationService.notifications = NotificationService.notifications.filter((n) => n.id !== id);
+    NotificationService.emit();
+  }
+
+  static clear() {
+    NotificationService.notifications = [];
+    NotificationService.emit();
+  }
+
+  static success(title: string, message?: string, duration?: number) {
+    return NotificationService.add({ type: 'success', title, message, duration });
+  }
+
+  static error(title: string, message?: string, duration?: number) {
+    return NotificationService.add({ type: 'error', title, message, duration });
+  }
+
+  static warning(title: string, message?: string, duration?: number) {
+    return NotificationService.add({ type: 'warning', title, message, duration });
+  }
+
+  static info(title: string, message?: string, duration?: number) {
+    return NotificationService.add({ type: 'info', title, message, duration });
+  }
+
   static async getNotifications(filters: NotificationFilters = {}): Promise<NotificationListResponse> {
     const search = new URLSearchParams();
     if (filters.page) search.append('page', String(filters.page));

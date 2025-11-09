@@ -52,6 +52,25 @@ export default function CourseCard({
     return fallback;
   }, [course.instructor, courseAny]);
 
+  const categoryLabel = useMemo(() => {
+     if (!course.category) return 'Autre';
+     if (typeof course.category === 'string') return course.category;
+     if (typeof course.category === 'object') {
+       const categoryAny = course.category as any;
+      if (categoryAny?.name || categoryAny?.label || categoryAny?.title) {
+        return categoryAny?.name || categoryAny?.label || categoryAny?.title;
+      }
+      if (Array.isArray(categoryAny)) {
+        const labels = categoryAny
+          .map((item: any) => item?.name || item?.label || item?.title)
+          .filter(Boolean);
+        return labels.length ? labels.join(', ') : 'Autre';
+      }
+      return 'Autre';
+     }
+     return String(course.category);
+   }, [course.category]);
+
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'Débutant':
@@ -100,7 +119,7 @@ export default function CourseCard({
         {/* Badge de catégorie - en bas de l'image */}
         <div className="absolute bottom-3 left-3">
           <span className="bg-white bg-opacity-95 px-3 py-1 rounded-full text-xs font-medium text-gray-700">
-            {course.category}
+            {categoryLabel}
           </span>
         </div>
       </div>

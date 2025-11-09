@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { buildMediaUrl } from '../../utils/media';
+import { resolveMediaUrl } from '../utils/media';
 
 export interface StudentCourseEntry {
   enrollment_id: number | string;
@@ -124,11 +124,11 @@ export class StudentService {
         ...course,
         instructor: course.instructor ? {
           ...course.instructor,
-          avatar_url: buildMediaUrl(course.instructor.avatar_url),
+          avatar_url: resolveMediaUrl(course.instructor.avatar_url),
         } : course.instructor,
         certificate: course.certificate ? {
           ...course.certificate,
-          pdf_url: buildMediaUrl(course.certificate.pdf_url),
+          pdf_url: resolveMediaUrl(course.certificate.pdf_url),
         } : course.certificate,
       }));
     }

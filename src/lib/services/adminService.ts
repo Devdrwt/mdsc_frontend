@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { buildMediaUrl } from '../../utils/media';
+import { resolveMediaUrl } from '../utils/media';
 
 export interface CourseApproval {
   id: string;

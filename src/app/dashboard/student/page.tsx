@@ -117,6 +117,28 @@ export default function StudentDashboard() {
     });
   };
 
+  const toNumber = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (value && typeof value === 'object') {
+      if ('total' in value) {
+        return toNumber((value as any).total);
+      }
+      if ('count' in value) {
+        return toNumber((value as any).count);
+      }
+      if ('value' in value) {
+        return toNumber((value as any).value);
+      }
+    }
+    return 0;
+  };
+
   useEffect(() => {
       if (!user) return;
 
@@ -150,29 +172,31 @@ export default function StudentDashboard() {
         }
 
         if (statsResult.status === 'fulfilled') {
-          const statsData: StudentStatsResponse = statsResult.value ?? {};
-          const courseStats = statsData.courses ?? {};
-          const gamification = statsData.gamification ?? {};
-          const notificationStats = (statsData as any).notifications ?? {};
-          const calendarStats = (statsData as any).calendar ?? {};
-
-          const totalCourses = (courseStats.active ?? 0) + (courseStats.completed ?? 0);
-          const inProgress = Math.max((courseStats.active ?? 0) - (courseStats.completed ?? 0), 0);
-
-        setStats({
+           const statsData: StudentStatsResponse = statsResult.value ?? {};
+           const courseStats = statsData.courses ?? {};
+           const gamification = statsData.gamification ?? {};
+           const notificationStats = (statsData as any).notifications ?? {};
+           const calendarStats = (statsData as any).calendar ?? {};
+ 
+          const activeCourses = toNumber(courseStats.active);
+          const completedCourses = toNumber(courseStats.completed);
+          const totalCourses = activeCourses + completedCourses;
+          const inProgress = Math.max(activeCourses - completedCourses, 0);
+ 
+           setStats({
             totalCourses,
-            completedCourses: courseStats.completed ?? 0,
+            completedCourses,
             inProgressCourses: inProgress,
-            totalPoints: gamification.points ?? 0,
+            totalPoints: toNumber(gamification.points),
             currentLevel: gamification.level ?? 'Débutant',
-            streak: gamification.streak_days ?? 0,
-            weeklyGoal: gamification.weekly_goal ?? 5,
-            weeklyProgress: gamification.weekly_progress ?? 0,
-            totalBadges: statsData.badges ?? 0,
-            totalCertificates: statsData.certificates ?? 0,
-            totalNotifications: notificationStats.total ?? 0,
-            unreadNotifications: notificationStats.unread ?? 0,
-            upcomingEvents: calendarStats.upcoming_events ?? 0,
+            streak: toNumber(gamification.streak_days),
+            weeklyGoal: toNumber(gamification.weekly_goal) || 5,
+            weeklyProgress: toNumber(gamification.weekly_progress),
+            totalBadges: toNumber((statsData as any).badges),
+            totalCertificates: toNumber((statsData as any).certificates),
+            totalNotifications: toNumber(notificationStats.total),
+            unreadNotifications: toNumber(notificationStats.unread),
+            upcomingEvents: toNumber((calendarStats as any).upcoming_events ?? (calendarStats as any).total ?? (calendarStats as any).count),
           });
         } else {
           const reason = statsResult.reason as Error | undefined;
