@@ -126,11 +126,9 @@ function GoogleCallbackContent() {
         console.log('✅ [GOOGLE CALLBACK] Token:', token ? 'Token present' : 'Token missing');
         console.log('✅ [GOOGLE CALLBACK] User role from backend:', user.role || user.role_name || 'NOT PROVIDED');
         
-        // Récupérer le rôle depuis sessionStorage si le backend ne l'a pas fourni
-        const roleFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null;
-        if (!user.role && !user.role_name && roleFromStorage) {
-          console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, using role from sessionStorage:', roleFromStorage);
-          user.role = roleFromStorage;
+        if (!user.role && !user.role_name) {
+          console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
+          user.role = 'student';
         }
         
         // Vérifier que les données utilisateur ne contiennent pas d'undefined
@@ -188,11 +186,9 @@ function GoogleCallbackContent() {
           console.log('✅ [GOOGLE CALLBACK] Success data from hash');
           console.log('✅ [GOOGLE CALLBACK] User role from backend:', user.role || user.role_name || 'NOT PROVIDED');
           
-          // Récupérer le rôle depuis sessionStorage si le backend ne l'a pas fourni
-          const roleFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null;
-          if (!user.role && !user.role_name && roleFromStorage) {
-            console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, using role from sessionStorage:', roleFromStorage);
-            user.role = roleFromStorage;
+          if (!user.role && !user.role_name) {
+            console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
+            user.role = 'student';
           }
           
           console.log('✅ [GOOGLE CALLBACK] Final user role to send:', user.role || user.role_name || 'NOT SET');
@@ -255,13 +251,9 @@ function GoogleCallbackContent() {
         console.log('✅ [GOOGLE CALLBACK] Token:', token ? 'present' : 'missing');
         console.log('✅ [GOOGLE CALLBACK] User role from backend:', user?.role || user?.role_name || 'NOT PROVIDED');
         
-        // Récupérer le rôle depuis sessionStorage si le backend ne l'a pas fourni
         if (user && !user.role && !user.role_name) {
-          const roleFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null;
-          if (roleFromStorage) {
-            console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, using role from sessionStorage:', roleFromStorage);
-            user.role = roleFromStorage;
-          }
+          console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
+          user.role = 'student';
         }
         
         console.log('✅ [GOOGLE CALLBACK] Final user role to send:', user?.role || user?.role_name || 'NOT SET');

@@ -50,6 +50,25 @@ export default function ProgressPanel() {
           const progress = course.progress || 0;
           const totalLessons = course.lessons?.length || 0;
           const completedLessons = Math.round((progress / 100) * totalLessons);
+
+          const normalizeCategory = (category: any): string => {
+            if (!category) return 'Général';
+            if (typeof category === 'string') return category;
+            if (typeof category === 'object') {
+              const categoryAny = category as any;
+              if (categoryAny?.name || categoryAny?.label || categoryAny?.title) {
+                return categoryAny.name || categoryAny.label || categoryAny.title;
+              }
+              if (Array.isArray(categoryAny)) {
+                const labels = categoryAny
+                  .map((item: any) => item?.name || item?.label || item?.title)
+                  .filter(Boolean);
+                return labels.length ? labels.join(', ') : 'Général';
+              }
+              return 'Général';
+            }
+            return String(category);
+          };
           
           return {
             courseId: course.id,
@@ -61,7 +80,7 @@ export default function ProgressPanel() {
             enrolledAt: course.enrolledAt || course.createdAt || new Date().toISOString(),
             status: progress === 100 ? 'completed' : progress > 0 ? 'in-progress' : 'not-started',
             estimatedTimeRemaining: Math.ceil((100 - progress) / 10), // Temps estimé en heures
-            category: course.category || 'Général',
+            category: normalizeCategory(course.category),
           };
         });
         

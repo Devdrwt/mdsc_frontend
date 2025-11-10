@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, Award, Target, Star, TrendingUp, Users, Clock, BookOpen } from 'lucide-react';
+import { Trophy, Award, Target, Star, TrendingUp, Users, Clock, BookOpen, Zap } from 'lucide-react';
 import { gamificationService, UserProgress, LeaderboardEntry } from '../../../lib/services/gamificationService';
 import { Badge } from '../../../types';
 import { useAuthStore } from '../../../lib/stores/authStore';

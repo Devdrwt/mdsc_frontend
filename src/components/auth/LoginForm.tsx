@@ -158,7 +158,7 @@ export default function LoginForm() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-700">
             Vous n'avez pas encore de compte ?{' '}
-            <a href="/select-role" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
+            <a href="/register" className="font-medium text-teal-600 hover:text-teal-700 transition-colors">
               S'inscrire gratuitement
             </a>
           </p>

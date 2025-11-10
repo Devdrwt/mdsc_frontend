@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Shield, 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Users,
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Shield,
   UserCheck,
   UserX,
   Mail,
@@ -16,14 +16,20 @@ import {
   Award,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  RefreshCw,
+  Ban,
+  Undo2,
 } from 'lucide-react';
 import DataTable from '../shared/DataTable';
+import AdminService, { AdminUserEntry } from '../../../lib/services/adminService';
+import { useNotification } from '../../../lib/hooks/useNotification';
 
 interface User {
   id: string;
   firstName: string;
   lastName: string;
+  name?: string;
   email: string;
   role: 'student' | 'instructor' | 'admin';
   status: 'active' | 'inactive' | 'suspended' | 'pending';
@@ -45,107 +51,116 @@ export default function UserManagement() {
   const [filterRole, setFilterRole] = useState<'all' | 'student' | 'instructor' | 'admin'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'suspended' | 'pending'>('all');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [roleUpdating, setRoleUpdating] = useState<Record<string, boolean>>({});
+  const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const { error: notifyError, success: notifySuccess } = useNotification();
+  const notifyErrorRef = useRef(notifyError);
+  const notifySuccessRef = useRef(notifySuccess);
 
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setLoading(true);
-        
-        // Simulation des données utilisateurs - dans un vrai projet, on récupérerait depuis l'API
-        const mockUsers: User[] = [
-          {
-            id: '1',
-            firstName: 'Marie',
-            lastName: 'Koné',
-            email: 'marie.kone@example.com',
-            role: 'student',
-            status: 'active',
-            lastLogin: '2024-01-15 14:30',
-            createdAt: '2024-01-10',
-            coursesEnrolled: 3,
-            coursesCompleted: 1,
-            totalPoints: 450,
-            isEmailVerified: true,
-            organization: 'ONG Développement',
-            country: 'CI'
-          },
-          {
-            id: '2',
-            firstName: 'Dr. Jean',
-            lastName: 'Traoré',
-            email: 'jean.traore@example.com',
-            role: 'instructor',
-            status: 'active',
-            lastLogin: '2024-01-15 13:45',
-            createdAt: '2024-01-05',
-            coursesEnrolled: 0,
-            coursesCompleted: 0,
-            totalPoints: 0,
-            isEmailVerified: true,
-            organization: 'Université d\'Abidjan',
-            country: 'CI'
-          },
-          {
-            id: '3',
-            firstName: 'Fatou',
-            lastName: 'Diabaté',
-            email: 'fatou.diabate@example.com',
-            role: 'student',
-            status: 'pending',
-            lastLogin: '2024-01-14 10:20',
-            createdAt: '2024-01-14',
-            coursesEnrolled: 2,
-            coursesCompleted: 0,
-            totalPoints: 120,
-            isEmailVerified: false,
-            organization: 'Association Femmes',
-            country: 'CI'
-          },
-          {
-            id: '4',
-            firstName: 'Paul',
-            lastName: 'N\'Guessan',
-            email: 'paul.nguessan@example.com',
-            role: 'admin',
-            status: 'active',
-            lastLogin: '2024-01-15 15:00',
-            createdAt: '2023-12-01',
-            coursesEnrolled: 0,
-            coursesCompleted: 0,
-            totalPoints: 0,
-            isEmailVerified: true,
-            organization: 'MdSC',
-            country: 'CI'
-          },
-          {
-            id: '5',
-            firstName: 'Aminata',
-            lastName: 'Ouattara',
-            email: 'aminata.ouattara@example.com',
-            role: 'student',
-            status: 'suspended',
-            lastLogin: '2024-01-10 09:15',
-            createdAt: '2024-01-08',
-            coursesEnrolled: 1,
-            coursesCompleted: 0,
-            totalPoints: 50,
-            isEmailVerified: true,
-            organization: 'Coopérative Agricole',
-            country: 'CI'
-          }
-        ];
+    notifyErrorRef.current = notifyError;
+    notifySuccessRef.current = notifySuccess;
+  }, [notifyError, notifySuccess]);
 
-        setUsers(mockUsers);
-        setFilteredUsers(mockUsers);
-      } catch (error) {
-        console.error('Erreur lors du chargement des utilisateurs:', error);
-      } finally {
-        setLoading(false);
-      }
+  const normalizeUser = useCallback((entry: AdminUserEntry): User => {
+    const fallbackId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `user-${Math.random().toString(36).slice(2, 10)}`;
+    const resolvedId =
+      entry.id ?? entry.user_id ?? entry.uuid ?? entry.email ?? fallbackId;
+    const resolvedRole = (entry.role || entry.role_name || 'student').toString().toLowerCase();
+    const role: User['role'] =
+      resolvedRole === 'admin'
+        ? 'admin'
+        : resolvedRole === 'instructor'
+          ? 'instructor'
+          : 'student';
+
+    const rawStatus = (entry.status || entry.account_status || 'active')?.toString().toLowerCase();
+    const status: User['status'] =
+      rawStatus === 'inactive'
+        ? 'inactive'
+        : rawStatus === 'suspended'
+          ? 'suspended'
+          : rawStatus === 'pending'
+            ? 'pending'
+            : 'active';
+
+    const firstName =
+      entry.first_name ||
+      (entry.name ? entry.name.split(' ')[0] : undefined) ||
+      '';
+    const lastName =
+      entry.last_name ||
+      (entry.name ? entry.name.split(' ').slice(1).join(' ') : undefined) ||
+      '';
+
+    const displayName =
+      entry.name ||
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      entry.email ||
+      '';
+
+    const toNumber = (value: unknown, fallback = 0) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : fallback;
     };
 
-    loadUsers();
+    return {
+      id: String(resolvedId),
+      firstName,
+      lastName,
+      name: displayName,
+      email: entry.email || 'Email indisponible',
+      role,
+      status,
+      lastLogin: entry.last_login || entry.lastLogin || 'Inconnue',
+      createdAt: entry.created_at || entry.createdAt || '',
+      coursesEnrolled: toNumber(
+        (entry as any)?.courses_enrolled ?? (entry as any)?.coursesEnrolled,
+        0
+      ),
+      coursesCompleted: toNumber(
+        (entry as any)?.courses_completed ?? (entry as any)?.coursesCompleted,
+        0
+      ),
+      totalPoints: toNumber(entry.total_points ?? entry.totalPoints, 0),
+      isEmailVerified: Boolean(
+        entry.is_email_verified ?? entry.email_verified ?? false
+      ),
+      organization: entry.organization,
+      country: entry.country,
+    };
   }, []);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await AdminService.getUsers();
+      const normalized = response.users.map(normalizeUser);
+      setUsers(normalized);
+      setFilteredUsers(normalized);
+    } catch (err) {
+      console.error('Erreur lors du chargement des utilisateurs:', err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Impossible de récupérer la liste des utilisateurs.';
+      setError(message);
+      notifyErrorRef.current?.('Chargement des utilisateurs', message);
+      setUsers([]);
+      setFilteredUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [normalizeUser]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   useEffect(() => {
     let filtered = users;
@@ -246,6 +261,112 @@ export default function UserManagement() {
     // Implémenter les actions en masse
   };
 
+  const handleRoleToggle = async (user: User) => {
+    if (user.role === 'admin') {
+      notifyError('Action impossible', 'Le rôle de l\'administrateur ne peut pas être modifié.');
+      return;
+    }
+
+    const nextRole: User['role'] = user.role === 'instructor' ? 'student' : 'instructor';
+    setRoleUpdating(prev => ({ ...prev, [user.id]: true }));
+
+    try {
+      await AdminService.updateUserRole(user.id, nextRole);
+      notifySuccessRef.current?.(
+        'Rôle mis à jour',
+        `Le compte ${user.email} est désormais ${nextRole === 'instructor' ? 'formateur' : 'apprenant'}.`
+      );
+      await loadUsers();
+    } catch (err) {
+      console.error(`Erreur lors de la mise à jour du rôle pour ${user.id}:`, err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'La mise à jour du rôle a échoué. Veuillez réessayer.';
+      notifyErrorRef.current?.('Mise à jour du rôle', message);
+    } finally {
+      setRoleUpdating(prev => {
+        const updated = { ...prev };
+        delete updated[user.id];
+        return updated;
+      });
+    }
+  };
+
+  const handleSuspendToggle = async (user: User) => {
+    if (user.role === 'admin') {
+      notifyErrorRef.current?.('Action impossible', 'Impossible de suspendre un administrateur.');
+      return;
+    }
+
+    const isSuspended = user.status === 'suspended';
+    const actionLabel = isSuspended ? 'réactiver' : 'suspendre';
+
+  if (
+    !window.confirm(
+      `Voulez-vous vraiment ${actionLabel} ${user.email || 'cet utilisateur'} ?\n\nVoulez-vous continuer ?`
+    )
+  ) {
+      return;
+    }
+
+    setStatusUpdating(prev => ({ ...prev, [user.id]: true }));
+
+    try {
+      if (isSuspended) {
+        await AdminService.reactivateUser(user.id);
+        notifySuccessRef.current?.('Réactivation réussie', `${user.email || 'Utilisateur'} est à nouveau actif.`);
+      } else {
+        await AdminService.suspendUser(user.id);
+        notifySuccessRef.current?.('Utilisateur suspendu', `${user.email || 'Utilisateur'} a été suspendu.`);
+      }
+      await loadUsers();
+    } catch (err) {
+      console.error(`Erreur lors de la mise à jour du statut de ${user.id}:`, err);
+      const message = err instanceof Error ? err.message : 'Impossible de mettre à jour le statut de l\'utilisateur.';
+      notifyErrorRef.current?.('Erreur suspension', message);
+    } finally {
+      setStatusUpdating(prev => {
+        const updated = { ...prev };
+        delete updated[user.id];
+        return updated;
+      });
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (user.role === 'admin') {
+      notifyErrorRef.current?.('Action impossible', 'Impossible de supprimer un administrateur.');
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Cette action supprimera définitivement ${user.email || 'cet utilisateur'}.\n\nVoulez-vous continuer ?`
+      )
+    ) {
+      return;
+    }
+
+    setStatusUpdating(prev => ({ ...prev, [user.id]: true }));
+
+    try {
+      await AdminService.deleteUser(user.id);
+      notifySuccessRef.current?.('Utilisateur supprimé', `${user.email || 'Utilisateur'} a été supprimé.`);
+      await loadUsers();
+    } catch (err) {
+      console.error(`Erreur lors de la suppression de ${user.id}:`, err);
+      const message = err instanceof Error ? err.message : 'Impossible de supprimer l\'utilisateur.';
+      notifyErrorRef.current?.('Erreur suppression', message);
+    } finally {
+      setStatusUpdating(prev => {
+        const updated = { ...prev };
+        delete updated[user.id];
+        return updated;
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -259,14 +380,15 @@ export default function UserManagement() {
       key: 'user',
       label: 'Utilisateur',
       sortable: true,
-      render: (user: User) => (
+      render: (_value: unknown, user: User) => (
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 bg-mdsc-blue-dark rounded-full flex items-center justify-center text-white font-semibold">
-            {user.firstName[0]}{user.lastName[0]}
+            {((user?.firstName ?? user?.name ?? user?.email ?? '?').toString().charAt(0) || '?').toUpperCase()}
+            {((user?.lastName ?? user?.role ?? '').toString().charAt(0) || '').toUpperCase()}
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</div>
-            <div className="text-sm text-gray-500">{user.email}</div>
+            <div className="text-sm font-medium text-gray-900">{[user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.name || user?.email || 'Utilisateur'}</div>
+            <div className="text-sm text-gray-500">{user?.email || 'Email indisponible'}</div>
           </div>
         </div>
       )
@@ -275,22 +397,22 @@ export default function UserManagement() {
       key: 'role',
       label: 'Rôle',
       sortable: true,
-      render: (user: User) => getRoleBadge(user.role)
+      render: (_value: unknown, user: User) => getRoleBadge(user?.role ?? '')
     },
     {
       key: 'status',
       label: 'Statut',
       sortable: true,
-      render: (user: User) => getStatusBadge(user.status)
+      render: (_value: unknown, user: User) => getStatusBadge(user?.status ?? '')
     },
     {
       key: 'activity',
       label: 'Activité',
       sortable: true,
-      render: (user: User) => (
+      render: (_value: unknown, user: User) => (
         <div className="text-sm">
-          <div className="text-gray-900">{user.coursesEnrolled} cours</div>
-          <div className="text-gray-500">Dernière connexion: {user.lastLogin}</div>
+          <div className="text-gray-900">{(user as any)?.coursesEnrolled ?? (user as any)?.courses ?? 0} cours</div>
+          <div className="text-gray-500">Dernière connexion: {(user as any)?.lastLogin || (user as any)?.last_login || 'Inconnue'}</div>
         </div>
       )
     },
@@ -298,7 +420,7 @@ export default function UserManagement() {
       key: 'verification',
       label: 'Vérification',
       sortable: true,
-      render: (user: User) => (
+      render: (_value: unknown, user: User) => (
         <div className="flex items-center space-x-2">
           {user.isEmailVerified ? (
             <CheckCircle className="h-4 w-4 text-green-500" />
@@ -314,7 +436,7 @@ export default function UserManagement() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (user: User) => (
+      render: (_value: unknown, user: User) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={() => handleUserAction(user.id, 'edit')}
@@ -331,12 +453,53 @@ export default function UserManagement() {
             <Mail className="h-4 w-4" />
           </button>
           <button
-            onClick={() => handleUserAction(user.id, 'suspend')}
-            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-            title="Suspendre"
+            onClick={() => handleRoleToggle(user)}
+            className={`p-1 ${
+              user.role === 'admin'
+                ? 'text-gray-300 cursor-not-allowed'
+                : 'text-gray-400 hover:text-mdsc-blue-dark transition-colors'
+            }`}
+            title={
+              user.role === 'instructor'
+                ? 'Rebasculer en apprenant'
+                : 'Attribuer le rôle formateur'
+            }
+            disabled={roleUpdating[user.id] || user.role === 'admin'}
           >
-            <UserX className="h-4 w-4" />
+            {roleUpdating[user.id] ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : user.role === 'instructor' ? (
+              <Users className="h-4 w-4" />
+            ) : (
+              <Award className="h-4 w-4" />
+            )}
           </button>
+          {user.role !== 'admin' && (
+            <>
+              <button
+                onClick={() => handleSuspendToggle(user)}
+                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                title={user.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
+                disabled={Boolean(statusUpdating[user.id])}
+              >
+                {statusUpdating[user.id] ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : user.status === 'suspended' ? (
+                  <Undo2 className="h-4 w-4" />
+                ) : (
+                  <Ban className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                onClick={() => handleDeleteUser(user)}
+                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                title="Supprimer l'utilisateur"
+                disabled={Boolean(statusUpdating[user.id])}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
       )
     }
@@ -354,6 +517,14 @@ export default function UserManagement() {
             </p>
           </div>
           <div className="flex items-center space-x-4">
+            <button
+              onClick={() => loadUsers()}
+              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Rafraîchir
+            </button>
             <button
               onClick={() => handleBulkAction('export')}
               className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -427,6 +598,12 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg p-4">
+          {error}
+        </div>
+      )}
+
       {/* Filtres et recherche */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -475,14 +652,20 @@ export default function UserManagement() {
       </div>
 
       {/* Tableau des utilisateurs */}
-      <DataTable
-        columns={columns}
-        data={filteredUsers}
-        searchable={false}
-        filterable={false}
-        pagination={true}
-        pageSize={10}
-      />
+      {!loading && !error && filteredUsers.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-12 text-center text-gray-500">
+          Aucun utilisateur ne correspond aux critères sélectionnés.
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filteredUsers}
+          searchable={false}
+          filterable={false}
+          pagination={true}
+          pageSize={10}
+        />
+      )}
     </div>
   );
 }

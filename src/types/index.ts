@@ -17,6 +17,7 @@ export interface Course {
     avatar?: string;
   };
   students?: number; // Alias pour enrollment_count pour CourseCard
+  price?: number;
   prerequisite_course_id?: string | number;
   is_published: boolean;
   enrollment_count: number;
@@ -24,6 +25,14 @@ export interface Course {
   modules?: Module[];
   createdAt?: string;
   updatedAt?: string;
+  priceAmount?: number;
+  currency?: string;
+  isFree?: boolean;
+  isLive?: boolean;
+  isExpired?: boolean;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 // Module selon architecture
