@@ -231,19 +231,8 @@ export default function CourseModeration() {
       label: 'Cours',
       sortable: true,
       render: (value: any, course: Course) => (
-        <div className="flex items-start space-x-3">
-          <div className="h-12 w-12 bg-mdsc-gold rounded-lg flex items-center justify-center text-white font-semibold">
-            <BookOpen className="h-6 w-6" />
-          </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-gray-900 line-clamp-1">{course.title}</div>
-            <div className="text-sm text-gray-500 line-clamp-2">{course.description}</div>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="text-xs text-gray-500">{course.instructor}</span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-500">{course.category}</span>
-            </div>
-          </div>
+        <div className="text-sm font-medium text-gray-900 line-clamp-2">
+          {course.title}
         </div>
       )
     },

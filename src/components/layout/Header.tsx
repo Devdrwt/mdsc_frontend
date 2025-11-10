@@ -115,7 +115,7 @@ export default function Header() {
                   Connexion
                 </a>
                 <a 
-                  href="/select-role" 
+                  href="/register" 
                   className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
                 >
                   S'inscrire
@@ -211,7 +211,7 @@ export default function Header() {
                     Connexion
                   </a>
                   <a 
-                    href="/select-role"
+                    href="/register"
                     onClick={() => setIsMenuOpen(false)}
                     className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
                   >

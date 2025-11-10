@@ -1,26 +1,13 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+import { AlertCircle } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<'student' | 'instructor' | null>(null);
-
-  useEffect(() => {
-    // Récupérer le rôle sélectionné depuis sessionStorage
-    const role = sessionStorage.getItem('selectedRole') as 'student' | 'instructor' | null;
-    if (role === 'student' || role === 'instructor') {
-      setSelectedRole(role);
-    } else {
-      // Si aucun rôle n'est sélectionné, rediriger vers la page de sélection
-      router.push('/select-role');
-    }
-  }, [router]);
-
-  // Contenu selon le rôle
-  const studentContent = {
+  const searchParams = useSearchParams();
+  const message = searchParams.get('message');
+  const content = {
     image: '/Colleagues.png',
     title: 'APPRENANT',
     subtitle: 'Suivre des formations',
@@ -31,33 +18,6 @@ export default function RegisterPage() {
       'Suivi de progression'
     ]
   };
-
-  const instructorContent = {
-    image: '/Woman.png',
-    title: 'FORMATEUR',
-    subtitle: 'Créer et animer des formations',
-    features: [
-      'Création de cours',
-      'Gestion des apprenants',
-      'Support IA pour formateurs',
-      'Évaluation et certification'
-    ]
-  };
-
-  // Sélectionner le contenu selon le rôle (par défaut student si null)
-  const content = selectedRole === 'instructor' ? instructorContent : studentContent;
-
-  // Si aucun rôle n'est sélectionné, ne rien afficher (redirection en cours)
-  if (!selectedRole) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirection...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex relative">
@@ -100,6 +60,12 @@ export default function RegisterPage() {
       {/* Colonne droite - Formulaire */}
       <div className="flex-1 flex items-center justify-center bg-white overflow-y-auto">
         <div className="w-full max-w-2xl p-8">
+          {message && (
+            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <span>{message}</span>
+            </div>
+          )}
           <SimpleRegisterForm />
         </div>
       </div>

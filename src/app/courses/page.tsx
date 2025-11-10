@@ -27,6 +27,54 @@ const levels = [
   'Avancé'
 ];
 
+// Fonction utilitaire pour convertir en nombre
+const toNumber = (value: any, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const normalized = value.replace(/[^\d.,-]/g, '').replace(',', '.');
+    const parsed = parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  return fallback;
+};
+
+const toDateISOString = (value: any): string | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+};
+
+const resolveCourseStatus = (courseAny: Record<string, any>, options: { endDate?: Date | null; explicitExpired?: boolean }): { status: string; isExpired: boolean; isLive: boolean } => {
+  const now = new Date();
+  const statusRaw = (courseAny.status || courseAny.course_status || courseAny.state || '').toString().toLowerCase();
+  const liveFlag = Boolean(
+    courseAny.is_live ||
+    courseAny.isLive ||
+    courseAny.live ||
+    statusRaw === 'live' ||
+    statusRaw === 'en direct' ||
+    statusRaw === 'live-stream'
+  );
+
+  const inferredExpired = options.endDate ? options.endDate.getTime() < now.getTime() : false;
+  const isExpired = Boolean(options.explicitExpired || inferredExpired || statusRaw === 'expired');
+
+  if (isExpired) {
+    return { status: 'expired', isExpired: true, isLive: false };
+  }
+
+  if (liveFlag) {
+    return { status: 'live', isExpired: false, isLive: true };
+  }
+
+  return {
+    status: statusRaw || 'active',
+    isExpired: false,
+    isLive: false,
+  };
+};
+
 // Fonction pour convertir ServiceCourse en Course (pour CourseCard)
 const convertToCourse = (serviceCourse: ServiceCourse): any => {
   // Convertir la durée en string pour CourseCard
@@ -77,6 +125,54 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
 
   const courseImage = resolveMediaUrl(courseImageRaw) || DEFAULT_COURSE_IMAGE;
 
+  const rawPrice =
+    courseAny.price ??
+    courseAny.pricing?.amount ??
+    courseAny.cost ??
+    serviceCourse.price ??
+    0;
+
+  const priceValue = toNumber(rawPrice, 0);
+  const currencyCode = (courseAny.currency || courseAny.pricing?.currency || 'XOF').toString().toUpperCase();
+  const explicitFreeFlag =
+    courseAny.is_free ??
+    courseAny.isFree ??
+    courseAny.free ??
+    null;
+  const isFree = explicitFreeFlag !== null ? Boolean(explicitFreeFlag) : priceValue <= 0;
+
+  const startDateRaw =
+    courseAny.start_date ||
+    courseAny.startDate ||
+    courseAny.course_start_date ||
+    courseAny.begin_at ||
+    courseAny.available_from ||
+    null;
+
+  const endDateRaw =
+    courseAny.end_date ||
+    courseAny.endDate ||
+    courseAny.course_end_date ||
+    courseAny.enrollment_deadline ||
+    courseAny.available_until ||
+    courseAny.closing_date ||
+    null;
+
+  const normalizeDate = (value: any): Date | null => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const startDate = normalizeDate(startDateRaw);
+  const endDate = normalizeDate(endDateRaw);
+  const explicitExpired = courseAny.is_expired ?? courseAny.expired ?? false;
+
+  const statusInfo = resolveCourseStatus(courseAny, {
+    endDate,
+    explicitExpired: Boolean(explicitExpired),
+  });
+
   return {
     id: serviceCourse.id,
     title: serviceCourse.title,
@@ -96,7 +192,15 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     // Conversions pour CourseCard
     thumbnail: courseImage,
     students: serviceCourse.totalStudents || 0,
-    price: serviceCourse.price || 0,
+    price: priceValue,
+    priceAmount: priceValue,
+    currency: currencyCode,
+    isFree,
+    isLive: statusInfo.isLive,
+    isExpired: statusInfo.isExpired,
+    status: statusInfo.status,
+    startDate: startDate ? startDate.toISOString() : toDateISOString(startDateRaw),
+    endDate: endDate ? endDate.toISOString() : toDateISOString(endDateRaw),
   };
 };
 

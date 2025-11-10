@@ -200,6 +200,44 @@ export interface AdminEventListResponse {
   } | null;
 }
 
+export interface AdminUserEntry {
+  id?: number | string;
+  user_id?: number | string;
+  uuid?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  role?: string;
+  role_name?: string;
+  status?: string;
+  account_status?: string;
+  is_email_verified?: boolean;
+  email_verified?: boolean;
+  created_at?: string;
+  createdAt?: string;
+  last_login?: string;
+  lastLogin?: string;
+  organization?: string;
+  country?: string;
+  courses_enrolled?: number;
+  coursesEnrolled?: number;
+  total_points?: number;
+  totalPoints?: number;
+  suspension_reason?: string | null;
+  suspended_at?: string | null;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUserEntry[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    total_pages?: number;
+  } | null;
+}
+
 export class AdminService {
   // Récupérer les cours en attente de validation
   static async getPendingCourses(): Promise<CourseApproval[]> {
@@ -576,6 +614,108 @@ export class AdminService {
 
   static async deleteAdminEvent(id: number | string): Promise<void> {
     await apiRequest(`/admin/events/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async getUsers(params?: {
+    search?: string;
+    role?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<AdminUserListResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.role) searchParams.append('role', params.role);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/users${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const payload = response?.data ?? response ?? {};
+    let users: AdminUserEntry[] = [];
+    let pagination: AdminUserListResponse['pagination'] = null;
+
+    const candidates = [
+      payload,
+      (payload as any)?.data,
+      (payload as any)?.data?.data,
+      (payload as any)?.data?.users,
+      (payload as any)?.results,
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+
+      if (Array.isArray(candidate)) {
+        users = candidate as AdminUserEntry[];
+        break;
+      }
+
+      if (typeof candidate === 'object') {
+        if (Array.isArray((candidate as any).users)) {
+          users = (candidate as any).users;
+          pagination = (candidate as any).pagination ?? (candidate as any).meta ?? pagination;
+          break;
+        }
+        if (Array.isArray((candidate as any).data)) {
+          users = (candidate as any).data;
+          pagination = (candidate as any).pagination ?? (candidate as any).meta ?? pagination;
+          break;
+        }
+      }
+    }
+
+    if (!users.length && Array.isArray(response)) {
+      users = response as AdminUserEntry[];
+    }
+
+    return {
+      users,
+      pagination,
+    };
+  }
+
+  static async updateUserRole(
+    userId: string | number,
+    role: 'student' | 'instructor'
+  ): Promise<AdminUserEntry> {
+    const response = await apiRequest(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async suspendUser(
+    userId: string | number,
+    reason?: string
+  ): Promise<AdminUserEntry> {
+    const payload = reason ? { reason } : undefined;
+    const response = await apiRequest(`/admin/users/${userId}/suspend`, {
+      method: 'POST',
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async reactivateUser(userId: string | number): Promise<AdminUserEntry> {
+    const response = await apiRequest(`/admin/users/${userId}/reactivate`, {
+      method: 'POST',
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async deleteUser(userId: string | number): Promise<void> {
+    await apiRequest(`/admin/users/${userId}`, {
       method: 'DELETE',
     });
   }

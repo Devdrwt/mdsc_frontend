@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Clock, Users, Star, Play, BookOpen, Award, User } from 'lucide-react';
+import { Clock, Users, User, AlertCircle } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
 import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
@@ -10,18 +10,50 @@ interface CourseCardProps {
   showEnrollButton?: boolean;
 }
 
-export default function CourseCard({ 
-  course, 
-  onEnroll, 
-  showEnrollButton = true 
+export default function CourseCard({
+  course,
+  onEnroll,
+  showEnrollButton = true,
 }: CourseCardProps) {
-  // État pour gérer l'erreur de chargement d'image
   const [imageError, setImageError] = useState(false);
-  
+
   const courseAny = course as any;
-  const rawThumbnail = course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url;
+  const rawThumbnail =
+    course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url;
   const resolvedThumbnail = resolveMediaUrl(rawThumbnail) || DEFAULT_COURSE_IMAGE;
   const imageSrc = imageError ? DEFAULT_COURSE_IMAGE : resolvedThumbnail;
+
+  const priceValue = useMemo(() => {
+    const rawPrice = courseAny.priceAmount ?? courseAny.price ?? 0;
+    const numeric = Number(rawPrice);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }, [courseAny.price, courseAny.priceAmount]);
+
+  const currencyCode = useMemo(() => {
+    const currency = (courseAny.currency || courseAny.price_currency || 'XOF').toString().toUpperCase();
+    return currency.length === 3 ? currency : 'XOF';
+  }, [courseAny.currency, courseAny.price_currency]);
+
+  const isFree = useMemo(() => {
+    const explicit = courseAny.isFree ?? courseAny.is_free ?? courseAny.free;
+    if (explicit !== undefined && explicit !== null) {
+      return Boolean(explicit);
+    }
+    return priceValue <= 0;
+  }, [courseAny.free, courseAny.isFree, courseAny.is_free, priceValue]);
+
+  const priceLabel = useMemo(() => {
+    if (isFree) return 'Gratuit';
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: currencyCode,
+        maximumFractionDigits: 0,
+      }).format(priceValue);
+    } catch {
+      return `${priceValue.toLocaleString('fr-FR')} ${currencyCode}`;
+    }
+  }, [currencyCode, isFree, priceValue]);
 
   const instructorName = useMemo(() => {
     if (typeof course.instructor === 'string') {
@@ -45,18 +77,16 @@ export default function CourseCard({
       '';
 
     const fallback =
-      courseAny.instructor_name ||
-      [firstName, lastName].filter(Boolean).join(' ') ||
-      'Instructeur';
+      courseAny.instructor_name || [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
 
     return fallback;
   }, [course.instructor, courseAny]);
 
   const categoryLabel = useMemo(() => {
-     if (!course.category) return 'Autre';
-     if (typeof course.category === 'string') return course.category;
-     if (typeof course.category === 'object') {
-       const categoryAny = course.category as any;
+    if (!course.category) return 'Autre';
+    if (typeof course.category === 'string') return course.category;
+    if (typeof course.category === 'object') {
+      const categoryAny = course.category as any;
       if (categoryAny?.name || categoryAny?.label || categoryAny?.title) {
         return categoryAny?.name || categoryAny?.label || categoryAny?.title;
       }
@@ -67,9 +97,9 @@ export default function CourseCard({
         return labels.length ? labels.join(', ') : 'Autre';
       }
       return 'Autre';
-     }
-     return String(course.category);
-   }, [course.category]);
+    }
+    return String(course.category);
+  }, [course.category]);
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -84,18 +114,62 @@ export default function CourseCard({
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'finance':
-        return <Award className="h-5 w-5" />;
-      case 'communication':
-        return <Play className="h-5 w-5" />;
-      case 'évaluation':
-        return <BookOpen className="h-5 w-5" />;
-      default:
-        return <BookOpen className="h-5 w-5" />;
-    }
+  const parseISODate = (value: any): Date | null => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   };
+
+  const startDate = useMemo(
+    () => parseISODate(courseAny.startDate || courseAny.start_date),
+    [courseAny.startDate, courseAny.start_date]
+  );
+  const endDate = useMemo(
+    () => parseISODate(courseAny.endDate || courseAny.end_date),
+    [courseAny.endDate, courseAny.end_date]
+  );
+
+  const isExpired = useMemo(() => {
+    if (courseAny.isExpired || courseAny.is_expired || courseAny.expired) return true;
+    if (!endDate) return false;
+    return endDate.getTime() < Date.now();
+  }, [courseAny.expired, courseAny.isExpired, courseAny.is_expired, endDate]);
+
+  const statusRaw = (courseAny.status || courseAny.course_status || '').toString().toLowerCase();
+
+  const isLive = useMemo(() => {
+    if (courseAny.isLive || courseAny.is_live || courseAny.live) return true;
+    return statusRaw === 'live' || statusRaw === 'en direct' || statusRaw === 'live-stream';
+  }, [courseAny.isLive, courseAny.is_live, courseAny.live, statusRaw]);
+
+  const statusLabel = useMemo(() => {
+    if (isExpired) return 'Expiré';
+    if (isLive) return 'En direct';
+    if (statusRaw === 'upcoming') return 'À venir';
+    if (statusRaw === 'draft') return 'Brouillon';
+    return 'Actif';
+  }, [isExpired, isLive, statusRaw]);
+
+  const statusClasses = useMemo(() => {
+    if (isExpired) return 'bg-red-600 text-white';
+    if (isLive) return 'bg-orange-500 text-white';
+    if (statusRaw === 'upcoming') return 'bg-indigo-500 text-white';
+    if (statusRaw === 'draft') return 'bg-gray-500 text-white';
+    return 'bg-emerald-600 text-white';
+  }, [isExpired, isLive, statusRaw]);
+
+  const expiryText = useMemo(() => {
+    if (isExpired && endDate) {
+      return `Expiré le ${endDate.toLocaleDateString('fr-FR')}`;
+    }
+    if (!isExpired && endDate) {
+      return `Disponible jusqu'au ${endDate.toLocaleDateString('fr-FR')}`;
+    }
+    if (!isExpired && startDate) {
+      return `Commence le ${startDate.toLocaleDateString('fr-FR')}`;
+    }
+    return null;
+  }, [endDate, isExpired, startDate]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
@@ -105,15 +179,25 @@ export default function CourseCard({
           src={imageSrc}
           alt={course.title}
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={() => {
-            // Si l'image ne peut pas être chargée, utiliser l'image par défaut
-            setImageError(true);
-          }}
+          onError={() => setImageError(true)}
         />
         {/* Badge de niveau - en haut à droite */}
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
             {course.level}
+          </span>
+        </div>
+        {/* Badges prix & statut - en haut à gauche */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
+              isFree ? 'bg-emerald-500 text-white' : 'bg-indigo-600 text-white'
+            }`}
+          >
+            {priceLabel}
+          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusClasses}`}>
+            {statusLabel}
           </span>
         </div>
         {/* Badge de catégorie - en bas de l'image */}
@@ -130,10 +214,15 @@ export default function CourseCard({
           <h3 className="font-semibold text-lg text-gray-900 mb-3 line-clamp-2 group-hover:text-mdsc-blue-primary transition-colors">
             {course.title}
           </h3>
-          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
-            {course.description}
-          </p>
+          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">{course.description}</p>
         </div>
+
+        {expiryText && (
+          <div className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+            <AlertCircle className="h-4 w-4 text-gray-500 mt-0.5" />
+            <span>{expiryText}</span>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
           <div className="flex items-center space-x-1">
@@ -142,7 +231,7 @@ export default function CourseCard({
           </div>
           <div className="flex items-center space-x-1">
             <Users className="h-4 w-4" />
-            <span>{course.students}</span>
+            <span>{course.students ?? 0}</span>
           </div>
           <div className="flex items-center space-x-1">
             <User className="h-4 w-4" />
@@ -152,7 +241,7 @@ export default function CourseCard({
 
         {showEnrollButton && (
           <div className="pt-4">
-            <Button 
+            <Button
               size="sm"
               onClick={() => {
                 const slug = (course as any).slug || (course as any).slug?.toString();
