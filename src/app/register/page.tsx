@@ -1,29 +1,30 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
 
-export default function RegisterPage() {
+const content = {
+  image: '/Colleagues.png',
+  title: 'APPRENANT',
+  subtitle: 'Suivre des formations',
+  features: [
+    'Accès à tous les cours',
+    'Certifications reconnues',
+    'Assistant IA personnel',
+    'Suivi de progression',
+  ],
+} as const;
+
+function RegisterContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
-  const content = {
-    image: '/Colleagues.png',
-    title: 'APPRENANT',
-    subtitle: 'Suivre des formations',
-    features: [
-      'Accès à tous les cours',
-      'Certifications reconnues',
-      'Assistant IA personnel',
-      'Suivi de progression'
-    ]
-  };
 
   return (
     <div className="min-h-screen flex relative">
-      {/* Bouton retour accueil */}
-      <a 
-        href="/" 
+      <a
+        href="/"
         className="absolute top-4 left-4 z-20 flex items-center text-gray-600 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm"
       >
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,16 +32,14 @@ export default function RegisterPage() {
         </svg>
         Retour à l'accueil
       </a>
-      
-      {/* Colonne gauche - Image de fond avec texte */}
+
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `url(${content.image})`
+            backgroundImage: `url(${content.image})`,
           }}
         />
-        {/* Overlay avec texte */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/70 to-cyan-900/70 z-10">
           <div className="h-full flex flex-col justify-center items-center text-white p-12">
             <h1 className="text-5xl font-bold mb-4 text-center">{content.title}</h1>
@@ -56,8 +55,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-      
-      {/* Colonne droite - Formulaire */}
+
       <div className="flex-1 flex items-center justify-center bg-white overflow-y-auto">
         <div className="w-full max-w-2xl p-8">
           {message && (
@@ -70,5 +68,22 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-orange-50">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-dark mx-auto" />
+            <p className="text-gray-600 text-sm">Chargement de la page d'inscription...</p>
+          </div>
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

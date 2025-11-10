@@ -6,6 +6,14 @@ export interface MessagePayload {
   type?: 'direct' | 'announcement' | string;
   recipient_id?: number | string;
   recipient_email?: string;
+  courseId?: string;
+}
+
+export interface BroadcastMessagePayload {
+  courseId: string | number;
+  subject: string;
+  content: string;
+  type?: 'broadcast' | string;
 }
 
 export interface MessageEntry {
@@ -79,6 +87,31 @@ export class MessageService {
     });
 
     return response.data ?? { messages: [] };
+  }
+
+  static async getCourseMessages(courseId: string | number, params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/messages/course/${encodeURIComponent(String(courseId))}${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    return response.data ?? { messages: [] };
+  }
+
+  static async sendBroadcastMessage(data: BroadcastMessagePayload): Promise<void> {
+    await apiRequest('/messages/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({
+        course_id: data.courseId,
+        subject: data.subject,
+        content: data.content,
+        type: data.type ?? 'broadcast',
+      }),
+    });
   }
 
   static async getConversations(): Promise<ConversationEntry[]> {

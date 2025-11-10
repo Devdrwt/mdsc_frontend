@@ -5,10 +5,18 @@ import { Eye, ExternalLink } from 'lucide-react';
 import Button from '../ui/Button';
 import { courseService } from '../../lib/services/courseService';
 import { useNotification } from '../../lib/hooks/useNotification';
+import type { Lesson } from '../../types';
+
+type LegacyLesson = Lesson & {
+  contentType?: string;
+  contentUrl?: string;
+  contentText?: string;
+  isRequired?: boolean;
+};
 
 interface LessonEditorProps {
   courseId: number | string;
-  lesson: Lesson;
+  lesson: LegacyLesson;
   onSaved?: (updated: Lesson) => void;
 }
 

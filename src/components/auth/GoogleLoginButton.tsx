@@ -246,7 +246,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       window.addEventListener('message', messageListener);
       
       // Vérifier si la popup a été fermée manuellement ou si elle a changé d'URL
-      let checkPopupClosed: NodeJS.Timeout | null = setInterval(() => {
+      let checkPopupClosed: ReturnType<typeof setInterval> | null = setInterval(() => {
         if (!popup) {
           clearInterval(checkPopupClosed!);
           return;

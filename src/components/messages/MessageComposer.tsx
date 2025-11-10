@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, User, Send, Loader, X } from 'lucide-react';
 import { MessageService } from '../../lib/services/messageService';
+import AdminService from '../../lib/services/adminService';
 import toast from '../../lib/utils/toast';
 
 interface UserSearchResult {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   role: string;
@@ -47,9 +48,37 @@ export default function MessageComposer({
 
     setSearching(true);
     try {
-      const results = await MessageService.searchUserByEmail(email);
-      setSearchResults(results);
-      setShowResults(results.length > 0);
+      const { users } = await AdminService.getUsers({ search: email, limit: 10 });
+      const normalizedResults = (users ?? [])
+        .map<UserSearchResult | null>((user, index) => {
+          const emailValue = user.email ?? '';
+          if (!emailValue) {
+            return null;
+          }
+
+          const displayName =
+            user.name ||
+            [user.first_name, user.last_name]
+              .filter(Boolean)
+              .join(' ')
+              .trim() ||
+            emailValue;
+
+          const roleLabel = user.role ?? user.role_name ?? 'utilisateur';
+          const rawId = user.id ?? user.user_id ?? emailValue ?? index;
+          const normalizedId = typeof rawId === 'number' ? rawId : String(rawId);
+
+          return {
+            id: normalizedId,
+            name: displayName,
+            email: emailValue,
+            role: roleLabel,
+          };
+        })
+        .filter((user): user is UserSearchResult => Boolean(user));
+
+      setSearchResults(normalizedResults);
+      setShowResults(normalizedResults.length > 0);
     } catch (error: any) {
       console.error('Erreur lors de la recherche:', error);
       setSearchResults([]);
@@ -95,7 +124,8 @@ export default function MessageComposer({
     setSending(true);
     try {
       await MessageService.sendMessage({
-        receiverEmail,
+        recipient_email: receiverEmail,
+        recipient_id: selectedUser?.id,
         subject,
         content,
         type: 'direct',

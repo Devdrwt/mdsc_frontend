@@ -125,20 +125,11 @@ export type {
   AIContentGenerationResponse 
 } from './aiService';
 
-export type { 
-  Notification, 
-  NotificationSettings, 
-  NotificationTemplate, 
-  NotificationCampaign, 
-  NotificationStats, 
-  CreateNotificationData, 
-  UpdateNotificationData, 
-  CreateNotificationTemplateData, 
-  UpdateNotificationTemplateData, 
-  CreateNotificationCampaignData, 
-  UpdateNotificationCampaignData, 
-  NotificationFilter, 
-  NotificationExport 
+export type {
+  Notification,
+  NotificationEntry,
+  NotificationListResponse,
+  NotificationFilters,
 } from './notificationService';
 
 
@@ -152,9 +143,13 @@ export type {
   FileExport 
 } from './fileService';
 
-export type { 
-  Message, 
-  MessageStats 
+export type {
+  MessagePayload,
+  BroadcastMessagePayload,
+  MessageEntry,
+  PaginatedMessages,
+  ConversationEntry,
+  MessageStats,
 } from './messageService';
 
 export type { 

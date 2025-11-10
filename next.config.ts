@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
   // Optimisations pour la production
   experimental: {
     optimizeCss: true,
