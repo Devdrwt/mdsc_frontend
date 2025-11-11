@@ -1,180 +1,96 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   ClipboardList, 
-  Plus, 
-  Edit, 
-  Trash2, 
   Eye,
-  Calendar, 
-  Clock, 
+  Edit,
   Users,
-  FileText,
   BarChart3,
-  Filter,
   Search,
+  Filter,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
-import { courseService } from '../../../lib/services/courseService';
-import { quizService } from '../../../lib/services/quizService';
-import { useAuthStore } from '../../../lib/stores/authStore';
-import QuizBuilder from './QuizBuilder';
+import {
+  EvaluationService,
+  InstructorFinalEvaluationEntry,
+} from '../../../lib/services/evaluationService';
 
-interface Evaluation {
-  id: string;
-  title: string;
-  type: 'quiz' | 'assignment' | 'exam';
-  courseName: string;
-  status: 'draft' | 'published' | 'closed';
-  dueDate: string;
-  submissionsCount: number;
-  averageScore: number;
-  createdAt: string;
-}
+type StatusFilter =
+  | 'all'
+  | 'draft'
+  | 'pending_approval'
+  | 'approved'
+  | 'rejected'
+  | 'published';
 
 export default function EvaluationManagement() {
-  const { user } = useAuthStore();
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [evaluations, setEvaluations] = useState<InstructorFinalEvaluationEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'quiz' | 'assignment' | 'exam'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'closed'>('all');
-  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
-  const [attemptsLoading, setAttemptsLoading] = useState(false);
-  const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState<any[]>([]);
-  const [updateBusyId, setUpdateBusyId] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [courses, setCourses] = useState<any[]>([]);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  // Charger les évaluations
   useEffect(() => {
-    if (user) {
       loadEvaluations();
-      loadCourses();
-    }
-  }, [user]);
-
-  const loadCourses = async () => {
-    if (!user) return;
-    try {
-      const instructorCourses = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
-      setCourses(instructorCourses || []);
-    } catch (error) {
-      console.error('Error loading courses:', error);
-    }
-  };
+  }, []);
 
   const loadEvaluations = async () => {
-    if (!user) return;
-    
     setLoading(true);
+    setError(null);
     try {
-      // Récupérer les cours de l'instructeur
-      const courses = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
-      
-      // Pour chaque cours, récupérer les quizzes (évaluations)
-      const allEvaluations: Evaluation[] = [];
-      for (const course of courses) {
-        try {
-          // Récupérer le cours avec tous ses détails (incluant quizzes si backend le fournit)
-          const fullCourse = await courseService.getCourseById(course.id);
-          const quizzes = (fullCourse as any).quizzes || [];
-          
-          const transformed = (quizzes || []).map((q: any) => ({
-            id: String(q.id),
-            title: q.title || q.name || 'Quiz',
-            type: 'quiz' as const,
-            courseName: course.title,
-            status: (q.status === 'draft' ? 'draft' : 'published') as 'draft' | 'published' | 'closed',
-            dueDate: q.due_date || q.deadline || new Date().toISOString(),
-            submissionsCount: Number(q.total_attempts || q.attempts_count || 0),
-            averageScore: Number(q.avg_score || q.average_score || 0),
-            createdAt: q.created_at || q.createdAt || new Date().toISOString(),
-          }));
-          allEvaluations.push(...transformed);
-        } catch (error) {
-          console.error(`Error loading evaluations for course ${course.id}:`, error);
-        }
-      }
-      
-      setEvaluations(allEvaluations);
-    } catch (error) {
-      console.error('Error loading evaluations:', error);
+      const response = await EvaluationService.getInstructorFinalEvaluations();
+      setEvaluations(response.evaluations);
+    } catch (err: any) {
+      console.error('Erreur chargement évaluations finales instructeur:', err);
       setEvaluations([]);
+      setError(
+        err?.message ||
+          "Impossible de récupérer les évaluations finales pour l'instant."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredEvaluations = evaluations.filter(evaluation => {
-    if (searchTerm && !evaluation.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !evaluation.courseName.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    if (filterType !== 'all' && evaluation.type !== filterType) return false;
-    if (filterStatus !== 'all' && evaluation.status !== filterStatus) return false;
-    return true;
-  });
+  const filteredEvaluations = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
 
-  const openAttempts = async (quizId: string) => {
-    setSelectedQuizId(quizId);
-    setShowAttemptsModal(true);
-    setAttemptsLoading(true);
-    try {
-      // TODO: Implémenter getAttemptHistory dans quizService
-      // Pour l'instant, utiliser un tableau vide
-      const data: any[] = [];
-      setAttempts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error('Erreur chargement tentatives', e);
-      setAttempts([]);
-    } finally {
-      setAttemptsLoading(false);
-    }
-  };
+    return evaluations.filter((evaluation) => {
+      const courseStatus = (evaluation.course?.status ?? '').toLowerCase();
+      const matchesStatus =
+        statusFilter === 'all' || courseStatus === statusFilter;
 
-  const quickAdjustScore = async (attemptId: string, delta: number) => {
-    try {
-      setUpdateBusyId(attemptId);
-      const current = attempts.find(a => String(a.id) === String(attemptId));
-      const nextScore = Math.max(0, Math.min(100, Number(current?.score || 0) + delta));
-      // TODO: Implémenter updateAttempt dans quizService
-      // Pour l'instant, mettre à jour localement
-      const updated = { ...current, score: nextScore } as any;
-      setAttempts(prev => prev.map(a => String(a.id) === String(attemptId) ? { ...a, score: updated.score } : a));
-    } catch (e) {
-      console.error('Erreur mise à jour tentative', e);
-    } finally {
-      setUpdateBusyId(null);
-    }
-  };
+      const matchesSearch =
+        !term ||
+        evaluation.title.toLowerCase().includes(term) ||
+        evaluation.course.title.toLowerCase().includes(term);
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'quiz':
-        return <ClipboardList className="h-5 w-5 text-blue-500" />;
-      case 'assignment':
-        return <FileText className="h-5 w-5 text-green-500" />;
-      case 'exam':
-        return <FileText className="h-5 w-5 text-purple-500" />;
-      default:
-        return <ClipboardList className="h-5 w-5 text-gray-500" />;
-    }
-  };
+      return matchesStatus && matchesSearch;
+    });
+  }, [evaluations, searchTerm, statusFilter]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Brouillon
-          </span>
-        );
+  const totalEvaluations = evaluations.length;
+  const publishedCount = evaluations.filter(
+    (evaluation) => (evaluation.course.status ?? '').toLowerCase() === 'published'
+  ).length;
+  const totalSubmissions = evaluations.reduce(
+    (sum, evaluation) => sum + (evaluation.statistics.totalSubmissions ?? 0),
+    0
+  );
+  const totalPassed = evaluations.reduce(
+    (sum, evaluation) => sum + (evaluation.statistics.passedCount ?? 0),
+    0
+  );
+  const successRate = totalSubmissions
+    ? Math.round((totalPassed / totalSubmissions) * 100)
+    : 0;
+
+  const formatStatusBadge = (status: string) => {
+    const normalized = status.toLowerCase();
+    switch (normalized) {
       case 'published':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -182,90 +98,110 @@ export default function EvaluationManagement() {
             Publié
           </span>
         );
-      case 'closed':
+      case 'approved':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Approuvé
+          </span>
+        );
+      case 'pending_approval':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            <ClockIcon />
+            En attente
+          </span>
+        );
+      case 'rejected':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <Clock className="h-3 w-3 mr-1" />
-            Fermé
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Rejeté
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            Brouillon
+          </span>
+        );
     }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'final_exam':
+        return 'Examen final';
+      case 'exam':
+        return 'Examen';
+      case 'final':
+      default:
+        return 'Évaluation finale';
+    }
+  };
+
+  const handleView = (evaluation: InstructorFinalEvaluationEntry) => {
+    const href = evaluation.links?.detail;
+    if (href) {
+      window.location.href = href;
+      return;
+    }
+    console.log('Voir évaluation finale', evaluation.id);
+  };
+
+  const handleEdit = (evaluation: InstructorFinalEvaluationEntry) => {
+    const href = evaluation.links?.edit;
+    if (href) {
+      window.location.href = href;
+      return;
+    }
+    console.log('Modifier évaluation finale', evaluation.id);
   };
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec actions */}
-      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestion des Évaluations</h2>
-          <p className="text-gray-600 mt-1">Créez et gérez les évaluations de vos cours</p>
-        </div>
-        <button onClick={() => setShowCreateModal(true)} className="btn-mdsc-primary flex items-center">
-          <Plus className="h-5 w-5 mr-2" />
-          Nouvelle évaluation
-        </button>
+        <h2 className="text-2xl font-bold text-gray-900">
+          Évaluations finales
+        </h2>
+        <p className="text-gray-600 mt-1">
+          Retrouvez toutes vos évaluations finales par cours.
+        </p>
       </div>
 
-      {/* Statistiques */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{evaluations.length}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <ClipboardList className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Publiées</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {evaluations.filter(e => e.status === 'published').length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Soumissions</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {evaluations.reduce((sum, e) => sum + e.submissionsCount, 0)}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Moyenne</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Math.round(evaluations.reduce((sum, e) => sum + e.averageScore, 0) / evaluations.length) || 0}%
-              </p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
+        <StatCard
+          label="Total"
+          value={totalEvaluations}
+          icon={<ClipboardList className="h-6 w-6 text-blue-600" />}
+          iconBg="bg-blue-100"
+        />
+        <StatCard
+          label="Publiées"
+          value={publishedCount}
+          icon={<CheckCircle className="h-6 w-6 text-green-600" />}
+          iconBg="bg-green-100"
+        />
+        <StatCard
+          label="Soumissions"
+          value={totalSubmissions}
+          icon={<Users className="h-6 w-6 text-purple-600" />}
+          iconBg="bg-purple-100"
+        />
+        <StatCard
+          label="Taux de réussite"
+          value={`${successRate}%`}
+          icon={<BarChart3 className="h-6 w-6 text-orange-600" />}
+          iconBg="bg-orange-100"
+        />
       </div>
 
-      {/* Filtres et recherche */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div className="flex-1 max-w-md">
@@ -273,7 +209,7 @@ export default function EvaluationManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Rechercher une évaluation..."
+                placeholder="Rechercher une évaluation ou un cours..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent w-full"
@@ -285,31 +221,29 @@ export default function EvaluationManagement() {
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
               >
-                <option value="all">Tous les types</option>
-                <option value="quiz">Quiz</option>
-                <option value="assignment">Devoir</option>
-                <option value="exam">Examen</option>
+                <option value="all">Tous les statuts</option>
+                <option value="published">Publié</option>
+                <option value="draft">Brouillon</option>
+                <option value="pending_approval">En attente</option>
+                <option value="approved">Approuvé</option>
+                <option value="rejected">Rejeté</option>
               </select>
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+            <button
+              onClick={loadEvaluations}
+              className="text-sm text-mdsc-blue-primary hover:underline"
+              disabled={loading}
             >
-              <option value="all">Tous les statuts</option>
-              <option value="draft">Brouillon</option>
-              <option value="published">Publié</option>
-              <option value="closed">Fermé</option>
-            </select>
+              Actualiser
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Liste des évaluations */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -328,202 +262,137 @@ export default function EvaluationManagement() {
                   Soumissions
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Échéance
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEvaluations.map((evaluation) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
+                    Chargement des évaluations...
+                  </td>
+                </tr>
+              ) : filteredEvaluations.length > 0 ? (
+                filteredEvaluations.map((evaluation) => (
                 <tr key={evaluation.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 rounded-lg">
-                        {getTypeIcon(evaluation.type)}
+                          <ClipboardList className="h-5 w-5 text-blue-500" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{evaluation.title}</div>
-                        <div className="text-sm text-gray-500">{evaluation.courseName}</div>
-                      </div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {evaluation.links?.detail ? (
+                              <a
+                                href={evaluation.links.detail}
+                                className="text-mdsc-blue-primary hover:underline"
+                              >
+                                {evaluation.title}
+                              </a>
+                            ) : (
+                              evaluation.title
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 flex items-center gap-1">
+                            {evaluation.course.detailUrl ? (
+                              <a
+                                href={evaluation.course.detailUrl}
+                                className="inline-flex items-center text-gray-500 hover:text-mdsc-blue-primary hover:underline"
+                              >
+                                {evaluation.course.title}
+                                <ExternalLink className="h-3 w-3 ml-1" />
+                              </a>
+                            ) : (
+                              evaluation.course.title
+                            )}
+                          </div>
+                        </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900 capitalize">{evaluation.type}</span>
+                      <span className="text-sm text-gray-900">
+                        {getTypeLabel(evaluation.type)}
+                      </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(evaluation.status)}
+                      {formatStatusBadge(evaluation.course.status)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{evaluation.submissionsCount}</div>
-                    {evaluation.averageScore > 0 && (
-                      <div className="text-sm text-gray-500">Moyenne: {evaluation.averageScore}%</div>
+                      <div className="text-sm text-gray-900">
+                        {evaluation.statistics.totalSubmissions}
+                      </div>
+                      {evaluation.statistics.totalSubmissions > 0 && (
+                        <div className="text-xs text-gray-500">
+                          {evaluation.statistics.passedCount ?? evaluation.statistics.passedStudents ?? 0} validée(s)
+                        </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 inline mr-1" />
-                    {new Date(evaluation.dueDate).toLocaleDateString('fr-FR')}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
-                      <button onClick={() => openAttempts(evaluation.id)} className="text-blue-600 hover:text-blue-900" title="Voir tentatives">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleView(evaluation)}
+                          className="inline-flex items-center text-blue-600 hover:text-blue-900"
+                          title="Voir"
+                        >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="text-gray-600 hover:text-gray-900" title="Modifier">
+                        <button
+                          onClick={() => handleEdit(evaluation)}
+                          className="inline-flex items-center text-gray-600 hover:text-gray-900"
+                          title="Modifier"
+                        >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900" title="Supprimer">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <ClipboardList className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Aucune évaluation finale
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Les évaluations finales enregistrées apparaîtront ici.
+                    </p>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
-
-        {filteredEvaluations.length === 0 && (
-          <div className="text-center py-12">
-            <ClipboardList className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune évaluation</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Commencez par créer une nouvelle évaluation.
-            </p>
-          </div>
-        )}
       </div>
-
-      {/* Modal tentatives */}
-      {showAttemptsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Tentatives du quiz</h3>
-              <button onClick={() => setShowAttemptsModal(false)} className="text-gray-500 hover:text-gray-700">Fermer</button>
-            </div>
-            <div className="p-4">
-              {attemptsLoading ? (
-                <div className="flex items-center justify-center h-40">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-mdsc-gold"></div>
-                </div>
-              ) : attempts.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Étudiant</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Soumis</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {attempts.map((a) => (
-                        <tr key={a.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-2 text-sm text-gray-900">
-                            {a.user_name || a.student_name || `#${a.user_id || a.student_id || '-'}`}
-                          </td>
-                          <td className="px-4 py-2 text-sm text-gray-900">{a.score ?? 0}%</td>
-                          <td className="px-4 py-2 text-sm text-gray-500">{a.submitted_at ? new Date(a.submitted_at).toLocaleString() : '-'}</td>
-                          <td className="px-4 py-2 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                disabled={updateBusyId === String(a.id)}
-                                onClick={() => quickAdjustScore(String(a.id), +5)}
-                                className="px-2 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                              >
-                                +5
-                              </button>
-                              <button
-                                disabled={updateBusyId === String(a.id)}
-                                onClick={() => quickAdjustScore(String(a.id), -5)}
-                                className="px-2 py-1 text-xs rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-                              >
-                                -5
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center text-gray-600 py-12">Aucune tentative trouvée</div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal création évaluation */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex-shrink-0 p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-2xl font-bold text-gray-900">Nouvelle évaluation</h3>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-700">
-                <span className="text-2xl">&times;</span>
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sélectionner un cours *
-                </label>
-                <select
-                  value={selectedCourseId}
-                  onChange={(e) => setSelectedCourseId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Choisir un cours...</option>
-                  {courses.map(course => (
-                    <option key={course.id} value={String(course.id)}>{course.title}</option>
-                  ))}
-                </select>
-              </div>
-              {selectedCourseId && (
-                <QuizBuilder
-                  courseId={selectedCourseId}
-                  lessonId=""
-                  quizType="assessment"
-                  initialQuiz={undefined}
-                  onSave={async (quiz) => {
-                    try {
-                      const quizData = {
-                        ...quiz,
-                        course_id: parseInt(selectedCourseId, 10),
-                        questions: quiz.questions.map((q, idx) => ({
-                          question_text: q.question_text,
-                          question_type: q.question_type,
-                          options: q.options,
-                          correct_answer: q.correct_answer,
-                          points: q.points,
-                          order_index: idx + 1
-                        }))
-                      };
-                      await quizService.createQuiz(quizData as any);
-                      setShowCreateModal(false);
-                      setSelectedCourseId('');
-                      loadEvaluations();
-                    } catch (error) {
-                      console.error('Error creating quiz:', error);
-                      throw error;
-                    }
-                  }}
-                  onCancel={() => {
-                    setShowCreateModal(false);
-                    setSelectedCourseId('');
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  iconBg,
+}: {
+  label: string;
+  value: number | string;
+  icon: React.ReactNode;
+  iconBg: string;
+}) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+        </div>
+        <div className={`p-3 rounded-lg ${iconBg}`}>{icon}</div>
+        </div>
+    </div>
+  );
+}
+
+function ClockIcon() {
+  return <svg className="h-3 w-3 mr-1 text-yellow-700" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-12.5a.75.75 0 00-1.5 0v4.19l-2.22 2.22a.75.75 0 101.06 1.06l2.4-2.39c.18-.18.28-.43.28-.68V5.5z" clipRule="evenodd" /></svg>;
 }
