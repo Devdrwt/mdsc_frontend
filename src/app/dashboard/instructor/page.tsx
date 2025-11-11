@@ -37,6 +37,7 @@ import {
   PlayCircle,
   Eye,
   Bell,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface InstructorStats {
@@ -117,6 +118,7 @@ export default function InstructorDashboard() {
   const [notifications, setNotifications] = useState<InstructorNotificationEntry[]>([]);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [policiesAccepted, setPoliciesAccepted] = useState(true);
 
   const formatCurrency = (amount?: number, currency = 'XOF') => {
     if (amount === undefined || amount === null) return '0';
@@ -221,6 +223,24 @@ export default function InstructorDashboard() {
     [notifications]
   );
 
+  const notificationsWithMessages = useMemo(() => {
+    if (unreadMessages > 0) {
+      const messageEntry: InstructorNotificationEntry = {
+        id: 'unread-messages',
+        title: 'Messages non lus',
+        message: `Vous avez ${unreadMessages} message${unreadMessages > 1 ? 's' : ''} non lu${
+          unreadMessages > 1 ? 's' : ''
+        }.`,
+        type: 'message',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { link: '/dashboard/instructor/messages' },
+      };
+      return [messageEntry, ...notifications];
+    }
+    return notifications;
+  }, [notifications, unreadMessages]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -234,13 +254,14 @@ export default function InstructorDashboard() {
       setNotificationsLoading(true);
 
       try {
-        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult] = await Promise.allSettled([
+        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult, preferencesResult] = await Promise.allSettled([
           InstructorService.getDashboard(),
           InstructorService.getCourses({ limit: 12 }),
           InstructorService.getEnrollmentsTrend('90d'),
           InstructorService.getRecentActivity(20),
           InstructorService.getUnreadMessagesCount(),
           InstructorService.getNotifications({ limit: 20 }),
+          InstructorService.getPreferences(),
         ]);
 
         if (!isMounted) return;
@@ -367,6 +388,13 @@ export default function InstructorDashboard() {
           setNotificationsError(reason?.message ?? 'Impossible de récupérer vos notifications');
           setNotifications([]);
         }
+
+        if (preferencesResult.status === 'fulfilled') {
+          const prefs = preferencesResult.value ?? {};
+          setPoliciesAccepted(Boolean(prefs?.policies?.accepted));
+        } else if (preferencesResult.status === 'rejected') {
+          setPoliciesAccepted(true);
+        }
       } catch (error) {
         if (!isMounted) return;
         console.error('Erreur lors du chargement des données instructeur:', error);
@@ -405,6 +433,24 @@ export default function InstructorDashboard() {
     <AuthGuard requiredRole="instructor">
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
+          {!policiesAccepted && (
+            <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span>
+                  Merci de lire et d’accepter nos règles & confidentialité pour bénéficier de toutes les fonctionnalités.
+                </span>
+              </div>
+              <Link
+                href="/dashboard/instructor/policies"
+                className="inline-flex items-center gap-1 text-sm font-medium text-orange-700 hover:text-orange-900"
+              >
+                Consulter et accepter
+                <ArrowUp className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
+
           {/* En-tête de bienvenue moderne */}
           <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-gold via-orange-500 to-mdsc-gold rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -702,7 +748,8 @@ export default function InstructorDashboard() {
                   Notifications
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {notifications.length} notification{notifications.length > 1 ? 's' : ''} • {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? 's' : ''}
+                  {notificationsWithMessages.length} notification{notificationsWithMessages.length > 1 ? 's' : ''} • {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? 's' : ''}
+                  {unreadMessages > 0 ? ` • ${unreadMessages} message${unreadMessages > 1 ? 's' : ''} non lu${unreadMessages > 1 ? 's' : ''}` : ''}
                 </p>
               </div>
             </div>
@@ -712,13 +759,13 @@ export default function InstructorDashboard() {
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {notificationsError}
               </div>
-            ) : notifications.length === 0 ? (
+            ) : notificationsWithMessages.length === 0 ? (
               <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-6 text-center text-gray-500 text-sm">
                 Aucune notification pour le moment.
               </div>
             ) : (
               <ul className="space-y-3">
-                {notifications.slice(0, 6).map((notification) => (
+                {notificationsWithMessages.slice(0, 6).map((notification) => (
                   <li key={notification.id} className={`rounded-xl border px-4 py-3 ${notification.is_read ? 'border-gray-200 bg-white' : 'border-blue-200 bg-blue-50'}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -737,6 +784,14 @@ export default function InstructorDashboard() {
                           <pre className="mt-2 text-xs bg-white/70 border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
                             {JSON.stringify(notification.metadata, null, 2)}
                           </pre>
+                        )}
+                        {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
+                          <Link
+                            href={notification.metadata.link}
+                            className="mt-2 inline-flex text-sm font-medium text-mdsc-blue-primary hover:underline"
+                          >
+                            Consulter les messages
+                          </Link>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                           <span>{formatDateTime(notification.created_at)}</span>
