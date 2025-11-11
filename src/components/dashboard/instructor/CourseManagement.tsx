@@ -93,11 +93,11 @@ export default function CourseManagement() {
 
   useEffect(() => {
     const loadCourses = async () => {
-      if (!user) return;
+      if (!user?.id) return;
 
       try {
         setLoading(true);
-        const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
+        const list = await courseService.getInstructorCourses(String(user.id), { status: filterStatus, page, limit });
         const arr = Array.isArray(list) ? list : (list as any)?.data || list || [];
         const pagination = (list as any)?.pagination || { page, limit, total: arr.length, pages: Math.max(1, Math.ceil(arr.length / limit)) };
         setCourses(arr);
@@ -120,24 +120,21 @@ export default function CourseManagement() {
   useEffect(() => {
     const loadFormData = async () => {
       try {
-        // Charger les catégories
         const catsResponse = await courseService.getCategories();
-        const categoriesData = Array.isArray(catsResponse) 
-          ? catsResponse 
+        const categoriesData = Array.isArray(catsResponse)
+          ? catsResponse
           : (catsResponse as any)?.data?.categories || (catsResponse as any)?.categories || [];
         setCategories(categoriesData);
 
-        // Charger tous les cours pour le prérequis
         const coursesResponse = await courseService.getAllCourses();
-        const coursesData = Array.isArray(coursesResponse?.courses) 
-          ? coursesResponse.courses 
+        const coursesData = Array.isArray(coursesResponse?.courses)
+          ? coursesResponse.courses
           : Array.isArray(coursesResponse)
           ? coursesResponse
           : [];
         setAvailableCourses(coursesData.map((c: any) => ({ id: c.id, title: c.title })));
       } catch (error) {
         console.error('Erreur lors du chargement des données du formulaire:', error);
-        // En cas d'erreur, initialiser avec des tableaux vides
         setCategories([]);
         setAvailableCourses([]);
       }

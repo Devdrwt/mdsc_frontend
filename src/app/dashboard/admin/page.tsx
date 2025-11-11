@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -11,11 +12,15 @@ import AdminService, {
   AdminSystemMetricsResponse,
   AdminNotificationEntry,
   AdminEventEntry,
+  AdminTopCourseEntry,
+  AdminTopInstructorEntry,
+  AdminPaymentEntry,
+  AdminFeatureSummary,
 } from '../../../lib/services/adminService';
 import { 
-  Users, 
-  BookOpen, 
-  TrendingUp, 
+  Users,
+  BookOpen,
+  TrendingUp,
   Shield,
   Eye,
   Settings,
@@ -41,7 +46,13 @@ import {
   Edit3,
   XCircle,
   MapPin,
+  Award,
+  CreditCard,
+  Headset,
+  Brain,
+  Star,
 } from 'lucide-react';
+import MessageService from '../../../lib/services/messageService';
 
 interface AdminStats {
   totalUsers: number;
@@ -146,6 +157,7 @@ export default function AdminDashboard() {
   const [userGrowth, setUserGrowth] = useState<UserGrowth[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminNotifications, setAdminNotifications] = useState<AdminNotificationEntry[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [notificationForm, setNotificationForm] = useState<NotificationFormState>({
@@ -177,6 +189,15 @@ export default function AdminDashboard() {
   const [eventFormError, setEventFormError] = useState<string | null>(null);
   const [eventSuccessMessage, setEventSuccessMessage] = useState<string | null>(null);
   const [eventProcessing, setEventProcessing] = useState(false);
+  const [topCourses, setTopCourses] = useState<AdminTopCourseEntry[]>([]);
+  const [topCoursesError, setTopCoursesError] = useState<string | null>(null);
+  const [topInstructors, setTopInstructors] = useState<AdminTopInstructorEntry[]>([]);
+  const [topInstructorsError, setTopInstructorsError] = useState<string | null>(null);
+  const [recentPayments, setRecentPayments] = useState<AdminPaymentEntry[]>([]);
+  const [recentPaymentsError, setRecentPaymentsError] = useState<string | null>(null);
+  const [supportSummary, setSupportSummary] = useState<AdminFeatureSummary | null>(null);
+  const [moderationSummary, setModerationSummary] = useState<AdminFeatureSummary | null>(null);
+  const [aiUsageSummary, setAiUsageSummary] = useState<AdminFeatureSummary | null>(null);
 
   const formatUptime = (seconds?: number) => {
     if (!seconds || seconds <= 0) {
@@ -205,6 +226,25 @@ export default function AdminDashboard() {
       dateStyle: 'short',
       timeStyle: 'short',
     });
+  };
+
+  const formatCurrency = (amount?: number, currency: string = 'XOF') => {
+    const safeAmount = Number.isFinite(amount) ? Number(amount) : 0;
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+      }).format(safeAmount);
+    } catch {
+      return `${safeAmount.toLocaleString('fr-FR')} ${currency}`;
+    }
+  };
+
+  const formatPercent = (value?: number, digits = 1) => {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : 0;
+    const scaled = Math.abs(numeric) <= 1 ? numeric * 100 : numeric;
+    return `${scaled.toFixed(digits)}%`;
   };
 
   const formatDateForInput = (iso?: string | null) => {
@@ -328,7 +368,12 @@ export default function AdminDashboard() {
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
-      const { notifications } = await AdminService.getAdminNotifications({ page: 1, limit: 20 });
+      const [notificationsResponse, messageStats] = await Promise.all([
+        AdminService.getAdminNotifications({ page: 1, limit: 20 }),
+        MessageService.getStats().catch(() => null),
+      ]);
+      setUnreadMessages(messageStats?.received_unread ?? 0);
+      const notifications = notificationsResponse?.notifications ?? [];
       setAdminNotifications(Array.isArray(notifications) ? notifications : []);
     } catch (error) {
       const message =
@@ -337,6 +382,7 @@ export default function AdminDashboard() {
           : 'Impossible de charger les notifications administrateur';
       setNotificationsError(message);
       setAdminNotifications([]);
+      setUnreadMessages(0);
     } finally {
       setNotificationsLoading(false);
     }
@@ -614,14 +660,35 @@ export default function AdminDashboard() {
     setRecentActivityNotice(null);
     setAlertsError(null);
     setServiceStatusError(null);
+    setTopCoursesError(null);
+    setTopInstructorsError(null);
+    setRecentPaymentsError(null);
 
     try {
-      const [overviewResult, metricsResult, activityResult, alertsResult, servicesResult] = await Promise.allSettled([
+      const [
+        overviewResult,
+        metricsResult,
+        activityResult,
+        alertsResult,
+        servicesResult,
+        topCoursesResult,
+        topInstructorsResult,
+        paymentsResult,
+        supportResult,
+        moderationResult,
+        aiResult,
+      ] = await Promise.allSettled([
         AdminService.getOverview(),
         AdminService.getSystemMetrics({ rangeMinutes: 60, historyLimit: 12 }),
         AdminService.getRecentActivity({ limit: 20 }),
         AdminService.getAlerts(),
         AdminService.getServiceStatus(),
+        AdminService.getTopCourses({ limit: 6 }),
+        AdminService.getTopInstructors({ limit: 6 }),
+        AdminService.getRecentPayments({ limit: 8 }),
+        AdminService.getSupportSummary(),
+        AdminService.getModerationSummary(),
+        AdminService.getAiUsageSummary(),
       ]);
 
       if (overviewResult.status === 'fulfilled') {
@@ -822,6 +889,48 @@ export default function AdminDashboard() {
         setServiceStatusSummary(null);
         setServiceStatusCheckedAt(null);
       }
+
+        if (topCoursesResult.status === 'fulfilled') {
+          setTopCourses(topCoursesResult.value ?? []);
+        } else {
+          const reason = topCoursesResult.reason as Error | undefined;
+          setTopCoursesError(reason?.message ?? 'Impossible de récupérer les cours les plus performants.');
+          setTopCourses([]);
+        }
+
+        if (topInstructorsResult.status === 'fulfilled') {
+          setTopInstructors(topInstructorsResult.value ?? []);
+        } else {
+          const reason = topInstructorsResult.reason as Error | undefined;
+          setTopInstructorsError(reason?.message ?? 'Impossible de récupérer les meilleures performances instructeurs.');
+          setTopInstructors([]);
+        }
+
+        if (paymentsResult.status === 'fulfilled') {
+          setRecentPayments(paymentsResult.value ?? []);
+        } else {
+          const reason = paymentsResult.reason as Error | undefined;
+          setRecentPaymentsError(reason?.message ?? 'Impossible de récupérer les transactions récentes.');
+          setRecentPayments([]);
+        }
+
+        if (supportResult.status === 'fulfilled') {
+          setSupportSummary(supportResult.value ?? null);
+        } else {
+          setSupportSummary({ message: 'Fonctionnalité support en développement.' });
+        }
+
+        if (moderationResult.status === 'fulfilled') {
+          setModerationSummary(moderationResult.value ?? null);
+        } else {
+          setModerationSummary({ message: 'Fonctionnalité modération en développement.' });
+        }
+
+        if (aiResult.status === 'fulfilled') {
+          setAiUsageSummary(aiResult.value ?? null);
+        } else {
+          setAiUsageSummary({ message: 'Statistiques IA en développement.' });
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
       const message =
@@ -858,6 +967,15 @@ export default function AdminDashboard() {
       setAlerts([]);
       setServiceStatus([]);
       setUserGrowth([]);
+      setTopCourses([]);
+      setTopCoursesError((prev) => prev ?? message);
+      setTopInstructors([]);
+      setTopInstructorsError((prev) => prev ?? message);
+      setRecentPayments([]);
+      setRecentPaymentsError((prev) => prev ?? message);
+      setSupportSummary({ message });
+      setModerationSummary({ message });
+      setAiUsageSummary({ message });
       } finally {
         setLoading(false);
       }
@@ -873,6 +991,24 @@ export default function AdminDashboard() {
     loadAdminNotifications();
     loadAdminEvents();
   }, [user, loadAdminNotifications, loadAdminEvents]);
+
+  const adminNotificationsWithMessages = useMemo(() => {
+    if (unreadMessages > 0) {
+      const messageEntry: AdminNotificationEntry = {
+        id: 'admin-unread-messages',
+        title: 'Messages non lus',
+        message: `Vous avez ${unreadMessages} message${unreadMessages > 1 ? 's' : ''} non lu${
+          unreadMessages > 1 ? 's' : ''
+        }.`,
+        type: 'message',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { link: '/dashboard/instructor/messages' },
+      };
+      return [messageEntry, ...adminNotifications];
+    }
+    return adminNotifications;
+  }, [adminNotifications, unreadMessages]);
 
   if (loading) {
     return (
@@ -1401,6 +1537,247 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Performance des cours et instructeurs */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Award className="h-5 w-5 text-mdsc-blue-primary" />
+                  Top Cours
+                </h3>
+                <span className="text-xs text-gray-400">Source : agrégations globales</span>
+              </div>
+              {topCoursesError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {topCoursesError}
+                </div>
+              ) : topCourses.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-center text-sm text-gray-600">
+                  Aucun cours à afficher pour le moment.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Cours</th>
+                        <th className="px-4 py-3 text-right">Inscriptions</th>
+                        <th className="px-4 py-3 text-right">Complétion</th>
+                        <th className="px-4 py-3 text-right">Note</th>
+                        <th className="px-4 py-3 text-right">Revenu</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {topCourses.slice(0, 6).map((course) => (
+                        <tr key={course.id} className="hover:bg-gray-50 transition">
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900">{course.title}</p>
+                            {course.category && (
+                              <p className="text-xs text-gray-500 mt-0.5">{course.category}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {course.enrollments.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {formatPercent(course.completion_rate, 0)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {course.average_rating.toFixed(1)}/5
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-900">
+                            {formatCurrency(course.revenue, course.currency ?? 'XOF')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-mdsc-blue-primary" />
+                  Instructeurs Performants
+                </h3>
+                <span className="text-xs text-gray-400">Source : agrégations instructeurs</span>
+              </div>
+              {topInstructorsError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {topInstructorsError}
+                </div>
+              ) : topInstructors.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-center text-sm text-gray-600">
+                  Aucun instructeur à mettre en avant pour le moment.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {topInstructors.slice(0, 6).map((instructor) => (
+                    <div
+                      key={instructor.id}
+                      className="flex items-start justify-between rounded-lg border border-gray-100 px-4 py-3 hover:border-mdsc-blue-primary/40 transition"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900">{instructor.name}</p>
+                        {instructor.email && (
+                          <p className="text-xs text-gray-500">{instructor.email}</p>
+                        )}
+                        <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="h-3 w-3" />
+                            {instructor.courses_count} cours
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {instructor.total_enrollments.toLocaleString()} inscrits
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            {instructor.average_rating.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(instructor.revenue, instructor.currency ?? 'XOF')}
+                        </p>
+                        {Number.isFinite(instructor.trend ?? null) && (
+                          <p
+                            className={`text-xs flex items-center justify-end gap-1 ${
+                              (instructor.trend ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}
+                          >
+                            {(instructor.trend ?? 0) >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                            {formatPercent(Math.abs(instructor.trend ?? 0), 1)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Transactions et centres opérationnels */}
+          <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-mdsc-blue-primary" />
+                  Transactions récentes
+                </h3>
+                <Link href="/dashboard/admin/payments" className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark">
+                  Voir tout
+                </Link>
+              </div>
+              {recentPaymentsError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {recentPaymentsError}
+                </div>
+              ) : recentPayments.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-center text-sm text-gray-600">
+                  Aucune transaction récente.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Référence</th>
+                        <th className="px-4 py-3 text-left">Utilisateur</th>
+                        <th className="px-4 py-3 text-left">Cours</th>
+                        <th className="px-4 py-3 text-right">Montant</th>
+                        <th className="px-4 py-3 text-right">Statut</th>
+                        <th className="px-4 py-3 text-right">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {recentPayments.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-gray-50 transition">
+                          <td className="px-4 py-3 font-medium text-gray-900">{payment.reference ?? `#${payment.id}`}</td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {payment.user?.name ?? 'N/A'}
+                            {payment.user?.email && (
+                              <span className="block text-xs text-gray-500">{payment.user.email}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {payment.course?.title ?? 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-900">
+                            {formatCurrency(payment.amount, payment.currency ?? 'XOF')}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span
+                              className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                payment.status === 'completed' || payment.status === 'paid'
+                                  ? 'bg-green-100 text-green-700'
+                                  : payment.status === 'failed' || payment.status === 'refunded'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {(payment.status ?? 'pending').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-xs text-gray-500">
+                            {formatDateTime(payment.processed_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Centres opérationnels</h3>
+              <div className="divide-y divide-gray-100">
+                {[
+                  {
+                    title: 'Support & tickets',
+                    summary: supportSummary,
+                    icon: Headset,
+                    accent: 'text-blue-600',
+                  },
+                  {
+                    title: 'Modération & conformité',
+                    summary: moderationSummary,
+                    icon: Shield,
+                    accent: 'text-orange-600',
+                  },
+                  {
+                    title: 'Usage IA & automatisations',
+                    summary: aiUsageSummary,
+                    icon: Brain,
+                    accent: 'text-purple-600',
+                  },
+                ].map(({ title, summary, icon: Icon, accent }, index) => (
+                  <div key={`${title}-${index}`} className="py-3 flex items-start gap-3">
+                    <div className={`p-2 rounded-full bg-gray-100 ${accent.replace('text', 'bg').replace('-600', '-100')}`}>
+                      <Icon className={`h-5 w-5 ${accent}`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{title}</p>
+                      <p className="text-sm text-gray-600">
+                        {summary?.message ?? 'Statistiques en cours de synchronisation.'}
+                      </p>
+                      {summary?.updated_at && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Dernière mise à jour : {formatDateTime(summary.updated_at)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Gestion notifications & événements */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -1419,6 +1796,12 @@ export default function AdminDashboard() {
                   Rafraîchir
                 </button>
               </div>
+
+              {unreadMessages > 0 && (
+                <p className="text-sm text-blue-600 mb-4">
+                  Vous avez {unreadMessages} message{unreadMessages > 1 ? 's' : ''} non lu{unreadMessages > 1 ? 's' : ''}.
+                </p>
+              )}
 
               <form onSubmit={handleNotificationSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1524,84 +1907,104 @@ export default function AdminDashboard() {
                   <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {notificationsError}
                   </div>
-                ) : adminNotifications.length === 0 ? (
+                ) : adminNotificationsWithMessages.length === 0 ? (
                   <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-600 text-center">
                     Aucune notification enregistrée.
                   </div>
                 ) : (
                   <ul className="space-y-3">
-                    {adminNotifications.map((notification) => (
-                      <li
-                        key={notification.id}
-                        className={`rounded-xl border px-4 py-3 transition ${
-                          notification.is_read
-                            ? 'border-gray-200 bg-white'
-                            : 'border-blue-200 bg-blue-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 pr-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-900">{notification.title}</span>
-                              {notification.type && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
-                                  {notification.type}
-                                </span>
+                    {adminNotificationsWithMessages.map((notification) => {
+                      const isMessagePlaceholder = String(notification.id) === 'admin-unread-messages';
+                      return (
+                        <li
+                          key={notification.id}
+                          className={`rounded-xl border px-4 py-3 transition ${
+                            notification.is_read
+                              ? 'border-gray-200 bg-white'
+                              : 'border-blue-200 bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 pr-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">{notification.title}</span>
+                                {notification.type && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
+                                    {notification.type}
+                                  </span>
+                                )}
+                              </div>
+                              {notification.message && (
+                                <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                                  {notification.message}
+                                </p>
+                              )}
+                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                <span>Créée : {formatDateTime(notification.created_at)}</span>
+                                {notification.trigger_at && (
+                                  <span className="flex items-center gap-1 text-blue-600">
+                                    <Clock className="h-3 w-3" /> {formatDateTime(notification.trigger_at)}
+                                  </span>
+                                )}
+                              </div>
+                              {!isMessagePlaceholder && notification.metadata && (
+                                <pre className="mt-2 text-xs bg-white border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
+                                  {JSON.stringify(notification.metadata, null, 2)}
+                                </pre>
+                              )}
+                              {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
+                                <Link
+                                  href={notification.metadata.link}
+                                  className="mt-2 inline-flex text-xs font-medium text-mdsc-blue-primary hover:underline"
+                                >
+                                  Consulter la messagerie
+                                </Link>
                               )}
                             </div>
-                            {notification.message && (
-                              <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
-                                {notification.message}
-                              </p>
-                            )}
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                              <span>Créée : {formatDateTime(notification.created_at)}</span>
-                              {notification.trigger_at && (
-                                <span className="flex items-center gap-1 text-blue-600">
-                                  <Clock className="h-3 w-3" /> {formatDateTime(notification.trigger_at)}
-                                </span>
-                              )}
-                            </div>
-                            {notification.metadata && (
-                              <pre className="mt-2 text-xs bg-white border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
-                                {JSON.stringify(notification.metadata, null, 2)}
-                              </pre>
+                            {isMessagePlaceholder ? (
+                              <Link
+                                href="/dashboard/instructor/messages"
+                                className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                              >
+                                <Mail className="h-4 w-4 mr-1" /> Ouvrir la messagerie
+                              </Link>
+                            ) : (
+                              <div className="flex flex-col items-end gap-2 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationToggleRead(notification)}
+                                  className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                                >
+                                  {notification.is_read ? (
+                                    <>
+                                      <XCircle className="h-4 w-4 mr-1" /> Marquer non lu
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4 mr-1" /> Marquer lu
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationEdit(notification)}
+                                  className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800"
+                                >
+                                  <Edit3 className="h-4 w-4 mr-1" /> Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationDelete(notification.id)}
+                                  className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+                                </button>
+                              </div>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationToggleRead(notification)}
-                              className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
-                            >
-                              {notification.is_read ? (
-                                <>
-                                  <XCircle className="h-4 w-4 mr-1" /> Marquer non lu
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Marquer lu
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationEdit(notification)}
-                              className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800"
-                            >
-                              <Edit3 className="h-4 w-4 mr-1" /> Modifier
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationDelete(notification.id)}
-                              className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -1880,7 +2283,7 @@ export default function AdminDashboard() {
                   href: '/dashboard/admin/settings'
                 }
               ].map((action, index) => (
-                <a
+                <Link
                   key={index}
                   href={action.href}
                   className="group flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-105"
@@ -1892,7 +2295,7 @@ export default function AdminDashboard() {
                     <p className="font-medium text-gray-900">{action.title}</p>
                     <p className="text-sm text-gray-500">{action.description}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>

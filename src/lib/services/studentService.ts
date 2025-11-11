@@ -113,6 +113,20 @@ export interface StudentCertificateEntry {
   certificate_code?: string;
 }
 
+export interface StudentPreferences {
+  language?: 'fr' | 'en';
+  theme?: 'light' | 'dark' | 'system';
+  policies?: {
+    accepted?: boolean;
+    accepted_at?: string;
+    version?: string;
+  };
+}
+
+type StudentPreferencesResponse = {
+  preferences?: StudentPreferences;
+};
+
 export class StudentService {
   static async getCourses(): Promise<StudentCourseEntry[]> {
     const response = await apiRequest('/student/courses', {
@@ -158,6 +172,56 @@ export class StudentService {
     }
 
     return {};
+  }
+
+  static async getPreferences(): Promise<StudentPreferences & { sections?: Array<Record<string, any>> }> {
+    const response = await apiRequest('/student/settings', {
+      method: 'GET',
+    });
+
+    if (response.success !== false && response.data) {
+      const data = response.data as any;
+      const sections = Array.isArray(data?.sections) ? data.sections : [];
+      const preferences = (data?.preferences && typeof data.preferences === 'object')
+        ? (data.preferences as StudentPreferences)
+        : (Object.keys(data || {}).some((key) => key !== 'sections') ? (data as StudentPreferences) : {});
+      return {
+        ...preferences,
+        sections,
+      };
+    }
+
+    return { sections: [] };
+  }
+
+  static async updatePreferences(payload: StudentPreferences): Promise<StudentPreferences> {
+    const response = await apiRequest('/student/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ preferences: payload }),
+    });
+
+    if (response.success !== false && response.data) {
+      const data = response.data as any;
+      if (data?.preferences && typeof data.preferences === 'object') {
+        return data.preferences as StudentPreferences;
+      }
+      return (data as StudentPreferences) ?? payload;
+    }
+
+    return payload;
+  }
+
+  static async acknowledgePolicies(version?: string): Promise<StudentPreferences> {
+    const response = await apiRequest('/student/settings/policies', {
+      method: 'POST',
+      body: JSON.stringify({ version }),
+    });
+
+    if (response.success !== false && response.data) {
+      return (response.data as StudentPreferencesResponse).preferences ?? (response.data as StudentPreferences);
+    }
+
+    return { policies: { accepted: true, accepted_at: new Date().toISOString(), version } };
   }
 
   static async getActivities(params?: { limit?: number; page?: number; type?: string }): Promise<StudentActivityEntry[]> {

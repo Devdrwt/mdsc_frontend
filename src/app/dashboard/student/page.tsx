@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -11,6 +12,7 @@ import StudentService, {
   StudentActivityEntry,
   StudentStatsResponse,
 } from '../../../lib/services/studentService';
+import MessageService from '../../../lib/services/messageService';
 import { 
   BookOpen, 
   Trophy, 
@@ -31,6 +33,7 @@ import {
   Eye,
   Bookmark,
   Bell,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -97,6 +100,9 @@ export default function StudentDashboard() {
     unreadNotifications: 0,
     upcomingEvents: 0,
   });
+  const [recentCertificates, setRecentCertificates] = useState<StudentCertificateEntry[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const [policiesAccepted, setPoliciesAccepted] = useState(true);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [badges, setBadges] = useState<StudentBadgeEntry[]>([]);
   const [certificates, setCertificates] = useState<StudentCertificateEntry[]>([]);
@@ -153,13 +159,20 @@ export default function StudentDashboard() {
       setCertificatesError(null);
 
       try {
-        const [coursesResult, statsResult, activityResult, badgesResult, certificatesResult] = await Promise.allSettled([
+        const [coursesResult, statsResult, activityResult, badgesResult, certificatesResult, messageStatsResult, preferencesResult] = await Promise.allSettled([
           StudentService.getCourses(),
           StudentService.getStats(),
-          StudentService.getActivities({ limit: 20 }),
+          StudentService.getRecentActivity(20),
           StudentService.getBadges(),
           StudentService.getCertificates(),
+          MessageService.getStats(),
+          StudentService.getPreferences(),
         ]);
+
+        const unreadMessagesValue = messageStatsResult.status === 'fulfilled'
+          ? messageStatsResult.value?.received_unread ?? 0
+          : 0;
+        setUnreadMessages(unreadMessagesValue);
 
         if (!isMounted) return;
 
@@ -195,7 +208,7 @@ export default function StudentDashboard() {
             totalBadges: toNumber((statsData as any).badges),
             totalCertificates: toNumber((statsData as any).certificates),
             totalNotifications: toNumber(notificationStats.total),
-            unreadNotifications: toNumber(notificationStats.unread),
+            unreadNotifications: Math.max(toNumber(notificationStats.unread), unreadMessagesValue),
             upcomingEvents: toNumber((calendarStats as any).upcoming_events ?? (calendarStats as any).total ?? (calendarStats as any).count),
           });
         } else {
@@ -214,6 +227,9 @@ export default function StudentDashboard() {
             unreadNotifications: 0,
             upcomingEvents: 0,
           }));
+          if (messageStatsResult.status === 'rejected') {
+            setUnreadMessages(0);
+          }
         }
 
         if (activityResult.status === 'fulfilled') {
@@ -265,6 +281,13 @@ export default function StudentDashboard() {
           setCertificatesError(reason?.message ?? 'Impossible de récupérer vos certificats');
           setCertificates([]);
         }
+
+        if (preferencesResult.status === 'fulfilled') {
+          const prefs = preferencesResult.value ?? {};
+          setPoliciesAccepted(Boolean(prefs?.policies?.accepted));
+        } else if (preferencesResult.status === 'rejected') {
+          setPoliciesAccepted(true);
+        }
       } catch (error) {
         if (!isMounted) return;
         console.error('Erreur lors du chargement du dashboard étudiant:', error);
@@ -311,6 +334,22 @@ export default function StudentDashboard() {
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
         <div className="space-y-8">
+          {!policiesAccepted && (
+            <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span>
+                  Merci d’accepter les règles & confidentialité étudiants pour continuer votre parcours.
+                </span>
+              </div>
+              <Link
+                href="/dashboard/student/policies"
+                className="inline-flex items-center gap-1 text-sm font-medium text-orange-700 hover:text-orange-900"
+              >
+                Lire et accepter
+              </Link>
+            </div>
+          )}
           {/* En-tête de bienvenue moderne */}
           <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -404,8 +443,16 @@ export default function StudentDashboard() {
                   {stats.totalNotifications}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  {stats.unreadNotifications} non lue{stats.unreadNotifications !== 1 ? 's' : ''}
+                  {stats.unreadNotifications} notification{stats.unreadNotifications !== 1 ? 's' : ''} non lu{stats.unreadNotifications !== 1 ? 'es' : 'e'} • {unreadMessages} message{unreadMessages !== 1 ? 's' : ''} non lu{unreadMessages !== 1 ? 's' : ''}
                 </p>
+                {unreadMessages > 0 && (
+                  <Link
+                    href="/dashboard/student/messages"
+                    className="mt-2 inline-flex items-center text-xs font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                  >
+                    <MessageSquare className="h-3 w-3 mr-1" /> Consulter mes messages
+                  </Link>
+                )}
               </div>
               <div className="bg-blue-100 p-3 rounded-full">
                 <Bell className="h-6 w-6 text-blue-600" />
