@@ -53,17 +53,23 @@ export default function LessonContent({
   }, [lesson]);
 
   const handleMarkComplete = async () => {
-    if (!enrollmentId) {
+    if (!enrollmentId && !onComplete) {
       console.error('enrollmentId est requis pour marquer une leçon comme complétée');
       return;
     }
 
     setIsMarkingComplete(true);
     try {
+      if (onComplete) {
+        setIsCompleted(true);
+        await Promise.resolve(onComplete());
+        return;
+      }
+
       const result = await progressService.markLessonCompleted(
-        enrollmentId,
+        enrollmentId!,
         typeof lesson.id === 'number' ? lesson.id : parseInt(lesson.id as string),
-        undefined // timeSpent optionnel
+        undefined
       );
 
       if (result?.success === false) {

@@ -315,63 +315,88 @@ export default function CoursePlayer({
     }
 
     const lessonId = selectedLessonId;
+    const orderedLessons = getOrderedLessons();
+    const lessonIndex = orderedLessons.findIndex((lesson) => lesson.id === lessonId);
+    const currentLesson = lessonIndex !== -1 ? orderedLessons[lessonIndex] : selectedLesson;
+    const moduleId =
+      currentLesson?.module_id ??
+      (currentLesson as any)?.moduleId ??
+      selectedLesson?.module_id ??
+      (selectedLesson as any)?.moduleId ??
+      null;
+    const nextLesson =
+      lessonIndex !== -1 ? orderedLessons[lessonIndex + 1] : undefined;
+
+    const previousCompleted = new Set(completedLessons);
+    const previousUnlocked = new Set(unlockedLessons);
+    const previousCourseProgress = courseProgress;
+    const previousModuleProgressMap = new Map(moduleProgressMap);
 
     try {
-      const result = await progressService.completeLesson(enrollmentId, lessonId);
+      const optimisticCompleted = new Set(previousCompleted);
+      optimisticCompleted.add(lessonId);
+      setCompletedLessons(optimisticCompleted);
 
-      setCompletedLessons((prev) => {
-        const next = new Set([...prev, lessonId]);
+      const lessonsCount = orderedLessons.length;
+      if (lessonsCount > 0) {
+        const progressRatio =
+          (optimisticCompleted.size / Math.max(lessonsCount, 1)) * 100;
+        setCourseProgress((current) =>
+          progressRatio > current ? progressRatio : current
+        );
+      }
 
-        const orderedLessons = getOrderedLessons();
-        const lessonsCount = orderedLessons.length;
-        if (lessonsCount > 0) {
-          const progressRatio = (next.size / lessonsCount) * 100;
-          setCourseProgress((current) => (progressRatio > current ? progressRatio : current));
+      if (moduleId !== null) {
+        setModuleProgressMap((prevMap) => {
+          const updatedMap = new Map(prevMap);
+          const module = course.modules?.find((m) => m.id === Number(moduleId));
+          const totalLessonsInModule = module?.lessons?.length ?? 0;
+          if (totalLessonsInModule > 0) {
+            const completedInModule =
+              module?.lessons?.filter((lesson) => optimisticCompleted.has(lesson.id)).length ?? 0;
+            const moduleProgress = (completedInModule / totalLessonsInModule) * 100;
+            updatedMap.set(Number(moduleId), moduleProgress);
+          }
+          return updatedMap;
+        });
+      }
+
+      setUnlockedLessons((prev) => {
+        const updated = new Set(prev);
+        updated.add(lessonId);
+        if (nextLesson) {
+          updated.add(nextLesson.id);
         }
-
-        const moduleId = selectedLesson?.module_id ?? (selectedLesson as any)?.moduleId;
-        if (moduleId) {
-          setModuleProgressMap((prevMap) => {
-            const updated = new Map(prevMap);
-            const module = course.modules?.find((m) => m.id === Number(moduleId));
-            const totalLessonsInModule = module?.lessons?.length ?? 0;
-            if (totalLessonsInModule > 0) {
-              const completedInModule = module?.lessons?.filter((lesson) => next.has(lesson.id)).length ?? 0;
-              const moduleProgress = (completedInModule / totalLessonsInModule) * 100;
-              updated.set(Number(moduleId), moduleProgress);
-            }
-            return updated;
-          });
-        }
-
-        return next;
+        return updated;
       });
 
-      if (result.success !== false) {
-        const orderedLessons = getOrderedLessons();
-        const lessonIndex = orderedLessons.findIndex((lesson) => lesson.id === lessonId);
-        const nextLesson = lessonIndex !== -1 ? orderedLessons[lessonIndex + 1] : undefined;
+      const result = await progressService.completeLesson(enrollmentId, lessonId);
 
-        if (result.unlockedLessonId) {
-          setUnlockedLessons((prev) => new Set([...prev, lessonId, result.unlockedLessonId]));
-        } else if (nextLesson) {
-          setUnlockedLessons((prev) => new Set([...prev, lessonId, nextLesson.id]));
-        }
+      if (result.success === false) {
+        throw new Error('La complétion de la leçon a été refusée par le serveur');
+      }
+
+      if (result.unlockedLessonId) {
+        setUnlockedLessons((prev) => new Set([...prev, result.unlockedLessonId!]));
       }
 
       await loadProgress();
     } catch (error) {
       console.error('Erreur lors de la complétion de la leçon:', error);
+      setCompletedLessons(previousCompleted);
+      setUnlockedLessons(previousUnlocked);
+      setCourseProgress(previousCourseProgress);
+      setModuleProgressMap(previousModuleProgressMap);
     }
   };
 
   const isLessonUnlocked = (lesson: Lesson): boolean => {
     if (!enrollmentId) return true;
-
+    
     if (unlockedLessons.has(lesson.id)) {
       return true;
     }
-
+    
     const moduleId = lesson.module_id ?? (lesson as any).moduleId;
     if (!moduleId) {
       return unlockedLessons.size === 0 || completedLessons.has(lesson.id);
@@ -387,7 +412,7 @@ export default function CoursePlayer({
     if (lessonIndex === 0) {
       const moduleIndex = course.modules?.findIndex((module) => module.id === moduleId) ?? -1;
       if (moduleIndex <= 0) {
-        return true;
+          return true;
       }
 
       const previousModules = course.modules?.slice(0, moduleIndex) || [];
