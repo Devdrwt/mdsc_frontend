@@ -12,6 +12,8 @@ export interface InstructorDashboardStats {
     total?: number;
     active?: number;
     new_last_30_days?: number;
+    avg_completion_rate?: number;
+    completion_rate?: number;
   };
   revenue?: Array<{
     currency?: string;
@@ -20,6 +22,7 @@ export interface InstructorDashboardStats {
   rating?: {
     average?: number;
   };
+  average_rating?: number;
   views?: {
     total?: number;
   };
@@ -133,6 +136,52 @@ export interface InstructorAnalyticsResponse {
   enrollment_trend?: InstructorEnrollmentsTrendPoint[];
   revenue_trend?: InstructorEnrollmentsTrendPoint[];
   top_courses?: InstructorTopCourse[];
+}
+
+export type InstructorStudentStatus = 'active' | 'completed' | 'inactive';
+
+export interface InstructorStudentEntry {
+  enrollment_id?: number | string;
+  enrolled_at?: string;
+  progress_percentage?: number;
+  completed_at?: string | null;
+  last_accessed_at?: string | null;
+  is_active?: boolean;
+  student?: {
+    id?: number | string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    last_login_at?: string | null;
+    profile_picture?: string | null;
+    profile_picture_url?: string | null;
+  };
+  course?: {
+    id?: number | string;
+    title?: string;
+    slug?: string;
+    language?: string;
+    status?: string;
+  };
+}
+
+export interface InstructorStudentsResponse {
+  students: InstructorStudentEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  stats?: {
+    total_students?: number;
+    active_students?: number;
+    completed_students?: number;
+    avg_progress?: number;
+  };
+  filters?: {
+    courses?: Array<{ id: number | string; title: string }>;
+  };
 }
 
 export class InstructorService {
@@ -281,6 +330,52 @@ export class InstructorService {
     }
 
     return {};
+  }
+
+  static async getStudents(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    course_id?: string | number;
+    status?: InstructorStudentStatus;
+    sort?: 'enrolled_at' | 'progress' | 'last_activity' | 'last_login';
+    order?: 'asc' | 'desc';
+  }): Promise<InstructorStudentsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.course_id) searchParams.append('course_id', String(params.course_id));
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.sort) searchParams.append('sort', params.sort);
+    if (params?.order) searchParams.append('order', params.order);
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/instructor/students${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    if (response.success !== false && response.data) {
+      const data = response.data;
+      return {
+        students: Array.isArray(data?.students) ? (data.students as InstructorStudentEntry[]) : [],
+        pagination: {
+          page: Number(data?.pagination?.page) || 1,
+          limit: Number(data?.pagination?.limit) || (params?.limit ?? 10),
+          total: Number(data?.pagination?.total) || 0,
+          pages: Number(data?.pagination?.pages) || 1,
+        },
+        stats: data?.stats ?? {},
+        filters: data?.filters ?? {},
+      };
+    }
+
+    return {
+      students: [],
+      pagination: { page: 1, limit: params?.limit ?? 10, total: 0, pages: 1 },
+      stats: {},
+      filters: {},
+    };
   }
 }
 
