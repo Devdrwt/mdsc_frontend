@@ -152,11 +152,18 @@ export default function StudentSettingsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    const applyTheme = (value: 'light' | 'dark') => {
+      document.documentElement.classList.toggle('dark', value === 'dark');
+      document.documentElement.dataset.theme = value;
+    };
+
     if (themePreference === 'system') {
-      document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      localStorage.removeItem('mdsc-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(prefersDark ? 'dark' : 'light');
+      localStorage.setItem('mdsc-theme', 'system');
     } else {
-      document.documentElement.dataset.theme = themePreference;
+      applyTheme(themePreference);
       localStorage.setItem('mdsc-theme', themePreference);
     }
   }, [themePreference]);
@@ -164,6 +171,7 @@ export default function StudentSettingsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('mdsc-language', communicationLanguage);
+    document.documentElement.lang = communicationLanguage;
   }, [communicationLanguage]);
 
   const handleSave = async () => {

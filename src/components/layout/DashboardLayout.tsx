@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Menu, 
@@ -31,6 +31,7 @@ import {
 import { useAuthStore } from '../../lib/stores/authStore';
 import NotificationContainer from '../ui/NotificationContainer';
 import Image from 'next/image';
+import StudentService from '../../lib/services/studentService';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -50,7 +51,9 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
@@ -163,20 +166,99 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
 
   const colors = getRoleColors();
 
-  // Gestion du thème
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-    } else {
-      // Si pas de thème sauvegardé, utiliser le thème du système
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      setTheme(systemTheme);
-      localStorage.setItem('theme', systemTheme);
-      document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+  // Gestion centralisée des préférences affichage/langue
+  const applyResolvedTheme = useCallback((value: 'light' | 'dark') => {
+    setResolvedTheme(value);
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.toggle('dark', value === 'dark');
+      document.documentElement.dataset.theme = value;
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    let mounted = true;
+
+    const loadPreferences = async () => {
+      localStorage.removeItem('theme');
+      const storedThemePref = localStorage.getItem('mdsc-theme') as 'light' | 'dark' | 'system' | null;
+      const storedLanguage = localStorage.getItem('mdsc-language') as 'fr' | 'en' | null;
+
+      let nextThemePref: 'light' | 'dark' | 'system' = storedThemePref ?? 'system';
+      let nextLanguage: 'fr' | 'en' = storedLanguage ?? 'fr';
+
+      if (userRole === 'student') {
+        try {
+          const prefs = await StudentService.getPreferences();
+          if (!mounted || !prefs) {
+            return;
+          }
+
+          if (!storedThemePref && prefs.theme) {
+            nextThemePref = prefs.theme;
+            localStorage.setItem('mdsc-theme', prefs.theme);
+          }
+
+          if (!storedLanguage && prefs.language) {
+            nextLanguage = prefs.language;
+            localStorage.setItem('mdsc-language', prefs.language);
+          }
+        } catch (error) {
+          console.warn('Impossible de charger les préférences utilisateur.', error);
+        }
+      }
+
+      if (mounted) {
+        setThemePreference(nextThemePref);
+        setLanguage(nextLanguage);
+      }
+    };
+
+    loadPreferences();
+
+    return () => {
+      mounted = false;
+    };
+  }, [userRole]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem('mdsc-theme', themePreference);
+
+    if (themePreference === 'system') {
+      const media = window.matchMedia('(prefers-color-scheme: dark)');
+      const applySystemTheme = (matches: boolean) => {
+        applyResolvedTheme(matches ? 'dark' : 'light');
+      };
+
+      applySystemTheme(media.matches);
+
+      const listener = (event: MediaQueryListEvent) => applySystemTheme(event.matches);
+      media.addEventListener('change', listener);
+
+      return () => {
+        media.removeEventListener('change', listener);
+      };
+    }
+
+    applyResolvedTheme(themePreference);
+    return undefined;
+  }, [themePreference, applyResolvedTheme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem('mdsc-language', language);
+    document.documentElement.lang = language;
+  }, [language]);
 
   // Ouvrir automatiquement le sous-menu si un enfant est actif
   useEffect(() => {
@@ -194,10 +276,14 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   }, [pathname]);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+    setThemePreference(nextTheme);
+
+    if (userRole === 'student') {
+      StudentService.updatePreferences({ theme: nextTheme }).catch((error) => {
+        console.warn('Impossible de sauvegarder la préférence de thème.', error);
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -395,9 +481,9 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             <button
               onClick={toggleTheme}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              title={theme === 'light' ? 'Mode sombre' : 'Mode clair'}
+              title={resolvedTheme === 'light' ? 'Mode sombre' : 'Mode clair'}
             >
-              {theme === 'light' ? (
+              {resolvedTheme === 'light' ? (
                 <Moon className="h-5 w-5" />
               ) : (
                 <Sun className="h-5 w-5" />
