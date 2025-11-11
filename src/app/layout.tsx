@@ -78,7 +78,33 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              !function(){const e=document.documentElement;e.classList.remove('dark');}();
+              (function() {
+                try {
+                  var root = document.documentElement;
+                  var storedTheme = localStorage.getItem('mdsc-theme');
+                  var storedLanguage = localStorage.getItem('mdsc-language');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var theme;
+
+                  if (storedTheme === 'light' || storedTheme === 'dark') {
+                    theme = storedTheme;
+                  } else {
+                    theme = prefersDark ? 'dark' : 'light';
+                    if (storedTheme !== 'system') {
+                      localStorage.setItem('mdsc-theme', 'system');
+                    }
+                  }
+
+                  root.classList.toggle('dark', theme === 'dark');
+                  root.dataset.theme = theme;
+
+                  if (storedLanguage === 'fr' || storedLanguage === 'en') {
+                    root.setAttribute('lang', storedLanguage);
+                  }
+                } catch (error) {
+                  console.warn('Préférences d\'affichage indisponibles avant l\'initialisation.', error);
+                }
+              })();
             `,
           }}
         />
