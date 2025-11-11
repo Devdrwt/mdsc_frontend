@@ -5,6 +5,7 @@ import { Trophy, Award, Users, RefreshCw } from 'lucide-react';
 import { GamificationService } from '../../../lib/services/gamificationService';
 import { BadgeService } from '../../../lib/services/badgeService';
 import { Badge, UserBadge } from '../../../types';
+import toast from '../../../lib/utils/toast';
 
 export default function GamificationInstructor() {
   const [loading, setLoading] = useState(true);
@@ -37,16 +38,16 @@ export default function GamificationInstructor() {
   const checkAndAward = async () => {
     try {
       setChecking(true);
-      // Endpoint backend: POST /api/badges/check-and-award (selon plan)
-      // On utilise apiRequest indirectement via une méthode générique si non présente
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'}/badges/check-and-award`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const result = await BadgeService.checkAndAward();
+      if (result?.success) {
+        toast.success('Badges mis à jour', result.message || 'Vérification effectuée avec succès.');
+      } else {
+        toast.info('Vérification terminée', result?.message || 'Aucun nouveau badge détecté.');
+      }
       await load();
-    } catch (_) {
-      // silent
+    } catch (error) {
+      console.error('Erreur vérification badges:', error);
+      toast.error('Impossible de vérifier les badges', (error as Error)?.message || 'Veuillez réessayer.');
     } finally {
       setChecking(false);
     }

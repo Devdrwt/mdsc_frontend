@@ -184,6 +184,31 @@ export interface InstructorStudentsResponse {
   };
 }
 
+export interface InstructorPreferences {
+  language?: 'fr' | 'en';
+  theme?: 'light' | 'dark' | 'system';
+  notifications?: {
+    course_updates?: boolean;
+    student_activity?: boolean;
+    platform_news?: boolean;
+    weekly_digest?: boolean;
+  };
+  security?: {
+    two_factor_auth?: boolean;
+    login_alerts?: boolean;
+    device_trust?: boolean;
+  };
+  policies?: {
+    accepted?: boolean;
+    accepted_at?: string;
+    version?: string;
+  };
+}
+
+export interface InstructorPreferencesResponse {
+  preferences?: InstructorPreferences;
+}
+
 export class InstructorService {
   static async getDashboard(): Promise<InstructorDashboardResponse> {
     const response = await apiRequest('/instructor/dashboard', {
@@ -376,6 +401,62 @@ export class InstructorService {
       stats: {},
       filters: {},
     };
+  }
+
+  /**
+   * L'API retourne actuellement un objet { sections: [...] }.
+   * Nous le convertissons en préférences minimales exploitables côté front.
+   */
+  static async getPreferences(): Promise<InstructorPreferences & { sections?: Array<Record<string, any>> }> {
+    const response = await apiRequest('/instructor/settings', {
+      method: 'GET',
+    });
+
+    if (response.success !== false && response.data) {
+      const sections = (response.data as any).sections ?? [];
+      return { sections };
+    }
+
+    return { sections: [] };
+  }
+
+  static async updatePreferences(payload: InstructorPreferences): Promise<InstructorPreferences> {
+    const response = await apiRequest('/instructor/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ preferences: payload }),
+    });
+
+    if (response.success !== false && response.data) {
+      return (response.data as InstructorPreferencesResponse).preferences ?? payload;
+    }
+
+    return payload;
+  }
+
+  static async requestDataExport(): Promise<void> {
+    await apiRequest('/instructor/settings/export-request', {
+      method: 'POST',
+    });
+  }
+
+  static async requestAccountDeletion(payload?: { reason?: string; confirm?: boolean }): Promise<void> {
+    await apiRequest('/instructor/settings/delete-request', {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    });
+  }
+
+  static async acknowledgePolicies(version?: string): Promise<InstructorPreferences> {
+    const response = await apiRequest('/instructor/settings/policies', {
+      method: 'POST',
+      body: JSON.stringify({ version }),
+    });
+
+    if (response.success !== false && response.data) {
+      return (response.data as InstructorPreferencesResponse).preferences ?? (response.data as InstructorPreferences);
+    }
+
+    return { policies: { accepted: true, accepted_at: new Date().toISOString(), version } };
   }
 }
 

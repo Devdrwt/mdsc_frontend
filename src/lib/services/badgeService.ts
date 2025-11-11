@@ -38,6 +38,16 @@ export class BadgeService {
   }
 
   /**
+   * Vérifier automatiquement tous les badges et les attribuer si éligible
+   */
+  static async checkAndAward(): Promise<{ success: boolean; message?: string }> {
+    const response = await apiRequest('/badges/check-and-award', {
+      method: 'POST',
+    });
+    return response.data ?? { success: true };
+  }
+
+  /**
    * Récupérer les badges éligibles (non encore gagnés)
    */
   static async getEligibleBadges(): Promise<Badge[]> {

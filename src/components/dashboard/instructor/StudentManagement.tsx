@@ -433,8 +433,8 @@ export default function StudentManagement() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {students.length > 0 ? (
           <div className="divide-y divide-gray-200">
-            {students.map((student) => (
-              <div key={student.id} className="p-6 hover:bg-gray-50 transition-colors">
+            {students.map((student, index) => (
+              <div key={`${student.id}-${index}`} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
@@ -489,21 +489,14 @@ export default function StudentManagement() {
 
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => window.location.href = `/dashboard/instructor/students/${student.id}`}
-                      className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                      title="Voir le profil"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => window.location.href = `mailto:${student.email}`}
+                      onClick={() => (window.location.href = `mailto:${student.email}`)}
                       className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                       title="Envoyer un email"
                     >
                       <Mail className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => window.location.href = `/dashboard/instructor/messages?student=${student.id}`}
+                      onClick={() => (window.location.href = `/dashboard/instructor/messages?student=${student.id}`)}
                       className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
                       title="Envoyer un message"
                     >
@@ -516,50 +509,58 @@ export default function StudentManagement() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun étudiant trouvé</h3>
-            <p className="text-gray-500">
-              {searchTerm || filterStatus !== 'all'
-                ? 'Aucun étudiant ne correspond à vos critères de recherche.'
-                : 'Vous n\'avez aucun étudiant inscrit à vos cours.'}
-            </p>
+            <p className="text-gray-500">Aucun étudiant trouvé.</p>
           </div>
         )}
       </div>
 
-      {students.length > 0 && (
-        <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="text-sm text-gray-600">
-            Page {page} / {totalPages} · {total} étudiants
-          </div>
-          <div className="flex items-center space-x-2">
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <nav className="flex items-center space-x-2">
             <button
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+              onClick={() => setPage(Math.max(1, page - 1))}
+              disabled={page === 1}
+              className="p-2 text-gray-600 hover:text-mdsc-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Précédent
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
             </button>
+            <span className="text-gray-600">
+              Page {page} sur {totalPages}
+            </span>
             <button
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
+              onClick={() => setPage(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+              className="p-2 text-gray-600 hover:text-mdsc-gold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Suivant
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </button>
-            <select
-              value={limit}
-              onChange={(e) => {
-                setLimit(parseInt(e.target.value, 10));
-                setPage(1);
-              }}
-              className="ml-2 border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
+          </nav>
         </div>
       )}
     </div>

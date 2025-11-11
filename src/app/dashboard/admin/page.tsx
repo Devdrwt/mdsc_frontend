@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -42,6 +43,7 @@ import {
   XCircle,
   MapPin,
 } from 'lucide-react';
+import MessageService from '../../../lib/services/messageService';
 
 interface AdminStats {
   totalUsers: number;
@@ -146,6 +148,7 @@ export default function AdminDashboard() {
   const [userGrowth, setUserGrowth] = useState<UserGrowth[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminNotifications, setAdminNotifications] = useState<AdminNotificationEntry[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [notificationForm, setNotificationForm] = useState<NotificationFormState>({
@@ -328,7 +331,12 @@ export default function AdminDashboard() {
     setNotificationsLoading(true);
     setNotificationsError(null);
     try {
-      const { notifications } = await AdminService.getAdminNotifications({ page: 1, limit: 20 });
+      const [notificationsResponse, messageStats] = await Promise.all([
+        AdminService.getAdminNotifications({ page: 1, limit: 20 }),
+        MessageService.getStats().catch(() => null),
+      ]);
+      setUnreadMessages(messageStats?.received_unread ?? 0);
+      const notifications = notificationsResponse?.notifications ?? [];
       setAdminNotifications(Array.isArray(notifications) ? notifications : []);
     } catch (error) {
       const message =
@@ -337,6 +345,7 @@ export default function AdminDashboard() {
           : 'Impossible de charger les notifications administrateur';
       setNotificationsError(message);
       setAdminNotifications([]);
+      setUnreadMessages(0);
     } finally {
       setNotificationsLoading(false);
     }
@@ -873,6 +882,24 @@ export default function AdminDashboard() {
     loadAdminNotifications();
     loadAdminEvents();
   }, [user, loadAdminNotifications, loadAdminEvents]);
+
+  const adminNotificationsWithMessages = useMemo(() => {
+    if (unreadMessages > 0) {
+      const messageEntry: AdminNotificationEntry = {
+        id: 'admin-unread-messages',
+        title: 'Messages non lus',
+        message: `Vous avez ${unreadMessages} message${unreadMessages > 1 ? 's' : ''} non lu${
+          unreadMessages > 1 ? 's' : ''
+        }.`,
+        type: 'message',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { link: '/dashboard/instructor/messages' },
+      };
+      return [messageEntry, ...adminNotifications];
+    }
+    return adminNotifications;
+  }, [adminNotifications, unreadMessages]);
 
   if (loading) {
     return (
@@ -1420,6 +1447,12 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+              {unreadMessages > 0 && (
+                <p className="text-sm text-blue-600 mb-4">
+                  Vous avez {unreadMessages} message{unreadMessages > 1 ? 's' : ''} non lu{unreadMessages > 1 ? 's' : ''}.
+                </p>
+              )}
+
               <form onSubmit={handleNotificationSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1524,84 +1557,104 @@ export default function AdminDashboard() {
                   <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {notificationsError}
                   </div>
-                ) : adminNotifications.length === 0 ? (
+                ) : adminNotificationsWithMessages.length === 0 ? (
                   <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-600 text-center">
                     Aucune notification enregistrée.
                   </div>
                 ) : (
                   <ul className="space-y-3">
-                    {adminNotifications.map((notification) => (
-                      <li
-                        key={notification.id}
-                        className={`rounded-xl border px-4 py-3 transition ${
-                          notification.is_read
-                            ? 'border-gray-200 bg-white'
-                            : 'border-blue-200 bg-blue-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 pr-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-gray-900">{notification.title}</span>
-                              {notification.type && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
-                                  {notification.type}
-                                </span>
+                    {adminNotificationsWithMessages.map((notification) => {
+                      const isMessagePlaceholder = String(notification.id) === 'admin-unread-messages';
+                      return (
+                        <li
+                          key={notification.id}
+                          className={`rounded-xl border px-4 py-3 transition ${
+                            notification.is_read
+                              ? 'border-gray-200 bg-white'
+                              : 'border-blue-200 bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 pr-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-gray-900">{notification.title}</span>
+                                {notification.type && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
+                                    {notification.type}
+                                  </span>
+                                )}
+                              </div>
+                              {notification.message && (
+                                <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                                  {notification.message}
+                                </p>
+                              )}
+                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                                <span>Créée : {formatDateTime(notification.created_at)}</span>
+                                {notification.trigger_at && (
+                                  <span className="flex items-center gap-1 text-blue-600">
+                                    <Clock className="h-3 w-3" /> {formatDateTime(notification.trigger_at)}
+                                  </span>
+                                )}
+                              </div>
+                              {!isMessagePlaceholder && notification.metadata && (
+                                <pre className="mt-2 text-xs bg-white border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
+                                  {JSON.stringify(notification.metadata, null, 2)}
+                                </pre>
+                              )}
+                              {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
+                                <Link
+                                  href={notification.metadata.link}
+                                  className="mt-2 inline-flex text-xs font-medium text-mdsc-blue-primary hover:underline"
+                                >
+                                  Consulter la messagerie
+                                </Link>
                               )}
                             </div>
-                            {notification.message && (
-                              <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
-                                {notification.message}
-                              </p>
-                            )}
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                              <span>Créée : {formatDateTime(notification.created_at)}</span>
-                              {notification.trigger_at && (
-                                <span className="flex items-center gap-1 text-blue-600">
-                                  <Clock className="h-3 w-3" /> {formatDateTime(notification.trigger_at)}
-                                </span>
-                              )}
-                            </div>
-                            {notification.metadata && (
-                              <pre className="mt-2 text-xs bg-white border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
-                                {JSON.stringify(notification.metadata, null, 2)}
-                              </pre>
+                            {isMessagePlaceholder ? (
+                              <Link
+                                href="/dashboard/instructor/messages"
+                                className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                              >
+                                <Mail className="h-4 w-4 mr-1" /> Ouvrir la messagerie
+                              </Link>
+                            ) : (
+                              <div className="flex flex-col items-end gap-2 text-sm">
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationToggleRead(notification)}
+                                  className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                                >
+                                  {notification.is_read ? (
+                                    <>
+                                      <XCircle className="h-4 w-4 mr-1" /> Marquer non lu
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4 mr-1" /> Marquer lu
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationEdit(notification)}
+                                  className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800"
+                                >
+                                  <Edit3 className="h-4 w-4 mr-1" /> Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationDelete(notification.id)}
+                                  className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+                                </button>
+                              </div>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 text-sm">
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationToggleRead(notification)}
-                              className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
-                            >
-                              {notification.is_read ? (
-                                <>
-                                  <XCircle className="h-4 w-4 mr-1" /> Marquer non lu
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Marquer lu
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationEdit(notification)}
-                              className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800"
-                            >
-                              <Edit3 className="h-4 w-4 mr-1" /> Modifier
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNotificationDelete(notification.id)}
-                              className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
-                            </button>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
@@ -1880,7 +1933,7 @@ export default function AdminDashboard() {
                   href: '/dashboard/admin/settings'
                 }
               ].map((action, index) => (
-                <a
+                <Link
                   key={index}
                   href={action.href}
                   className="group flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-105"
@@ -1892,7 +1945,7 @@ export default function AdminDashboard() {
                     <p className="font-medium text-gray-900">{action.title}</p>
                     <p className="text-sm text-gray-500">{action.description}</p>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
