@@ -6,30 +6,50 @@ export class ProgressService {
    * Récupérer la progression détaillée d'une inscription
    */
   static async getEnrollmentProgress(enrollmentId: number): Promise<Progress[]> {
-    const response = await apiRequest(`/progress/enrollment/${enrollmentId}`, {
-      method: 'GET',
-    });
-    return response.data;
+    try {
+      const response = await apiRequest(`/progress/enrollment/${enrollmentId}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      console.warn('ProgressService.getEnrollmentProgress fallback:', error);
+      return [];
+    }
   }
 
   /**
    * Récupérer la progression d'un cours
    */
   static async getCourseProgress(courseId: number): Promise<CourseProgressStats> {
-    const response = await apiRequest(`/progress/course/${courseId}`, {
-      method: 'GET',
-    });
-    return response.data;
+    try {
+      const response = await apiRequest(`/progress/course/${courseId}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      console.warn('ProgressService.getCourseProgress fallback:', error);
+      return {
+        progress_percentage: 0,
+        enrollment_status: 'enrolled',
+        total_lessons: 0,
+        completed_lessons: 0,
+      };
+    }
   }
 
   /**
    * Récupérer la progression d'une leçon
    */
   static async getLessonProgress(lessonId: number): Promise<Progress[]> {
-    const response = await apiRequest(`/progress/lesson/${lessonId}`, {
-      method: 'GET',
-    });
-    return response.data;
+    try {
+      const response = await apiRequest(`/progress/lesson/${lessonId}`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error) {
+      console.warn('ProgressService.getLessonProgress fallback:', error);
+      return [];
+    }
   }
 
   /**
@@ -61,15 +81,29 @@ export class ProgressService {
     enrollmentId: number,
     lessonId: number,
     timeSpent?: number
-  ): Promise<Progress> {
-    const response = await apiRequest(
-      `/progress/enrollment/${enrollmentId}/lesson/${lessonId}/complete`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ time_spent: timeSpent }),
+  ): Promise<{ success: boolean; unlockedLessonId?: number }> {
+    try {
+      const response = await apiRequest(
+        `/progress/enrollment/${enrollmentId}/lesson/${lessonId}/complete`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ time_spent: timeSpent }),
+        }
+      );
+      const payload: any = response.data || {};
+      const unlockedLessonId =
+        payload?.unlockedNextLesson?.unlockedLessonId ?? payload?.unlockedLessonId;
+      return {
+        success: true,
+        unlockedLessonId: typeof unlockedLessonId === 'number' ? unlockedLessonId : undefined,
+      };
+    } catch (error: any) {
+      if (error?.status === 403) {
+        console.warn('Accès refusé lors de la complétion de la leçon:', error.message);
+        return { success: false };
       }
-    );
-    return response.data;
+      throw error;
+    }
   }
 
   // Méthodes de compatibilité avec l'ancien format
@@ -90,7 +124,7 @@ export class ProgressService {
   ): Promise<{ hasAccess: boolean; reason?: string }> {
     try {
       const response = await apiRequest(
-        `/enrollments/${enrollmentId}/lessons/${lessonId}/access`,
+        `/progress/enrollment/${enrollmentId}/lesson/${lessonId}/access`,
         {
           method: 'GET',
         }
@@ -98,7 +132,6 @@ export class ProgressService {
       return response.data;
     } catch (error: any) {
       console.error('Erreur lors de la vérification d\'accès:', error);
-      // En cas d'erreur, permettre l'accès pour ne pas bloquer l'utilisateur
       return { hasAccess: true };
     }
   }
@@ -110,15 +143,29 @@ export class ProgressService {
     enrollmentId: number,
     lessonId: number,
     timeSpent?: number
-  ): Promise<{ success: boolean; nextLessonUnlocked?: boolean }> {
-    const response = await apiRequest(
-      `/enrollments/${enrollmentId}/lessons/${lessonId}/complete`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ time_spent: timeSpent }),
+  ): Promise<{ success: boolean; unlockedLessonId?: number }> {
+    try {
+      const response = await apiRequest(
+        `/progress/enrollment/${enrollmentId}/lesson/${lessonId}/complete-sequential`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ time_spent: timeSpent }),
+        }
+      );
+      const payload: any = response.data || {};
+      const unlockedLessonId =
+        payload?.unlockedNextLesson?.unlockedLessonId ?? payload?.unlockedLessonId;
+      return {
+        success: true,
+        unlockedLessonId: typeof unlockedLessonId === 'number' ? unlockedLessonId : undefined,
+      };
+    } catch (error: any) {
+      if (error?.status === 403) {
+        console.warn('Accès refusé lors de la complétion de la leçon:', error.message);
+        return { success: false };
       }
-    );
-    return response.data;
+      throw error;
+    }
   }
 
   /**
@@ -130,14 +177,16 @@ export class ProgressService {
   ): Promise<number[]> {
     try {
       const response = await apiRequest(
-        `/enrollments/${enrollmentId}/progress`,
+        `/progress/enrollment/${enrollmentId}`,
         {
           method: 'GET',
         }
       );
-      // Retourner les IDs des leçons déverrouillées
-      const progress = response.data;
-      return progress.unlocked_lessons || [];
+      const progress = response.data?.progress || [];
+      return progress
+        .filter((item: any) => item.status === 'completed')
+        .map((item: any) => Number(item.lesson_id))
+        .filter((id: number) => !Number.isNaN(id));
     } catch (error) {
       console.error('Erreur lors de la récupération des leçons déverrouillées:', error);
       return [];

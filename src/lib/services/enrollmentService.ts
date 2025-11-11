@@ -5,11 +5,19 @@ export class EnrollmentService {
   /**
    * S'inscrire à un cours (vérifie automatiquement les prérequis)
    */
-  static async enrollInCourse(courseId: number): Promise<Enrollment> {
+  static async enrollInCourse(courseId: number, options?: { paymentId?: string }): Promise<Enrollment> {
     try {
+      const payload: Record<string, any> = {
+        course_id: courseId
+      };
+
+      if (options?.paymentId) {
+        payload.payment_id = options.paymentId;
+      }
+
       const response = await apiRequest('/enrollments', {
         method: 'POST',
-        body: JSON.stringify({ course_id: courseId }),
+        body: JSON.stringify(payload),
       });
       return response.data;
     } catch (error: any) {

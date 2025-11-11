@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CourseCard from '../../components/courses/CourseCard';
@@ -8,6 +9,7 @@ import Button from '../../components/ui/Button';
 import { Search, Clock, Users } from 'lucide-react';
 import { Course } from '../../types';
 import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
+import { useAuthStore } from '../../lib/stores/authStore';
 
 const categories = [
   'Toutes les catégories',
@@ -57,13 +59,27 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     || (serviceCourse as any).thumbnailUrl
     || '/apprenant.png'; // Image par défaut
 
+  const rawCategory = (serviceCourse as any).category;
+  let categoryValue = 'non-categorisé';
+  if (rawCategory) {
+    if (typeof rawCategory === 'string') {
+      categoryValue = rawCategory;
+    } else if (typeof rawCategory === 'object') {
+      categoryValue =
+        rawCategory.name ||
+        rawCategory.title ||
+        rawCategory.label ||
+        'non-categorisé';
+    }
+  }
+
   return {
     id: serviceCourse.id,
     title: serviceCourse.title,
     slug: serviceCourse.slug || serviceCourse.id, // Utiliser le slug s'il existe, sinon l'id
     description: serviceCourse.description || '',
     shortDescription: serviceCourse.shortDescription || '',
-    category: serviceCourse.category || 'non-categorisé',
+    category: categoryValue,
     level: levelString, // Pour CourseCard
     level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
     duration: durationString, // String pour CourseCard
@@ -76,17 +92,21 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     // Conversions pour CourseCard
     thumbnail: courseImage,
     students: serviceCourse.totalStudents || 0,
-    price: serviceCourse.price || 0,
+    price: Number(serviceCourse.price ?? 0),
   };
 };
 
 export default function CoursesPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toutes les catégories');
   const [selectedLevel, setSelectedLevel] = useState('Tous les niveaux');
   const [isLoading, setIsLoading] = useState(true);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set());
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true);
 
   // Charger les cours depuis l'API
   useEffect(() => {
@@ -115,8 +135,36 @@ export default function CoursesPage() {
         setIsLoading(false);
       }
     };
+
+    const loadEnrollments = async () => {
+      if (!user) {
+        setEnrolledCourseIds(new Set());
+        setLoadingEnrollments(false);
+        return;
+      }
+
+      try {
+        setLoadingEnrollments(true);
+        const myCourses = await CourseService.getMyCourses();
+        const ids = new Set<number>();
+        (myCourses || []).forEach((course: any) => {
+          const id = Number(course.id ?? course.course_id ?? course.courseId);
+          if (!Number.isNaN(id)) {
+            ids.add(id);
+          }
+        });
+        setEnrolledCourseIds(ids);
+      } catch (error) {
+        console.warn('Impossible de charger les cours inscrits (page publique):', error);
+        setEnrolledCourseIds(new Set());
+      } finally {
+        setLoadingEnrollments(false);
+      }
+    };
+
     loadCourses();
-  }, []);
+    loadEnrollments();
+  }, [user]);
 
   // Filtrage des cours
   useEffect(() => {
@@ -166,9 +214,24 @@ export default function CoursesPage() {
     }
   };
 
-  const handleEnroll = (courseId: string) => {
-    // TODO: Implémenter l'inscription au cours
-    console.log('Enroll in course:', courseId);
+  const handleEnroll = (course: Course) => {
+    const numericId = Number(course.id);
+    const rawPrice = (course as any).price ?? course.price ?? 0;
+    const price = Number(rawPrice);
+    const rawSlug = (course as any).slug || course.slug || course.id;
+    const slug = typeof rawSlug === 'string' ? rawSlug : String(rawSlug);
+
+    if (!Number.isNaN(numericId) && enrolledCourseIds.has(numericId)) {
+      router.push(`/learn/${numericId}`);
+      return;
+    }
+
+    if (price > 0) {
+      router.push(`/payments/new?courseId=${course.id}`);
+      return;
+    }
+
+    router.push(`/courses/${slug}`);
   };
 
   return (
@@ -267,13 +330,19 @@ export default function CoursesPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onEnroll={handleEnroll}
-                />
-              ))}
+              {filteredCourses.map((course) => {
+                const numericId = Number(course.id);
+                const isEnrolled = !Number.isNaN(numericId) && enrolledCourseIds.has(numericId);
+                return (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    onEnroll={handleEnroll}
+                    isEnrolled={isEnrolled}
+                    loadingState={loadingEnrollments}
+                  />
+                );
+              })}
             </div>
           )}
 

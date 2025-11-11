@@ -194,7 +194,34 @@ export class CourseService {
       method: 'GET',
     });
     // Le backend renvoie { course, modules, lessons, quizzes }
-    return response.data.course || response.data;
+    if (response.data?.course) {
+      const payload: any = response.data;
+      const course: any = { ...payload.course };
+
+      const lessons: any[] = Array.isArray(payload.lessons) ? payload.lessons : [];
+      const modules: any[] = Array.isArray(payload.modules)
+        ? payload.modules.map((module: any) => ({
+            ...module,
+            lessons: lessons.filter((lesson) => lesson.module_id === module.id),
+          }))
+        : [];
+
+      if (modules.length > 0) {
+        course.modules = modules;
+      }
+
+      if (lessons.length > 0 && (!course.modules || course.modules.length === 0)) {
+        course.lessons = lessons;
+      }
+
+      if (payload.quizzes) {
+        course.quizzes = payload.quizzes;
+      }
+
+      return course as Course;
+    }
+
+    return response.data;
   }
 
   // Récupérer un cours par slug
@@ -208,10 +235,17 @@ export class CourseService {
 
   // Vérifier si l'utilisateur est inscrit
   static async checkEnrollment(courseId: number): Promise<{ is_enrolled: boolean; enrollment?: any }> {
-    const response = await apiRequest(`/courses/${courseId}/check-enrollment`, {
-      method: 'GET',
-    });
-    return response.data;
+    try {
+      const response = await apiRequest(`/courses/${courseId}/check-enrollment`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error?.status === 401 || error?.status === 403) {
+        return { is_enrolled: false };
+      }
+      throw error;
+    }
   }
 
   // Récupérer les cours de l'utilisateur connecté
@@ -451,6 +485,20 @@ export class CourseService {
       method: 'PUT',
       body: JSON.stringify({ lessonOrders }),
     });
+  }
+
+  static async getMyCourseProgress(): Promise<{ courseId: number; progress: number; completedLessons: number; totalLessons: number }[]> {
+    const response = await apiRequest('/courses/my', {
+      method: 'GET',
+    });
+
+    const courses = response.data?.courses || response.data || [];
+    return courses.map((course: any) => ({
+      courseId: Number(course.id),
+      progress: Number(course.progress_percentage || course.progress || 0),
+      completedLessons: Number(course.completed_lessons || 0),
+      totalLessons: Number(course.total_lessons || 0),
+    }));
   }
 
 }

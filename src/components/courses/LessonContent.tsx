@@ -22,12 +22,23 @@ export default function LessonContent({
   onComplete,
   className = '',
 }: LessonContentProps) {
-  const [isCompleted, setIsCompleted] = useState(lesson.isCompleted || lesson.progress?.status === 'completed' || false);
+  const deriveCompletedStatus = (currentLesson: Lesson): boolean => {
+    return Boolean(
+      currentLesson.isCompleted ||
+        (currentLesson as any)?.is_completed ||
+        currentLesson.progress?.status === 'completed' ||
+        (currentLesson as any)?.status === 'completed'
+    );
+  };
+
+  const [isCompleted, setIsCompleted] = useState<boolean>(deriveCompletedStatus(lesson));
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [mediaFile, setMediaFile] = useState<MediaFile | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
 
   useEffect(() => {
+    setIsCompleted(deriveCompletedStatus(lesson));
+
     // Charger les médias de la leçon si disponibles
     if (lesson.mediaFile) {
       setMediaFile(lesson.mediaFile);
@@ -49,11 +60,18 @@ export default function LessonContent({
 
     setIsMarkingComplete(true);
     try {
-      await progressService.markLessonCompleted(
+      const result = await progressService.markLessonCompleted(
         enrollmentId,
         typeof lesson.id === 'number' ? lesson.id : parseInt(lesson.id as string),
         undefined // timeSpent optionnel
       );
+
+      if (result?.success === false) {
+        setIsCompleted(true);
+        onComplete?.();
+        return;
+      }
+
       setIsCompleted(true);
       onComplete?.();
     } catch (error) {
@@ -188,12 +206,12 @@ export default function LessonContent({
               )}
             </div>
           </div>
-          
+
           {isCompleted && (
-            <div className="flex items-center space-x-2 text-green-600">
-              <CheckCircle className="h-6 w-6" />
-              <span className="font-medium">Terminée</span>
-            </div>
+            <span className="inline-flex items-center px-4 py-2 rounded-lg bg-green-50 text-green-600 font-medium">
+              <CheckCircle className="h-5 w-5 mr-2" />
+              Terminée
+            </span>
           )}
         </div>
 
@@ -258,22 +276,24 @@ export default function LessonContent({
       )}
 
       {/* Completion Button */}
-      {lesson.contentType !== 'quiz' && !isCompleted && (
+      {lesson.contentType !== 'quiz' && (
         <div className="flex justify-end">
-          <Button
-            variant="primary"
-            onClick={handleMarkComplete}
-            disabled={isMarkingComplete}
-          >
-            {isMarkingComplete ? (
-              'Marquage...'
-            ) : (
-              <>
-                <CheckCircle className="h-5 w-5 mr-2" />
-                Marquer comme terminée
-              </>
-            )}
-          </Button>
+          {!isCompleted ? (
+            <Button
+              variant="primary"
+              onClick={handleMarkComplete}
+              disabled={isMarkingComplete}
+            >
+              {isMarkingComplete ? (
+                'Marquage...'
+              ) : (
+                <>
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  Marquer comme terminée
+                </>
+              )}
+            </Button>
+          ) : null}
         </div>
       )}
     </div>

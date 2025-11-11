@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
+import { CourseService } from '../../../lib/services/courseService';
 import CoursePlayer from '../../../components/courses/CoursePlayer';
 import { Course } from '../../../types/course';
 
@@ -26,10 +26,25 @@ export default function LearnCoursePage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      const data = await CourseService.getCourseById(courseId);
-      // Convertir ServiceCourse vers Course
-      const convertedCourse: Course = data as any;
-      setCourse(convertedCourse);
+      const baseCourse = await CourseService.getCourseById(courseId);
+      const enrichedCourse: Course = { ...(baseCourse as any) };
+
+      const numericCourseId = Number(courseId);
+      if (!Number.isNaN(numericCourseId)) {
+        try {
+          const enrollmentInfo = await CourseService.checkEnrollment(numericCourseId);
+          if (enrollmentInfo?.is_enrolled) {
+            (enrichedCourse as any).enrollment = enrollmentInfo.enrollment;
+            if (enrollmentInfo.enrollment?.progress_percentage !== undefined) {
+              (enrichedCourse as any).progress = enrollmentInfo.enrollment.progress_percentage;
+            }
+          }
+        } catch (enrollmentError) {
+          console.warn('Impossible de vérifier l’inscription du cours:', enrollmentError);
+        }
+      }
+
+      setCourse(enrichedCourse);
     } catch (err: any) {
       console.error('Erreur chargement cours:', err);
       setError(err.message || 'Erreur lors du chargement du cours');

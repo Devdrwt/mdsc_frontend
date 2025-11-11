@@ -16,6 +16,11 @@ const openSans = Open_Sans({
 export const metadata: Metadata = {
   title: "Maison de la Société Civile - Plateforme MOOC",
   description: "Plateforme d'apprentissage en ligne pour renforcer les capacités des organisations de la société civile. Cours, certifications et accompagnement pour la crédibilité et l'innovation.",
+  icons: {
+    icon: '/mdsc-logo1.png',
+    shortcut: '/mdsc-logo1.png',
+    apple: '/mdsc-logo1.png',
+  },
   keywords: ["formation", "OSC", "société civile", "apprentissage", "certification", "Côte d'Ivoire"],
   authors: [{ name: "Maison de la Société Civile" }],
   creator: "Équipe Dev Drwintech inc",

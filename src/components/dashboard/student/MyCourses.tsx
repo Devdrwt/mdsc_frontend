@@ -1,21 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Clock, Users, Star, Play, CheckCircle, Award, Filter, Search, X, Trash2 } from 'lucide-react';
+import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2 } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
 
+type StudentCourse = Course & {
+  progressValue: number;
+  categoryLabel: string;
+  createdAt?: string | null;
+};
+
 export default function MyCourses() {
   const { user } = useAuthStore();
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<StudentCourse[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<StudentCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'in-progress' | 'completed' | 'not-started'>('all');
-  const [unenrollingCourse, setUnenrollingCourse] = useState<string | null>(null);
+  const [unenrollingCourse, setUnenrollingCourse] = useState<string | number | null>(null);
   const [showUnenrollModal, setShowUnenrollModal] = useState(false);
-  const [courseToUnenroll, setCourseToUnenroll] = useState<Course | null>(null);
+  const [courseToUnenroll, setCourseToUnenroll] = useState<StudentCourse | null>(null);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -24,11 +30,29 @@ export default function MyCourses() {
       try {
         setLoading(true);
         const userCourses = await courseService.getMyCourses();
-        setCourses(userCourses || []);
-        setFilteredCourses(userCourses || []);
+        const normalizedCourses: StudentCourse[] = (userCourses || []).map((course: any) => {
+          const categoryLabel = typeof course.category === 'string'
+            ? course.category
+            : course.category?.name || 'Sans catégorie';
+
+          const progressRaw = course.progress ?? course.progressValue ?? course.enrollment?.progress_percentage ?? course.progress_percentage ?? 0;
+          const progressValue = Number(progressRaw);
+
+          const createdAt = course.createdAt || course.created_at || course.enrollment?.enrolled_at || null;
+
+          return {
+            ...course,
+            category: categoryLabel,
+            categoryLabel,
+            progressValue: Number.isFinite(progressValue) ? Math.min(Math.max(progressValue, 0), 100) : 0,
+            createdAt,
+          } as StudentCourse;
+        });
+
+        setCourses(normalizedCourses);
+        setFilteredCourses(normalizedCourses);
       } catch (error) {
         console.error('Erreur lors du chargement des cours:', error);
-        // En cas d'erreur, initialiser avec un tableau vide
         setCourses([]);
         setFilteredCourses([]);
       } finally {
@@ -45,37 +69,38 @@ export default function MyCourses() {
     // Filtrage par statut
     switch (filterStatus) {
       case 'in-progress':
-        filtered = filtered.filter(course => course.progress > 0 && course.progress < 100);
+        filtered = filtered.filter(course => course.progressValue > 0 && course.progressValue < 100);
         break;
       case 'completed':
-        filtered = filtered.filter(course => course.progress === 100);
+        filtered = filtered.filter(course => course.progressValue === 100);
         break;
       case 'not-started':
-        filtered = filtered.filter(course => course.progress === 0);
+        filtered = filtered.filter(course => course.progressValue === 0);
         break;
     }
 
     // Filtrage par recherche
     if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
       filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchTerm.toLowerCase())
+        (course.title || '').toLowerCase().includes(lower) ||
+        (course.description || '').toLowerCase().includes(lower) ||
+        (course.categoryLabel || '').toLowerCase().includes(lower)
       );
     }
 
     setFilteredCourses(filtered);
   }, [courses, searchTerm, filterStatus]);
 
-  const getStatusBadge = (course: Course) => {
-    if (course.progress === 100) {
+  const getStatusBadge = (course: StudentCourse) => {
+    if (course.progressValue === 100) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           <CheckCircle className="h-3 w-3 mr-1" />
           Terminé
         </span>
       );
-    } else if (course.progress > 0) {
+    } else if (course.progressValue > 0) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
           <Play className="h-3 w-3 mr-1" />
@@ -102,12 +127,12 @@ export default function MyCourses() {
   const handleUnenroll = async () => {
     if (!courseToUnenroll) return;
     
-    setUnenrollingCourse(courseToUnenroll.id);
+    setUnenrollingCourse(String(courseToUnenroll.id));
     try {
-      await courseService.unenrollFromCourse(courseToUnenroll.id);
+      await courseService.unenrollFromCourse(String(courseToUnenroll.id));
       // Retirer le cours de la liste
-      setCourses(courses.filter(c => c.id !== courseToUnenroll.id));
-      setFilteredCourses(filteredCourses.filter(c => c.id !== courseToUnenroll.id));
+      setCourses(courses.filter(c => String(c.id) !== String(courseToUnenroll.id)));
+      setFilteredCourses(filteredCourses.filter(c => String(c.id) !== String(courseToUnenroll.id)));
       setShowUnenrollModal(false);
       setCourseToUnenroll(null);
     } catch (error) {
@@ -118,7 +143,7 @@ export default function MyCourses() {
     }
   };
 
-  const openUnenrollModal = (course: Course) => {
+  const openUnenrollModal = (course: StudentCourse) => {
     setCourseToUnenroll(course);
     setShowUnenrollModal(true);
   };
@@ -163,7 +188,7 @@ export default function MyCourses() {
             <div>
               <p className="text-sm font-medium text-gray-600">Terminés</p>
               <p className="text-2xl font-bold text-gray-900">
-                {courses.filter(c => c.progress === 100).length}
+                {courses.filter(c => c.progressValue === 100).length}
               </p>
             </div>
           </div>
@@ -177,7 +202,7 @@ export default function MyCourses() {
             <div>
               <p className="text-sm font-medium text-gray-600">En cours</p>
               <p className="text-2xl font-bold text-gray-900">
-                {courses.filter(c => c.progress > 0 && c.progress < 100).length}
+                {courses.filter(c => c.progressValue > 0 && c.progressValue < 100).length}
               </p>
             </div>
           </div>
@@ -192,7 +217,7 @@ export default function MyCourses() {
               <p className="text-sm font-medium text-gray-600">Progression moyenne</p>
               <p className="text-2xl font-bold text-gray-900">
                 {courses.length > 0 
-                  ? Math.round(courses.reduce((acc, c) => acc + c.progress, 0) / courses.length)
+                  ? Math.round(courses.reduce((acc, c) => acc + c.progressValue, 0) / courses.length)
                   : 0}%
               </p>
             </div>
@@ -239,7 +264,10 @@ export default function MyCourses() {
         {filteredCourses.length > 0 ? (
           <div className="divide-y divide-gray-200">
             {filteredCourses.map((course) => (
-              <div key={course.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div
+                key={course.id}
+                className="p-6 transition-colors bg-white hover:bg-gray-100"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
@@ -254,7 +282,7 @@ export default function MyCourses() {
                     <div className="flex items-center space-x-6 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <BookOpen className="h-4 w-4" />
-                        <span>{course.category}</span>
+                        <span>{course.categoryLabel}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
@@ -270,12 +298,12 @@ export default function MyCourses() {
                     <div className="w-32">
                       <div className="flex justify-between text-xs text-gray-600 mb-1">
                         <span>Progression</span>
-                        <span>{course.progress}%</span>
+                        <span>{course.progressValue}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(course.progress)}`}
-                          style={{ width: `${course.progress}%` }}
+                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(course.progressValue)}`}
+                          style={{ width: `${course.progressValue}%` }}
                         ></div>
                       </div>
                     </div>
@@ -286,7 +314,7 @@ export default function MyCourses() {
                         href={`/learn/${course.id}`}
                         className="btn-mdsc-primary text-sm"
                       >
-                        {course.progress === 100 ? 'Revoir' : course.progress > 0 ? 'Continuer' : 'Commencer'}
+                        {course.progressValue === 100 ? 'Revoir' : course.progressValue > 0 ? 'Continuer' : 'Commencer'}
                       </a>
                       
                       {/* Bouton de désinscription */}
@@ -316,7 +344,7 @@ export default function MyCourses() {
             </p>
             {!searchTerm && filterStatus === 'all' && (
               <a
-                href="/courses"
+                href="/dashboard/student/courses/catalogue"
                 className="mt-4 inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-md hover:bg-mdsc-blue-dark transition-colors"
               >
                 <BookOpen className="h-4 w-4 mr-2" />

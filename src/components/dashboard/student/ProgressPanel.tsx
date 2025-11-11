@@ -24,10 +24,13 @@ interface CourseProgress {
   progress: number;
   completedLessons: number;
   totalLessons: number;
+  completedDurationMinutes: number;
+  totalDurationMinutes: number;
+  remainingDurationMinutes: number;
   lastAccessedAt: string;
   enrolledAt: string;
   status: 'not-started' | 'in-progress' | 'completed';
-  estimatedTimeRemaining: number;
+  estimatedTimeRemainingHours: number;
   category: string;
 }
 
@@ -47,21 +50,122 @@ export default function ProgressPanel() {
         
         // Transformer les cours en format de progression
         const progressData: CourseProgress[] = (userCourses || []).map((course: any) => {
-          const progress = course.progress || 0;
-          const totalLessons = course.lessons?.length || 0;
-          const completedLessons = Math.round((progress / 100) * totalLessons);
-          
+          const progressValueRaw =
+            course.progress_percentage ??
+            course.progress ??
+            course.enrollment?.progress_percentage ??
+            0;
+          const progress =
+            typeof progressValueRaw === 'number' && Number.isFinite(progressValueRaw)
+              ? Math.round(progressValueRaw)
+              : 0;
+
+          const lessonsArray = Array.isArray(course.lessons)
+            ? course.lessons
+            : Array.isArray(course.modules)
+            ? course.modules.flatMap((module: any) => module?.lessons || [])
+            : [];
+
+          const dbTotalLessonsRaw =
+            course.total_lessons ??
+            course.totalLessons ??
+            course.enrollment?.total_lessons;
+          const dbCompletedLessonsRaw =
+            course.completed_lessons ??
+            course.completedLessons ??
+            course.enrollment?.completed_lessons;
+
+          const totalLessons = (() => {
+            if (typeof dbTotalLessonsRaw === 'number' && Number.isFinite(dbTotalLessonsRaw)) {
+              return dbTotalLessonsRaw;
+            }
+            const parsed = Number(dbTotalLessonsRaw);
+            if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+              return parsed;
+            }
+            return lessonsArray.length;
+          })();
+
+          const completedLessons = (() => {
+            if (typeof dbCompletedLessonsRaw === 'number' && Number.isFinite(dbCompletedLessonsRaw)) {
+              return dbCompletedLessonsRaw;
+            }
+            const parsed = Number(dbCompletedLessonsRaw);
+            if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+              return parsed;
+            }
+            if (totalLessons > 0) {
+              return Math.round((progress / 100) * totalLessons);
+            }
+            return 0;
+          })();
+
+          const summedLessonsDuration = lessonsArray.reduce((sum: number, lesson: any) => {
+            const durationRaw = lesson?.duration_minutes ?? lesson?.duration ?? 0;
+            const duration =
+              typeof durationRaw === 'number' && Number.isFinite(durationRaw)
+                ? durationRaw
+                : Number(durationRaw ?? 0);
+            return sum + (Number.isFinite(duration) ? duration : 0);
+          }, 0);
+
+          const courseDurationRaw =
+            course.total_duration_minutes ??
+            course.duration_minutes ??
+            course.duration ??
+            0;
+          const courseDuration =
+            typeof courseDurationRaw === 'number' && Number.isFinite(courseDurationRaw)
+              ? courseDurationRaw
+              : Number(courseDurationRaw ?? 0);
+
+          const totalDurationMinutes = summedLessonsDuration > 0 ? summedLessonsDuration : Math.max(courseDuration, 0);
+          const completedDurationMinutes =
+            totalLessons > 0
+              ? Math.round((completedLessons / Math.max(totalLessons, 1)) * totalDurationMinutes)
+              : Math.round((progress / 100) * totalDurationMinutes);
+
+          const remainingDurationMinutes = Math.max(totalDurationMinutes - completedDurationMinutes, 0);
+          const estimatedTimeRemainingHours = totalDurationMinutes > 0
+            ? Math.max(Math.ceil(remainingDurationMinutes / 60), 0)
+            : Math.max(Math.ceil((100 - progress) / 10), 0);
+
+          const categoryValue = (() => {
+            const cat = course.category || course.category_id || course.courseCategory;
+            if (!cat) return 'Général';
+            if (typeof cat === 'string') return cat;
+            if (Array.isArray(cat)) {
+              const first = cat[0];
+              if (!first) return 'Général';
+              if (typeof first === 'string') return first;
+              if (typeof first?.name === 'string') return first.name;
+            }
+            if (typeof cat?.name === 'string') return cat.name;
+            return 'Général';
+          })();
+
           return {
-            courseId: course.id,
-            courseTitle: course.title,
-            progress: progress,
+            courseId: String(course.id ?? course.courseId ?? ''),
+            courseTitle: course.title ?? course.name ?? 'Cours sans titre',
+            progress,
             completedLessons,
             totalLessons,
-            lastAccessedAt: course.lastAccessedAt || course.updatedAt || new Date().toISOString(),
-            enrolledAt: course.enrolledAt || course.createdAt || new Date().toISOString(),
+            completedDurationMinutes,
+            totalDurationMinutes,
+            remainingDurationMinutes,
+            lastAccessedAt:
+              course.lastAccessedAt ||
+              course.updatedAt ||
+              course.enrollment?.last_accessed_at ||
+              new Date().toISOString(),
+            enrolledAt:
+              course.enrolledAt ||
+              course.createdAt ||
+              course.enrollment?.enrolled_at ||
+              new Date().toISOString(),
             status: progress === 100 ? 'completed' : progress > 0 ? 'in-progress' : 'not-started',
-            estimatedTimeRemaining: Math.ceil((100 - progress) / 10), // Temps estimé en heures
-            category: course.category || 'Général',
+            estimatedTimeRemainingHours,
+            category: categoryValue,
           };
         });
         
@@ -90,6 +194,9 @@ export default function ProgressPanel() {
       : 0,
     totalCompletedLessons: courses.reduce((sum, c) => sum + c.completedLessons, 0),
     totalLessons: courses.reduce((sum, c) => sum + c.totalLessons, 0),
+    totalCompletedMinutes: courses.reduce((sum, c) => sum + c.completedDurationMinutes, 0),
+    totalMinutes: courses.reduce((sum, c) => sum + c.totalDurationMinutes, 0),
+    totalRemainingMinutes: courses.reduce((sum, c) => sum + c.remainingDurationMinutes, 0),
   };
 
   const getStatusBadge = (status: string) => {
@@ -125,6 +232,19 @@ export default function ProgressPanel() {
     if (progress >= 50) return 'bg-blue-500';
     if (progress >= 25) return 'bg-yellow-500';
     return 'bg-gray-300';
+  };
+
+  const formatDuration = (minutes: number) => {
+    if (!minutes || minutes <= 0) return '0 h';
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (hours === 0) {
+      return `${remainingMinutes} min`;
+    }
+    if (remainingMinutes === 0) {
+      return `${hours} h`;
+    }
+    return `${hours} h ${remainingMinutes} min`;
   };
 
   if (loading) {
@@ -176,7 +296,9 @@ export default function ProgressPanel() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Leçons Complétées</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{overallStats.totalCompletedLessons}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">sur {overallStats.totalLessons} total</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">
+                {overallStats.totalLessons} au total · {formatDuration(overallStats.totalCompletedMinutes)} suivies
+              </p>
             </div>
           </div>
         </div>
@@ -206,6 +328,9 @@ export default function ProgressPanel() {
             <p className="text-3xl font-bold">{overallStats.averageProgress}%</p>
             <p className="text-blue-100 text-sm">
               {overallStats.totalCompletedLessons} / {overallStats.totalLessons} leçons
+            </p>
+            <p className="text-blue-100 text-xs">
+              {formatDuration(overallStats.totalCompletedMinutes)} suivies / {formatDuration(overallStats.totalMinutes)}
             </p>
           </div>
         </div>
@@ -271,8 +396,7 @@ export default function ProgressPanel() {
                   </div>
                 </div>
 
-                {/* Métriques */}
-                <div className="grid grid-cols-3 gap-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {course.completedLessons}/{course.totalLessons}
@@ -281,67 +405,35 @@ export default function ProgressPanel() {
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {course.estimatedTimeRemaining}h
+                      {course.totalDurationMinutes > 0
+                        ? formatDuration(course.remainingDurationMinutes)
+                        : `${course.estimatedTimeRemainingHours}h`}
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Temps restant</p>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                      {course.status === 'completed' ? '✓' : '⏱'}
+                      {formatDuration(course.completedDurationMinutes)}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {course.status === 'completed' ? 'Terminé' : 'En cours'}
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Temps suivi</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {course.totalDurationMinutes > 0 ? formatDuration(course.totalDurationMinutes) : '—'}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Durée totale</p>
                   </div>
                 </div>
 
-                {/* Bouton d'action */}
-                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <a 
-                    href={`/courses/${course.courseId}`}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    {course.status === 'not-started' ? 'Commencer' : 'Continuer'} 
-                    <TrendingUp className="h-4 w-4 ml-2" />
-                  </a>
-                </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-          <BarChart3 className="h-16 w-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Aucune progression</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {activeFilter === 'all' 
-              ? 'Vous n\'êtes inscrit à aucun cours pour le moment.'
-              : `Aucun cours ${activeFilter === 'in-progress' ? 'en cours' : activeFilter === 'completed' ? 'terminé' : 'non commencé'}.`
-            }
-          </p>
-          <a 
-            href="/courses"
-            className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            <BookOpen className="h-5 w-5 mr-2" />
-            Explorer les cours
-          </a>
-        </div>
-      )}
-
-      {/* Graphique de tendance (placeholder) */}
-      {filteredCourses.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tendance de Progression</h3>
-          <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <div className="text-center">
-              <BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
-              <p className="text-gray-600 dark:text-gray-400">Graphique de progression en développement</p>
-            </div>
-          </div>
+        <div className="text-center py-12">
+          <p className="text-gray-500 dark:text-gray-400">Aucun cours trouvé pour votre filtre actuel.</p>
         </div>
       )}
     </div>
   );
 }
-

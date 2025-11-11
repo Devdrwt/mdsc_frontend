@@ -70,7 +70,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             href: `/dashboard/${userRole}/courses`, 
             icon: BookOpen,
             children: [
-              { name: 'Catalogue', href: '/courses', icon: Grid3x3 },
+              { name: 'Catalogue', href: `/dashboard/${userRole}/courses/catalogue`, icon: Grid3x3 },
               { name: 'Mes Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen }
             ]
           },

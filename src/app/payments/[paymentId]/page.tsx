@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import PaymentForm from '../../../components/payments/PaymentForm';
 import PaymentSuccess from '../../../components/payments/PaymentSuccess';
-import { paymentService } from '../../../lib/services/paymentService';
+import { paymentService, Payment, isDemoMode } from '../../../lib/services/paymentService';
 import { courseService } from '../../../lib/services/courseService';
 import { enrollmentService } from '../../../lib/services/enrollmentService';
 import { Loader, AlertCircle } from 'lucide-react';
@@ -17,8 +17,9 @@ export default function PaymentPage() {
   const [step, setStep] = useState<'form' | 'processing' | 'success' | 'error'>('form');
   const [courseId, setCourseId] = useState<string>('');
   const [course, setCourse] = useState<any>(null);
-  const [payment, setPayment] = useState<any>(null);
+  const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
+  const demoMode = isDemoMode();
 
   useEffect(() => {
     loadPaymentData();
@@ -31,18 +32,14 @@ export default function PaymentPage() {
       setPayment(paymentData);
       setCourseId(paymentData.course_id);
 
-      // Charger les détails du cours
       const courseData = await courseService.getCourseById(paymentData.course_id);
       setCourse(courseData);
 
-      // Vérifier le statut du paiement
       if (paymentData.status === 'completed') {
         setStep('success');
-        // S'assurer que l'inscription est créée
         try {
-          await enrollmentService.enrollInCourse(Number(paymentData.course_id));
+          await enrollmentService.enrollInCourse(Number(paymentData.course_id), { paymentId });
         } catch (error) {
-          // L'inscription existe peut-être déjà
           console.log('Inscription déjà existante ou erreur:', error);
         }
       } else if (paymentData.status === 'failed') {
@@ -59,23 +56,33 @@ export default function PaymentPage() {
     }
   };
 
-  const handlePaymentInitiated = async (newPaymentId: string) => {
+  const handlePaymentInitiated = async (paymentInit: Payment) => {
+    if (!paymentInit?.id) {
+      toast.error('Erreur', 'Paiement invalide');
+      return;
+    }
+
+    if (!demoMode && paymentInit.redirect_url) {
+      window.location.href = paymentInit.redirect_url;
+      return;
+    }
+
     setStep('processing');
-    // Vérifier périodiquement le statut du paiement
+    const newPaymentId = paymentInit.id;
+
     const checkInterval = setInterval(async () => {
       try {
         const paymentStatus = await paymentService.verifyPayment(newPaymentId);
         if (paymentStatus.status === 'completed') {
           clearInterval(checkInterval);
-          // Créer l'inscription automatiquement
           try {
-            await enrollmentService.enrollInCourse(Number(paymentStatus.course_id));
+            await enrollmentService.enrollInCourse(Number(paymentStatus.course_id || paymentInit.course_id), { paymentId: newPaymentId });
             setPayment(paymentStatus);
             setStep('success');
             toast.success('Paiement réussi', 'Votre inscription a été créée avec succès');
           } catch (error: any) {
             console.error('Erreur lors de la création de l\'inscription:', error);
-            // Même si l'inscription échoue, le paiement est réussi
+            setPayment(paymentStatus);
             setStep('success');
           }
         } else if (paymentStatus.status === 'failed') {
@@ -86,9 +93,8 @@ export default function PaymentPage() {
       } catch (error) {
         console.error('Erreur lors de la vérification du paiement:', error);
       }
-    }, 3000); // Vérifier toutes les 3 secondes
+    }, 3000);
 
-    // Arrêter après 5 minutes
     setTimeout(() => {
       clearInterval(checkInterval);
     }, 300000);
@@ -116,10 +122,10 @@ export default function PaymentPage() {
           </p>
           <div className="flex space-x-4">
             <button
-              onClick={() => router.push(`/courses/${courseId}`)}
+              onClick={() => router.push('/dashboard/student/courses')}
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Retour au cours
+              Retour à mes cours
             </button>
             <button
               onClick={() => setStep('form')}
@@ -178,7 +184,7 @@ export default function PaymentPage() {
         amount={course.price || 0}
         currency={course.currency || 'XOF'}
         onPaymentInitiated={handlePaymentInitiated}
-        onCancel={() => router.push(`/courses/${course.slug || course.id}`)}
+        onCancel={() => router.push('/dashboard/student/courses')}
       />
     </div>
   );

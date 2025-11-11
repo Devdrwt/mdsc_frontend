@@ -2,21 +2,28 @@ import { apiRequest } from './api';
 
 export interface Payment {
   id: string;
-  user_id: string;
+  user_id?: string;
   course_id: string;
   amount: number;
   currency: string;
-  payment_method: 'card' | 'mobile_money';
+  payment_method: 'card' | 'mobile_money' | 'gobipay';
   payment_provider?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
-  provider_transaction_id?: string;
+  provider_transaction_id?: string | null;
   created_at: string;
+  redirect_url?: string | null;
+  instructions?: any;
+  metadata?: any;
+  raw?: any;
 }
 
 export interface PaymentInitiation {
   courseId: string;
-  paymentMethod: 'card' | 'mobile_money';
-  paymentProvider?: string; // Pour mobile money: 'orange', 'mtn', 'moov'
+  paymentMethod: 'card' | 'mobile_money' | 'gobipay';
+  paymentProvider?: string;
+  customerFullname?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
 export interface PaymentVerification {
@@ -25,110 +32,167 @@ export interface PaymentVerification {
 }
 
 export class PaymentService {
-  // Mode démo (simulation)
-  private static readonly DEMO_MODE = process.env.NEXT_PUBLIC_PAYMENT_DEMO_MODE === 'true' || true; // Par défaut activé
+  private static readonly DEMO_MODE = process.env.NEXT_PUBLIC_PAYMENT_DEMO_MODE === 'true';
 
-  // Vérifier si le mode démo est activé
   static isDemoMode(): boolean {
     return this.DEMO_MODE;
   }
 
-  // Initier un paiement
   static async initiatePayment(data: PaymentInitiation): Promise<Payment> {
-    // Mode démo : simuler le paiement
     if (this.DEMO_MODE) {
       return this.simulatePayment(data);
     }
 
-    // Mode réel : appeler l'API
     const response = await apiRequest('/payments/initiate', {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return response.data;
+
+    const payload = response.data || {};
+    const rawPaymentData =
+      typeof payload.payment_data === 'string'
+        ? (() => {
+            try {
+              return JSON.parse(payload.payment_data);
+            } catch {
+              return payload.payment_data;
+            }
+          })()
+        : payload.payment_data;
+
+    const instructions =
+      rawPaymentData?.pay?.data?.payload ||
+      rawPaymentData?.pay?.payload ||
+      rawPaymentData?.pay?.data ||
+      rawPaymentData?.pay ||
+      rawPaymentData?.transaction?.data?.payload;
+
+    const redirectCandidate =
+      payload.redirect_url ||
+      payload.payment_url ||
+      rawPaymentData?.pay?.data?.redirect_url ||
+      rawPaymentData?.pay?.redirect_url ||
+      rawPaymentData?.pay?.payment_url ||
+      null;
+
+    const amount = Number(
+      payload.payment_data?.total ??
+      rawPaymentData?.transaction?.data?.amount ??
+      payload.total ??
+      0
+    );
+
+    return {
+      id: String(payload.payment_id ?? ''),
+      user_id: String(payload.user_id ?? ''),
+      course_id: data.courseId,
+      amount,
+      currency:
+        payload.payment_data?.currency ||
+        rawPaymentData?.transaction?.data?.currency ||
+        payload.currency ||
+        'XOF',
+      payment_method: data.paymentMethod,
+      payment_provider: data.paymentProvider,
+      status: 'processing',
+      provider_transaction_id:
+        payload.provider_transaction_id ||
+        rawPaymentData?.transaction?.data?.slug ||
+        rawPaymentData?.transaction?.slug ||
+        null,
+      redirect_url: redirectCandidate,
+      instructions,
+      metadata: rawPaymentData,
+      created_at: new Date().toISOString(),
+      raw: payload,
+    };
   }
 
-  // Simuler un paiement en mode démo
   private static async simulatePayment(data: PaymentInitiation): Promise<Payment> {
-    // Simuler un délai de traitement (1-2 secondes)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Générer un ID de paiement simulé
     const paymentId = `demo_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-    const transactionId = data.paymentMethod === 'card' 
-      ? `card_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
-      : `mm_${data.paymentProvider}_${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
+    const transactionId =
+      data.paymentMethod === 'card'
+        ? `card_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
+        : data.paymentMethod === 'mobile_money'
+        ? `mm_${data.paymentProvider}_${Math.random().toString(36).slice(2, 12).toUpperCase()}`
+        : `gobipay_${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
 
-    // Simuler un paiement réussi
     const payment: Payment = {
       id: paymentId,
-      user_id: 'current_user', // Sera remplacé par le vrai user_id côté backend
+      user_id: 'current_user',
       course_id: data.courseId,
-      amount: 0, // Sera récupéré depuis le cours
+      amount: 0,
       currency: 'XOF',
       payment_method: data.paymentMethod,
       payment_provider: data.paymentProvider,
-      status: 'completed', // En démo, toujours réussi
+      status: 'completed',
       provider_transaction_id: transactionId,
       created_at: new Date().toISOString(),
+      redirect_url: null,
     };
 
     return payment;
   }
 
-  // Vérifier le statut d'un paiement
   static async verifyPayment(paymentId: string): Promise<Payment> {
-    // Mode démo : retourner le paiement simulé
     if (this.DEMO_MODE && paymentId.startsWith('demo_')) {
-      // Simuler un délai de vérification
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Retourner un paiement simulé avec statut "completed"
+      await new Promise(resolve => setTimeout(resolve, 300));
       return {
         id: paymentId,
         user_id: 'current_user',
         course_id: '',
         amount: 0,
         currency: 'XOF',
-        payment_method: 'card',
+        payment_method: 'gobipay',
         status: 'completed',
         provider_transaction_id: `demo_tx_${paymentId}`,
         created_at: new Date().toISOString(),
+        redirect_url: null,
       };
     }
 
-    // Mode réel : appeler l'API
     const response = await apiRequest(`/payments/${paymentId}/status`, {
       method: 'GET',
     });
-    return response.data;
+
+    const payload = response.data || {};
+
+    return {
+      id: String(payload.id ?? paymentId),
+      user_id: String(payload.user_id ?? ''),
+      course_id: String(payload.course_id ?? ''),
+      amount: Number(payload.amount ?? 0),
+      currency: payload.currency || 'XOF',
+      payment_method: (payload.payment_method || 'gobipay') as Payment['payment_method'],
+      payment_provider: payload.payment_provider,
+      status: payload.status || 'processing',
+      provider_transaction_id: payload.provider_transaction_id || null,
+      created_at: payload.created_at || new Date().toISOString(),
+      redirect_url: payload.redirect_url || null,
+      raw: payload,
+    };
   }
 
-  // Obtenir l'historique des paiements de l'utilisateur
   static async getMyPayments(): Promise<Payment[]> {
     const response = await apiRequest('/payments/my-payments', {
       method: 'GET',
     });
-    return response.data || [];
+    const payload = response.data?.payments || response.data || [];
+    return Array.isArray(payload) ? payload : [];
   }
 
-  // Obtenir les détails d'un paiement
   static async getPayment(paymentId: string): Promise<Payment> {
-    const response = await apiRequest(`/payments/${paymentId}`, {
-      method: 'GET',
-    });
-    return response.data;
+    return this.verifyPayment(paymentId);
   }
 }
 
-// Export de la fonction pour vérifier le mode démo
 export const isDemoMode = (): boolean => {
   return PaymentService.isDemoMode();
 };
 
-// Export par défaut
 export default PaymentService;
 
-// Export nommé pour compatibilité
 export const paymentService = PaymentService;
 

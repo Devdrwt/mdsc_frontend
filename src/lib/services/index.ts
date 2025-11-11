@@ -12,6 +12,7 @@ export { FileService } from './fileService';
 export { MessageService } from './messageService';
 export { EvaluationService } from './evaluationService';
 export { ProfessionalService } from './professionalService';
+export { StudentCatalogService, studentCatalogService } from './studentCatalogService';
 export * from './chatIAService';
 
 // Nouveaux services selon architecture

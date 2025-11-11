@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
-import { Clock, Users, Star, Play, BookOpen, Award, User } from 'lucide-react';
+import { Clock, Users, Star, Play, BookOpen, Award, User, BadgeCheck } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
 
 interface CourseCardProps {
   course: Course;
-  onEnroll?: (courseId: string) => void;
+  onEnroll?: (course: Course) => void;
   showEnrollButton?: boolean;
+  isEnrolled?: boolean;
+  loadingState?: boolean;
 }
 
 export default function CourseCard({ 
   course, 
   onEnroll, 
-  showEnrollButton = true 
+  showEnrollButton = true,
+  isEnrolled = false,
+  loadingState = false,
 }: CourseCardProps) {
   // État pour gérer l'erreur de chargement d'image
   const [imageError, setImageError] = useState(false);
@@ -50,9 +54,18 @@ export default function CourseCard({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 group">
+    <div
+      className={`bg-white rounded-lg overflow-hidden transition-all duration-300 group border shadow-sm ${
+        isEnrolled ? 'border-green-400 shadow-green-100 ring-2 ring-green-100' : 'border-gray-200 hover:shadow-lg'
+      }`}
+    >
       {/* Thumbnail */}
       <div className="relative overflow-hidden">
+        {isEnrolled && (
+          <span className="absolute top-3 left-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white shadow">
+            <BadgeCheck className="h-3 w-3 mr-1" /> Inscrit
+          </span>
+        )}
         <img
           src={imageSrc}
           alt={course.title}
@@ -110,17 +123,23 @@ export default function CourseCard({
           <div className="pt-4">
             <Button 
               size="sm"
+              disabled={loadingState}
               onClick={() => {
-                const slug = (course as any).slug || (course as any).slug?.toString();
-                if (slug) {
-                  window.location.href = `/courses/${slug}`;
-                } else {
-                  onEnroll?.(String((course as any).id));
+                if (onEnroll) {
+                  onEnroll(course);
+                  return;
                 }
+                const rawSlug = (course as any).slug || (course as any).id;
+                const slug = typeof rawSlug === 'string' ? rawSlug : String(rawSlug);
+                window.location.href = `/courses/${slug}`;
               }}
-              className="w-full"
+              className={`w-full ${
+                isEnrolled
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white'
+              } ${loadingState ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              Voir détails
+              {loadingState ? 'Chargement...' : isEnrolled ? 'Continuer' : 'Voir détails'}
             </Button>
           </div>
         )}
