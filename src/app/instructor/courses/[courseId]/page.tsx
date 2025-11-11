@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useNotification } from '../../../../lib/hooks/useNotification';
@@ -26,12 +26,17 @@ export default function InstructorCourseDetailPage() {
     return Number.isFinite(n) ? n : undefined;
   }, [courseIdParam]);
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [course, setCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [courseMedia, setCourseMedia] = useState<any[]>([]);
   const [evaluation, setEvaluation] = useState<any | null>(null);
   const [courseStatus, setCourseStatus] = useState<'draft' | 'pending_approval' | 'approved' | 'rejected' | 'published'>('draft');
-  const [activeTab, setActiveTab] = useState<'modules' | 'lessons' | 'medias' | 'evaluations' | 'settings'>('modules');
+  type TabKey = 'modules' | 'lessons' | 'medias' | 'evaluations' | 'settings';
+  const tabKeys: TabKey[] = ['modules', 'lessons', 'medias', 'evaluations', 'settings'];
+  const [activeTab, setActiveTab] = useState<TabKey>('modules');
   const [selectedModuleForQuiz, setSelectedModuleForQuiz] = useState<{ moduleId: string; quiz: any | null } | null>(null);
   const [selectedModuleForLesson, setSelectedModuleForLesson] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,17 +112,35 @@ export default function InstructorCourseDetailPage() {
     load();
   }, [courseIdParam, courseIdNum]);
 
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    if (!tabParam) return;
+    const normalized = tabParam.toLowerCase();
+    if (tabKeys.includes(normalized as TabKey) && normalized !== activeTab) {
+      setActiveTab(normalized as TabKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const changeTab = (tab: TabKey) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', tab);
+    router.replace(`/instructor/courses/${courseIdParam}?${params.toString()}`, { scroll: false });
+  };
+
   const content = (
     <DashboardLayout userRole="instructor">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Cours'}</h1>
           <div className="flex items-center gap-2">
-            {(['modules', 'lessons', 'medias', 'evaluations', 'settings'] as const).map(tab => (
+            {tabKeys.map(tab => (
               <button
                 key={tab}
                 className={`px-3 py-2 rounded-lg text-sm border transition-colors flex items-center space-x-2 ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => changeTab(tab)}
               >
                 {tab === 'evaluations' && <FileText className="h-4 w-4" />}
                 <span>
@@ -162,7 +185,7 @@ export default function InstructorCourseDetailPage() {
                   onAddLessonClick={(moduleId: number) => {
                     // Basculer vers l'onglet "Leçons" et pré-sélectionner le module
                     setSelectedModuleForLesson(moduleId);
-                    setActiveTab('lessons');
+                    changeTab('lessons');
                   }}
                 />
                 
@@ -256,7 +279,7 @@ export default function InstructorCourseDetailPage() {
                       notifyError?.('Erreur', 'Impossible de recharger l\'évaluation');
                     }
                   }}
-                  onCancel={() => setActiveTab('modules')}
+                  onCancel={() => changeTab('modules')}
                 />
               </div>
             )}
@@ -666,7 +689,7 @@ export default function InstructorCourseDetailPage() {
                             }
                             if (!evaluation) {
                               notifyError?.('Évaluation requise', 'Vous devez créer une évaluation finale avant de demander la publication');
-                              setActiveTab('evaluations');
+                              changeTab('evaluations');
                               return;
                             }
                             if (!course?.title || course.title.length < 5) {

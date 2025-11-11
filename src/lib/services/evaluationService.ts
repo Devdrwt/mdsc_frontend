@@ -35,6 +35,47 @@ export interface EvaluationStats {
   earnedPoints: number;
 }
 
+export interface InstructorFinalEvaluationEntry {
+  id: string;
+  title: string;
+  type: string;
+  course: {
+    id: string;
+    title: string;
+    slug?: string;
+    language?: string;
+    status: string;
+    detailUrl?: string;
+  };
+  statistics: {
+    totalQuestions: number;
+    totalSubmissions: number;
+    passedCount: number;
+    failedCount: number;
+    passedStudents?: number;
+  };
+  passingScore?: number;
+  durationMinutes?: number;
+  maxAttempts?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  links?: {
+    api?: string;
+    detail?: string;
+    edit?: string;
+  };
+}
+
+export interface InstructorFinalEvaluationsResponse {
+  evaluations: InstructorFinalEvaluationEntry[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    pages?: number;
+    limit?: number;
+  } | null;
+}
+
 // Interface pour l'évaluation finale
 export interface FinalEvaluation {
   id?: string;
@@ -270,6 +311,94 @@ export class EvaluationService {
     });
     return response.data;
   }
+
+  static async getInstructorFinalEvaluations(params?: {
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<InstructorFinalEvaluationsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/evaluations/instructor/finals${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const payload = response?.data ?? response ?? {};
+    const rawEvaluations = Array.isArray(payload.evaluations)
+      ? payload.evaluations
+      : Array.isArray(payload.data?.evaluations)
+        ? payload.data.evaluations
+        : [];
+
+    const normalized = rawEvaluations.map(normalizeInstructorFinalEvaluation);
+    const pagination = payload.pagination ?? payload.data?.pagination ?? null;
+
+    return {
+      evaluations: normalized,
+      pagination,
+    };
+  }
+}
+
+function normalizeInstructorFinalEvaluation(raw: any): InstructorFinalEvaluationEntry {
+  const course = raw?.course ?? {};
+  const stats = raw?.statistics ?? {};
+
+  const courseStatus = String(course.status ?? raw?.course_status ?? 'draft').toLowerCase();
+
+  return {
+    id: String(raw?.id ?? raw?.evaluation_id ?? ''),
+    title: String(raw?.evaluation_title ?? raw?.title ?? 'Évaluation finale'),
+    type: String(raw?.evaluation_type ?? raw?.type ?? 'final'),
+    course: {
+      id: String(course?.id ?? raw?.course_id ?? ''),
+      title: String(course?.title ?? raw?.course_title ?? 'Cours sans titre'),
+      slug: course?.slug ?? raw?.course_slug ?? undefined,
+      language: course?.language ?? raw?.course_language ?? undefined,
+      status: courseStatus,
+      detailUrl:
+        course?.detail_url ??
+        course?.detailUrl ??
+        raw?.course_detail_url ??
+        (course?.slug || raw?.course_slug
+          ? `/dashboard/instructor/courses/${course?.slug ?? raw?.course_slug}`
+          : raw?.course_id
+            ? `/dashboard/instructor/courses/${raw.course_id}`
+            : undefined),
+    },
+    statistics: {
+      totalQuestions: Number(stats?.total_questions ?? raw?.total_questions ?? 0),
+      totalSubmissions: Number(stats?.total_submissions ?? raw?.total_submissions ?? 0),
+      passedCount: Number(stats?.passed_count ?? raw?.passed_count ?? 0),
+      failedCount: Number(stats?.failed_count ?? raw?.failed_count ?? 0),
+      passedStudents: Number(stats?.passed_students ?? raw?.passed_students ?? raw?.passed_count ?? 0),
+    },
+    passingScore: raw?.passing_score ?? raw?.passingScore ?? undefined,
+    durationMinutes: raw?.duration_minutes ?? raw?.durationMinutes ?? undefined,
+    maxAttempts: raw?.max_attempts ?? raw?.maxAttempts ?? undefined,
+    createdAt: raw?.created_at ?? raw?.createdAt ?? undefined,
+    updatedAt: raw?.updated_at ?? raw?.updatedAt ?? undefined,
+    links: {
+      api:
+        raw?.links?.api ??
+        raw?.api_url ??
+        (raw?.id ? `/api/evaluations/${raw.id}` : undefined),
+      detail:
+        raw?.links?.detail ??
+        raw?.detail_url ??
+        (raw?.id ? `/dashboard/instructor/evaluations/${raw.id}` : undefined),
+      edit:
+        raw?.links?.edit ??
+        raw?.edit_url ??
+        (raw?.id ? `/dashboard/instructor/evaluations/${raw.id}/edit` : undefined),
+    },
+  };
 }
 
 // Export par défaut
