@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, 
-  Search, 
-  Filter, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  BookOpen,
+  Search,
+  Filter,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertTriangle,
   Users,
   Star,
@@ -17,10 +17,13 @@ import {
   Edit,
   Trash2,
   Shield,
-  Award
+  Award,
+  Loader2,
 } from 'lucide-react';
+import Modal from '../../ui/Modal';
 import DataTable from '../shared/DataTable';
 import { adminService } from '../../../lib/services/adminService';
+import { courseService } from '../../../lib/services/courseService';
 import toast from '../../../lib/utils/toast';
 
 interface Course {
@@ -44,6 +47,25 @@ interface Course {
   hasCertificate: boolean;
 }
 
+const toDisplayLevel = (raw?: string): 'Débutant' | 'Intermédiaire' | 'Avancé' => {
+  if (!raw) return 'Débutant';
+  const value = raw.toLowerCase();
+  if (['intermediate', 'intermédiaire'].includes(value)) return 'Intermédiaire';
+  if (['advanced', 'avancé'].includes(value)) return 'Avancé';
+  return 'Débutant';
+};
+
+const toApiLevel = (display: 'Débutant' | 'Intermédiaire' | 'Avancé'): string => {
+  switch (display) {
+    case 'Intermédiaire':
+      return 'intermediate';
+    case 'Avancé':
+      return 'advanced';
+    default:
+      return 'beginner';
+  }
+};
+
 export default function CourseModeration() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
@@ -52,67 +74,81 @@ export default function CourseModeration() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'pending' | 'approved' | 'rejected' | 'published'>('all');
   const [filterLevel, setFilterLevel] = useState<'all' | 'Débutant' | 'Intermédiaire' | 'Avancé'>('all');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [viewCourse, setViewCourse] = useState<Course | null>(null);
+const [editCourse, setEditCourse] = useState<Course | null>(null);
+const [editForm, setEditForm] = useState({
+  title: '',
+  shortDescription: '',
+  description: '',
+  level: 'Débutant' as 'Débutant' | 'Intermédiaire' | 'Avancé',
+  price: 0,
+  isPublished: false,
+});
+const [editLoading, setEditLoading] = useState(false);
+const [editSaving, setEditSaving] = useState(false);
 
-  useEffect(() => {
-    const loadCourses = async () => {
-      try {
-        setLoading(true);
-        
-        // Récupérer les cours depuis l'API
-        const response = await adminService.getAllCourses();
-        
-        // Extraire les cours de la réponse (format avec pagination)
-        const coursesData: any[] = response.courses || [];
-        
-        // Normaliser les données de l'API vers le format Course
-        const apiCourses: Course[] = coursesData.map((course: any) => ({
-          id: String(course.id || course.course_id || ''),
-          title: course.title || course.course_title || 'Sans titre',
-          description: course.description || course.short_description || '',
-          instructor: course.instructor_name || 
-                     (course.instructor_first_name && course.instructor_last_name 
-                       ? `${course.instructor_first_name} ${course.instructor_last_name}` 
-                       : course.instructor || 'Instructeur inconnu'),
-          instructorEmail: course.instructor_email || course.instructorEmail || '',
-          category: course.category_name || course.category || 'Non catégorisé',
-          level: course.level || 'Débutant',
-          status: course.status || 'draft',
-          createdAt: course.created_at || course.createdAt || new Date().toISOString(),
-          updatedAt: course.updated_at || course.updatedAt || course.created_at || new Date().toISOString(),
-          studentsEnrolled: course.students_enrolled || course.enrollment_count || course.studentsEnrolled || 0,
-          averageRating: course.average_rating || course.rating || course.averageRating || 0,
-          totalLessons: course.total_lessons || course.lessons_count || course.totalLessons || 0,
-          duration: course.duration || course.duration_minutes 
-            ? `${Math.round((course.duration_minutes || course.duration || 0) / 60)} heures` 
-            : 'Non spécifié',
-          price: course.price || course.price_amount || 0,
-          tags: course.tags || course.tag_names || [],
-          isPublic: course.is_public !== undefined ? course.is_public : (course.isPublic !== undefined ? course.isPublic : true),
-          hasCertificate: course.has_certificate !== undefined ? course.has_certificate : (course.hasCertificate !== undefined ? course.hasCertificate : false)
-        }));
-        
-        setCourses(apiCourses);
-        setFilteredCourses(apiCourses);
-      } catch (error: any) {
-        console.error('Erreur lors du chargement des cours:', error);
-        
-        // Ne pas afficher d'erreur pour les 404 (route non trouvée) - c'est normal si l'endpoint n'existe pas encore
-        if (error.status !== 404) {
-          toast.error('Erreur', error.message || 'Impossible de charger les cours depuis la base de données');
-        } else {
-          console.warn('⚠️ [CourseModeration] Endpoint non disponible, affichage d\'une liste vide');
-        }
-        
-        // En cas d'erreur, initialiser avec un tableau vide (pas de fallback)
-        setCourses([]);
-        setFilteredCourses([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+const loadCourses = useCallback(async () => {
+  try {
+    setLoading(true);
 
-    loadCourses();
-  }, []);
+    const response = await adminService.getAllCourses();
+    const coursesData: any[] = response.courses || [];
+
+    const apiCourses: Course[] = coursesData.map((course: any) => ({
+      id: String(course.id || course.course_id || ''),
+      title: course.title || course.course_title || 'Sans titre',
+      description: course.description || course.short_description || '',
+      instructor:
+        course.instructor_name ||
+        (course.instructor_first_name && course.instructor_last_name
+          ? `${course.instructor_first_name} ${course.instructor_last_name}`
+          : course.instructor || 'Instructeur inconnu'),
+      instructorEmail: course.instructor_email || course.instructorEmail || '',
+      category: course.category_name || course.category || 'Non catégorisé',
+      level: toDisplayLevel(course.level || course.difficulty),
+      status: course.status || 'draft',
+      createdAt: course.created_at || course.createdAt || new Date().toISOString(),
+      updatedAt: course.updated_at || course.updatedAt || course.created_at || new Date().toISOString(),
+      studentsEnrolled: course.students_enrolled || course.enrollment_count || course.studentsEnrolled || 0,
+      averageRating: course.average_rating || course.rating || course.averageRating || 0,
+      totalLessons: course.total_lessons || course.lessons_count || course.totalLessons || 0,
+      duration:
+        course.duration || course.duration_minutes
+          ? `${Math.round((course.duration_minutes || course.duration || 0) / 60)} heures`
+          : 'Non spécifié',
+      price: course.price || course.price_amount || 0,
+      tags: course.tags || course.tag_names || [],
+      isPublic:
+        course.is_public !== undefined ? course.is_public : course.isPublic !== undefined ? course.isPublic : true,
+      hasCertificate:
+        course.has_certificate !== undefined
+          ? course.has_certificate
+          : course.hasCertificate !== undefined
+          ? course.hasCertificate
+          : false,
+    }));
+
+    setCourses(apiCourses);
+    setFilteredCourses(apiCourses);
+  } catch (error: any) {
+    console.error('Erreur lors du chargement des cours:', error);
+
+    if (error.status !== 404) {
+      toast.error('Erreur', error.message || 'Impossible de charger les cours depuis la base de données');
+    } else {
+      console.warn('⚠️ [CourseModeration] Endpoint non disponible, affichage d\'une liste vide');
+    }
+
+    setCourses([]);
+    setFilteredCourses([]);
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+useEffect(() => {
+  loadCourses();
+}, [loadCourses]);
 
   useEffect(() => {
     let filtered = courses;
@@ -207,15 +243,90 @@ export default function CourseModeration() {
     }
   };
 
-  const handleCourseAction = (courseId: string, action: string) => {
-    console.log(`Action ${action} sur le cours ${courseId}`);
-    // Implémenter les actions selon le type
-  };
+const handleCourseAction = async (courseId: string, action: string) => {
+  const course = courses.find((c) => c.id === courseId);
+  if (!course) return;
+
+  switch (action) {
+    case 'view':
+      setViewCourse(course);
+      break;
+    case 'edit':
+      try {
+        setEditCourse(course);
+        setEditLoading(true);
+        const details = await adminService.getCourseForApproval(courseId);
+        setEditForm({
+          title: details.title || course.title,
+          shortDescription: details.short_description || details.shortDescription || course.description || '',
+          description: details.description || course.description || '',
+          level: toDisplayLevel(details.level || details.difficulty || course.level),
+          price: Number(details.price ?? course.price ?? 0),
+          isPublished:
+            details.is_published !== undefined
+              ? Boolean(details.is_published)
+              : ['published', 'approved'].includes((details.status || course.status || '').toLowerCase()),
+        });
+      } catch (error: any) {
+        console.error('Erreur lors du chargement du cours:', error);
+        toast.error('Erreur', error.message || 'Impossible de charger les détails du cours.');
+        setEditCourse(null);
+      } finally {
+        setEditLoading(false);
+      }
+      break;
+    case 'approve':
+    case 'reject':
+      console.log(`Action ${action} sur le cours ${courseId}`);
+      toast.info('Fonctionnalité à venir', 'La modération avancée sera bientôt disponible.');
+      break;
+    default:
+      console.log(`Action ${action} sur le cours ${courseId}`);
+  }
+};
 
   const handleBulkAction = (action: string) => {
     console.log(`Action en masse ${action} sur ${selectedCourses.length} cours`);
     // Implémenter les actions en masse
   };
+
+const handleCloseEditModal = () => {
+  setEditCourse(null);
+  setEditLoading(false);
+  setEditSaving(false);
+  setEditForm({
+    title: '',
+    shortDescription: '',
+    description: '',
+    level: 'Débutant',
+    price: 0,
+    isPublished: false,
+  });
+};
+
+const handleSaveEdit = async () => {
+  if (!editCourse) return;
+  try {
+    setEditSaving(true);
+    const payload = {
+      title: editForm.title,
+      shortDescription: editForm.shortDescription,
+      description: editForm.description,
+      level: toApiLevel(editForm.level),
+      price: Number.isFinite(editForm.price) ? editForm.price : 0,
+      isPublished: editForm.isPublished,
+    };
+    await courseService.updateCourse(editCourse.id, payload);
+    toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès.');
+    handleCloseEditModal();
+    await loadCourses();
+  } catch (error: any) {
+    console.error('Erreur lors de la mise à jour du cours:', error);
+    toast.error('Erreur', error.message || 'Impossible de mettre à jour le cours.');
+  } finally {
+    setEditSaving(false);
+  }
+};
 
   if (loading) {
     return (
@@ -493,6 +604,245 @@ export default function CourseModeration() {
         pagination={true}
         pageSize={10}
       />
+
+      {/* Modale de visualisation */}
+      {viewCourse && (
+        <Modal
+          isOpen
+          onClose={() => setViewCourse(null)}
+          title="Détails du cours"
+          size="xl"
+        >
+          <div className="space-y-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">{viewCourse.title}</h3>
+                <p className="text-sm text-gray-500">{viewCourse.instructor}</p>
+              </div>
+              <span className="text-sm text-gray-400">
+                Créé le {new Date(viewCourse.createdAt).toLocaleDateString('fr-FR')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Résumé</h4>
+                <p className="text-sm text-gray-600 whitespace-pre-line">
+                  {viewCourse.description || 'Aucune description fournie.'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50 space-y-2 text-sm text-gray-600">
+                <div className="flex items-center justify-between">
+                  <span>Niveau</span>
+                  {getLevelBadge(viewCourse.level)}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Statut</span>
+                  {getStatusBadge(viewCourse.status)}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Catégorie</span>
+                  <span className="text-gray-800 font-medium">{viewCourse.category}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Prix</span>
+                  <span className="text-gray-800 font-medium">
+                    {viewCourse.price === 0 ? 'Gratuit' : `${viewCourse.price.toLocaleString()} FCFA`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Durée</span>
+                  <span className="text-gray-800 font-medium">{viewCourse.duration}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+              <div className="rounded-lg border border-gray-200 p-4 bg-white">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Users className="h-4 w-4" />
+                  <span>Inscrits</span>
+                </div>
+                <p className="mt-1 text-lg font-semibold text-gray-900">
+                  {viewCourse.studentsEnrolled.toLocaleString()}
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-4 bg-white">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Star className="h-4 w-4" />
+                  <span>Note moyenne</span>
+                </div>
+                <p className="mt-1 text-lg font-semibold text-gray-900">
+                  {viewCourse.averageRating > 0 ? viewCourse.averageRating.toFixed(1) : 'N/A'}
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-4 bg-white">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Leçons</span>
+                </div>
+                <p className="mt-1 text-lg font-semibold text-gray-900">{viewCourse.totalLessons}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-4 bg-white">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Calendar className="h-4 w-4" />
+                  <span>Mis à jour</span>
+                </div>
+                <p className="mt-1 text-lg font-semibold text-gray-900">
+                  {new Date(viewCourse.updatedAt).toLocaleDateString('fr-FR')}
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modale d’édition */}
+      {editCourse && (
+        <Modal
+          isOpen
+          onClose={handleCloseEditModal}
+          title={`Éditer le cours · ${editCourse.title}`}
+          size="xl"
+        >
+          {editLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 className="h-8 w-8 animate-spin text-mdsc-blue-dark" />
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveEdit();
+              }}
+              className="space-y-6"
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre du cours
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.title}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Niveau
+                  </label>
+                  <select
+                    value={editForm.level}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, level: e.target.value as typeof prev.level }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                  >
+                    <option value="Débutant">Débutant</option>
+                    <option value="Intermédiaire">Intermédiaire</option>
+                    <option value="Avancé">Avancé</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prix (FCFA)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editForm.price}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, price: Number(e.target.value) || 0 }))
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description courte
+                  </label>
+                  <textarea
+                    value={editForm.shortDescription}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, shortDescription: e.target.value }))
+                    }
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description principale
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    rows={5}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 bg-gray-50">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Publication</p>
+                  <p className="text-xs text-gray-500">
+                    Permettre aux apprenants de voir ce cours dans le catalogue.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditForm((prev) => ({ ...prev, isPublished: !prev.isPublished }))
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                    editForm.isPublished ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                      editForm.isPublished ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  disabled={editSaving}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-lg bg-mdsc-blue-dark px-5 py-2 text-sm font-medium text-white hover:bg-mdsc-blue-primary transition disabled:opacity-60"
+                  disabled={editSaving}
+                >
+                  {editSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Enregistrement…</span>
+                    </>
+                  ) : (
+                    <span>Enregistrer les modifications</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  FolderOpen, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  FolderOpen,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   EyeOff,
   Search,
-  Building
+  Building,
+  Loader2,
 } from 'lucide-react';
 import { ProfessionalService, Domain } from '../../../lib/services/professionalService';
 import ConfirmModal from '../../ui/ConfirmModal';
@@ -19,17 +20,20 @@ export default function DomainManagement() {
   const { success: showSuccess, error: showError } = useNotification();
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [domainToDelete, setDomainToDelete] = useState<number | null>(null);
+  const [processingDomainId, setProcessingDomainId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     icon: 'folder-open',
     color: '#3b82f6',
+    is_active: true,
   });
 
   useEffect(() => {
@@ -40,31 +44,49 @@ export default function DomainManagement() {
     try {
       setLoading(true);
       const data = await ProfessionalService.getDomains();
-      setDomains(data);
+      setDomains(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur lors du chargement des domaines:', error);
+      showError('Erreur', extractErrorMessage(error, 'Impossible de charger les domaines.'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshDomains = async () => {
+    try {
+      setReloading(true);
+      await loadDomains();
+    } finally {
+      setReloading(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        icon: formData.icon,
+        color: formData.color,
+        is_active: formData.is_active,
+      };
+
       if (editingDomain) {
-        await ProfessionalService.updateDomain(editingDomain.id, formData);
+        await ProfessionalService.updateDomain(editingDomain.id, payload);
         showSuccess('Domaine mis à jour', 'Le domaine a été mis à jour avec succès');
       } else {
-        await ProfessionalService.createDomain(formData);
+        await ProfessionalService.createDomain(payload);
         showSuccess('Domaine créé', 'Le domaine a été créé avec succès');
       }
       setShowCreateModal(false);
       setEditingDomain(null);
-      setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6' });
-      loadDomains();
+      setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6', is_active: true });
+      await refreshDomains();
     } catch (error) {
       console.error('Erreur:', error);
-      showError('Erreur', 'Erreur lors de l\'opération');
+      showError('Erreur', extractErrorMessage(error, 'Erreur lors de l’opération.'));
     }
   };
 
@@ -79,12 +101,12 @@ export default function DomainManagement() {
     try {
       await ProfessionalService.deleteDomain(domainToDelete);
       showSuccess('Domaine supprimé', 'Le domaine a été supprimé avec succès');
-      loadDomains();
+      await refreshDomains();
       setShowDeleteModal(false);
       setDomainToDelete(null);
     } catch (error) {
       console.error('Erreur:', error);
-      showError('Erreur', 'Erreur lors de la suppression');
+      showError('Erreur', extractErrorMessage(error, 'Erreur lors de la suppression.'));
     }
   };
 
@@ -95,8 +117,26 @@ export default function DomainManagement() {
       description: domain.description,
       icon: domain.icon,
       color: domain.color,
+      is_active: domain.is_active,
     });
     setShowCreateModal(true);
+  };
+
+  const handleToggleActive = async (domain: Domain) => {
+    try {
+      setProcessingDomainId(domain.id);
+      await ProfessionalService.updateDomain(domain.id, { is_active: !domain.is_active });
+      showSuccess(
+        'Statut mis à jour',
+        domain.is_active ? 'Le domaine est désormais inactif.' : 'Le domaine a été activé.',
+      );
+      await refreshDomains();
+    } catch (error) {
+      console.error('Erreur lors du changement de statut du domaine:', error);
+      showError('Erreur', extractErrorMessage(error, 'Impossible de changer le statut du domaine.'));
+    } finally {
+      setProcessingDomainId(null);
+    }
   };
 
   const filteredDomains = domains.filter(domain =>
@@ -135,17 +175,28 @@ export default function DomainManagement() {
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Domaines</h1>
           <p className="text-gray-600 mt-1">Organisez vos formations par domaines professionnels</p>
         </div>
-        <button
-          onClick={() => {
-            setShowCreateModal(true);
-            setEditingDomain(null);
-            setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6' });
-          }}
-          className="btn-mdsc-primary flex items-center space-x-2"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Nouveau Domaine</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refreshDomains}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition disabled:opacity-60"
+            disabled={reloading}
+            title="Rafraîchir la liste"
+          >
+            {reloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            <span>Actualiser</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowCreateModal(true);
+              setEditingDomain(null);
+              setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6', is_active: true });
+            }}
+            className="btn-mdsc-primary flex items-center space-x-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Nouveau Domaine</span>
+          </button>
+        </div>
       </div>
 
       {/* Recherche */}
@@ -170,13 +221,27 @@ export default function DomainManagement() {
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-4">
-              <div 
+              <div
                 className="p-3 rounded-lg"
                 style={{ backgroundColor: `${getColorClass(domain.color)}20`, color: getColorClass(domain.color) }}
               >
                 {getIconComponent(domain.icon, 28)}
               </div>
               <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleToggleActive(domain)}
+                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                  title={domain.is_active ? 'Désactiver' : 'Activer'}
+                  disabled={processingDomainId === domain.id}
+                >
+                  {processingDomainId === domain.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : domain.is_active ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
                 <button
                   onClick={() => handleEdit(domain)}
                   className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
@@ -199,17 +264,13 @@ export default function DomainManagement() {
             
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <div className="flex items-center space-x-2">
-                {domain.is_active ? (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <Eye className="h-3 w-3 mr-1" />
-                    Actif
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    <EyeOff className="h-3 w-3 mr-1" />
-                    Inactif
-                  </span>
-                )}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    domain.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {domain.is_active ? 'Actif' : 'Inactif'}
+                </span>
               </div>
               <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                 Voir modules
@@ -228,7 +289,11 @@ export default function DomainManagement() {
           </p>
           {!searchTerm && (
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                setShowCreateModal(true);
+                setEditingDomain(null);
+                setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6', is_active: true });
+              }}
               className="btn-mdsc-primary inline-flex items-center space-x-2"
             >
               <Plus className="h-5 w-5" />
@@ -305,12 +370,35 @@ export default function DomainManagement() {
                 </div>
               </div>
 
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 bg-gray-50">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Domaine actif</p>
+                  <p className="text-xs text-gray-500">
+                    Un domaine inactif n’apparaîtra plus dans les filtres ni lors de la création de cours.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, is_active: !prev.is_active }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                    formData.is_active ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                      formData.is_active ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
                     setEditingDomain(null);
+                    setFormData({ name: '', description: '', icon: 'folder-open', color: '#3b82f6', is_active: true });
                   }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -342,4 +430,15 @@ export default function DomainManagement() {
       />
     </div>
   );
+}
+
+function extractErrorMessage(error: any, fallback: string) {
+  if (!error) return fallback;
+  if (typeof error === 'string') return error;
+  if (error?.status === 401 || error?.message?.toLowerCase?.().includes('non autorisé')) {
+    return 'Session expirée. Merci de vous reconnecter.';
+  }
+  if (error?.data?.message) return error.data.message;
+  if (error?.message) return error.message;
+  return fallback;
 }
