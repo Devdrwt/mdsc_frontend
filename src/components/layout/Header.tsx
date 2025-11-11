@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../ui/Logo';
 import { Menu, X, Moon, Sun, Search, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useTheme } from '../../lib/context/ThemeContext';
 import { useAuthStore } from '../../lib/stores/authStore';
+import StudentService from '../../lib/services/studentService';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggle } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -36,6 +37,66 @@ export default function Header() {
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
+  };
+
+  // Synchroniser les changements de thème avec le backend
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    if (!isAuthenticated || !user || user.role !== 'student') {
+      return;
+    }
+
+    const handleThemeChange = async (preference?: 'light' | 'dark' | 'system') => {
+      // Annuler le timeout précédent si il existe
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Utiliser un debounce pour éviter trop de requêtes
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          const currentPreference = preference || (localStorage.getItem('mdsc-theme') as 'light' | 'dark' | 'system' | null);
+          if (currentPreference && (currentPreference === 'light' || currentPreference === 'dark' || currentPreference === 'system')) {
+            await StudentService.updatePreferences({ theme: currentPreference });
+          }
+        } catch (error) {
+          console.warn('Impossible de sauvegarder la préférence de thème dans le backend:', error);
+        }
+        saveTimeoutRef.current = null;
+      }, 500);
+    };
+
+    // Écouter l'événement personnalisé émis par ThemeContext
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ preference: 'light' | 'dark' | 'system' }>;
+      if (customEvent.detail?.preference) {
+        handleThemeChange(customEvent.detail.preference);
+      }
+    };
+
+    // Écouter les événements storage (changements depuis d'autres onglets)
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === 'mdsc-theme' && e.newValue) {
+        handleThemeChange(e.newValue as 'light' | 'dark' | 'system');
+      }
+    };
+
+    window.addEventListener('mdsc-theme-changed', handleCustomEvent);
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      window.removeEventListener('mdsc-theme-changed', handleCustomEvent);
+      window.removeEventListener('storage', handleStorageEvent);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, [isAuthenticated, user]);
+
+  const handleThemeToggle = () => {
+    toggle();
   };
 
   const isHome = pathname === '/';
@@ -72,12 +133,16 @@ export default function Header() {
           {/* Boutons d'action */}
           <div className="hidden md:flex items-center space-x-2">
             <button 
-              onClick={toggleTheme}
-              className="p-2.5 text-mdsc-blue-dark hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-100 group"
-              aria-label="Toggle dark mode"
-              title="Mode clair"
+              onClick={handleThemeToggle}
+              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group"
+              aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
+              title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
             >
-              <Sun className="h-5 w-5" />
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </button>
             {isAuthenticated && user ? (
               <>
@@ -164,13 +229,22 @@ export default function Header() {
                 {item.name}
               </a>
             ))}
-            <div className="pt-2 border-t border-gray-200 space-y-2">
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <button 
-                onClick={toggleTheme}
-                className="w-full px-4 py-3 text-left text-mdsc-blue-dark hover:text-[#D79A49] rounded-lg hover:bg-orange-200 transition-all duration-200 flex items-center gap-3"
+                onClick={handleThemeToggle}
+                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] rounded-lg hover:bg-orange-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center gap-3"
               >
+                {theme === 'dark' ? (
+                  <>
                     <Sun className="h-5 w-5" />
                     Mode clair
+                  </>
+                ) : (
+                  <>
+                    <Moon className="h-5 w-5" />
+                    Mode sombre
+                  </>
+                )}
               </button>
               {isAuthenticated && user ? (
                 <>

@@ -546,9 +546,9 @@ export default function CoursePlayer({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row min-h-screen bg-gray-50 ${className}`}>
+    <div className={`flex flex-col lg:flex-row min-h-screen bg-gray-50 dark:bg-gray-900 ${className}`}>
       {/* Sidebar - Modules et Leçons */}
-      <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto max-h-[50vh] lg:max-h-none flex-shrink-0">
+      <aside className="w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 overflow-y-auto max-h-[50vh] lg:max-h-none flex-shrink-0">
         <div className="p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
           <h2 className="text-xl font-bold mb-2">{course.title}</h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -601,22 +601,22 @@ export default function CoursePlayer({
             const isExpanded = selectedModuleId === module.id;
 
             return (
-              <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div key={module.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setSelectedModuleId(isExpanded ? null : module.id)}
-                  className="w-full p-4 text-left hover:bg-gray-50 transition-colors flex items-center justify-between"
+                  className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{module.title}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{module.title}</h3>
                       {moduleProgress === 100 && (
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mb-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       {module.lessons?.length || 0} leçons • {module.lessons?.reduce((sum, l) => sum + getLessonDurationMinutes(l), 0) || 0} min
                     </p>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                       <div
                         className="bg-mdsc-blue-primary h-1.5 rounded-full transition-all"
                         style={{ width: `${moduleProgress}%` }}
@@ -624,25 +624,25 @@ export default function CoursePlayer({
                     </div>
                   </div>
                   <ChevronRight
-                    className={`h-5 w-5 text-gray-400 transition-transform ${
+                    className={`h-5 w-5 text-gray-400 dark:text-gray-500 transition-transform ${
                       isExpanded ? 'rotate-90' : ''
                     }`}
                   />
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-gray-200 bg-gray-50">
+                  <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                     {/* Quiz du module (si disponible et module complété) */}
                     {isModuleCompleted(module) && moduleQuizzes.has(module.id) && (
                       <button
                         onClick={() => handleQuizClick(module.id)}
-                        className="w-full p-3 text-left text-sm transition-colors border-b border-gray-200 bg-purple-50 hover:bg-purple-100"
+                        className="w-full p-3 text-left text-sm transition-colors border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50"
                       >
                         <div className="flex items-center space-x-2">
-                          <Award className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                          <Award className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
                           <div className="flex-1">
-                            <p className="font-medium text-purple-900">Quiz du module</p>
-                            <p className="text-xs text-purple-600">Passer le quiz pour obtenir un badge</p>
+                            <p className="font-medium text-purple-900 dark:text-purple-300">Quiz du module</p>
+                            <p className="text-xs text-purple-600 dark:text-purple-400">Passer le quiz pour obtenir un badge</p>
                           </div>
                         </div>
                       </button>
@@ -660,10 +660,10 @@ export default function CoursePlayer({
                           onClick={() => !isLocked && handleLessonSelect(lesson)}
                           disabled={isLocked}
                           className={`
-                            w-full p-3 text-left text-sm transition-colors border-b border-gray-200 last:border-b-0
-                            ${isSelected ? 'bg-mdsc-blue-primary text-white' : 'hover:bg-white'}
+                            w-full p-3 text-left text-sm transition-colors border-b border-gray-200 dark:border-gray-700 last:border-b-0
+                            ${isSelected ? 'bg-mdsc-blue-primary text-white dark:bg-mdsc-blue-primary' : 'hover:bg-white dark:hover:bg-gray-800'}
                             ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                            ${isCompleted && !isSelected ? 'bg-green-50' : ''}
+                            ${isCompleted && !isSelected ? 'bg-green-50 dark:bg-green-900/20' : ''}
                           `}
                         >
                           <div className="flex items-center space-x-2">
@@ -675,18 +675,18 @@ export default function CoursePlayer({
                               <div className="h-4 w-4 flex-shrink-0 rounded-full border-2 border-gray-300" />
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+                              <p className={`font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
                                 {lesson.title}
                               </p>
                               <div className="flex items-center space-x-2 mt-1">
-                                <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                                <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
                                   {lesson.duration || 0} min
                                 </p>
                                 {isLocked && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     isSelected 
                                       ? 'bg-white/20 text-white' 
-                                      : 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
                                   }`}>
                                     Verrouillée
                                   </span>
@@ -695,7 +695,7 @@ export default function CoursePlayer({
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     isSelected 
                                       ? 'bg-white/20 text-white' 
-                                      : 'bg-gray-200 text-gray-600'
+                                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                                   }`}>
                                     {lesson.contentType}
                                   </span>
@@ -715,8 +715,8 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
+        <div className="sticky top-0 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
             <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
               <Image
@@ -736,8 +736,8 @@ export default function CoursePlayer({
               Retour à mes cours
             </Link>
           </div>
-          <div className="text-xs sm:text-sm text-gray-600">
-            <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
+          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+            <span className="font-semibold text-gray-900 dark:text-white">{Math.round(courseProgress)}%</span>
             <span className="ml-1">complété</span>
           </div>
         </div>

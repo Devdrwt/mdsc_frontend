@@ -7,6 +7,7 @@ import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useAuthStore } from '../../../../lib/stores/authStore';
 import StudentService, { StudentPreferences } from '../../../../lib/services/studentService';
 import toast from '../../../../lib/utils/toast';
+import { useTheme } from '../../../../lib/context/ThemeContext';
 import {
   UserCircle,
   BookOpen,
@@ -80,6 +81,7 @@ const SettingToggle = ({
 
 export default function StudentSettingsPage() {
   const { user } = useAuthStore();
+  const { theme, setPreference } = useTheme();
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
     courseReminders: true,
     quizReminders: true,
@@ -117,7 +119,15 @@ export default function StudentSettingsPage() {
         const prefs = await StudentService.getPreferences();
         if (!mounted || !prefs) return;
         if (prefs.language) setCommunicationLanguage(prefs.language);
-        if (prefs.theme) setThemePreference(prefs.theme);
+        
+        // Synchroniser le thème avec ThemeContext
+        const storedTheme = localStorage.getItem('mdsc-theme') as 'light' | 'dark' | 'system' | null;
+        const themeToUse = prefs.theme || storedTheme || 'system';
+        if (themeToUse === 'light' || themeToUse === 'dark' || themeToUse === 'system') {
+          setThemePreference(themeToUse);
+          setPreference(themeToUse);
+        }
+        
         if ((prefs as any).notifications) {
           const prefNotifs = (prefs as any).notifications;
           setNotificationPreferences((prev) => ({
@@ -148,25 +158,7 @@ export default function StudentSettingsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const applyTheme = (value: 'light' | 'dark') => {
-      document.documentElement.classList.toggle('dark', value === 'dark');
-      document.documentElement.dataset.theme = value;
-    };
-
-    if (themePreference === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyTheme(prefersDark ? 'dark' : 'light');
-      localStorage.setItem('mdsc-theme', 'system');
-    } else {
-      applyTheme(themePreference);
-      localStorage.setItem('mdsc-theme', themePreference);
-    }
-  }, [themePreference]);
+  }, [setPreference]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -177,6 +169,12 @@ export default function StudentSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      
+      // Mettre à jour le thème via ThemeContext
+      if (themePreference === 'light' || themePreference === 'dark' || themePreference === 'system') {
+        setPreference(themePreference);
+      }
+      
       const payload: StudentPreferences = {
         language: communicationLanguage,
         theme: themePreference,
@@ -475,7 +473,13 @@ export default function StudentSettingsPage() {
                         <button
                           key={value}
                           type="button"
-                          onClick={() => setThemePreference(value as typeof themePreference)}
+                          onClick={() => {
+                            const newTheme = value as typeof themePreference;
+                            setThemePreference(newTheme);
+                            if (newTheme === 'light' || newTheme === 'dark' || newTheme === 'system') {
+                              setPreference(newTheme);
+                            }
+                          }}
                           className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
                             themePreference === value
                               ? 'border-mdsc-blue-primary bg-blue-50/70'

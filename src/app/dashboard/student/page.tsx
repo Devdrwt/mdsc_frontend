@@ -420,6 +420,7 @@ export default function StudentDashboard() {
           if (entries.length > 0) {
             setRecentActivity((entries as StudentActivityEntry[]).map((entry) => {
               const iconMap: Record<string, { icon: React.ComponentType<any>; color: string; title: string }> = {
+                course_enrolled: { icon: BookOpen, color: 'text-indigo-500', title: 'Inscription réussie' },
                 course_started: { icon: Play, color: 'text-blue-500', title: 'Cours commencé' },
                 course_completed: { icon: CheckCircle, color: 'text-green-500', title: 'Cours terminé' },
                 quiz_passed: { icon: Star, color: 'text-yellow-500', title: 'Quiz réussi' },
@@ -433,19 +434,30 @@ export default function StudentDashboard() {
                 color: 'text-gray-500',
                 title: 'Activité',
               };
+              // Le backend envoie activity_type, mais on peut aussi avoir type
+              const activityType = entry.type || (entry as any).activity_type || 'unknown';
               const description =
                 entry.description ||
                 entry.metadata?.message ||
                 entry.metadata?.description ||
+                entry.metadata?.courseTitle ||
                 'Activité enregistrée';
+              
+              // Utiliser le type d'activité pour trouver la bonne configuration
+              const activityConfig = iconMap[activityType] ?? {
+                icon: Play,
+                color: 'text-gray-500',
+                title: 'Activité',
+              };
+              
               return {
                 id: entry.id,
-                type: entry.type,
-                title: config.title,
+                type: activityType,
+                title: activityConfig.title,
                 description,
                 timestamp: formatDateTime(entry.created_at),
-                icon: config.icon,
-                color: config.color,
+                icon: activityConfig.icon,
+                color: activityConfig.color,
                 points: entry.points,
               };
             }));
@@ -702,9 +714,13 @@ export default function StudentDashboard() {
                     </div>
                 ))}
                 {courseCards.length > 3 && (
-                  <button className="w-full text-center py-2 text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors">
-                    Voir tous les cours ({courseCards.length})
-                  </button>
+                  <a 
+                    href="/dashboard/student/courses"
+                    className="w-full text-center py-2 text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors flex items-center justify-center space-x-1"
+                  >
+                    <span>Voir tous les cours ({courseCards.length})</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
                 )}
               </div>
             </div>

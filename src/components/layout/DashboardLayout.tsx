@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Menu, 
@@ -32,6 +32,7 @@ import { useAuthStore } from '../../lib/stores/authStore';
 import NotificationContainer from '../ui/NotificationContainer';
 import Image from 'next/image';
 import StudentService from '../../lib/services/studentService';
+import { useTheme } from '../../lib/context/ThemeContext';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -51,12 +52,11 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
-  const [themePreference, setThemePreference] = useState<'light' | 'dark' | 'system'>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { theme, setPreference, toggle: toggleTheme } = useTheme();
 
   // Navigation items par rôle
   const getNavigationItems = (): NavigationItem[] => {
@@ -166,15 +166,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
 
   const colors = getRoleColors();
 
-  // Gestion centralisée des préférences affichage/langue
-  const applyResolvedTheme = useCallback((value: 'light' | 'dark') => {
-    setResolvedTheme(value);
-    if (typeof document !== 'undefined') {
-      document.documentElement.classList.toggle('dark', value === 'dark');
-      document.documentElement.dataset.theme = value;
-    }
-  }, []);
-
+  // Charger les préférences utilisateur (langue uniquement, thème géré par ThemeContext)
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -183,11 +175,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     let mounted = true;
 
     const loadPreferences = async () => {
-      localStorage.removeItem('theme');
-      const storedThemePref = localStorage.getItem('mdsc-theme') as 'light' | 'dark' | 'system' | null;
       const storedLanguage = localStorage.getItem('mdsc-language') as 'fr' | 'en' | null;
-
-      let nextThemePref: 'light' | 'dark' | 'system' = storedThemePref ?? 'system';
       let nextLanguage: 'fr' | 'en' = storedLanguage ?? 'fr';
 
       if (userRole === 'student') {
@@ -197,9 +185,12 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             return;
           }
 
-          if (!storedThemePref && prefs.theme) {
-            nextThemePref = prefs.theme;
-            localStorage.setItem('mdsc-theme', prefs.theme);
+          // Synchroniser le thème avec ThemeContext si disponible depuis le backend
+          if (prefs.theme && (prefs.theme === 'light' || prefs.theme === 'dark' || prefs.theme === 'system')) {
+            const currentStored = localStorage.getItem('mdsc-theme');
+            if (!currentStored || currentStored !== prefs.theme) {
+              setPreference(prefs.theme);
+            }
           }
 
           if (!storedLanguage && prefs.language) {
@@ -212,7 +203,6 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       }
 
       if (mounted) {
-        setThemePreference(nextThemePref);
         setLanguage(nextLanguage);
       }
     };
@@ -222,34 +212,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     return () => {
       mounted = false;
     };
-  }, [userRole]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    localStorage.setItem('mdsc-theme', themePreference);
-
-    if (themePreference === 'system') {
-      const media = window.matchMedia('(prefers-color-scheme: dark)');
-      const applySystemTheme = (matches: boolean) => {
-        applyResolvedTheme(matches ? 'dark' : 'light');
-      };
-
-      applySystemTheme(media.matches);
-
-      const listener = (event: MediaQueryListEvent) => applySystemTheme(event.matches);
-      media.addEventListener('change', listener);
-
-      return () => {
-        media.removeEventListener('change', listener);
-      };
-    }
-
-    applyResolvedTheme(themePreference);
-    return undefined;
-  }, [themePreference, applyResolvedTheme]);
+  }, [userRole, setPreference]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -275,15 +238,64 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     openActiveSubmenu();
   }, [pathname]);
 
-  const toggleTheme = () => {
-    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
-    setThemePreference(nextTheme);
-
-    if (userRole === 'student') {
-      StudentService.updatePreferences({ theme: nextTheme }).catch((error) => {
-        console.warn('Impossible de sauvegarder la préférence de thème.', error);
-      });
+  // Synchroniser les changements de thème avec le backend
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    if (userRole !== 'student') {
+      return;
     }
+
+    const handleThemeChange = async (preference?: 'light' | 'dark' | 'system') => {
+      // Annuler le timeout précédent si il existe
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // Utiliser un debounce pour éviter trop de requêtes
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          const currentPreference = preference || (localStorage.getItem('mdsc-theme') as 'light' | 'dark' | 'system' | null);
+          if (currentPreference && (currentPreference === 'light' || currentPreference === 'dark' || currentPreference === 'system')) {
+            await StudentService.updatePreferences({ theme: currentPreference });
+          }
+        } catch (error) {
+          console.warn('Impossible de sauvegarder la préférence de thème dans le backend:', error);
+        }
+        saveTimeoutRef.current = null;
+      }, 500);
+    };
+
+    // Écouter l'événement personnalisé émis par ThemeContext
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ preference: 'light' | 'dark' | 'system' }>;
+      if (customEvent.detail?.preference) {
+        handleThemeChange(customEvent.detail.preference);
+      }
+    };
+
+    // Écouter les événements storage (changements depuis d'autres onglets)
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === 'mdsc-theme' && e.newValue) {
+        handleThemeChange(e.newValue as 'light' | 'dark' | 'system');
+      }
+    };
+
+    window.addEventListener('mdsc-theme-changed', handleCustomEvent);
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      window.removeEventListener('mdsc-theme-changed', handleCustomEvent);
+      window.removeEventListener('storage', handleStorageEvent);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, [userRole]);
+
+  const handleThemeToggle = () => {
+    toggleTheme();
   };
 
   const handleLogout = async () => {
@@ -479,14 +491,14 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           <div className="flex items-center space-x-4">
             {/* Theme Toggle */}
             <button
-              onClick={toggleTheme}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              title={resolvedTheme === 'light' ? 'Mode sombre' : 'Mode clair'}
+              onClick={handleThemeToggle}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
             >
-              {resolvedTheme === 'light' ? (
-                <Moon className="h-5 w-5" />
-              ) : (
+              {theme === 'dark' ? (
                 <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
               )}
             </button>
 

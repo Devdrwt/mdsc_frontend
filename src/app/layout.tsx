@@ -86,13 +86,18 @@ export default function RootLayout({
                   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                   var theme;
 
-                  if (storedTheme === 'light' || storedTheme === 'dark') {
-                    theme = storedTheme;
-                  } else {
+                  // Si la préférence est 'system' ou null, utiliser la préférence système
+                  if (storedTheme === 'system' || !storedTheme) {
                     theme = prefersDark ? 'dark' : 'light';
-                    if (storedTheme !== 'system') {
+                    if (!storedTheme) {
                       localStorage.setItem('mdsc-theme', 'system');
                     }
+                  } else if (storedTheme === 'light' || storedTheme === 'dark') {
+                    theme = storedTheme;
+                  } else {
+                    // Valeur invalide, réinitialiser à 'system'
+                    theme = prefersDark ? 'dark' : 'light';
+                    localStorage.setItem('mdsc-theme', 'system');
                   }
 
                   root.classList.toggle('dark', theme === 'dark');

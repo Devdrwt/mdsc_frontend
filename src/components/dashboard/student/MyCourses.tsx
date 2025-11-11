@@ -5,6 +5,7 @@ import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2 } 
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
+import toast from '../../../lib/utils/toast';
 
 type StudentCourse = Course & {
   progressValue: number;
@@ -154,9 +155,11 @@ export default function MyCourses() {
       setFilteredCourses(filteredCourses.filter(c => String(c.id) !== String(courseToUnenroll.id)));
       setShowUnenrollModal(false);
       setCourseToUnenroll(null);
-    } catch (error) {
+      toast.success('Désinscription réussie', `Vous avez été désinscrit du cours "${courseToUnenroll.title}"`);
+    } catch (error: any) {
       console.error('Erreur lors de la désinscription:', error);
-      alert('Erreur lors de la désinscription. Veuillez réessayer.');
+      const errorMessage = error?.message || 'Erreur lors de la désinscription. Veuillez réessayer.';
+      toast.error('Erreur de désinscription', errorMessage);
     } finally {
       setUnenrollingCourse(null);
     }

@@ -251,7 +251,7 @@ export default function ProgressPanel() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Chargement de votre progression...</p>
+          <p className="text-gray-600">Chargement de votre progression...</p>
         </div>
       </div>
     );
@@ -261,56 +261,56 @@ export default function ProgressPanel() {
     <div className="space-y-6">
       {/* Statistiques globales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-4">
-              <BookOpen className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-blue-100 rounded-lg mr-4">
+              <BookOpen className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Cours</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{overallStats.totalCourses}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">{overallStats.completedCourses} terminés</p>
+              <p className="text-sm font-medium text-gray-600">Total Cours</p>
+              <p className="text-2xl font-bold text-gray-900">{overallStats.totalCourses}</p>
+              <p className="text-xs text-gray-500">{overallStats.completedCourses} terminés</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
-              <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div className="p-2 bg-green-100 rounded-lg mr-4">
+              <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Progression Moyenne</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{overallStats.averageProgress}%</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">Sur tous les cours</p>
+              <p className="text-sm font-medium text-gray-600">Progression Moyenne</p>
+              <p className="text-2xl font-bold text-gray-900">{overallStats.averageProgress}%</p>
+              <p className="text-xs text-gray-500">Sur tous les cours</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mr-4">
-              <CheckCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-2 bg-purple-100 rounded-lg mr-4">
+              <CheckCircle className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Leçons Complétées</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{overallStats.totalCompletedLessons}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">
+              <p className="text-sm font-medium text-gray-600">Leçons Complétées</p>
+              <p className="text-2xl font-bold text-gray-900">{overallStats.totalCompletedLessons}</p>
+              <p className="text-xs text-gray-500">
                 {overallStats.totalLessons} au total · {formatDuration(overallStats.totalCompletedMinutes)} suivies
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg mr-4">
-              <Zap className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            <div className="p-2 bg-orange-100 rounded-lg mr-4">
+              <Zap className="h-6 w-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">En Cours</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{overallStats.inProgressCourses}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">cours actifs</p>
+              <p className="text-sm font-medium text-gray-600">En Cours</p>
+              <p className="text-2xl font-bold text-gray-900">{overallStats.inProgressCourses}</p>
+              <p className="text-xs text-gray-500">cours actifs</p>
             </div>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function ProgressPanel() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div className="flex flex-wrap gap-2">
           {[
             { key: 'all', label: 'Tous les cours', count: overallStats.totalCourses },
@@ -356,7 +356,7 @@ export default function ProgressPanel() {
               className={`px-4 py-2 rounded-lg transition-colors ${
                 activeFilter === filter.key
                   ? 'bg-mdsc-blue-primary text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               {filter.label} ({filter.count})
@@ -369,14 +369,14 @@ export default function ProgressPanel() {
       {filteredCourses.length > 0 ? (
         <div className="space-y-4">
           {filteredCourses.map((course) => (
-            <div key={course.courseId} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+            <div key={course.courseId} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{course.courseTitle}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">{course.courseTitle}</h3>
                     {getStatusBadge(course.status)}
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{course.category}</p>
+                  <p className="text-sm text-gray-500">{course.category}</p>
                 </div>
               </div>
 
@@ -384,10 +384,10 @@ export default function ProgressPanel() {
                 {/* Barre de progression */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progression</span>
-                    <span className="text-sm font-bold text-gray-900 dark:text-white">{course.progress}%</span>
+                    <span className="text-sm font-medium text-gray-700">Progression</span>
+                    <span className="text-sm font-bold text-gray-900">{course.progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
                     <div 
                       className={`${getProgressColor(course.progress)} h-3 rounded-full transition-all duration-500`}
                       style={{ width: `${course.progress}%` }}
@@ -395,32 +395,32 @@ export default function ProgressPanel() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-gray-200">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    <div className="text-2xl font-bold text-blue-600">
                       {course.completedLessons}/{course.totalLessons}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Leçons</p>
+                    <p className="text-xs text-gray-500">Leçons</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    <div className="text-2xl font-bold text-green-600">
                       {course.totalDurationMinutes > 0
                         ? formatDuration(course.remainingDurationMinutes)
                         : `${course.estimatedTimeRemainingHours}h`}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Temps restant</p>
+                    <p className="text-xs text-gray-500">Temps restant</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    <div className="text-2xl font-bold text-orange-600">
                       {formatDuration(course.completedDurationMinutes)}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Temps suivi</p>
+                    <p className="text-xs text-gray-500">Temps suivi</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    <div className="text-2xl font-bold text-purple-600">
                       {course.totalDurationMinutes > 0 ? formatDuration(course.totalDurationMinutes) : '—'}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Durée totale</p>
+                    <p className="text-xs text-gray-500">Durée totale</p>
                   </div>
                 </div>
 
@@ -430,7 +430,7 @@ export default function ProgressPanel() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">Aucun cours trouvé pour votre filtre actuel.</p>
+          <p className="text-gray-500">Aucun cours trouvé pour votre filtre actuel.</p>
         </div>
       )}
     </div>

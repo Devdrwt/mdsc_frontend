@@ -453,7 +453,7 @@ export default function CourseDetailPage() {
                 {/* Bouton d'inscription */}
                 <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
                   {isEnrolled ? (
-                    <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-primary hover:bg-gray-100">
+                    <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold">
                       <Play className="h-5 w-5 mr-2" />
                       Continuer l'apprentissage
                     </Button>
@@ -463,7 +463,7 @@ export default function CourseDetailPage() {
                       size="lg" 
                       onClick={handleEnroll} 
                       disabled={!enrollmentPossible}
-                      className={`bg-white text-mdsc-blue-primary hover:bg-gray-100 ${
+                      className={`bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold ${
                         !enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                     >
