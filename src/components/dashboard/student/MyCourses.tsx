@@ -124,6 +124,25 @@ export default function MyCourses() {
     return 'bg-red-500';
   };
 
+  const getCategoryLabel = (category: any): string => {
+    if (!category) return 'Autre';
+    if (typeof category === 'string') return category;
+    if (typeof category === 'object') {
+      const categoryAny = category as any;
+      if (categoryAny?.name || categoryAny?.label || categoryAny?.title) {
+        return categoryAny.name || categoryAny.label || categoryAny.title;
+      }
+      if (Array.isArray(categoryAny)) {
+        const labels = categoryAny
+          .map((item: any) => item?.name || item?.label || item?.title)
+          .filter(Boolean);
+        return labels.length ? labels.join(', ') : 'Autre';
+      }
+      return 'Autre';
+    }
+    return String(category);
+  };
+
   const handleUnenroll = async () => {
     if (!courseToUnenroll) return;
     
@@ -282,7 +301,7 @@ export default function MyCourses() {
                     <div className="flex items-center space-x-6 text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <BookOpen className="h-4 w-4" />
-                        <span>{course.categoryLabel}</span>
+                        <span>{course.categoryLabel || getCategoryLabel((course as any).category)}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />

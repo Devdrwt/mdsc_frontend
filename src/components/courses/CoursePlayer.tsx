@@ -261,8 +261,8 @@ export default function CoursePlayer({
       unlockedSet.add(orderedLessons[0].id);
     }
 
-    setCompletedLessons(completedSet);
-    setUnlockedLessons(unlockedSet);
+    setCompletedLessons((prev) => new Set([...prev, ...completedSet]));
+    setUnlockedLessons((prev) => new Set([...prev, ...unlockedSet]));
   };
 
   const selectedModule = course.modules?.find((m) => m.id === selectedModuleId);
@@ -319,7 +319,33 @@ export default function CoursePlayer({
     try {
       const result = await progressService.completeLesson(enrollmentId, lessonId);
 
-      setCompletedLessons((prev) => new Set([...prev, lessonId]));
+      setCompletedLessons((prev) => {
+        const next = new Set([...prev, lessonId]);
+
+        const orderedLessons = getOrderedLessons();
+        const lessonsCount = orderedLessons.length;
+        if (lessonsCount > 0) {
+          const progressRatio = (next.size / lessonsCount) * 100;
+          setCourseProgress((current) => (progressRatio > current ? progressRatio : current));
+        }
+
+        const moduleId = selectedLesson?.module_id ?? (selectedLesson as any)?.moduleId;
+        if (moduleId) {
+          setModuleProgressMap((prevMap) => {
+            const updated = new Map(prevMap);
+            const module = course.modules?.find((m) => m.id === Number(moduleId));
+            const totalLessonsInModule = module?.lessons?.length ?? 0;
+            if (totalLessonsInModule > 0) {
+              const completedInModule = module?.lessons?.filter((lesson) => next.has(lesson.id)).length ?? 0;
+              const moduleProgress = (completedInModule / totalLessonsInModule) * 100;
+              updated.set(Number(moduleId), moduleProgress);
+            }
+            return updated;
+          });
+        }
+
+        return next;
+      });
 
       if (result.success !== false) {
         const orderedLessons = getOrderedLessons();

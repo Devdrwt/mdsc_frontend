@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import EmailVerification from './EmailVerification';
 import { register, ApiError } from '../../lib/services/authService';
 import { countries } from '../../lib/constants/countries';
-import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, GraduationCap, Users } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Building, Lock, Eye, EyeOff, GraduationCap, ShieldAlert } from 'lucide-react';
 import GoogleLoginButton from './GoogleLoginButton';
 import { useNotification } from '../../lib/hooks/useNotification';
 
@@ -21,21 +20,7 @@ interface FormData {
 }
 
 const SimpleRegisterForm = () => {
-  const router = useRouter();
   const { error: showError, success: showSuccess } = useNotification();
-  
-  // Récupérer le rôle sélectionné depuis sessionStorage
-  const [selectedRole, setSelectedRole] = useState<'student' | 'instructor'>('student');
-  
-  React.useEffect(() => {
-    const role = sessionStorage.getItem('selectedRole') as 'student' | 'instructor' | null;
-    if (role) {
-      setSelectedRole(role);
-    } else {
-      // Si aucun rôle n'est sélectionné, rediriger vers la page de sélection
-      router.push('/select-role');
-    }
-  }, [router]);
   
   const [formData, setFormData] = useState<FormData>({
     email: '',
@@ -200,7 +185,7 @@ const SimpleRegisterForm = () => {
         phone: formData.phone || undefined,
         organization: formData.organization || undefined,
         country: formData.country,
-        role: selectedRole
+        role: 'student'
       });
 
       // Récupérer le token de vérification en mode dev
@@ -245,20 +230,15 @@ const SimpleRegisterForm = () => {
       </div>
 
       {/* Badge du rôle sélectionné */}
-      <div className="text-center mt-4">
+      <div className="text-center mt-4 space-y-2">
         <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-800 rounded-full text-sm font-medium">
-          {selectedRole === 'student' ? (
-            <>
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Inscription en tant qu'Apprenant
-            </>
-          ) : (
-            <>
-              <Users className="h-4 w-4 mr-2" />
-              Inscription en tant que Formateur
-            </>
-          )}
+          <GraduationCap className="h-4 w-4 mr-2" />
+          Inscription en tant qu'Apprenant
         </div>
+        <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-gray-400" />
+          Le rôle formateur est attribué par un administrateur MdSC.
+        </p>
       </div>
 
       {/* Formulaire */}

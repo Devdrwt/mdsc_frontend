@@ -19,20 +19,14 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
     setIsLoading(true);
     
     try {
-      // Récupérer le rôle sélectionné (si disponible)
-      const selectedRole = (typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null) || 'student';
-      
+      const selectedRole: 'student' = 'student';
+
       // Construire l'URL de l'API
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
       const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google/callback`);
       const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
       
-      console.log('🔐 [GOOGLE AUTH] Selected role:', selectedRole);
-      console.log('🔐 [GOOGLE AUTH] Role source:', {
-        fromSessionStorage: typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null,
-        finalRole: selectedRole,
-        defaultUsed: !sessionStorage.getItem('selectedRole'),
-      });
+      console.log('🔐 [GOOGLE AUTH] Rôle appliqué pour l\'inscription OAuth Google: apprenant');
       
       console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
       console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
@@ -117,24 +111,17 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           
           // Mettre à jour le store d'authentification
           try {
-            // Récupérer le rôle depuis sessionStorage au moment du callback (plus fiable)
-            const roleFromStorage = typeof window !== 'undefined' ? sessionStorage.getItem('selectedRole') : null;
-            
-            // Priorité: rôle retourné par le backend > rôle dans sessionStorage > rôle sélectionné au démarrage > 'student'
             const backendRole = user.role || user.role_name;
-            const storageRole = roleFromStorage as 'student' | 'instructor' | 'admin' | null;
-            const finalRole = (backendRole || storageRole || selectedRole || 'student') as 'student' | 'instructor' | 'admin';
+            const finalRole = (backendRole || selectedRole || 'student') as 'student' | 'instructor' | 'admin';
             
             console.log('🔐 [GOOGLE AUTH] Role resolution:', {
               backendRole,
-              storageRole,
               selectedRoleAtStart: selectedRole,
               finalRole,
             });
             
-            // Si le backend n'a pas retourné de rôle, utiliser celui de sessionStorage
-            if (!backendRole && storageRole) {
-              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a role, using role from sessionStorage:', storageRole);
+            if (!backendRole) {
+              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a rôle, fallback vers apprenant');
             }
             
             // Normaliser les données utilisateur en remplaçant undefined par null ou des valeurs par défaut
@@ -162,12 +149,6 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             console.log('💾 [GOOGLE AUTH] User role in store:', userData.role);
             setUser(userData);
             setTokens(token, token); // Utiliser le même token pour refresh token temporairement
-            
-            // Stocker le rôle dans sessionStorage pour les prochaines fois
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('selectedRole', finalRole);
-              console.log('💾 [GOOGLE AUTH] Role stored in sessionStorage:', finalRole);
-            }
             
             console.log('✅ [GOOGLE AUTH] Store updated successfully with role:', finalRole);
             
@@ -250,9 +231,8 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           }
           
           if (isUserNotFound) {
-            // Rediriger vers la page de sélection de rôle avec un message
-            console.log('🔄 [GOOGLE AUTH] User not found, redirecting to select-role page');
-            router.push('/select-role?from=google&message=' + encodeURIComponent('Veuillez choisir votre rôle pour continuer votre inscription avec Google'));
+            console.log('🔄 [GOOGLE AUTH] Utilisateur introuvable, redirection vers la page d\'inscription apprenant');
+            router.push('/register?from=google&message=' + encodeURIComponent('Compte Google non associé, créez votre profil apprenant pour continuer.'));
             return;
           }
           
@@ -266,7 +246,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       window.addEventListener('message', messageListener);
       
       // Vérifier si la popup a été fermée manuellement ou si elle a changé d'URL
-      let checkPopupClosed: NodeJS.Timeout | null = setInterval(() => {
+      let checkPopupClosed: ReturnType<typeof setInterval> | null = setInterval(() => {
         if (!popup) {
           clearInterval(checkPopupClosed!);
           return;

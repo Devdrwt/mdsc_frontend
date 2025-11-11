@@ -301,11 +301,14 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       console.error('❌ API Error:', errorLog);
     }
     
+    const errorCode = hasValidData ? (data.code ?? null) : null;
+    const errorDetails = hasValidData ? (data.details ?? data.errors ?? null) : null;
+
     const error = new ApiError(
       errorMessage,
       response.status,
-      hasValidData ? data.code : undefined,
-      hasValidData ? (data.details || data.errors) : undefined
+      errorCode,
+      errorDetails
     );
     
     // Gérer les erreurs d'authentification

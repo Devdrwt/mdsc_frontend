@@ -162,7 +162,13 @@ export class GamificationService {
       });
       
       // Transformer UserXP[] en LeaderboardEntry[]
-      const entries: LeaderboardEntry[] = (response.data || []).map((user: any, index: number) => ({
+      const rawEntries = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray((response.data as any)?.entries)
+        ? (response.data as any).entries
+        : [];
+
+      const entries: LeaderboardEntry[] = rawEntries.map((user: any, index: number) => ({
         userId: user.user_id?.toString() || index.toString(),
         username: user.username || `User ${user.user_id}`,
         level: user.current_level || 1,

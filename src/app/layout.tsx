@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Playfair_Display, Open_Sans } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "../components/providers/ClientProviders";
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="fr" suppressHydrationWarning>

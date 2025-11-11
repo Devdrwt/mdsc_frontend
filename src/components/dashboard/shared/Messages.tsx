@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Inbox, Send, Plus, Search, Mail, MailOpen, Trash2, Clock, User, Users, RefreshCw } from 'lucide-react';
-import { MessageService, Message } from '../../../lib/services/messageService';
+import { MessageService, MessageEntry, PaginatedMessages } from '../../../lib/services/messageService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import MessageComposer from '../../messages/MessageComposer';
 import toast from '../../../lib/utils/toast';
@@ -15,9 +15,9 @@ interface MessagesProps {
 export default function Messages({ courseId }: MessagesProps) {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'inbox' | 'sent' | 'compose' | 'course'>('inbox');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
@@ -34,15 +34,15 @@ export default function Messages({ courseId }: MessagesProps) {
   const loadMessages = async () => {
     setLoading(true);
     try {
-      let data: Message[] = [];
+      let response: PaginatedMessages | null = null;
       if (activeTab === 'inbox') {
-        data = await MessageService.getReceivedMessages();
+        response = await MessageService.getReceivedMessages();
       } else if (activeTab === 'sent') {
-        data = await MessageService.getSentMessages();
+        response = await MessageService.getSentMessages();
       } else if (activeTab === 'course' && courseId) {
-        data = await MessageService.getCourseMessages(courseId);
+        response = await MessageService.getCourseMessages?.(courseId) ?? null;
       }
-      // S'assurer que data est toujours un tableau
+      const data = response ? response.messages ?? [] : [];
       setMessages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -84,16 +84,16 @@ export default function Messages({ courseId }: MessagesProps) {
     setActiveTab('inbox');
   };
 
-  const handleOpenMessage = async (message: Message) => {
+  const handleOpenMessage = async (message: MessageEntry) => {
     setSelectedMessage(message);
-    if (!message.isRead) {
+    if (!message.is_read) {
       await MessageService.markAsRead(message.id);
-      message.isRead = true;
+      message.is_read = true;
     }
   };
 
-  const handleDeleteClick = (messageId: string) => {
-    setMessageToDelete(messageId);
+  const handleDeleteClick = (messageId: string | number) => {
+    setMessageToDelete(String(messageId));
     setShowDeleteModal(true);
   };
 
@@ -117,10 +117,12 @@ export default function Messages({ courseId }: MessagesProps) {
 
   const filteredMessages = Array.isArray(messages) ? messages.filter(message => {
     const searchLower = searchTerm.toLowerCase();
+    const senderLabel = message.sender_name || message.sender_email || '';
+    const receiverLabel = message.recipient_name || message.recipient_email || '';
     return (
-      message.subject.toLowerCase().includes(searchLower) ||
-      message.content.toLowerCase().includes(searchLower) ||
-      (activeTab === 'inbox' ? message.senderName : message.receiverName).toLowerCase().includes(searchLower)
+      (message.subject || '').toLowerCase().includes(searchLower) ||
+      (message.content || '').toLowerCase().includes(searchLower) ||
+      (activeTab === 'inbox' ? senderLabel : receiverLabel).toLowerCase().includes(searchLower)
     );
   }) : [];
 
@@ -234,7 +236,7 @@ export default function Messages({ courseId }: MessagesProps) {
                       {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'}
                       {activeTab === 'inbox' && (
                         <span className="ml-2">
-                          ({filteredMessages.filter(m => !m.isRead).length} non lu{filteredMessages.filter(m => !m.isRead).length !== 1 ? 's' : ''})
+                          ({filteredMessages.filter(m => !m.is_read).length} non lu{filteredMessages.filter(m => !m.is_read).length !== 1 ? 's' : ''})
                         </span>
                       )}
                     </p>
@@ -244,15 +246,15 @@ export default function Messages({ courseId }: MessagesProps) {
                       key={message.id}
                       onClick={() => handleOpenMessage(message)}
                       className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
-                        !message.isRead && activeTab === 'inbox' ? 'bg-blue-50' : ''
+                        !message.is_read && activeTab === 'inbox' ? 'bg-blue-50' : ''
                       } ${selectedMessage?.id === message.id ? 'bg-mdsc-blue-50 border-l-4 border-mdsc-blue-primary' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
-                          {!message.isRead && activeTab === 'inbox' && (
+                          {!message.is_read && activeTab === 'inbox' && (
                             <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
                           )}
-                          {message.isRead && activeTab === 'inbox' && (
+                          {message.is_read && activeTab === 'inbox' && (
                             <MailOpen className="h-4 w-4 text-gray-400 flex-shrink-0" />
                           )}
                           {activeTab === 'sent' && (
@@ -260,17 +262,17 @@ export default function Messages({ courseId }: MessagesProps) {
                           )}
                           <span className="font-medium text-gray-900 truncate">
                             {activeTab === 'inbox' 
-                              ? (message.senderName || message.senderEmail || 'Expéditeur inconnu')
+                              ? (message.sender_name || message.sender_email || 'Expéditeur inconnu')
                               : activeTab === 'course' 
-                                ? (message.senderName || message.senderEmail || 'Expéditeur inconnu')
-                                : (message.receiverName || message.receiverEmail || 'Destinataire inconnu')}
+                                ? (message.sender_name || message.sender_email || 'Expéditeur inconnu')
+                                : (message.recipient_name || message.recipient_email || 'Destinataire inconnu')}
                           </span>
                         </div>
                         <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                          {new Date(message.createdAt).toLocaleDateString('fr-FR', {
+                          {new Date(message.created_at ?? '').toLocaleDateString('fr-FR', {
                             day: 'numeric',
                             month: 'short',
-                            year: new Date(message.createdAt).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            year: new Date(message.created_at ?? '').getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
                           })}
                         </span>
                       </div>
@@ -367,10 +369,10 @@ export default function Messages({ courseId }: MessagesProps) {
                         <User className="h-4 w-4 mr-1" />
                         <span className="font-medium">
                           {activeTab === 'inbox' 
-                            ? `De: ${selectedMessage.senderName || selectedMessage.senderEmail || 'Expéditeur inconnu'}`
+                            ? `De: ${selectedMessage.sender_name || selectedMessage.sender_email || 'Expéditeur inconnu'}`
                             : activeTab === 'course' 
-                              ? `De: ${selectedMessage.senderName || selectedMessage.senderEmail || 'Expéditeur inconnu'}`
-                              : `À: ${selectedMessage.receiverName || selectedMessage.receiverEmail || 'Destinataire inconnu'}`}
+                              ? `De: ${selectedMessage.sender_name || selectedMessage.sender_email || 'Expéditeur inconnu'}`
+                              : `À: ${selectedMessage.recipient_name || selectedMessage.recipient_email || 'Destinataire inconnu'}`}
                         </span>
                       </span>
                       {selectedMessage.type && selectedMessage.type !== 'direct' && (
@@ -381,7 +383,7 @@ export default function Messages({ courseId }: MessagesProps) {
                       )}
                       <span className="flex items-center">
                         <Clock className="h-4 w-4 mr-1" />
-                        {new Date(selectedMessage.createdAt).toLocaleString('fr-FR', {
+                        {new Date(selectedMessage.created_at ?? '').toLocaleString('fr-FR', {
                           day: 'numeric',
                           month: 'long',
                           year: 'numeric',
@@ -391,12 +393,12 @@ export default function Messages({ courseId }: MessagesProps) {
                       </span>
                       {activeTab === 'inbox' && (
                         <span className={`flex items-center px-2 py-1 rounded text-xs font-medium ${
-                          selectedMessage.isRead 
+                          selectedMessage.is_read 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-blue-100 text-blue-800'
                         }`}>
                           <MailOpen className="h-3 w-3 mr-1" />
-                          {selectedMessage.isRead ? 'Lu' : 'Non lu'}
+                          {selectedMessage.is_read ? 'Lu' : 'Non lu'}
                         </span>
                       )}
                     </div>

@@ -8,6 +8,31 @@ interface NotificationContainerProps {
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
+type NotificationType = 'success' | 'error' | 'warning' | 'info';
+
+const INFO_TYPE_ALIASES = new Set(['course', 'quiz', 'achievement', 'badge', 'certificate', 'reminder']);
+const NATIVE_TYPES = new Set<NotificationType>(['success', 'error', 'warning', 'info']);
+
+const normalizeNotificationType = (type?: string): NotificationType => {
+  if (!type) {
+    return 'info';
+  }
+
+  if (INFO_TYPE_ALIASES.has(type)) {
+    return 'info';
+  }
+
+  if (NATIVE_TYPES.has(type as NotificationType)) {
+    return type as NotificationType;
+  }
+
+  if (type === 'danger') {
+    return 'error';
+  }
+
+  return 'info';
+};
+
 export default function NotificationContainer({ 
   position = 'top-right' 
 }: NotificationContainerProps) {
@@ -19,7 +44,7 @@ export default function NotificationContainer({
         <Notification
           key={notification.id}
           id={notification.id}
-          type={notification.type === 'course' || notification.type === 'quiz' || notification.type === 'achievement' || notification.type === 'badge' || notification.type === 'certificate' || notification.type === 'reminder' ? 'info' : notification.type}
+          type={normalizeNotificationType(notification.type)}
           title={notification.title}
           message={notification.message}
           duration={5000}

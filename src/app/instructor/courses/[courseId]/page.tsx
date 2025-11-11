@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useNotification } from '../../../../lib/hooks/useNotification';
@@ -26,12 +26,17 @@ export default function InstructorCourseDetailPage() {
     return Number.isFinite(n) ? n : undefined;
   }, [courseIdParam]);
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [course, setCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [courseMedia, setCourseMedia] = useState<any[]>([]);
   const [evaluation, setEvaluation] = useState<any | null>(null);
   const [courseStatus, setCourseStatus] = useState<'draft' | 'pending_approval' | 'approved' | 'rejected' | 'published'>('draft');
-  const [activeTab, setActiveTab] = useState<'modules' | 'lessons' | 'medias' | 'evaluations' | 'settings'>('modules');
+  type TabKey = 'modules' | 'lessons' | 'medias' | 'evaluations' | 'settings';
+  const tabKeys: TabKey[] = ['modules', 'lessons', 'medias', 'evaluations', 'settings'];
+  const [activeTab, setActiveTab] = useState<TabKey>('modules');
   const [selectedModuleForQuiz, setSelectedModuleForQuiz] = useState<{ moduleId: string; quiz: any | null } | null>(null);
   const [selectedModuleForLesson, setSelectedModuleForLesson] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,17 +112,35 @@ export default function InstructorCourseDetailPage() {
     load();
   }, [courseIdParam, courseIdNum]);
 
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    if (!tabParam) return;
+    const normalized = tabParam.toLowerCase();
+    if (tabKeys.includes(normalized as TabKey) && normalized !== activeTab) {
+      setActiveTab(normalized as TabKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const changeTab = (tab: TabKey) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('tab', tab);
+    router.replace(`/instructor/courses/${courseIdParam}?${params.toString()}`, { scroll: false });
+  };
+
   const content = (
     <DashboardLayout userRole="instructor">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Cours'}</h1>
           <div className="flex items-center gap-2">
-            {(['modules', 'lessons', 'medias', 'evaluations', 'settings'] as const).map(tab => (
+            {tabKeys.map(tab => (
               <button
                 key={tab}
                 className={`px-3 py-2 rounded-lg text-sm border transition-colors flex items-center space-x-2 ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => changeTab(tab)}
               >
                 {tab === 'evaluations' && <FileText className="h-4 w-4" />}
                 <span>
@@ -162,7 +185,7 @@ export default function InstructorCourseDetailPage() {
                   onAddLessonClick={(moduleId: number) => {
                     // Basculer vers l'onglet "Leçons" et pré-sélectionner le module
                     setSelectedModuleForLesson(moduleId);
-                    setActiveTab('lessons');
+                    changeTab('lessons');
                   }}
                 />
                 
@@ -256,7 +279,7 @@ export default function InstructorCourseDetailPage() {
                       notifyError?.('Erreur', 'Impossible de recharger l\'évaluation');
                     }
                   }}
-                  onCancel={() => setActiveTab('modules')}
+                  onCancel={() => changeTab('modules')}
                 />
               </div>
             )}
@@ -355,9 +378,10 @@ export default function InstructorCourseDetailPage() {
                     e.preventDefault();
                     setSaving(true);
                     try {
+                      const { is_published: _ignoredPublishField, ...settingsWithoutPublish } = courseSettings;
                       // Inclure les données existantes du cours pour éviter les erreurs de validation
                       const updateData: any = {
-                        ...courseSettings,
+                        ...settingsWithoutPublish,
                         // Inclure les champs requis qui existent déjà dans le cours
                         title: course?.title || course?.name || '',
                         description: course?.description || course?.long_description || '',
@@ -387,19 +411,37 @@ export default function InstructorCourseDetailPage() {
                           <p className="text-sm text-gray-600">Contrôlez qui peut voir ce cours</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className="relative flex items-start p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={courseSettings.is_published}
-                            onChange={(e) => setCourseSettings({ ...courseSettings, is_published: e.target.checked })}
-                            className="mt-1 rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
-                          />
-                          <div className="ml-3 flex-1">
-                            <div className="font-medium text-gray-900 mb-1">Publier le cours</div>
-                            <div className="text-sm text-gray-600">Rendre le cours visible et accessible aux étudiants</div>
+                      <div className="space-y-4">
+                        <div className="rounded-lg border border-blue-200 bg-white p-4 flex items-start space-x-3">
+                          <Lock className="h-5 w-5 text-blue-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">La publication est gérée par l'équipe d'administration</p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Enregistrer vos paramètres ne publie pas le cours. Utilisez le bouton « Demander la publication » ci-dessus ; un administrateur devra valider la mise en ligne.
+                            </p>
                           </div>
-                        </label>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                            courseStatus === 'published'
+                              ? 'bg-green-100 text-green-700'
+                              : courseStatus === 'pending_approval'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : courseStatus === 'rejected'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          Statut actuel : {
+                            courseStatus === 'published'
+                            ? 'Publié'
+                            : courseStatus === 'pending_approval'
+                            ? 'En attente de validation admin'
+                            : courseStatus === 'rejected'
+                            ? 'Rejeté'
+                            : 'Brouillon'
+                          }
+                        </span>
                       </div>
                     </div>
 
@@ -647,7 +689,7 @@ export default function InstructorCourseDetailPage() {
                             }
                             if (!evaluation) {
                               notifyError?.('Évaluation requise', 'Vous devez créer une évaluation finale avant de demander la publication');
-                              setActiveTab('evaluations');
+                              changeTab('evaluations');
                               return;
                             }
                             if (!course?.title || course.title.length < 5) {

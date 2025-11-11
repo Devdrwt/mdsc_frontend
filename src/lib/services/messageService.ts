@@ -1,144 +1,179 @@
 import { apiRequest } from './api';
 
-export interface Message {
-  id: string;
-  senderId: number;
-  senderName: string;
-  senderEmail?: string;
-  receiverId?: number;
-  receiverName?: string;
-  receiverEmail?: string; // Email comme identifiant unique
-  courseId?: string;
+export interface MessagePayload {
   subject: string;
   content: string;
-  type: 'direct' | 'announcement' | 'system' | 'broadcast';
-  isRead: boolean;
-  createdAt: string;
-  readAt?: string;
+  type?: 'direct' | 'announcement' | string;
+  recipient_id?: number | string;
+  recipient_email?: string;
+  courseId?: string;
+}
+
+export interface BroadcastMessagePayload {
+  courseId: string | number;
+  subject: string;
+  content: string;
+  type?: 'broadcast' | string;
+}
+
+export interface MessageEntry {
+  id: number | string;
+  subject: string;
+  content: string;
+  type: string;
+  sender_id: number | string;
+  sender_email?: string;
+  sender_name?: string;
+  recipient_id: number | string;
+  recipient_email?: string;
+  recipient_name?: string;
+  is_read: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PaginatedMessages {
+  messages: MessageEntry[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
+export interface ConversationEntry {
+  email: string;
+  name?: string;
+  last_message?: MessageEntry;
+  unread_count?: number;
 }
 
 export interface MessageStats {
-  unreadCount: number;
-  totalReceived: number;
-  totalSent: number;
+  received_unread?: number;
+  sent_count?: number;
+  conversations_count?: number;
+  last_received_at?: string;
 }
 
 export class MessageService {
-  // Envoyer un message (avec email comme identifiant)
-  static async sendMessage(data: {
-    receiverEmail: string; // Email comme identifiant unique
-    subject: string;
-    content: string;
-    type?: 'direct' | 'announcement' | 'system';
-    recipientId?: number; // ID du destinataire (optionnel)
-  }): Promise<Message> {
-    // Mapper receiverEmail vers recipient_email pour correspondre à l'API backend
-    const requestData: any = {
-      subject: data.subject,
-      content: data.content,
-      type: data.type || 'direct',
-    };
-
-    // Le backend accepte recipient_email ou recipient_id
-    if (data.recipientId) {
-      requestData.recipient_id = data.recipientId;
-    } else if (data.receiverEmail) {
-      requestData.recipient_email = data.receiverEmail;
-    }
-
+  static async sendMessage(data: MessagePayload): Promise<MessageEntry> {
     const response = await apiRequest('/messages/send', {
       method: 'POST',
-      body: JSON.stringify(requestData),
+      body: JSON.stringify(data),
     });
     return response.data;
   }
 
-  // Rechercher un utilisateur par email
-  static async searchUserByEmail(email: string): Promise<{ id: number; name: string; email: string; role: string }[]> {
-    const response = await apiRequest(`/messages/search?email=${encodeURIComponent(email)}`, {
+  static async getReceivedMessages(params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const response = await apiRequest(`/messages/received?${searchParams.toString()}`, {
       method: 'GET',
     });
-    return response.data || [];
+
+    return response.data ?? { messages: [] };
   }
 
-  // Récupérer les messages reçus
-  static async getReceivedMessages(limit: number = 50, offset: number = 0): Promise<Message[]> {
-    const response = await apiRequest(`/messages/received?limit=${limit}&offset=${offset}`, {
+  static async getSentMessages(params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const response = await apiRequest(`/messages/sent?${searchParams.toString()}`, {
       method: 'GET',
     });
-    const data = response.data || [];
-    return Array.isArray(data) ? data : [];
+
+    return response.data ?? { messages: [] };
   }
 
-  // Récupérer les messages envoyés
-  static async getSentMessages(limit: number = 50, offset: number = 0): Promise<Message[]> {
-    const response = await apiRequest(`/messages/sent?limit=${limit}&offset=${offset}`, {
+  static async getCourseMessages(courseId: string | number, params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/messages/course/${encodeURIComponent(String(courseId))}${query ? `?${query}` : ''}`, {
       method: 'GET',
     });
-    const data = response.data || [];
-    return Array.isArray(data) ? data : [];
+
+    return response.data ?? { messages: [] };
   }
 
-  // Récupérer un message spécifique
-  static async getMessage(messageId: string): Promise<Message> {
-    const response = await apiRequest(`/messages/${messageId}`, {
+  static async sendBroadcastMessage(data: BroadcastMessagePayload): Promise<void> {
+    await apiRequest('/messages/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({
+        course_id: data.courseId,
+        subject: data.subject,
+        content: data.content,
+        type: data.type ?? 'broadcast',
+      }),
+    });
+  }
+
+  static async getConversations(): Promise<ConversationEntry[]> {
+    const response = await apiRequest('/messages/conversations', {
       method: 'GET',
     });
+
+    return response.data ?? [];
+  }
+
+  static async getConversationByEmail(email: string, params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const response = await apiRequest(`/messages/conversations/${encodeURIComponent(email)}?${searchParams.toString()}`, {
+      method: 'GET',
+    });
+
+    return response.data ?? { messages: [] };
+  }
+
+  static async getMessageById(id: string | number): Promise<MessageEntry> {
+    const response = await apiRequest(`/messages/${id}`, {
+      method: 'GET',
+    });
+
     return response.data;
   }
 
-  // Marquer un message comme lu
-  static async markAsRead(messageId: string): Promise<void> {
-    await apiRequest(`/messages/${messageId}/read`, {
+  static async markAsRead(id: string | number): Promise<void> {
+    await apiRequest(`/messages/${id}/read`, {
       method: 'PUT',
     });
   }
 
-  // Supprimer un message
-  static async deleteMessage(messageId: string): Promise<void> {
-    await apiRequest(`/messages/${messageId}`, {
+  static async deleteMessage(id: string | number): Promise<void> {
+    await apiRequest(`/messages/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Récupérer les statistiques de messages
   static async getStats(): Promise<MessageStats> {
     const response = await apiRequest('/messages/stats', {
       method: 'GET',
     });
-    return response.data;
+
+    return response.data ?? {};
   }
 
-  // Récupérer les messages d'un cours (broadcast)
-  static async getCourseMessages(courseId: string, limit: number = 50, offset: number = 0): Promise<Message[]> {
-    const response = await apiRequest(`/messages?courseId=${courseId}&limit=${limit}&offset=${offset}`, {
+  static async search(query: string, params?: { page?: number; limit?: number }): Promise<PaginatedMessages> {
+    const searchParams = new URLSearchParams();
+    searchParams.append('q', query);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const response = await apiRequest(`/messages/search?${searchParams.toString()}`, {
       method: 'GET',
     });
-    const data = response.data || [];
-    return Array.isArray(data) ? data : [];
-  }
 
-  // Envoyer un message de broadcast à tous les participants d'un cours
-  static async sendBroadcastMessage(data: {
-    courseId: string;
-    subject: string;
-    content: string;
-    type?: 'announcement' | 'broadcast';
-  }): Promise<Message> {
-    const response = await apiRequest(`/messages?courseId=${data.courseId}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        subject: data.subject,
-        content: data.content,
-        type: data.type || 'broadcast',
-      }),
-    });
-    return response.data;
+    return response.data ?? { messages: [] };
   }
 }
 
-// Export par défaut
 export default MessageService;
-
-// Export nommé pour compatibilité
-export const messageService = MessageService;

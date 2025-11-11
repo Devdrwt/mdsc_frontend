@@ -66,16 +66,11 @@ export default function ProgressPanel() {
             ? course.modules.flatMap((module: any) => module?.lessons || [])
             : [];
 
-          const dbTotalLessonsRaw =
-            course.total_lessons ??
-            course.totalLessons ??
-            course.enrollment?.total_lessons;
-          const dbCompletedLessonsRaw =
-            course.completed_lessons ??
-            course.completedLessons ??
-            course.enrollment?.completed_lessons;
-
           const totalLessons = (() => {
+            const dbTotalLessonsRaw =
+              course.total_lessons ??
+              course.totalLessons ??
+              course.enrollment?.total_lessons;
             if (typeof dbTotalLessonsRaw === 'number' && Number.isFinite(dbTotalLessonsRaw)) {
               return dbTotalLessonsRaw;
             }
@@ -87,6 +82,10 @@ export default function ProgressPanel() {
           })();
 
           const completedLessons = (() => {
+            const dbCompletedLessonsRaw =
+              course.completed_lessons ??
+              course.completedLessons ??
+              course.enrollment?.completed_lessons;
             if (typeof dbCompletedLessonsRaw === 'number' && Number.isFinite(dbCompletedLessonsRaw)) {
               return dbCompletedLessonsRaw;
             }

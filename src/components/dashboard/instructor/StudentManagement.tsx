@@ -1,24 +1,27 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Mail, 
-  MessageSquare, 
-  Eye, 
-  Award, 
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Users,
+  Search,
+  Filter,
+  Mail,
+  MessageSquare,
+  Eye,
+  Award,
   Clock,
   TrendingUp,
   CheckCircle,
-  AlertCircle,
   Star,
-  BookOpen
+  BookOpen,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useAuthStore } from '../../../lib/stores/authStore';
-import { courseService, Course } from '../../../lib/services/courseService';
-import { EnrollmentService } from '../../../lib/services/enrollmentService';
+import {
+  InstructorService,
+  InstructorStudentEntry,
+  InstructorStudentStatus,
+} from '../../../lib/services/instructorService';
 import toast from '../../../lib/utils/toast';
 
 interface Student {
@@ -27,149 +30,201 @@ interface Student {
   lastName: string;
   email: string;
   avatar?: string;
-  enrolledCourses: number;
-  completedCourses: number;
+  courseTitle?: string;
+  enrolledAt?: string;
   currentLevel: string;
-  totalPoints: number;
-  lastActivity: string;
+  lastActivity?: string;
   progress: number;
   averageGrade: number;
-  status: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'completed';
 }
+
+interface StudentsStats {
+  totalStudents: number;
+  activeStudents: number;
+  completedStudents: number;
+  avgProgress: number;
+}
+
+interface CourseOption {
+  id: string;
+  title: string;
+}
+
+const safeNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+};
+
+const fallbackId = () => `student-${Math.random().toString(36).slice(2, 10)}`;
 
 export default function StudentManagement() {
   const { user } = useAuthStore();
   const [students, setStudents] = useState<Student[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'suspended'>('all');
-  const [selectedCourse, setSelectedCourse] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | InstructorStudentStatus>('all');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<CourseOption[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
-  const [order, setOrder] = useState<'ASC' | 'DESC'>('DESC');
-  const [sort, setSort] = useState<'enrolled_at' | 'progress' | 'last_accessed_at' | 'completed_at' | 'first_name' | 'last_name'>('last_accessed_at');
-  const [serverPagination, setServerPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({ page: 1, limit: 10, total: 0, pages: 1 });
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  const [sort, setSort] = useState<'enrolled_at' | 'progress' | 'last_activity' | 'last_login'>('last_activity');
+  const [pagination, setPagination] = useState<{ page: number; limit: number; total: number; pages: number }>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 1,
+  });
+  const [stats, setStats] = useState<StudentsStats>({
+    totalStudents: 0,
+    activeStudents: 0,
+    completedStudents: 0,
+    avgProgress: 0,
+  });
 
   useEffect(() => {
-    // Les étudiants sont chargés via fetchEnrollments basé sur selectedCourseId
-  }, [user]);
+    if (!user) return;
 
-  useEffect(() => {
-    let filtered = students;
-
-    // Filtrage par statut
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(student => student.status === filterStatus);
-    }
-
-    // Filtrage par cours
-    if (selectedCourse !== 'all') {
-      // Dans un vrai projet, on filtrerait par cours spécifique
-      filtered = filtered;
-    }
-
-    // Filtrage par recherche
-    if (searchTerm) {
-      filtered = filtered.filter(student =>
-        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    setFilteredStudents(filtered);
-  }, [students, searchTerm, filterStatus, selectedCourse]);
-
-  // Charger les cours de l'instructeur
-  useEffect(() => {
-    const loadCourses = async () => {
-      if (!user) return;
-      try {
-        const list = await courseService.getInstructorCourses(user.id.toString(), { status: 'all', page: 1, limit: 100 });
-        const arr = Array.isArray(list) ? list : (list as any)?.data || [];
-        setCourses(arr);
-        if (!selectedCourseId && arr[0]?.id) setSelectedCourseId(String(arr[0].id));
-      } catch (e) {
-        console.error('Erreur chargement cours', e);
-      }
-    };
-    loadCourses();
-  }, [user]);
-
-  // Charger les inscriptions (pagination serveur)
-  useEffect(() => {
-    const fetchEnrollments = async () => {
-      if (!selectedCourseId) {
-        setStudents([]);
-        setFilteredStudents([]);
-        return;
-      }
+    const loadStudents = async () => {
       try {
         setLoading(true);
-        const { data, pagination } = await EnrollmentService.getCourseEnrollments(selectedCourseId, {
+        const response = await InstructorService.getStudents({
           page,
           limit,
-          search: searchTerm,
+          search: searchTerm || undefined,
+          course_id: selectedCourseId || undefined,
           status: filterStatus !== 'all' ? filterStatus : undefined,
-          sort: 'last_accessed_at',
-          order: 'DESC',
+          sort,
+          order,
         });
-        const mapped: Student[] = (data || []).map((r: any) => ({
-          id: String(r.user_id || r.id),
-          firstName: r.first_name || r.firstName || '',
-          lastName: r.last_name || r.lastName || '',
-          email: r.email || '',
-          avatar: r.avatar_url || r.avatar || undefined,
-          enrolledCourses: 0,
-          completedCourses: r.status === 'completed' ? 1 : 0,
-          currentLevel: '',
-          totalPoints: 0,
-          lastActivity: r.last_accessed_at || r.enrolled_at || '',
-          progress: Math.round(Number(r.progress_percentage || r.progress || 0)),
-          averageGrade: Number(r.avg_quiz_score || 0) / 20 * 5 || 0,
-          status: r.status || 'active' as 'active' | 'inactive' | 'suspended',
-        }));
+
+        const mapped: Student[] = response.students.map((entry: InstructorStudentEntry) => {
+          const studentInfo = entry.student ?? {};
+          const courseInfo = entry.course ?? {};
+          const progress = safeNumber(entry.progress_percentage);
+          const status: Student['status'] = entry.completed_at
+            ? 'completed'
+            : entry.is_active
+            ? 'active'
+            : 'inactive';
+
+          return {
+            id: String(studentInfo.id ?? entry.enrollment_id ?? fallbackId()),
+            firstName: studentInfo.first_name ?? '',
+            lastName: studentInfo.last_name ?? '',
+            email: studentInfo.email ?? '',
+            avatar: studentInfo.profile_picture_url ?? studentInfo.profile_picture ?? undefined,
+            courseTitle: courseInfo.title ?? undefined,
+            enrolledAt: entry.enrolled_at ?? undefined,
+            currentLevel: courseInfo.language ?? '',
+            lastActivity:
+              entry.last_accessed_at ?? studentInfo.last_login_at ?? entry.enrolled_at ?? undefined,
+            progress: Math.round(progress),
+            averageGrade: 0,
+            status,
+          };
+        });
+
         setStudents(mapped);
-        setFilteredStudents(mapped);
-        setServerPagination(pagination);
+        setPagination(response.pagination);
+        setStats({
+          totalStudents: safeNumber(response.stats?.total_students),
+          activeStudents: safeNumber(response.stats?.active_students),
+          completedStudents: safeNumber(response.stats?.completed_students),
+          avgProgress: safeNumber(response.stats?.avg_progress),
+        });
+
+        if (Array.isArray(response.filters?.courses)) {
+          setCourses(
+            response.filters.courses.map((course) => ({
+              id: String(course.id),
+              title: course.title,
+            }))
+          );
+        }
       } catch (e: any) {
-        console.error('Erreur chargement inscriptions', e);
+        console.error('Erreur chargement étudiants', e);
         setStudents([]);
-        setFilteredStudents([]);
-        // Afficher l'erreur à l'utilisateur pour toutes les erreurs d'autorisation
-        const isAuthError = e.status === 403 || 
-            e.message?.includes('autorisé') || 
-            e.message?.includes('Non autorisé') || 
-            e.message?.includes('inscrits') ||
-            e.message?.includes('Accès interdit') ||
-            e.message?.includes('Permissions insuffisantes');
+        setPagination({ page: 1, limit, total: 0, pages: 1 });
+        setStats({
+          totalStudents: 0,
+          activeStudents: 0,
+          completedStudents: 0,
+          avgProgress: 0,
+        });
+
+        const isAuthError =
+          e?.status === 403 ||
+          e?.message?.includes('autorisé') ||
+          e?.message?.includes('Non autorisé') ||
+          e?.message?.includes('Accès interdit') ||
+          e?.message?.includes('Permissions insuffisantes');
+
         if (isAuthError) {
-          toast.error('Accès refusé', e.message || 'Vous n\'êtes pas autorisé à consulter les inscrits de ce cours');
+          toast.error(
+            'Accès refusé',
+            e.message || 'Vous n\'êtes pas autorisé à consulter les inscrits de ce cours'
+          );
         } else {
-          // Pour les autres erreurs, afficher un message générique
           toast.error('Erreur', 'Impossible de charger les inscriptions. Veuillez réessayer.');
         }
       } finally {
         setLoading(false);
       }
     };
-    fetchEnrollments();
-  }, [selectedCourseId, page, limit, searchTerm, filterStatus]);
 
-  // Pagination client (en attendant l'API paginée)
-  const total = serverPagination.total || filteredStudents.length;
-  const totalPages = serverPagination.pages || Math.max(1, Math.ceil(total / limit));
-  const pagedStudents = filteredStudents;
+    loadStudents();
+  }, [user, page, limit, searchTerm, filterStatus, selectedCourseId, sort, order]);
+
+  const total = pagination.total || students.length;
+  const totalPages = pagination.pages || Math.max(1, Math.ceil(total / limit));
+
+  const averageProgress = useMemo(() => {
+    if (stats.avgProgress) return Math.round(stats.avgProgress);
+    if (students.length === 0) return 0;
+    const sum = students.reduce((acc, student) => acc + student.progress, 0);
+    return Math.round(sum / students.length);
+  }, [students, stats.avgProgress]);
 
   const exportCsv = () => {
     const rows = [
-      ['id', 'firstName', 'lastName', 'email', 'enrolledCourses', 'completedCourses', 'progress', 'averageGrade', 'status'],
-      ...filteredStudents.map(s => [s.id, s.firstName, s.lastName, s.email, String(s.enrolledCourses), String(s.completedCourses), String(s.progress), String(s.averageGrade), s.status])
+      [
+        'id',
+        'firstName',
+        'lastName',
+        'email',
+        'courseTitle',
+        'enrolledAt',
+        'progress',
+        'status',
+        'lastActivity',
+      ],
+      ...students.map((student) => [
+        student.id,
+        student.firstName,
+        student.lastName,
+        student.email,
+        student.courseTitle ?? '',
+        student.enrolledAt ?? '',
+        String(student.progress),
+        student.status,
+        student.lastActivity ?? '',
+      ]),
     ];
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -179,7 +234,7 @@ export default function StudentManagement() {
     URL.revokeObjectURL(url);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Student['status']) => {
     switch (status) {
       case 'active':
         return (
@@ -188,18 +243,18 @@ export default function StudentManagement() {
             Actif
           </span>
         );
+      case 'completed':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <Award className="h-3 w-3 mr-1" />
+            Terminé
+          </span>
+        );
       case 'inactive':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
             <Clock className="h-3 w-3 mr-1" />
             Inactif
-          </span>
-        );
-      case 'suspended':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Suspendu
           </span>
         );
       default:
@@ -214,24 +269,21 @@ export default function StudentManagement() {
     return 'bg-red-500';
   };
 
-  const getGradeColor = (grade: number) => {
-    if (grade >= 4.5) return 'text-green-600';
-    if (grade >= 4.0) return 'text-yellow-600';
-    if (grade >= 3.0) return 'text-orange-600';
-    return 'text-red-600';
+  const handleSortToggle = () => {
+    setOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    setPage(1);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-gold"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-gold" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
       <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">Gestion des Étudiants 👥</h1>
         <p className="text-yellow-100">
@@ -239,7 +291,6 @@ export default function StudentManagement() {
         </p>
       </div>
 
-      {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center">
@@ -248,7 +299,7 @@ export default function StudentManagement() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Total étudiants</p>
-              <p className="text-2xl font-bold text-gray-900">{students.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalStudents || students.length}</p>
             </div>
           </div>
         </div>
@@ -261,7 +312,7 @@ export default function StudentManagement() {
             <div>
               <p className="text-sm font-medium text-gray-600">Actifs</p>
               <p className="text-2xl font-bold text-gray-900">
-                {students.filter(s => s.status === 'active').length}
+                {stats.activeStudents || students.filter((student) => student.status === 'active').length}
               </p>
             </div>
           </div>
@@ -275,7 +326,7 @@ export default function StudentManagement() {
             <div>
               <p className="text-sm font-medium text-gray-600">Cours complétés</p>
               <p className="text-2xl font-bold text-gray-900">
-                {students.reduce((acc, s) => acc + s.completedCourses, 0)}
+                {stats.completedStudents || students.filter((student) => student.status === 'completed').length}
               </p>
             </div>
           </div>
@@ -288,56 +339,90 @@ export default function StudentManagement() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Progression moyenne</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Math.round(students.reduce((acc, s) => acc + s.progress, 0) / students.length)}%
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{averageProgress || 0}%</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtres, recherche et export */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Rechercher un étudiant..."
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent w-full"
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <div>
               <select
                 value={selectedCourseId}
-                onChange={(e) => { setSelectedCourseId(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setSelectedCourseId(e.target.value);
+                  setPage(1);
+                }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               >
-                <option value="">Sélectionner un cours</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>{c.title}</option>
+                <option value="">Tous les cours</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title}
+                  </option>
                 ))}
               </select>
             </div>
+
             <div className="flex items-center space-x-2">
               <Filter className="h-4 w-4 text-gray-400" />
               <select
                 value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value as any); setPage(1); }}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value as any);
+                  setPage(1);
+                }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               >
                 <option value="all">Tous les étudiants</option>
                 <option value="active">Actifs</option>
+                <option value="completed">Terminés</option>
                 <option value="inactive">Inactifs</option>
-                <option value="suspended">Suspendus</option>
               </select>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value as any);
+                  setPage(1);
+                }}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
+              >
+                <option value="last_activity">Dernière activité</option>
+                <option value="enrolled_at">Date d'inscription</option>
+                <option value="progress">Progression</option>
+                <option value="last_login">Dernière connexion</option>
+              </select>
+              <button
+                onClick={handleSortToggle}
+                className="inline-flex items-center px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                title="Changer l'ordre de tri"
+              >
+                <ArrowUpDown className="h-4 w-4 mr-1" />
+                {order === 'asc' ? 'Asc' : 'Desc'}
+              </button>
+            </div>
+
             <button onClick={exportCsv} className="px-3 py-2 text-sm rounded-md border border-gray-300 hover:bg-gray-50">
               Export CSV
             </button>
@@ -345,22 +430,19 @@ export default function StudentManagement() {
         </div>
       </div>
 
-      {/* Liste des étudiants */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        {filteredStudents.length > 0 ? (
+        {students.length > 0 ? (
           <div className="divide-y divide-gray-200">
-            {pagedStudents.map((student) => (
+            {students.map((student) => (
               <div key={student.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
-                    {/* Avatar */}
                     <div className="flex-shrink-0">
                       <div className="h-12 w-12 bg-mdsc-gold rounded-full flex items-center justify-center text-white font-semibold">
-                        {student.firstName[0]}{student.lastName[0]}
+                        {`${student.firstName?.charAt(0) ?? ''}${student.lastName?.charAt(0) ?? ''}` || 'É'}
                       </div>
                     </div>
-                    
-                    {/* Informations de l'étudiant */}
+
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">
@@ -368,31 +450,28 @@ export default function StudentManagement() {
                         </h3>
                         {getStatusBadge(student.status)}
                       </div>
-                      
+
                       <p className="text-gray-600 text-sm mb-3">{student.email}</p>
-                      
-                      <div className="flex items-center space-x-6 text-sm text-gray-500 mb-3">
+
+                      <div className="flex items-center flex-wrap gap-4 text-sm text-gray-500 mb-3">
                         <div className="flex items-center space-x-1">
                           <BookOpen className="h-4 w-4" />
-                          <span>{student.enrolledCourses} cours inscrits</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Award className="h-4 w-4" />
-                          <span>{student.completedCourses} terminés</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4" />
-                          <span className={getGradeColor(student.averageGrade)}>
-                            {student.averageGrade.toFixed(1)}/5
-                          </span>
+                          <span>{student.courseTitle ?? 'Cours'}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
-                          <span>Dernière activité: {student.lastActivity}</span>
+                          <span>Inscription: {formatDate(student.enrolledAt)}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Star className="h-4 w-4" />
+                          <span className="text-gray-400">—/5</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-4 w-4" />
+                          <span>Dernière activité: {formatDate(student.lastActivity)}</span>
                         </div>
                       </div>
 
-                      {/* Progression */}
                       <div className="max-w-md">
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-gray-600">Progression globale</span>
@@ -402,13 +481,12 @@ export default function StudentManagement() {
                           <div
                             className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(student.progress)}`}
                             style={{ width: `${student.progress}%` }}
-                          ></div>
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Actions */}
+
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => window.location.href = `/dashboard/instructor/students/${student.id}`}
@@ -441,17 +519,15 @@ export default function StudentManagement() {
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun étudiant trouvé</h3>
             <p className="text-gray-500">
-              {searchTerm || filterStatus !== 'all' 
+              {searchTerm || filterStatus !== 'all'
                 ? 'Aucun étudiant ne correspond à vos critères de recherche.'
-                : 'Vous n\'avez aucun étudiant inscrit à vos cours.'
-              }
+                : 'Vous n\'avez aucun étudiant inscrit à vos cours.'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Pagination */}
-      {filteredStudents.length > 0 && (
+      {students.length > 0 && (
         <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="text-sm text-gray-600">
             Page {page} / {totalPages} · {total} étudiants
@@ -459,21 +535,24 @@ export default function StudentManagement() {
           <div className="flex items-center space-x-2">
             <button
               disabled={page <= 1}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
             >
               Précédent
             </button>
             <button
               disabled={page >= totalPages}
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               className="px-3 py-2 text-sm rounded-md border border-gray-300 disabled:opacity-50"
             >
               Suivant
             </button>
             <select
               value={limit}
-              onChange={(e) => { setLimit(parseInt(e.target.value)); setPage(1); }}
+              onChange={(e) => {
+                setLimit(parseInt(e.target.value, 10));
+                setPage(1);
+              }}
               className="ml-2 border border-gray-300 rounded-md px-3 py-2 text-sm"
             >
               <option value={10}>10</option>

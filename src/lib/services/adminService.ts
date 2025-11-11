@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { resolveMediaUrl } from '../utils/media';
 
 export interface CourseApproval {
   id: string;
@@ -25,6 +26,216 @@ export interface CourseApprovalAction {
   action: 'approve' | 'reject';
   comments?: string;
   rejectionReason?: string;
+}
+
+export interface AdminOverviewResponse {
+  totals?: {
+    users?: {
+      total?: number;
+      active?: number;
+      students?: number;
+      instructors?: number;
+      admins?: number;
+    };
+    courses?: {
+      total?: number;
+      published?: number;
+      pending?: number;
+      draft?: number;
+    };
+    enrollments?: {
+      total?: number;
+      completed?: number;
+      active?: number;
+    };
+    revenue?: {
+      totals?: Array<{
+        currency?: string;
+        amount?: number;
+        total_amount?: number;
+        completed_payments?: number;
+        last_payment_at?: string | null;
+      }>;
+    };
+  };
+  monthly_growth?: {
+    users?: Array<{ month?: string; value?: number }>;
+    courses?: Array<{ month?: string; value?: number }>;
+    revenue?: Array<{
+      month?: string;
+      total_amount?: number;
+      value?: number;
+      breakdown?: Array<{
+        currency?: string;
+        total_amount?: number;
+        payments?: number;
+      }>;
+    }>;
+  };
+}
+
+export interface AdminSystemMetric {
+  metric: string;
+  value: number;
+  unit?: string;
+  context?: Record<string, any>;
+  recorded_at: string;
+}
+
+export interface AdminSystemMetricsResponse {
+  metrics?: AdminSystemMetric[];
+  history?: Record<string, Array<{ value?: number; recorded_at?: string }>>;
+  uptime_seconds?: number;
+  last_backup_at?: string | null;
+}
+
+export interface AdminActivityEntry {
+  id: number | string;
+  type: string;
+  description?: string;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+  user?: {
+    id?: number | string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+  course?: {
+    id?: number | string;
+    title?: string;
+  };
+}
+
+export interface AdminAlertEntry {
+  id: number | string;
+  type: string;
+  severity: 'info' | 'warning' | 'danger';
+  title: string;
+  description?: string;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
+
+export interface AdminServiceStatusCheck {
+  id: string;
+  name: string;
+  status: 'up' | 'degraded' | 'down' | 'disabled';
+  message?: string;
+  details?: Record<string, any>;
+}
+
+export interface AdminServiceStatusResponse {
+  summary?: 'up' | 'degraded' | 'down';
+  checked_at?: string;
+  services?: AdminServiceStatusCheck[];
+}
+
+export interface AdminNotificationEntry {
+  id: number | string;
+  title: string;
+  message?: string;
+  type?: string;
+  metadata?: Record<string, any> | null;
+  is_read?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  trigger_at?: string | null;
+}
+
+export interface AdminNotificationPayload {
+  title: string;
+  message?: string;
+  type?: string;
+  metadata?: Record<string, any> | null;
+  trigger_at?: string | null;
+  is_read?: boolean;
+}
+
+export interface AdminNotificationListResponse {
+  notifications: AdminNotificationEntry[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    total_pages?: number;
+  } | null;
+}
+
+export interface AdminEventEntry {
+  id: number | string;
+  title: string;
+  description?: string;
+  type?: string;
+  start_at?: string;
+  end_at?: string | null;
+  location?: string | null;
+  course_id?: number | string | null;
+  course_title?: string;
+  is_public?: boolean;
+  metadata?: Record<string, any> | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminEventPayload {
+  title: string;
+  description?: string;
+  type?: string;
+  start_at: string;
+  end_at?: string | null;
+  location?: string | null;
+  course_id?: number | string | null;
+  is_public?: boolean;
+  metadata?: Record<string, any> | null;
+}
+
+export interface AdminEventListResponse {
+  events: AdminEventEntry[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    total_pages?: number;
+  } | null;
+}
+
+export interface AdminUserEntry {
+  id?: number | string;
+  user_id?: number | string;
+  uuid?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  role?: string;
+  role_name?: string;
+  status?: string;
+  account_status?: string;
+  is_email_verified?: boolean;
+  email_verified?: boolean;
+  created_at?: string;
+  createdAt?: string;
+  last_login?: string;
+  lastLogin?: string;
+  organization?: string;
+  country?: string;
+  courses_enrolled?: number;
+  coursesEnrolled?: number;
+  total_points?: number;
+  totalPoints?: number;
+  suspension_reason?: string | null;
+  suspended_at?: string | null;
+}
+
+export interface AdminUserListResponse {
+  users: AdminUserEntry[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    total_pages?: number;
+  } | null;
 }
 
 export class AdminService {
@@ -181,6 +392,332 @@ export class AdminService {
       // Pour les autres erreurs, relancer
       throw error;
     }
+  }
+
+  // Récupérer l'overview global du dashboard admin
+  static async getOverview(): Promise<AdminOverviewResponse> {
+    const response = await apiRequest('/admin/overview', {
+      method: 'GET',
+    });
+
+    // L'API renvoie { success, data }, retourner data ou un objet vide
+    if (response.success !== false && response.data) {
+      return response.data as AdminOverviewResponse;
+    }
+
+    return {};
+  }
+
+  // Récupérer les métriques système
+  static async getSystemMetrics(params?: {
+    rangeMinutes?: number;
+    historyLimit?: number;
+  }): Promise<AdminSystemMetricsResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.rangeMinutes) {
+      searchParams.append('rangeMinutes', String(params.rangeMinutes));
+    }
+    if (params?.historyLimit) {
+      searchParams.append('historyLimit', String(params.historyLimit));
+    }
+
+    const response = await apiRequest(`/admin/system-metrics?${searchParams.toString()}`, {
+      method: 'GET',
+    });
+
+    if (response.success !== false && response.data) {
+      return response.data as AdminSystemMetricsResponse;
+    }
+
+    return {};
+  }
+
+  // Récupérer les activités récentes
+  static async getRecentActivity(params?: {
+    limit?: number;
+    eventType?: string;
+  }): Promise<AdminActivityEntry[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) {
+      searchParams.append('limit', String(params.limit));
+    }
+    if (params?.eventType) {
+      searchParams.append('eventType', params.eventType);
+    }
+
+    const response = await apiRequest(`/admin/recent-activity?${searchParams.toString()}`, {
+      method: 'GET',
+    });
+
+    if (response.success !== false && Array.isArray(response.data)) {
+      return response.data as AdminActivityEntry[];
+    }
+
+    return [];
+  }
+
+  static async getAlerts(): Promise<AdminAlertEntry[]> {
+    const response = await apiRequest('/admin/alerts', {
+      method: 'GET',
+    });
+
+    if (response.success !== false && Array.isArray(response.data)) {
+      return response.data as AdminAlertEntry[];
+    }
+
+    return [];
+  }
+
+  static async getServiceStatus(): Promise<AdminServiceStatusResponse> {
+    const response = await apiRequest('/admin/services/status', {
+      method: 'GET',
+    });
+ 
+    if (response.success !== false && response.data) {
+      return response.data as AdminServiceStatusResponse;
+    }
+ 
+    return {};
+  }
+
+  static async getAdminNotifications(params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    is_read?: boolean;
+    upcoming?: boolean;
+  }): Promise<AdminNotificationListResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.type) searchParams.append('type', params.type);
+    if (typeof params?.is_read === 'boolean') searchParams.append('is_read', String(params.is_read));
+    if (typeof params?.upcoming === 'boolean') searchParams.append('upcoming', String(params.upcoming));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/notifications${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const data = response?.data;
+    if (Array.isArray(data)) {
+      return { notifications: data, pagination: null };
+    }
+    if (data && typeof data === 'object') {
+      if (Array.isArray((data as any).notifications)) {
+        return {
+          notifications: (data as any).notifications,
+          pagination: (data as any).pagination ?? null,
+        };
+      }
+      if (Array.isArray((data as any).data)) {
+        return {
+          notifications: (data as any).data,
+          pagination: (data as any).pagination ?? null,
+        };
+      }
+    }
+
+    return { notifications: [], pagination: null };
+  }
+
+  static async createAdminNotification(payload: AdminNotificationPayload): Promise<AdminNotificationEntry> {
+    const response = await apiRequest('/admin/notifications', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return (response?.data as AdminNotificationEntry) ?? (response as any);
+  }
+
+  static async updateAdminNotification(
+    id: number | string,
+    payload: Partial<AdminNotificationPayload>
+  ): Promise<AdminNotificationEntry> {
+    const response = await apiRequest(`/admin/notifications/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    return (response?.data as AdminNotificationEntry) ?? (response as any);
+  }
+
+  static async deleteAdminNotification(id: number | string): Promise<void> {
+    await apiRequest(`/admin/notifications/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async getAdminEvents(params?: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    upcoming?: boolean;
+    start?: string;
+    end?: string;
+  }): Promise<AdminEventListResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.type) searchParams.append('type', params.type);
+    if (typeof params?.upcoming === 'boolean') searchParams.append('upcoming', String(params.upcoming));
+    if (params?.start) searchParams.append('start', params.start);
+    if (params?.end) searchParams.append('end', params.end);
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/events${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const data = response?.data;
+    if (Array.isArray(data)) {
+      return { events: data, pagination: null };
+    }
+    if (data && typeof data === 'object') {
+      if (Array.isArray((data as any).events)) {
+        return {
+          events: (data as any).events,
+          pagination: (data as any).pagination ?? null,
+        };
+      }
+      if (Array.isArray((data as any).data)) {
+        return {
+          events: (data as any).data,
+          pagination: (data as any).pagination ?? null,
+        };
+      }
+    }
+
+    return { events: [], pagination: null };
+  }
+
+  static async createAdminEvent(payload: AdminEventPayload): Promise<AdminEventEntry> {
+    const response = await apiRequest('/admin/events', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    return (response?.data as AdminEventEntry) ?? (response as any);
+  }
+
+  static async updateAdminEvent(
+    id: number | string,
+    payload: Partial<AdminEventPayload>
+  ): Promise<AdminEventEntry> {
+    const response = await apiRequest(`/admin/events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    return (response?.data as AdminEventEntry) ?? (response as any);
+  }
+
+  static async deleteAdminEvent(id: number | string): Promise<void> {
+    await apiRequest(`/admin/events/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  static async getUsers(params?: {
+    search?: string;
+    role?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<AdminUserListResponse> {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.role) searchParams.append('role', params.role);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/users${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const payload = response?.data ?? response ?? {};
+    let users: AdminUserEntry[] = [];
+    let pagination: AdminUserListResponse['pagination'] = null;
+
+    const candidates = [
+      payload,
+      (payload as any)?.data,
+      (payload as any)?.data?.data,
+      (payload as any)?.data?.users,
+      (payload as any)?.results,
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+
+      if (Array.isArray(candidate)) {
+        users = candidate as AdminUserEntry[];
+        break;
+      }
+
+      if (typeof candidate === 'object') {
+        if (Array.isArray((candidate as any).users)) {
+          users = (candidate as any).users;
+          pagination = (candidate as any).pagination ?? (candidate as any).meta ?? pagination;
+          break;
+        }
+        if (Array.isArray((candidate as any).data)) {
+          users = (candidate as any).data;
+          pagination = (candidate as any).pagination ?? (candidate as any).meta ?? pagination;
+          break;
+        }
+      }
+    }
+
+    if (!users.length && Array.isArray(response)) {
+      users = response as AdminUserEntry[];
+    }
+
+    return {
+      users,
+      pagination,
+    };
+  }
+
+  static async updateUserRole(
+    userId: string | number,
+    role: 'student' | 'instructor'
+  ): Promise<AdminUserEntry> {
+    const response = await apiRequest(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async suspendUser(
+    userId: string | number,
+    reason?: string
+  ): Promise<AdminUserEntry> {
+    const payload = reason ? { reason } : undefined;
+    const response = await apiRequest(`/admin/users/${userId}/suspend`, {
+      method: 'POST',
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async reactivateUser(userId: string | number): Promise<AdminUserEntry> {
+    const response = await apiRequest(`/admin/users/${userId}/reactivate`, {
+      method: 'POST',
+    });
+
+    return (response?.data as AdminUserEntry) ?? (response as any);
+  }
+
+  static async deleteUser(userId: string | number): Promise<void> {
+    await apiRequest(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
   }
 }
 

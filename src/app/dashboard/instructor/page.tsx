@@ -1,18 +1,25 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
-import { courseService, Course } from '../../../lib/services/courseService';
-import { AnalyticsService } from '../../../lib/services/analyticsService';
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
+import InstructorService, {
+  InstructorCourseEntry,
+  InstructorDashboardResponse,
+  InstructorEnrollmentsTrendPoint,
+  InstructorRecentActivityEntry,
+  InstructorRecentEnrollment,
+  InstructorRecentPayment,
+  InstructorTopCourse,
+  InstructorNotificationEntry,
+} from '../../../lib/services/instructorService';
+import Link from 'next/link';
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
   DollarSign,
-  Eye,
   MessageSquare,
   Plus,
   BarChart3,
@@ -28,177 +35,358 @@ import {
   Settings,
   FileText,
   PlayCircle,
-  Upload
+  Eye,
+  Bell,
 } from 'lucide-react';
 
 interface InstructorStats {
   totalCourses: number;
+  publishedCourses: number;
+  pendingCourses: number;
+  draftCourses: number;
   totalStudents: number;
-  totalRevenue: number;
-  averageRating: number;
-  completionRate: number;
-  monthlyViews: number;
-  monthlyGrowth: number;
   activeStudents: number;
+  totalRevenue: number;
+  revenueByCurrency: Array<{ currency: string; amount: number }>;
+  averageRating: number;
+  totalViews: number;
 }
 
 interface CoursePerformance {
   id: string;
   title: string;
+  status?: string;
   students: number;
   completionRate: number;
   rating: number;
   revenue: number;
   views: number;
-  trend: 'up' | 'down' | 'stable';
 }
 
 interface RecentActivity {
-  id: string;
-  type: 'student_enrolled' | 'course_created' | 'review_received' | 'quiz_submitted';
+  id: string | number;
+  type: string;
   title: string;
   description: string;
   timestamp: string;
   icon: React.ComponentType<any>;
   color: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface RecentEnrollmentItem {
+  id: string | number;
+  courseTitle: string;
+  studentName: string;
+  enrolledAt: string;
+}
+
+interface RecentPaymentItem {
+  id: string | number;
+  courseTitle: string;
+  studentName: string;
+  amount: number;
+  currency: string;
+  paidAt: string;
 }
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [courses, setCourses] = useState<InstructorCourseEntry[]>([]);
   const [stats, setStats] = useState<InstructorStats>({
     totalCourses: 0,
+    publishedCourses: 0,
+    pendingCourses: 0,
+    draftCourses: 0,
     totalStudents: 0,
+    activeStudents: 0,
     totalRevenue: 0,
+    revenueByCurrency: [],
     averageRating: 0,
-    completionRate: 0,
-    monthlyViews: 0,
-    monthlyGrowth: 0,
-    activeStudents: 0
+    totalViews: 0,
   });
   const [coursePerformance, setCoursePerformance] = useState<CoursePerformance[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [recentEnrollments, setRecentEnrollments] = useState<RecentEnrollmentItem[]>([]);
+  const [recentPayments, setRecentPayments] = useState<RecentPaymentItem[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const [weeklyEnrollments, setWeeklyEnrollments] = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [coursesError, setCoursesError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<InstructorNotificationEntry[]>([]);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  const formatCurrency = (amount?: number, currency = 'XOF') => {
+    if (amount === undefined || amount === null) return '0';
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    } catch (error) {
+      return `${amount.toLocaleString('fr-FR')} ${currency}`;
+    }
+  };
+
+  const formatDateTime = (iso?: string) => {
+    if (!iso) return 'Non disponible';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return 'Non disponible';
+    return date.toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
+  };
+
+  const mapActivityEntry = (entry: InstructorRecentActivityEntry): RecentActivity => {
+    const configMap: Record<string, { icon: React.ComponentType<any>; color: string; title: string; priority: 'low' | 'medium' | 'high' }> = {
+      student_enrolled: {
+        icon: Users,
+        color: 'text-blue-500',
+        title: 'Nouvelle inscription',
+        priority: 'low',
+      },
+      course_created: {
+        icon: BookOpen,
+        color: 'text-green-500',
+        title: 'Cours publié',
+        priority: 'medium',
+      },
+      course_updated: {
+        icon: FileText,
+        color: 'text-indigo-500',
+        title: 'Cours mis à jour',
+        priority: 'low',
+      },
+      review_received: {
+        icon: Star,
+        color: 'text-yellow-500',
+        title: 'Nouvel avis reçu',
+        priority: 'medium',
+      },
+      payment_received: {
+        icon: DollarSign,
+        color: 'text-emerald-500',
+        title: 'Paiement reçu',
+        priority: 'low',
+      },
+    };
+
+    const config = configMap[entry.type] ?? {
+      icon: Activity,
+      color: 'text-gray-500',
+      title: 'Événement',
+      priority: 'low' as const,
+    };
+
+    let description = entry.description;
+    if (!description && entry.metadata && typeof entry.metadata === 'object') {
+      description = entry.metadata.message || entry.metadata.description || '';
+    }
+
+    return {
+      id: entry.id,
+      type: entry.type,
+      title: config.title,
+      description: description || 'Activité enregistrée',
+      timestamp: formatDateTime(entry.created_at),
+      icon: config.icon,
+      color: config.color,
+      priority: config.priority,
+    };
+  };
+
+  const toNumber = (value: any): number => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    if (value && typeof value === 'object') {
+      if ('total' in value) return toNumber((value as any).total);
+      if ('count' in value) return toNumber((value as any).count);
+      if ('value' in value) return toNumber((value as any).value);
+      if ('amount' in value) return toNumber((value as any).amount);
+    }
+    return 0;
+  };
+
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((notification) => !notification.is_read).length,
+    [notifications]
+  );
 
   useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+
     const loadDashboardData = async () => {
-      if (!user) return;
+      setLoading(true);
+      setDashboardError(null);
+      setCoursesError(null);
+      setNotificationsError(null);
+      setNotificationsLoading(true);
 
       try {
-        setLoading(true);
-        
-        // Charger les cours de l'instructeur
-        const instructorCourses = await courseService.getInstructorCourses(user.id.toString());
-        
-        // Vérifier que c'est un tableau
-        let coursesArray: any[] = [];
-        if (Array.isArray(instructorCourses)) {
-          coursesArray = instructorCourses;
-        } else if (instructorCourses && typeof instructorCourses === 'object') {
-          coursesArray = (instructorCourses as any)?.courses || (instructorCourses as any)?.data || [];
-        }
-        setCourses(coursesArray);
-
-        // Analytics dashboard backend-ready
-        try {
-          const analytics = await AnalyticsService.getInstructorDashboard();
-          const cs = analytics?.courses_statistics || {};
-          const ss = analytics?.students_statistics || {};
-          const enrollmentTrend = Array.isArray(analytics?.enrollment_trend) ? analytics.enrollment_trend : [];
-          const weeklyFromTrend = enrollmentTrend.slice(-8).map((e: any) => Number(e.new_enrollments || 0));
-
-          setStats({
-            totalCourses: Number(cs.total_courses || coursesArray.length || 0),
-            totalStudents: Number(ss.total_students || coursesArray.reduce((sum, c) => sum + (c.totalStudents || c.enrollment_count || 0), 0)),
-            totalRevenue: Number(cs.total_revenue || coursesArray.reduce((sum, c) => sum + (c.price || 0), 0)),
-            averageRating: coursesArray.length > 0 ? (coursesArray.reduce((sum, c) => sum + (c.rating || c.average_rating || 0), 0) / coursesArray.length) : 0,
-            completionRate: Number(ss.avg_completion_rate || 0),
-            monthlyViews: 0,
-            monthlyGrowth: Number(ss.new_students_30d || 0),
-            activeStudents: Math.floor(Number(ss.total_students || 0) * 0.7),
-          });
-
-          if (weeklyFromTrend.length) {
-            setWeeklyEnrollments(weeklyFromTrend);
-          }
-        } catch (_) {
-          // Fallback local calc si analytics non dispo
-          const totalStudents = coursesArray.reduce((sum, course) => sum + (course.totalStudents || 0), 0);
-          const totalRevenue = coursesArray.reduce((sum, course) => sum + (course.price || 0), 0);
-          const averageRating = coursesArray.length > 0 ? coursesArray.reduce((sum, course) => sum + (course.rating || 0), 0) / coursesArray.length : 0;
-          setStats({
-            totalCourses: coursesArray.length,
-            totalStudents,
-            totalRevenue,
-            averageRating,
-            completionRate: Math.floor(Math.random() * 40) + 60,
-            monthlyViews: Math.floor(Math.random() * 5000) + 1000,
-            monthlyGrowth: Math.floor(Math.random() * 30) + 5,
-            activeStudents: Math.floor(totalStudents * 0.7)
-          });
-          const weeks = 8;
-          const base = Math.max(5, Math.floor((totalStudents || 10) / weeks));
-          const generated = Array.from({ length: weeks }, (_, i) => {
-            const variance = Math.round((Math.sin(i) + 1) * 3);
-            return Math.max(0, base + variance + ((i % 3 === 0) ? 4 : 0));
-          });
-          setWeeklyEnrollments(generated);
-        }
-
-        // Performance des cours
-        setCoursePerformance(coursesArray.map(course => ({
-          id: course.id,
-          title: course.title,
-          students: course.totalStudents || 0,
-          completionRate: Math.floor(Math.random() * 40) + 60,
-          rating: course.rating || 0,
-          revenue: course.price || 0,
-          views: Math.floor(Math.random() * 1000) + 100,
-          trend: Math.random() > 0.5 ? 'up' : 'down'
-        })));
-
-        // weeklyEnrollments is set from analytics try/catch above
-
-        // Activités récentes
-        setRecentActivity([
-          {
-            id: '1',
-            type: 'student_enrolled',
-            title: 'Nouvel étudiant inscrit',
-            description: 'Marie Kouassi s\'est inscrite à "Leadership et Management"',
-            timestamp: 'Il y a 2 heures',
-            icon: Users,
-            color: 'text-blue-500'
-          },
-          {
-            id: '2',
-            type: 'review_received',
-            title: 'Nouvel avis reçu',
-            description: '5 étoiles pour "Communication Efficace"',
-            timestamp: 'Il y a 4 heures',
-            icon: Star,
-            color: 'text-yellow-500'
-          },
-          {
-            id: '3',
-            type: 'quiz_submitted',
-            title: 'Quiz soumis',
-            description: '15 étudiants ont terminé le quiz de la semaine',
-            timestamp: 'Il y a 6 heures',
-            icon: FileText,
-            color: 'text-green-500'
-          }
+        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult] = await Promise.allSettled([
+          InstructorService.getDashboard(),
+          InstructorService.getCourses({ limit: 12 }),
+          InstructorService.getEnrollmentsTrend('90d'),
+          InstructorService.getRecentActivity(20),
+          InstructorService.getUnreadMessagesCount(),
+          InstructorService.getNotifications({ limit: 20 }),
         ]);
 
+        if (!isMounted) return;
+
+        if (dashboardResult.status === 'fulfilled') {
+          const dashboardData: InstructorDashboardResponse = dashboardResult.value ?? {};
+          const statsData = dashboardData.stats ?? {};
+          const coursesStats = statsData.courses ?? {};
+          const studentsStats = statsData.students ?? {};
+          const revenueStats = statsData.revenue ?? [];
+          const ratingStats = statsData.rating ?? {};
+          const viewsStats = statsData.views ?? {};
+
+          const revenueByCurrency = revenueStats
+            .filter((item): item is { currency?: string; amount?: number } => Boolean(item?.currency))
+            .map((item) => ({
+              currency: item.currency ?? 'XOF',
+              amount: toNumber(item.amount ?? (item as any).total ?? (item as any).value),
+            }));
+
+          setStats({
+            totalCourses: toNumber(coursesStats.total),
+            publishedCourses: toNumber(coursesStats.published),
+            pendingCourses: toNumber(coursesStats.pending),
+            draftCourses: toNumber(coursesStats.draft),
+            totalStudents: toNumber(studentsStats.total),
+            activeStudents: toNumber(studentsStats.active),
+            totalRevenue: revenueStats.reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
+            revenueByCurrency,
+            averageRating: toNumber(ratingStats.average),
+            totalViews: toNumber(viewsStats.total),
+          });
+
+          setCoursePerformance((dashboardData.top_courses ?? []).map((course: InstructorTopCourse, index) => ({
+            id: String(course.course_id ?? index),
+            title: course.title ?? 'Cours',
+            status: course.status,
+            students: toNumber(course.enrollments),
+            completionRate: toNumber(course.completion_rate),
+            rating: toNumber(course.rating),
+            revenue: (course.revenue ?? []).reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
+            views: toNumber(course.views),
+          })));
+
+          setRecentEnrollments((dashboardData.recent_enrollments ?? []).map((item: InstructorRecentEnrollment, index) => ({
+            id: item.enrollment_id ?? index,
+            courseTitle: item.course_title ?? 'Cours',
+            studentName: item.student_name ?? 'Étudiant',
+            enrolledAt: formatDateTime(item.enrolled_at),
+          })));
+
+          setRecentPayments((dashboardData.recent_payments ?? []).map((item: InstructorRecentPayment, index) => ({
+            id: item.payment_id ?? index,
+            courseTitle: item.course_title ?? 'Cours',
+            studentName: item.student_name ?? 'Étudiant',
+            amount: toNumber(item.amount),
+            currency: item.currency ?? 'XOF',
+            paidAt: formatDateTime(item.paid_at),
+          })));
+        } else {
+          const reason = dashboardResult.reason as Error | undefined;
+          setDashboardError(reason?.message ?? 'Impossible de charger le tableau de bord instructeur');
+          setStats((prev) => ({
+            ...prev,
+            totalCourses: 0,
+            publishedCourses: 0,
+            pendingCourses: 0,
+            draftCourses: 0,
+            totalStudents: 0,
+            activeStudents: 0,
+            totalRevenue: 0,
+            revenueByCurrency: [],
+            averageRating: 0,
+            totalViews: 0,
+          }));
+          setCoursePerformance([]);
+          setRecentEnrollments([]);
+          setRecentPayments([]);
+        }
+
+        if (coursesResult.status === 'fulfilled') {
+          const data = coursesResult.value;
+          setCourses(data?.courses ?? []);
+        } else {
+          const reason = coursesResult.reason as Error | undefined;
+          setCoursesError(reason?.message ?? 'Impossible de récupérer vos cours');
+          setCourses([]);
+        }
+
+        if (trendResult.status === 'fulfilled') {
+          const trend = trendResult.value ?? [];
+          const limitedTrend = trend.slice(-8);
+          setWeeklyEnrollments(limitedTrend.map((point) => toNumber(point.enrollments ?? (point as any).total ?? (point as any).value)));
+        } else {
+          setWeeklyEnrollments([]);
+        }
+
+        if (activityResult.status === 'fulfilled') {
+          const entries = activityResult.value ?? [];
+          setRecentActivity(entries.map(mapActivityEntry));
+        } else {
+          setRecentActivity([]);
+        }
+
+        if (unreadResult.status === 'fulfilled') {
+          setUnreadMessages(unreadResult.value ?? 0);
+        } else {
+          setUnreadMessages(0);
+        }
+
+        if (notificationsResult.status === 'fulfilled') {
+          const data = notificationsResult.value;
+          const list = Array.isArray((data as any)?.notifications)
+            ? (data as any).notifications as InstructorNotificationEntry[]
+            : Array.isArray(data)
+            ? (data as InstructorNotificationEntry[])
+            : Array.isArray((data as any)?.data)
+            ? (data as any).data as InstructorNotificationEntry[]
+            : [];
+          setNotifications(list);
+          setNotificationsError(null);
+        } else {
+          const reason = notificationsResult.reason as Error | undefined;
+          setNotificationsError(reason?.message ?? 'Impossible de récupérer vos notifications');
+          setNotifications([]);
+        }
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
+        if (!isMounted) return;
+        console.error('Erreur lors du chargement des données instructeur:', error);
+        const message =
+          error instanceof Error ? error.message : 'Impossible de charger le tableau de bord instructeur';
+        setDashboardError(message);
+        setNotificationsError((prev) => prev ?? message);
       } finally {
+        if (isMounted) {
         setLoading(false);
+        setNotificationsLoading(false);
+        }
       }
     };
 
     loadDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   if (loading) {
@@ -248,15 +436,14 @@ export default function InstructorDashboard() {
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Mes Cours</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalCourses}</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +2 ce mois
+                  <p className="text-sm font-medium text-gray-600 mb-1">Étudiants</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalStudents.toLocaleString()}</p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Actifs : {stats.activeStudents.toLocaleString()}
                   </p>
                 </div>
                 <div className="bg-blue-100 p-3 rounded-full group-hover:bg-blue-200 transition-colors">
-                  <BookOpen className="h-6 w-6 text-blue-600" />
+                  <Users className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </div>
@@ -264,15 +451,14 @@ export default function InstructorDashboard() {
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Étudiants</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalStudents}</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +{stats.monthlyGrowth} ce mois
+                  <p className="text-sm font-medium text-gray-600 mb-1">Cours</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.totalCourses}</p>
+                  <p className="text-xs text-green-600 mt-1">
+                    Publiés : {stats.publishedCourses} • En attente : {stats.pendingCourses}
                   </p>
                 </div>
                 <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
-                  <Users className="h-6 w-6 text-green-600" />
+                  <BookOpen className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </div>
@@ -281,11 +467,16 @@ export default function InstructorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Revenus</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalRevenue.toLocaleString()} FCFA</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +15% ce mois
+                  <p className="text-3xl font-bold text-gray-900">
+                    {stats.revenueByCurrency.length
+                      ? formatCurrency(stats.revenueByCurrency[0].amount ?? 0, stats.revenueByCurrency[0].currency ?? 'XOF')
+                      : `${stats.totalRevenue.toLocaleString('fr-FR')} FCFA`}
                   </p>
+                  {stats.revenueByCurrency.length > 1 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      {stats.revenueByCurrency.slice(1).map((entry) => `${formatCurrency(entry.amount ?? 0, entry.currency ?? 'XOF')}`).join(' • ')}
+                    </p>
+                  )}
                 </div>
                 <div className="bg-emerald-100 p-3 rounded-full group-hover:bg-emerald-200 transition-colors">
                   <DollarSign className="h-6 w-6 text-emerald-600" />
@@ -299,8 +490,8 @@ export default function InstructorDashboard() {
                   <p className="text-sm font-medium text-gray-600 mb-1">Note Moyenne</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.averageRating.toFixed(1)}</p>
                   <p className="text-xs text-yellow-600 mt-1 flex items-center">
-                    <Star className="h-3 w-3 mr-1" />
-                    Excellent
+                    <Eye className="h-3 w-3 mr-1" />
+                    {stats.totalViews.toLocaleString()} vues
                   </p>
                 </div>
                 <div className="bg-yellow-100 p-3 rounded-full group-hover:bg-yellow-200 transition-colors">
@@ -323,6 +514,7 @@ export default function InstructorDashboard() {
                   Voir tout
                 </button>
               </div>
+              {coursePerformance.length > 0 ? (
               <div className="space-y-4">
                 {coursePerformance.slice(0, 3).map((course) => (
                   <div key={course.id} className="group p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
@@ -331,22 +523,27 @@ export default function InstructorDashboard() {
                         {course.title}
                       </h4>
                       <div className="flex items-center space-x-2">
-                        {course.trend === 'up' ? (
-                          <ArrowUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <ArrowDown className="h-4 w-4 text-red-500" />
-                        )}
-                        <span className="text-sm text-gray-600">{course.completionRate}%</span>
+                          {course.revenue > 0 && (
+                            <span className="text-xs text-emerald-600 font-semibold">
+                              {course.revenue.toLocaleString()} FCFA
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <div className="flex items-center justify-between text-sm text-gray-500">
                       <span>{course.students} étudiants</span>
-                      <span>{(course.rating || 0).toFixed(1)} ⭐</span>
+                        <span>{course.rating.toFixed(1)} ⭐</span>
                       <span>{course.views} vues</span>
                     </div>
                   </div>
                 ))}
               </div>
+              ) : (
+                <div className="text-center py-10">
+                  <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Pas encore assez de données pour les performances.</p>
+                </div>
+              )}
             </div>
 
             {/* Métriques clés */}
@@ -357,30 +554,16 @@ export default function InstructorDashboard() {
               </h3>
               
               <div className="space-y-6">
-                {/* Taux de completion */}
+                {/* Note moyenne */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">Taux de Completion</span>
-                    <span className="text-sm font-bold text-gray-900">{stats.completionRate}%</span>
-                  </div>
-                  <div className="bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${stats.completionRate}%` }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Vues mensuelles */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">Vues Mensuelles</span>
-                    <span className="text-sm font-bold text-gray-900">{stats.monthlyViews.toLocaleString()}</span>
+                    <span className="text-sm font-medium text-gray-600">Note moyenne</span>
+                    <span className="text-sm font-bold text-gray-900">{stats.averageRating.toFixed(1)} / 5</span>
                   </div>
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-mdsc-gold to-orange-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((stats.monthlyViews / 5000) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((stats.averageRating / 5) * 100, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -394,7 +577,7 @@ export default function InstructorDashboard() {
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(stats.activeStudents / stats.totalStudents) * 100}%` }}
+                      style={{ width: `${stats.totalStudents ? Math.min((stats.activeStudents / stats.totalStudents) * 100, 100) : 0}%` }}
                     ></div>
                   </div>
                 </div>
@@ -406,19 +589,25 @@ export default function InstructorDashboard() {
                     <span className="text-xs text-gray-500">{weeklyEnrollments.reduce((a, b) => a + b, 0)} au total</span>
                   </div>
                   <div className="w-full h-28">
-                    <svg viewBox="0 0 160 60" className="w-full h-full">
-                      <polyline
-                        fill="none"
-                        stroke="rgb(234 179 8)"
-                        strokeWidth="2"
-                        points={weeklyEnrollments.map((v, i) => {
-                          const x = (i / Math.max(1, weeklyEnrollments.length - 1)) * 160;
-                          const max = Math.max(...weeklyEnrollments, 1);
-                          const y = 60 - (v / max) * 55 - 2;
-                          return `${x.toFixed(1)},${y.toFixed(1)}`;
-                        }).join(' ')}
-                      />
-                    </svg>
+                    {weeklyEnrollments.length > 1 ? (
+                      <svg viewBox="0 0 160 60" className="w-full h-full">
+                        <polyline
+                          fill="none"
+                          stroke="rgb(234 179 8)"
+                          strokeWidth="2"
+                          points={weeklyEnrollments.map((v, i) => {
+                            const x = (i / Math.max(1, weeklyEnrollments.length - 1)) * 160;
+                            const max = Math.max(...weeklyEnrollments, 1);
+                            const y = 60 - (v / max) * 55 - 2;
+                            return `${x.toFixed(1)},${y.toFixed(1)}`;
+                          }).join(' ')}
+                        />
+                      </svg>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-sm text-gray-400">
+                        Pas encore de tendance disponible
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -502,6 +691,68 @@ export default function InstructorDashboard() {
                 </Link>
               ))}
             </div>
+          </div>
+
+          {/* Notifications personnelles */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Bell className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
+                  Notifications
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {notifications.length} notification{notifications.length > 1 ? 's' : ''} • {unreadNotificationsCount} non lue{unreadNotificationsCount > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+            {notificationsLoading ? (
+              <div className="py-6 text-center text-gray-500 text-sm">Chargement des notifications...</div>
+            ) : notificationsError ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {notificationsError}
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-6 text-center text-gray-500 text-sm">
+                Aucune notification pour le moment.
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                {notifications.slice(0, 6).map((notification) => (
+                  <li key={notification.id} className={`rounded-xl border px-4 py-3 ${notification.is_read ? 'border-gray-200 bg-white' : 'border-blue-200 bg-blue-50'}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">{notification.title || 'Notification'}</span>
+                          {notification.type && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
+                              {notification.type}
+                            </span>
+                          )}
+                        </div>
+                        {notification.message && (
+                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{notification.message}</p>
+                        )}
+                        {notification.metadata && (
+                          <pre className="mt-2 text-xs bg-white/70 border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
+                            {JSON.stringify(notification.metadata, null, 2)}
+                          </pre>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span>{formatDateTime(notification.created_at)}</span>
+                          {notification.trigger_at && (
+                            <span className="text-blue-600">Déclenchée le {formatDateTime(notification.trigger_at)}</span>
+                          )}
+                        </div>
+                      </div>
+                      {!notification.is_read && (
+                        <span className="text-xs font-semibold text-mdsc-blue-primary">Non lu</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* Activité récente */}

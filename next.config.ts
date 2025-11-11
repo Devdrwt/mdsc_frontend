@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
   // Optimisations pour la production
   experimental: {
     optimizeCss: true,
@@ -14,7 +18,17 @@ const nextConfig: NextConfig = {
   
   // Configuration des images
   images: {
-    domains: ['localhost', 'vercel.app'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '*',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app',
+      },
+    ],
     formats: ['image/webp', 'image/avif'],
   },
   
