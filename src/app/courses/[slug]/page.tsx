@@ -199,6 +199,83 @@ export default function CourseDetailPage() {
     }
   };
 
+  const instructorInfo = useMemo(() => {
+    const courseAny = course as any;
+
+    if (!courseAny) {
+      return {
+        name: 'Instructeur',
+        title: '',
+        organization: '',
+        email: '',
+        bio: '',
+        avatar: null,
+      };
+    }
+
+    const rawInstructor = courseAny.instructor || {};
+
+    const firstName =
+      rawInstructor.firstName ||
+      rawInstructor.first_name ||
+      courseAny.instructor_first_name ||
+      '';
+    const lastName =
+      rawInstructor.lastName ||
+      rawInstructor.last_name ||
+      courseAny.instructor_last_name ||
+      '';
+
+    const name =
+      rawInstructor.name ||
+      courseAny.instructor_name ||
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      'Instructeur';
+
+    const title =
+      rawInstructor.title ||
+      rawInstructor.jobTitle ||
+      rawInstructor.job_title ||
+      courseAny.instructor_title ||
+      courseAny.instructor_role ||
+      '';
+
+    const organization =
+      rawInstructor.organization ||
+      rawInstructor.company ||
+      courseAny.instructor_organization ||
+      courseAny.instructor_company ||
+      '';
+
+    const email =
+      rawInstructor.email ||
+      courseAny.instructor_email ||
+      '';
+
+    const bio =
+      rawInstructor.bio ||
+      rawInstructor.description ||
+      courseAny.instructor_bio ||
+      courseAny.instructor_description ||
+      '';
+
+    const avatarRaw =
+      rawInstructor.avatar ||
+      rawInstructor.avatar_url ||
+      courseAny.instructor_avatar ||
+      courseAny.instructorAvatar ||
+      null;
+
+    return {
+      name,
+      title,
+      organization,
+      email,
+      bio,
+      avatar: resolveMediaUrl(avatarRaw),
+    };
+  }, [course]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -231,7 +308,7 @@ export default function CourseDetailPage() {
     );
   }
     
-    const courseAny = course as any;
+  const courseAny = course as any;
 
   const courseImageRaw =
     courseAny?.thumbnail_url ||
@@ -244,69 +321,7 @@ export default function CourseDetailPage() {
     ? DEFAULT_COURSE_IMAGE
     : resolveMediaUrl(courseImageRaw) || DEFAULT_COURSE_IMAGE;
 
-  const instructorInfo = useMemo(() => {
-    const rawInstructor = courseAny?.instructor || {};
-
-    const firstName =
-      rawInstructor.firstName ||
-      rawInstructor.first_name ||
-      courseAny?.instructor_first_name ||
-      '';
-    const lastName =
-      rawInstructor.lastName ||
-      rawInstructor.last_name ||
-      courseAny?.instructor_last_name ||
-      '';
-
-    const name =
-      rawInstructor.name ||
-      courseAny?.instructor_name ||
-      [firstName, lastName].filter(Boolean).join(' ') ||
-      'Instructeur';
-
-    const title =
-      rawInstructor.title ||
-      rawInstructor.jobTitle ||
-      rawInstructor.job_title ||
-      courseAny?.instructor_title ||
-      courseAny?.instructor_role ||
-      '';
-
-    const organization =
-      rawInstructor.organization ||
-      rawInstructor.company ||
-      courseAny?.instructor_organization ||
-      courseAny?.instructor_company ||
-      '';
-
-    const email =
-      rawInstructor.email ||
-      courseAny?.instructor_email ||
-      '';
-
-    const bio =
-      rawInstructor.bio ||
-      rawInstructor.description ||
-      courseAny?.instructor_bio ||
-      courseAny?.instructor_description ||
-      '';
-
-    const avatarRaw =
-      rawInstructor.avatar ||
-      rawInstructor.avatar_url ||
-      courseAny?.instructor_avatar ||
-      courseAny?.instructorAvatar ||
-      null;
-
-    return {
-      name,
-      title,
-      organization,
-      email,
-      bio,
-      avatar: resolveMediaUrl(avatarRaw),
-    };
-  }, [courseAny]);
+  
 
   const isEnrolled = course.enrollment !== undefined;
   
