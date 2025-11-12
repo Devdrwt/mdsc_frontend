@@ -10,6 +10,7 @@ import { moduleService } from '../../../../lib/services/moduleService';
 import { mediaService } from '../../../../lib/services/mediaService';
 import ModuleList from '../../../../components/courses/ModuleList';
 import MediaUpload from '../../../../components/media/MediaUpload';
+import CourseMediaManager from '../../../../components/dashboard/instructor/CourseMediaManager';
 import LessonEditor from '../../../../components/instructor/LessonEditor';
 import LessonManagement from '../../../../components/dashboard/instructor/LessonManagement';
 import EvaluationBuilder from '../../../../components/dashboard/instructor/EvaluationBuilder';
@@ -119,7 +120,6 @@ export default function InstructorCourseDetailPage() {
     if (tabKeys.includes(normalized as TabKey) && normalized !== activeTab) {
       setActiveTab(normalized as TabKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const changeTab = (tab: TabKey) => {
@@ -285,76 +285,36 @@ export default function InstructorCourseDetailPage() {
             )}
 
             {activeTab === 'medias' && (
-              <div className="space-y-4">
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 text-gray-900">Ajouter un média au cours</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <MediaUpload
-                      contentType="document"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                    <MediaUpload
-                      contentType="image"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                    <MediaUpload
-                      contentType="video"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                  </div>
-                </div>
-
-                {/* Liste des médias du cours */}
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 text-gray-900">Médias du cours</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {courseMedia.map((mf: any) => (
-                      <div key={mf.id} className="border rounded p-3 flex items-center justify-between bg-gray-50">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{mf.original_filename || mf.filename}</div>
-                          <div className="text-xs text-gray-500">{mf.file_category} • {(mf.file_size/1024/1024).toFixed(2)} MB</div>
-                        </div>
-                        <button
-                          className="text-red-600 hover:text-red-700 text-sm transition-colors"
-                          onClick={async () => {
-                            try {
-                              await mediaService.deleteMediaFile(mf.id);
-                              setCourseMedia((prev) => prev.filter((x) => x.id !== mf.id));
-                              success?.('Média supprimé');
-                            } catch (e: any) {
-                              notifyError?.('Erreur', e.message || 'Suppression échouée');
-                            }
-                          }}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    ))}
-                    {courseMedia.length === 0 && (
-                      <div className="text-sm text-gray-500">Aucun média pour ce cours.</div>
-                    )}
-                  </div>
-                </div>
-
-                {modules.map((m) => (
-                  <div key={m.id} className="bg-white border rounded-lg p-4">
-                    <h4 className="font-medium mb-3 text-gray-900">Module: {m.title}</h4>
-                    {m.lessons?.map((lesson: any) => (
-                      <div key={lesson.id} className="mb-3">
-                        <div className="text-sm text-gray-700 mb-2">Leçon: {lesson.title}</div>
-                        <MediaUpload
-                          contentType="video"
-                          lessonId={String(lesson.id)}
-                          onUploadSuccess={() => { success?.('Média ajouté'); }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <CourseMediaManager
+                courseId={course?.id || courseIdParam}
+                modules={(() => {
+                  // Enrichir les modules avec leurs leçons depuis le cours
+                  const courseAny = course as any;
+                  const allLessons = courseAny?.lessons || [];
+                  return modules.map((m: any) => {
+                    const moduleLessons = allLessons.filter(
+                      (lesson: any) => lesson.module_id === m.id || lesson.moduleId === m.id
+                    );
+                    return {
+                      id: m.id,
+                      title: m.title,
+                      lessons: moduleLessons.map((l: any) => ({
+                        id: l.id,
+                        title: l.title,
+                        content_type: l.content_type || l.contentType || 'text',
+                      })),
+                    };
+                  });
+                })()}
+                onMediaUpdated={() => {
+                  // Recharger les médias après mise à jour
+                  if (courseIdNum) {
+                    mediaService.getCourseMedia(courseIdNum.toString())
+                      .then(setCourseMedia)
+                      .catch(() => {});
+                  }
+                }}
+              />
             )}
 
             {activeTab === 'settings' && (
@@ -374,32 +334,7 @@ export default function InstructorCourseDetailPage() {
                   </div>
 
                   {/* Form Content */}
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    setSaving(true);
-                    try {
-                      const { is_published: _ignoredPublishField, ...settingsWithoutPublish } = courseSettings;
-                      // Inclure les données existantes du cours pour éviter les erreurs de validation
-                      const updateData: any = {
-                        ...settingsWithoutPublish,
-                        // Inclure les champs requis qui existent déjà dans le cours
-                        title: course?.title || course?.name || '',
-                        description: course?.description || course?.long_description || '',
-                        short_description: course?.short_description || course?.shortDescription || course?.description?.substring(0, 200) || '',
-                        // S'assurer que max_students est un entier positif si défini
-                        max_students: courseSettings.max_students && courseSettings.max_students > 0 ? courseSettings.max_students : undefined,
-                      };
-                      
-                      await courseService.updateCourse(courseIdParam, updateData);
-                      success?.('Paramètres enregistrés avec succès');
-                      const updated = await courseService.getCourseById(courseIdParam);
-                      setCourse(updated);
-                    } catch (err: any) {
-                      notifyError?.('Erreur', err.message || 'Impossible de sauvegarder les paramètres');
-                    } finally {
-                      setSaving(false);
-                    }
-                  }} className="p-6 space-y-8">
+                  <div className="p-6 space-y-8">
                     {/* Statut et visibilité */}
                     <div className="bg-blue-50/50 rounded-lg p-6 border border-blue-100">
                       <div className="flex items-center space-x-3 mb-6">
@@ -704,6 +639,7 @@ export default function InstructorCourseDetailPage() {
                             setRequestingPublication(true);
                             try {
                               await courseService.requestCoursePublication(courseIdParam);
+                              // Le backend crée automatiquement une notification pour tous les admins
                               success?.('Demande envoyée', 'Votre demande de publication a été envoyée. Elle sera examinée par un administrateur.');
                               const updated = await courseService.getCourseById(courseIdParam);
                               setCourse(updated);
@@ -762,29 +698,7 @@ export default function InstructorCourseDetailPage() {
                       ) : null}
                     </div>
 
-                    {/* Boutons d'action */}
-                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-mdsc-gold to-yellow-600 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg font-medium"
-                      >
-                        {saving ? (
-                          <LoaderIcon className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Save className="h-5 w-5" />
-                        )}
-                        <span>{saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}</span>
-                      </button>
-                    </div>
-                  </form>
+                  </div>
                 </div>
               </div>
             )}

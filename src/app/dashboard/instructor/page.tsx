@@ -391,9 +391,17 @@ export default function InstructorDashboard() {
 
         if (preferencesResult.status === 'fulfilled') {
           const prefs = preferencesResult.value ?? {};
-          setPoliciesAccepted(Boolean(prefs?.policies?.accepted));
+          // Vérifier aussi localStorage au cas où les politiques ont été acceptées récemment
+          const localStorageAccepted = typeof window !== 'undefined' 
+            ? localStorage.getItem('instructor_policies_accepted') === 'true'
+            : false;
+          setPoliciesAccepted(Boolean(prefs?.policies?.accepted) || localStorageAccepted);
         } else if (preferencesResult.status === 'rejected') {
-          setPoliciesAccepted(true);
+          // Vérifier localStorage en fallback
+          const localStorageAccepted = typeof window !== 'undefined' 
+            ? localStorage.getItem('instructor_policies_accepted') === 'true'
+            : false;
+          setPoliciesAccepted(localStorageAccepted);
         }
       } catch (error) {
         if (!isMounted) return;
@@ -416,6 +424,27 @@ export default function InstructorDashboard() {
       isMounted = false;
     };
   }, [user]);
+
+  // Écouter l'événement personnalisé pour mettre à jour le statut des politiques en temps réel
+  useEffect(() => {
+    const handlePoliciesAccepted = (event: CustomEvent) => {
+      setPoliciesAccepted(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('policiesAccepted', handlePoliciesAccepted as EventListener);
+      
+      // Vérifier localStorage au montage au cas où les politiques ont été acceptées dans un autre onglet
+      const localStorageAccepted = localStorage.getItem('instructor_policies_accepted') === 'true';
+      if (localStorageAccepted) {
+        setPoliciesAccepted(true);
+      }
+
+      return () => {
+        window.removeEventListener('policiesAccepted', handlePoliciesAccepted as EventListener);
+      };
+    }
+  }, []);
 
   if (loading) {
     return (

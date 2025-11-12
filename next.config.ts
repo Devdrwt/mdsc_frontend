@@ -38,9 +38,11 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // X-Frame-Options explicitement défini à SAMEORIGIN pour permettre les iframes de la même origine
+          // Cela permet les PDFs, vidéos et autres contenus embarqués tout en protégeant contre le clickjacking
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           {
             key: 'X-Content-Type-Options',
@@ -67,15 +69,22 @@ const nextConfig: NextConfig = {
   },
 
   // Proxy dev: /api -> backend local sur 5000
+  // Note: Les routes API Next.js dans src/app/api/* ont automatiquement la priorité sur les rewrites
   async rewrites() {
-    return process.env.NEXT_PUBLIC_API_URL
-      ? []
-      : [
-          {
-            source: '/api/:path*',
-            destination: 'http://localhost:5000/api/:path*',
-          },
-        ];
+    // Si NEXT_PUBLIC_API_URL est défini, ne pas utiliser de rewrites
+    // (les appels API iront directement vers l'URL configurée)
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return [];
+    }
+    
+    // Rewrite pour toutes les routes API
+    // Les routes API Next.js (comme /api/media/*) seront appelées en premier
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:5000/api/:path*',
+      },
+    ];
   },
 };
 

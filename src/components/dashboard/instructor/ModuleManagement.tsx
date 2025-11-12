@@ -27,6 +27,7 @@ import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
+import { resolveMediaUrl } from '../../../lib/utils/media';
 import ConfirmModal from '../../ui/ConfirmModal';
 import { quizService } from '../../../lib/services/quizService';
 
@@ -92,7 +93,15 @@ export default function ModuleManagement() {
     try {
       setLoading(true);
       const modulesData = await moduleService.getCourseModules(Number(courseId));
-      setModules(modulesData || []);
+      
+      // Normaliser les modules pour compatibilité (le backend retourne maintenant image_url)
+      const normalizedModules = (modulesData || []).map((m: any) => ({
+        ...m,
+        image_url: m.image_url || m.imageUrl || null,
+        imageUrl: m.image_url || m.imageUrl || null, // Pour compatibilité
+      }));
+      
+      setModules(normalizedModules);
       
       // Charger les leçons et quiz pour chaque module
       if (modulesData && modulesData.length > 0) {
@@ -169,6 +178,7 @@ export default function ModuleManagement() {
       setShowCreateModal(false);
       setEditingModule(null);
       resetForm();
+      // Recharger les modules pour avoir les données à jour du backend (incluant image_url)
       loadModules(selectedCourseId);
     } catch (error: any) {
       console.error('Erreur:', error);
@@ -272,21 +282,60 @@ export default function ModuleManagement() {
       opacity: isDragging ? 0.5 : 1,
     } as React.CSSProperties;
 
+    // Le backend retourne maintenant image_url formatée (URL complète)
+    // Si l'URL est déjà complète (http://), on l'utilise telle quelle
+    // Sinon, on utilise resolveMediaUrl pour les chemins relatifs
+    const rawImageUrl = module.image_url || module.imageUrl;
+    const moduleImageUrl = rawImageUrl 
+      ? (rawImageUrl.startsWith('http://') || rawImageUrl.startsWith('https://')
+          ? rawImageUrl
+          : resolveMediaUrl(rawImageUrl))
+      : null;
+    
     return (
       <div
         ref={setNodeRef}
         style={style}
         className={`bg-white rounded-lg border-2 border-gray-200 overflow-hidden hover:border-blue-400 hover:shadow-lg transition-all ${isDragging ? 'border-blue-500' : ''}`}
       >
-        {module.image_url && (
-          <div className="relative w-full h-32 overflow-hidden">
-            <img
-              src={module.image_url}
-              alt={module.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
+        {/* Image de couverture - toujours affichée */}
+        <div className="relative w-full h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+          {moduleImageUrl ? (
+            <>
+              <img
+                src={moduleImageUrl}
+                alt={module.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  // En cas d'erreur de chargement, masquer l'image et afficher le placeholder
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const placeholder = target.nextElementSibling as HTMLElement;
+                  if (placeholder) placeholder.style.display = 'flex';
+                }}
+              />
+              {/* Placeholder caché par défaut, affiché en cas d'erreur */}
+              <div 
+                className="absolute inset-0 flex items-center justify-center hidden"
+                style={{ display: 'none' }}
+              >
+                <div className="text-center">
+                  <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">Image non disponible</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Placeholder si pas d'image */
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center">
+                <Image className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">Aucune image</p>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="p-4">
           {/* Handle pour drag */}
           <div className="flex items-start justify-between mb-3">

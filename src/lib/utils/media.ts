@@ -5,24 +5,40 @@ const MEDIA_BASE_URL = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
 /**
  * Normalise une URL de média en tenant compte des chemins relatifs.
  * Retourne `null` si aucune URL n'est disponible.
+ * Utilise toujours le proxy Next.js pour les URLs du backend pour éviter les problèmes CORS.
  */
 export function resolveMediaUrl(rawUrl?: string | null): string | null {
   if (!rawUrl) {
     return null;
   }
 
+  // Si l'URL est complète (http:// ou https://)
   if (/^https?:\/\//i.test(rawUrl)) {
+    // Si c'est une URL du backend, extraire le chemin et utiliser le proxy Next.js
+    const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    if (rawUrl.includes(backendBaseUrl) || rawUrl.includes('localhost:5000')) {
+      // Extraire le chemin depuis l'URL complète
+      try {
+        const url = new URL(rawUrl);
+        const path = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        // Utiliser le proxy Next.js pour éviter les problèmes CORS
+        return `/api/media/${path}`;
+      } catch (e) {
+        // Si l'URL ne peut pas être parsée, essayer une extraction simple
+        const match = rawUrl.match(/https?:\/\/[^/]+(\/.+)$/);
+        if (match) {
+          const path = match[1].startsWith('/') ? match[1].slice(1) : match[1];
+          return `/api/media/${path}`;
+        }
+      }
+    }
+    // Si c'est une URL externe (CDN, etc.), la retourner telle quelle
     return rawUrl;
   }
 
-  const base = MEDIA_BASE_URL.replace(/\/$/, '');
+  // URL relative, utiliser le proxy Next.js pour éviter les problèmes CORS
   const sanitizedPath = rawUrl.startsWith('/') ? rawUrl.slice(1) : rawUrl;
-
-  if (!base) {
-    return `/${sanitizedPath}`;
-  }
-
-  return `${base}/${sanitizedPath}`;
+  return `/api/media/${sanitizedPath}`;
 }
 
 export const DEFAULT_COURSE_IMAGE = '/apprenant.png';

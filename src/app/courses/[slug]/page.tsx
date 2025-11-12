@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   BookOpen, 
@@ -52,6 +52,11 @@ export default function CourseDetailPage() {
     }
   }, [slug]);
 
+  // Réinitialiser imageError quand le cours change
+  useEffect(() => {
+    setImageError(false);
+  }, [course]);
+
   const loadCourse = async () => {
     try {
       setLoading(true);
@@ -92,11 +97,14 @@ export default function CourseDetailPage() {
     }
   };
 
+  // Tous les hooks doivent être appelés avant les retours conditionnels
+  // Utiliser useMemo pour éviter les redéfinitions
+  const courseAny = useMemo(() => course ? (course as any) : null, [course]);
+
   // Vérifier si l'inscription est possible
-  const canEnroll = () => {
-    if (!course) return false;
+  const canEnroll = useCallback(() => {
+    if (!course || !courseAny) return false;
     
-    const courseAny = course as any;
     const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
     
     // Si pas de date limite, l'inscription est toujours possible
@@ -110,16 +118,15 @@ export default function CourseDetailPage() {
     deadline.setHours(23, 59, 59, 999);
     
     return now <= deadline;
-  };
+  }, [course, courseAny]);
 
-  const handleEnroll = async () => {
-    if (!course) {
+  const handleEnroll = useCallback(async () => {
+    if (!course || !courseAny) {
       toast.error('Erreur', 'Cours non chargé');
       return;
     }
     
     // Vérifier la date limite d'inscription avant de tenter l'inscription
-    const courseAny = course as any;
     const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
     
     if (enrollmentDeadline) {
@@ -137,7 +144,7 @@ export default function CourseDetailPage() {
     }
     
     // Vérifier si le cours est payant
-    const coursePrice = courseAny.price || course.price || 0;
+    const coursePrice = courseAny?.price || course.price || 0;
     const isPaidCourse = coursePrice > 0;
     
     if (isPaidCourse) {
@@ -169,13 +176,13 @@ export default function CourseDetailPage() {
       
       toast.error('Erreur d\'inscription', errorMessage);
     }
-  };
+  }, [course, courseAny, router]);
 
-  const handleStartLearning = () => {
+  const handleStartLearning = useCallback(() => {
     if (course) {
       router.push(`/learn/${course.id}`);
     }
-  };
+  }, [course, router]);
 
   const toggleModule = (moduleId: number) => {
     setExpandedModules(prev => ({
@@ -199,52 +206,52 @@ export default function CourseDetailPage() {
     }
   };
 
-  if (loading) {
+  const courseImageRaw = useMemo(() => {
+    if (!courseAny) return null;
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Chargement du cours...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
+      courseAny?.thumbnail_url ||
+      course?.thumbnail ||
+      courseAny?.thumbnailUrl ||
+      courseAny?.image_url ||
+      courseAny?.cover_image ||
+      courseAny?.coverImage ||
+      null
     );
-  }
+  }, [courseAny, course]);
 
-  if (error || !course) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">{error || 'Cours non trouvé'}</p>
-            <Button variant="primary" onClick={() => router.push('/courses')}>
-              Retour aux cours
-            </Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-    
-    const courseAny = course as any;
+  // Résoudre l'URL de l'image
+  const resolvedImageUrl = useMemo(() => resolveMediaUrl(courseImageRaw), [courseImageRaw]);
+  const courseImage = useMemo(() => {
+    return imageError || !resolvedImageUrl
+      ? DEFAULT_COURSE_IMAGE
+      : resolvedImageUrl;
+  }, [imageError, resolvedImageUrl]);
 
-  const courseImageRaw =
-    courseAny?.thumbnail_url ||
-    course?.thumbnail ||
-    courseAny?.thumbnailUrl ||
-    courseAny?.image_url ||
-    null;
-
-  const courseImage = imageError
-    ? DEFAULT_COURSE_IMAGE
-    : resolveMediaUrl(courseImageRaw) || DEFAULT_COURSE_IMAGE;
+  // Log pour déboguer
+  useEffect(() => {
+    if (course) {
+      console.log('🖼️ Image de couverture du cours:', {
+        courseImageRaw,
+        resolvedImageUrl,
+        courseImage,
+        imageError,
+        courseId: course.id,
+      });
+    }
+  }, [course, courseImageRaw, resolvedImageUrl, courseImage, imageError]);
 
   const instructorInfo = useMemo(() => {
+    if (!course || !courseAny) {
+      return {
+        name: 'Instructeur',
+        title: '',
+        organization: '',
+        email: '',
+        bio: '',
+        avatar: DEFAULT_INSTRUCTOR_AVATAR,
+      };
+    }
+
     const rawInstructor = courseAny?.instructor || {};
 
     const firstName =
@@ -306,7 +313,39 @@ export default function CourseDetailPage() {
       bio,
       avatar: resolveMediaUrl(avatarRaw),
     };
-  }, [courseAny]);
+  }, [course, courseAny]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement du cours...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">{error || 'Cours non trouvé'}</p>
+            <Button variant="primary" onClick={() => router.push('/courses')}>
+              Retour aux cours
+            </Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   const isEnrolled = course.enrollment !== undefined;
   
@@ -423,12 +462,27 @@ export default function CourseDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Image du cours */}
               <div className="lg:col-span-1">
-                <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                <div className="relative rounded-lg overflow-hidden shadow-2xl bg-gray-200">
                   <img
                     src={courseImage}
                     alt={course.title}
                     className="w-full h-64 lg:h-96 object-cover"
-                    onError={() => setImageError(true)}
+                    onError={(e) => {
+                      console.error('❌ Erreur de chargement de l\'image:', {
+                        courseImage,
+                        courseImageRaw,
+                        resolvedImageUrl,
+                        error: e,
+                      });
+                      setImageError(true);
+                      // Essayer de charger l'image par défaut si ce n'est pas déjà fait
+                      if (courseImage !== DEFAULT_COURSE_IMAGE) {
+                        (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE;
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Image chargée avec succès:', courseImage);
+                    }}
                   />
                 </div>
               </div>

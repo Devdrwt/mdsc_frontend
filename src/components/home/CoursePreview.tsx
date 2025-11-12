@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import Button from '../ui/Button';
 import { Clock, Users, Star, Play, ArrowRight } from 'lucide-react';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface Course {
   id: string;
@@ -57,11 +60,21 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
             >
               {/* Thumbnail */}
               <div className="relative mb-4 overflow-hidden rounded-lg">
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                {(() => {
+                  const courseAny = course as any;
+                  const rawThumbnail = course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url || null;
+                  const resolvedThumbnail = resolveMediaUrl(rawThumbnail) || DEFAULT_COURSE_IMAGE;
+                  return (
+                    <img
+                      src={resolvedThumbnail}
+                      alt={course.title}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE;
+                      }}
+                    />
+                  );
+                })()}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-white rounded-full p-3">

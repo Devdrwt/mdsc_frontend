@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Star, Clock, Users, Play, Bookmark, Share2, Eye } from 'lucide-react';
 import { Course } from '../../lib/services/courseService';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface ModernCourseCardProps {
   course: Course;
@@ -23,6 +24,18 @@ export default function ModernCourseCard({
   showActions = true,
   className = ''
 }: ModernCourseCardProps) {
+  const [imageError, setImageError] = useState(false);
+  
+  const courseAny = course as any;
+  const rawThumbnail = useMemo(() => {
+    return course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url || null;
+  }, [course.thumbnail, courseAny]);
+  
+  const resolvedThumbnail = useMemo(() => resolveMediaUrl(rawThumbnail), [rawThumbnail]);
+  const imageSrc = useMemo(() => {
+    return imageError || !resolvedThumbnail ? DEFAULT_COURSE_IMAGE : resolvedThumbnail;
+  }, [imageError, resolvedThumbnail]);
+
   const handleEnroll = () => {
     if (onEnroll) {
       onEnroll(course.id);
@@ -74,9 +87,10 @@ export default function ModernCourseCard({
       {/* Image du cours */}
       <div className="relative h-48 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark overflow-hidden">
         <img
-          src={course.thumbnail}
+          src={imageSrc}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          onError={() => setImageError(true)}
         />
         <div className="absolute inset-0 bg-black/20"></div>
         

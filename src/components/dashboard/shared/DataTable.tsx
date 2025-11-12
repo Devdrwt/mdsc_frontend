@@ -76,10 +76,10 @@ export default function DataTable({
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 ${className}`}>
+    <div className={`bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden ${className}`}>
       {/* Header avec recherche et filtres */}
       {(searchable || filterable) && (
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 bg-gray-50/50">
           <div className="flex items-center space-x-4">
             {searchable && (
               <div className="flex-1 relative">
@@ -89,12 +89,12 @@ export default function DataTable({
                   placeholder="Rechercher..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent w-full"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent w-full bg-white"
                 />
               </div>
             )}
             {filterable && (
-              <button className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
+              <button className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-white hover:shadow-sm transition-all">
                 <Filter className="h-4 w-4 mr-2" />
                 Filtres
               </button>
@@ -106,20 +106,20 @@ export default function DataTable({
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                    column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''
+                  className={`px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${
+                    column.sortable ? 'cursor-pointer hover:bg-gray-100 transition-colors' : ''
                   }`}
                   onClick={() => column.sortable && handleSort(column.key)}
                 >
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-2">
                     <span>{column.label}</span>
                     {column.sortable && sortColumn === column.key && (
-                      <span className="text-mdsc-blue-primary">
+                      <span className="text-mdsc-blue-primary font-bold">
                         {sortDirection === 'asc' ? '↑' : '↓'}
                       </span>
                     )}
@@ -130,7 +130,10 @@ export default function DataTable({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedData.map((row, index) => (
-              <tr key={index} className="hover:bg-gray-50">
+              <tr 
+                key={index} 
+                className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100"
+              >
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {column.render ? column.render(row[column.key], row) : row[column.key]}
@@ -144,16 +147,16 @@ export default function DataTable({
 
       {/* Pagination */}
       {pagination && totalPages > 1 && (
-        <div className="px-6 py-3 border-t border-gray-200">
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Affichage de {startIndex + 1} à {Math.min(endIndex, sortedData.length)} sur {sortedData.length} résultats
+            <div className="text-sm text-gray-600 font-medium">
+              Affichage de <span className="text-gray-900 font-semibold">{startIndex + 1}</span> à <span className="text-gray-900 font-semibold">{Math.min(endIndex, sortedData.length)}</span> sur <span className="text-gray-900 font-semibold">{sortedData.length}</span> résultats
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-white hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -162,10 +165,10 @@ export default function DataTable({
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
                     page === currentPage
-                      ? 'bg-mdsc-blue-primary text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark text-white shadow-md'
+                      : 'text-gray-700 hover:bg-white hover:shadow-sm border border-gray-200'
                   }`}
                 >
                   {page}
@@ -175,7 +178,7 @@ export default function DataTable({
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-white hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

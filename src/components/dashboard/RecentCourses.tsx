@@ -2,6 +2,7 @@ import React from 'react';
 import { Course } from '../../types';
 import { Clock, Users, Star, Play, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface RecentCoursesProps {
   courses: Course[];
@@ -51,11 +52,21 @@ export default function RecentCourses({ courses, onCourseClick }: RecentCoursesP
             >
               {/* Thumbnail */}
               <div className="flex-shrink-0">
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="w-16 h-16 object-cover rounded-lg"
-                />
+                {(() => {
+                  const courseAny = course as any;
+                  const rawThumbnail = course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url || null;
+                  const resolvedThumbnail = resolveMediaUrl(rawThumbnail) || DEFAULT_COURSE_IMAGE;
+                  return (
+                    <img
+                      src={resolvedThumbnail}
+                      alt={course.title}
+                      className="w-16 h-16 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE;
+                      }}
+                    />
+                  );
+                })()}
               </div>
 
               {/* Contenu */}
