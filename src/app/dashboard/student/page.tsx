@@ -284,9 +284,14 @@ export default function StudentDashboard() {
 
         if (preferencesResult.status === 'fulfilled') {
           const prefs = preferencesResult.value ?? {};
-          setPoliciesAccepted(Boolean(prefs?.policies?.accepted));
+          // Vérifier d'abord les préférences API, puis le localStorage comme fallback
+          const apiAccepted = Boolean(prefs?.policies?.accepted);
+          const localStorageAccepted = localStorage.getItem('student_policies_accepted') === 'true';
+          setPoliciesAccepted(apiAccepted || localStorageAccepted);
         } else if (preferencesResult.status === 'rejected') {
-          setPoliciesAccepted(true);
+          // En cas d'erreur API, vérifier le localStorage
+          const localStorageAccepted = localStorage.getItem('student_policies_accepted') === 'true';
+          setPoliciesAccepted(localStorageAccepted);
         }
       } catch (error) {
         if (!isMounted) return;
@@ -313,8 +318,22 @@ export default function StudentDashboard() {
 
     loadDashboardData();
 
+    // Écouter l'événement de changement de statut des politiques
+    const handlePoliciesAccepted = (event: CustomEvent) => {
+      setPoliciesAccepted(true);
+    };
+
+    window.addEventListener('studentPoliciesAccepted', handlePoliciesAccepted as EventListener);
+
+    // Vérifier aussi le localStorage au cas où l'événement n'a pas été capturé
+    const localStorageAccepted = localStorage.getItem('student_policies_accepted') === 'true';
+    if (localStorageAccepted) {
+      setPoliciesAccepted(true);
+    }
+
     return () => {
       isMounted = false;
+      window.removeEventListener('studentPoliciesAccepted', handlePoliciesAccepted as EventListener);
     };
   }, [user]);
 

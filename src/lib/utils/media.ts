@@ -16,7 +16,13 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
   if (/^https?:\/\//i.test(rawUrl)) {
     // Si c'est une URL du backend, extraire le chemin et utiliser le proxy Next.js
     const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    if (rawUrl.includes(backendBaseUrl) || rawUrl.includes('localhost:5000')) {
+    const backendBaseUrlAlt = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    
+    // Vérifier si c'est une URL du backend (plusieurs variantes possibles)
+    if (rawUrl.includes(backendBaseUrl) || 
+        rawUrl.includes(backendBaseUrlAlt) || 
+        rawUrl.includes('localhost:5000') ||
+        rawUrl.includes('/uploads/')) {
       // Extraire le chemin depuis l'URL complète
       try {
         const url = new URL(rawUrl);
@@ -36,7 +42,15 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
     return rawUrl;
   }
 
-  // URL relative, utiliser le proxy Next.js pour éviter les problèmes CORS
+  // URL relative
+  // Si c'est une image locale (dans /public), la retourner telle quelle
+  // Sinon, utiliser le proxy Next.js pour éviter les problèmes CORS
+  if (rawUrl.startsWith('/') && !rawUrl.startsWith('/uploads/')) {
+    // Image locale (ex: /apprenant.png, /mdsc-logo.png)
+    return rawUrl;
+  }
+  
+  // URL relative du backend (ex: uploads/...), utiliser le proxy
   const sanitizedPath = rawUrl.startsWith('/') ? rawUrl.slice(1) : rawUrl;
   return `/api/media/${sanitizedPath}`;
 }
