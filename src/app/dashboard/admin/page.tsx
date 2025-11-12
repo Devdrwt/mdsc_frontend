@@ -19,6 +19,7 @@ import AdminService, {
 } from '../../../lib/services/adminService';
 import { 
   Users,
+  User,
   BookOpen,
   TrendingUp,
   Shield,
@@ -1043,94 +1044,131 @@ export default function AdminDashboard() {
               </button>
             </div>
           )}
-          {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-dark via-gray-900 to-mdsc-blue-dark rounded-2xl p-8 text-white">
-            <div className="absolute inset-0 bg-gradient-to-r from-mdsc-blue-primary/20 to-mdsc-gold/20"></div>
+          {/* En-tête de bienvenue moderne avec effet shimmer */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-dark via-[#0C3C5C] to-[#1a4d6b] rounded-xl p-8 text-white shadow-2xl">
+            {/* Effet shimmer animé */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -inset-10 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold mb-2">
-                    Tableau de Bord Admin, {user?.firstName} ! 👑
-                  </h1>
-                  <p className="text-white/90 text-lg">
-                    Surveillez et gérez votre plateforme MdSC MOOC.
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                      <Shield className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl md:text-4xl font-bold mb-1">
+                        Tableau de Bord Admin
+                      </h1>
+                      <p className="text-white/80 text-sm md:text-base">
+                        Bienvenue, <span className="font-semibold">{user?.firstName || 'Administrateur'}</span> 👑
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-white/90 text-base md:text-lg ml-16">
+                    Surveillez et gérez votre plateforme MdSC MOOC en temps réel
                   </p>
                 </div>
-                <div className="hidden md:block">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
-                    <Shield className="h-12 w-12 text-white" />
+                <div className="hidden lg:block">
+                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-lg">
+                    <div className="flex flex-col items-center">
+                      <Activity className="h-10 w-10 text-white mb-2" />
+                      <span className="text-xs text-white/80">Système</span>
+                      <span className="text-lg font-bold text-white">{stats.systemHealth}%</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            {/* Effet de particules animées */}
-            <div className="absolute top-4 right-4 w-2 h-2 bg-white/30 rounded-full animate-ping"></div>
-            <div className="absolute top-8 right-8 w-1 h-1 bg-white/40 rounded-full animate-pulse"></div>
-            <div className="absolute bottom-4 right-12 w-1.5 h-1.5 bg-white/20 rounded-full animate-bounce"></div>
+            {/* Effet de particules animées améliorées */}
+            <div className="absolute top-6 right-6 w-3 h-3 bg-white/40 rounded-full animate-ping"></div>
+            <div className="absolute top-10 right-10 w-2 h-2 bg-white/30 rounded-full animate-pulse"></div>
+            <div className="absolute bottom-6 right-16 w-2.5 h-2.5 bg-white/20 rounded-full animate-bounce"></div>
           </div>
 
-          {/* Statistiques principales avec animations */}
+          {/* Statistiques principales avec animations modernes */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Utilisateurs</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalUsers.toLocaleString()}</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +{stats.monthlyUserGrowth.toLocaleString()} ce mois
-                  </p>
+            {/* Carte Utilisateurs */}
+            <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-2">Total Utilisateurs</p>
+                  <p className="text-3xl font-bold text-gray-900 mb-2">{stats.totalUsers.toLocaleString()}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      +{stats.monthlyUserGrowth.toLocaleString()}
+                    </div>
+                    <span className="text-xs text-gray-500">ce mois</span>
+                  </div>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-full group-hover:bg-blue-200 transition-colors">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Cours</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalCourses}</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +{stats.monthlyCourseGrowth.toLocaleString()} ce mois
-                  </p>
-                </div>
-                <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
-                  <BookOpen className="h-6 w-6 text-green-600" />
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Users className="h-7 w-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Revenus</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalRevenue.toLocaleString()} FCFA</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <ArrowUp className="h-3 w-3 mr-1" />
-                    +{stats.monthlyRevenueGrowth.toLocaleString()} FCFA ce mois
-                  </p>
+            {/* Carte Cours */}
+            <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-2">Total Cours</p>
+                  <p className="text-3xl font-bold text-gray-900 mb-2">{stats.totalCourses}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      +{stats.monthlyCourseGrowth.toLocaleString()}
+                    </div>
+                    <span className="text-xs text-gray-500">ce mois</span>
+                  </div>
                 </div>
-                <div className="bg-emerald-100 p-3 rounded-full group-hover:bg-emerald-200 transition-colors">
-                  <DollarSign className="h-6 w-6 text-emerald-600" />
+                <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <BookOpen className="h-7 w-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Santé Système</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.systemHealth}%</p>
-                  <p className="text-xs text-green-600 mt-1 flex items-center">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Optimal
-                  </p>
+            {/* Carte Revenus */}
+            <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-2">Revenus Totaux</p>
+                  <p className="text-2xl font-bold text-gray-900 mb-2">{stats.totalRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mb-2">FCFA</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      +{stats.monthlyRevenueGrowth.toLocaleString()}
+                    </div>
+                    <span className="text-xs text-gray-500">ce mois</span>
+                  </div>
                 </div>
-                <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
-                  <Server className="h-6 w-6 text-green-600" />
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <DollarSign className="h-7 w-7 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Carte Santé Système */}
+            <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-600 mb-2">Santé Système</p>
+                  <p className="text-3xl font-bold text-gray-900 mb-2">{stats.systemHealth}%</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Optimal
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                  <Server className="h-7 w-7 text-white" />
                 </div>
               </div>
             </div>
@@ -1253,64 +1291,106 @@ export default function AdminDashboard() {
             </div>
 
             {/* Alertes et notifications */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                Alertes & Notifications
-              </h3>
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow duration-300">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl shadow-md">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Alertes & Notifications</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Surveillance système en temps réel</p>
+                  </div>
+                </div>
+                {alerts.length > 0 && (
+                  <div className="px-3 py-1.5 bg-gradient-to-r from-orange-100 to-red-100 rounded-full">
+                    <span className="text-sm font-semibold text-orange-700">{alerts.length} alerte{alerts.length > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+              </div>
+              
               {alertsError ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {alertsError}
+                <div className="rounded-xl border-2 border-red-300 bg-gradient-to-r from-red-50 to-red-100 px-4 py-3 text-sm text-red-800 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{alertsError}</span>
+                  </div>
                 </div>
               ) : alerts.length === 0 ? (
-                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  Aucune alerte récente.
+                <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-500" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600">Aucune alerte récente</p>
+                  <p className="text-xs text-gray-500 mt-1">Tous les systèmes fonctionnent normalement</p>
                 </div>
               ) : (
-              <div className="space-y-4">
-                  {alerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className={`p-4 rounded-xl border ${
-                        alert.severity === 'danger'
-                          ? 'border-red-200 bg-red-50'
-                          : alert.severity === 'warning'
-                          ? 'border-yellow-200 bg-yellow-50'
-                          : 'border-blue-200 bg-blue-50'
-                      }`}
-                    >
-                    <div className="flex items-start space-x-3">
-                        <div
-                          className={`mt-0.5 rounded-full p-2 ${
-                            alert.severity === 'danger'
-                              ? 'bg-red-100 text-red-600'
-                              : alert.severity === 'warning'
-                              ? 'bg-yellow-100 text-yellow-600'
-                              : 'bg-blue-100 text-blue-600'
-                          }`}
-                        >
-                          <AlertTriangle className="h-4 w-4" />
-                        </div>
-                      <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900">{alert.title}</h4>
-                            <span className="text-xs text-gray-500">
-                              {formatDateTime(alert.created_at)}
-                            </span>
+                <div className="space-y-3">
+                  {alerts.map((alert) => {
+                    const severityConfig = {
+                      danger: {
+                        gradient: 'from-red-500 to-rose-600',
+                        bg: 'bg-gradient-to-br from-red-50 to-rose-50',
+                        border: 'border-red-200',
+                        iconBg: 'bg-red-100',
+                        iconColor: 'text-red-600',
+                        badge: 'bg-red-500',
+                        text: 'text-red-800',
+                      },
+                      warning: {
+                        gradient: 'from-yellow-500 to-orange-500',
+                        bg: 'bg-gradient-to-br from-yellow-50 to-orange-50',
+                        border: 'border-yellow-200',
+                        iconBg: 'bg-yellow-100',
+                        iconColor: 'text-yellow-600',
+                        badge: 'bg-yellow-500',
+                        text: 'text-yellow-800',
+                      },
+                      info: {
+                        gradient: 'from-blue-500 to-indigo-500',
+                        bg: 'bg-gradient-to-br from-blue-50 to-indigo-50',
+                        border: 'border-blue-200',
+                        iconBg: 'bg-blue-100',
+                        iconColor: 'text-blue-600',
+                        badge: 'bg-blue-500',
+                        text: 'text-blue-800',
+                      },
+                    };
+                    const config = severityConfig[alert.severity as keyof typeof severityConfig] || severityConfig.info;
+                    
+                    return (
+                      <div
+                        key={alert.id}
+                        className={`group p-4 rounded-xl border-2 ${config.border} ${config.bg} hover:shadow-lg transition-all duration-200 hover:scale-[1.02]`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-2.5 ${config.iconBg} rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-200`}>
+                            <AlertTriangle className={`h-5 w-5 ${config.iconColor}`} />
                           </div>
-                          {alert.description && (
-                            <p className="text-sm text-gray-600 mt-1">{alert.description}</p>
-                          )}
-                          {alert.metadata && (
-                            <pre className="mt-2 rounded bg-white/70 p-2 text-xs text-gray-600">
-                              {JSON.stringify(alert.metadata, null, 2)}
-                            </pre>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-bold text-gray-900">{alert.title}</h4>
+                                  <span className={`px-2 py-0.5 ${config.badge} text-white text-xs font-semibold rounded-full`}>
+                                    {alert.severity === 'danger' ? 'Critique' : alert.severity === 'warning' ? 'Attention' : 'Info'}
+                                  </span>
+                                </div>
+                                {alert.description && (
+                                  <p className="text-sm text-gray-700 mt-1 leading-relaxed">{alert.description}</p>
+                                )}
+                              </div>
+                              <span className="text-xs font-medium text-gray-500 whitespace-nowrap flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDateTime(alert.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 
@@ -1332,7 +1412,7 @@ export default function AdminDashboard() {
               )}
               <form onSubmit={handleEventSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="event-title" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-title" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Titre
                   </label>
                   <input
@@ -1340,12 +1420,12 @@ export default function AdminDashboard() {
                     id="event-title"
                     value={eventForm.title}
                     onChange={(e) => updateEventForm('title', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-description" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-description" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Description (optionnel)
                   </label>
                   <textarea
@@ -1353,18 +1433,18 @@ export default function AdminDashboard() {
                     value={eventForm.description}
                     onChange={(e) => updateEventForm('description', e.target.value)}
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-type" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-type" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Type
                   </label>
                   <select
                     id="event-type"
                     value={eventForm.type}
                     onChange={(e) => updateEventForm('type', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                   >
                     <option value="general">Général</option>
                     <option value="course_related">Relatif au cours</option>
@@ -1372,7 +1452,7 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="event-start-at" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-start-at" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Date de début
                   </label>
                   <input
@@ -1380,12 +1460,12 @@ export default function AdminDashboard() {
                     id="event-start-at"
                     value={eventForm.start_at}
                     onChange={(e) => updateEventForm('start_at', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-end-at" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-end-at" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Date de fin (optionnel)
                   </label>
                   <input
@@ -1393,11 +1473,11 @@ export default function AdminDashboard() {
                     id="event-end-at"
                     value={eventForm.end_at}
                     onChange={(e) => updateEventForm('end_at', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-location" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-location" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Lieu (optionnel)
                   </label>
                   <input
@@ -1405,11 +1485,11 @@ export default function AdminDashboard() {
                     id="event-location"
                     value={eventForm.location}
                     onChange={(e) => updateEventForm('location', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                   />
                 </div>
                 <div>
-                  <label htmlFor="event-course-id" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-course-id" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     ID du cours (optionnel)
                   </label>
                   <input
@@ -1417,7 +1497,7 @@ export default function AdminDashboard() {
                     id="event-course-id"
                     value={eventForm.course_id}
                     onChange={(e) => updateEventForm('course_id', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                   />
                 </div>
                 <div className="flex items-center">
@@ -1428,12 +1508,12 @@ export default function AdminDashboard() {
                     onChange={(e) => updateEventForm('is_public', e.target.checked)}
                     className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary border-gray-300 rounded"
                   />
-                  <label htmlFor="event-is-public" className="ml-2 text-sm text-gray-700">
+                  <label htmlFor="event-is-public" className="ml-2 text-sm font-medium text-gray-700">
                     Public
                   </label>
                 </div>
                 <div>
-                  <label htmlFor="event-metadata" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="event-metadata" className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Métadonnées (optionnel)
                   </label>
                   <textarea
@@ -1441,7 +1521,7 @@ export default function AdminDashboard() {
                     value={eventForm.metadata}
                     onChange={(e) => updateEventForm('metadata', e.target.value)}
                     rows={3}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary sm:text-sm"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
@@ -1449,7 +1529,7 @@ export default function AdminDashboard() {
                     <button
                       type="submit"
                       disabled={eventProcessing}
-                      className="px-4 py-2 text-sm font-medium text-white bg-mdsc-blue-primary rounded-md hover:bg-mdsc-blue-dark focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:ring-offset-2"
+                      className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 font-semibold text-sm"
                     >
                       {eventProcessing ? 'Mise à jour...' : 'Mettre à jour'}
                     </button>
@@ -1457,7 +1537,7 @@ export default function AdminDashboard() {
                     <button
                       type="submit"
                       disabled={eventProcessing}
-                      className="px-4 py-2 text-sm font-medium text-white bg-mdsc-blue-primary rounded-md hover:bg-mdsc-blue-dark focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:ring-offset-2"
+                      className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 font-semibold text-sm"
                     >
                       {eventProcessing ? 'Création...' : 'Créer'}
                     </button>
@@ -1467,7 +1547,7 @@ export default function AdminDashboard() {
                       type="button"
                       onClick={() => handleEventDelete(eventEditingId)}
                       disabled={eventProcessing}
-                      className="px-4 py-2 text-sm font-medium text-red-600 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                      className="px-5 py-2.5 text-sm font-semibold text-red-600 bg-red-100 rounded-lg hover:bg-red-200 hover:shadow-md transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                       {eventProcessing ? 'Suppression...' : 'Supprimer'}
                     </button>
@@ -1505,11 +1585,6 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500 mt-1">
                             {event.course_id ? `Cours: #${event.course_id}` : 'Cours: Non spécifié'}
                           </p>
-                          {event.metadata && (
-                            <pre className="mt-2 rounded bg-white/70 p-2 text-xs text-gray-600">
-                              {JSON.stringify(event.metadata, null, 2)}
-                            </pre>
-                          )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
@@ -1556,37 +1631,56 @@ export default function AdminDashboard() {
                   Aucun cours à afficher pour le moment.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 text-xs uppercase tracking-wide text-gray-600 border-b border-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-left">Cours</th>
-                        <th className="px-4 py-3 text-right">Inscriptions</th>
-                        <th className="px-4 py-3 text-right">Complétion</th>
-                        <th className="px-4 py-3 text-right">Note</th>
-                        <th className="px-4 py-3 text-right">Revenu</th>
+                        <th className="px-4 py-3.5 text-left font-semibold">Cours</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Inscriptions</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Complétion</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Note</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Revenu</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {topCourses.slice(0, 6).map((course) => (
-                        <tr key={course.id} className="hover:bg-gray-50 transition">
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-gray-900">{course.title}</p>
-                            {course.category && (
-                              <p className="text-xs text-gray-500 mt-0.5">{course.category}</p>
-                            )}
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {topCourses.slice(0, 6).map((course, index) => (
+                        <tr 
+                          key={course.id} 
+                          className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200 cursor-pointer group"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-gray-400 group-hover:text-mdsc-blue-primary transition-colors">
+                                #{index + 1}
+                              </span>
+                              <div>
+                                <p className="font-semibold text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">
+                                  {course.title}
+                                </p>
+                                {course.category && (
+                                  <p className="text-xs text-gray-500 mt-0.5">{course.category}</p>
+                                )}
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">
-                            {course.enrollments.toLocaleString()}
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="font-medium text-gray-700">{course.enrollments.toLocaleString()}</span>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">
-                            {formatPercent(course.completion_rate, 0)}
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              {formatPercent(course.completion_rate, 0)}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">
-                            {course.average_rating.toFixed(1)}/5
+                          <td className="px-4 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                              <span className="font-medium text-gray-700">{course.average_rating.toFixed(1)}</span>
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatCurrency(course.revenue, course.currency ?? 'XOF')}
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="font-semibold text-emerald-600">
+                              {formatCurrency(course.revenue, course.currency ?? 'XOF')}
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -1614,38 +1708,46 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {topInstructors.slice(0, 6).map((instructor) => (
+                  {topInstructors.slice(0, 6).map((instructor, index) => (
                     <div
                       key={instructor.id}
-                      className="flex items-start justify-between rounded-lg border border-gray-100 px-4 py-3 hover:border-mdsc-blue-primary/40 transition"
+                      className="group relative flex items-start justify-between rounded-xl border border-gray-200 bg-white px-4 py-4 hover:border-mdsc-blue-primary/50 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
                     >
-                      <div>
-                        <p className="font-semibold text-gray-900">{instructor.name}</p>
-                        {instructor.email && (
-                          <p className="text-xs text-gray-500">{instructor.email}</p>
-                        )}
-                        <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <BookOpen className="h-3 w-3" />
-                            {instructor.courses_count} cours
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            {instructor.total_enrollments.toLocaleString()} inscrits
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-yellow-500" />
-                            {instructor.average_rating.toFixed(1)}/5
-                          </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 to-transparent group-hover:from-blue-50/50 transition-all duration-200"></div>
+                      <div className="relative z-10 flex items-start gap-3 flex-1">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark flex items-center justify-center text-white font-bold text-sm shadow-md">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">
+                            {instructor.name}
+                          </p>
+                          {instructor.email && (
+                            <p className="text-xs text-gray-500 mt-0.5">{instructor.email}</p>
+                          )}
+                          <div className="mt-2 flex items-center gap-4 text-xs">
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">
+                              <BookOpen className="h-3 w-3" />
+                              {instructor.courses_count} cours
+                            </span>
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-50 text-green-700 font-medium">
+                              <Users className="h-3 w-3" />
+                              {instructor.total_enrollments.toLocaleString()} inscrits
+                            </span>
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 font-medium">
+                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                              {instructor.average_rating.toFixed(1)}/5
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-gray-900">
+                      <div className="relative z-10 text-right">
+                        <p className="text-base font-bold text-emerald-600">
                           {formatCurrency(instructor.revenue, instructor.currency ?? 'XOF')}
                         </p>
                         {Number.isFinite(instructor.trend ?? null) && (
                           <p
-                            className={`text-xs flex items-center justify-end gap-1 ${
+                            className={`text-xs flex items-center justify-end gap-1 mt-1 font-semibold ${
                               (instructor.trend ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}
                           >
@@ -1682,49 +1784,60 @@ export default function AdminDashboard() {
                   Aucune transaction récente.
                 </div>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 text-xs uppercase tracking-wide text-gray-600 border-b border-gray-200">
                       <tr>
-                        <th className="px-4 py-3 text-left">Référence</th>
-                        <th className="px-4 py-3 text-left">Utilisateur</th>
-                        <th className="px-4 py-3 text-left">Cours</th>
-                        <th className="px-4 py-3 text-right">Montant</th>
-                        <th className="px-4 py-3 text-right">Statut</th>
-                        <th className="px-4 py-3 text-right">Date</th>
+                        <th className="px-4 py-3.5 text-left font-semibold">Référence</th>
+                        <th className="px-4 py-3.5 text-left font-semibold">Utilisateur</th>
+                        <th className="px-4 py-3.5 text-left font-semibold">Cours</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Montant</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Statut</th>
+                        <th className="px-4 py-3.5 text-right font-semibold">Date</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-gray-100 bg-white">
                       {recentPayments.map((payment) => (
-                        <tr key={payment.id} className="hover:bg-gray-50 transition">
-                          <td className="px-4 py-3 font-medium text-gray-900">{payment.reference ?? `#${payment.id}`}</td>
-                          <td className="px-4 py-3 text-gray-700">
-                            {payment.user?.name ?? 'N/A'}
-                            {payment.user?.email && (
-                              <span className="block text-xs text-gray-500">{payment.user.email}</span>
-                            )}
+                        <tr 
+                          key={payment.id} 
+                          className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200 cursor-pointer group"
+                        >
+                          <td className="px-4 py-3.5">
+                            <span className="font-semibold text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">
+                              {payment.reference ?? `#${payment.id}`}
+                            </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-700">
-                            {payment.course?.title ?? 'N/A'}
+                          <td className="px-4 py-3.5">
+                            <div>
+                              <p className="font-medium text-gray-900">{payment.user?.name ?? 'N/A'}</p>
+                              {payment.user?.email && (
+                                <p className="text-xs text-gray-500 mt-0.5">{payment.user.email}</p>
+                              )}
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatCurrency(payment.amount, payment.currency ?? 'XOF')}
+                          <td className="px-4 py-3.5">
+                            <p className="text-gray-700">{payment.course?.title ?? 'N/A'}</p>
                           </td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="font-bold text-emerald-600">
+                              {formatCurrency(payment.amount, payment.currency ?? 'XOF')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
                             <span
-                              className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ${
                                 payment.status === 'completed' || payment.status === 'paid'
-                                  ? 'bg-green-100 text-green-700'
+                                  ? 'bg-green-100 text-green-700 border border-green-200'
                                   : payment.status === 'failed' || payment.status === 'refunded'
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-yellow-100 text-yellow-700'
+                                  ? 'bg-red-100 text-red-700 border border-red-200'
+                                  : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                               }`}
                             >
                               {(payment.status ?? 'pending').toUpperCase()}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right text-xs text-gray-500">
-                            {formatDateTime(payment.processed_at)}
+                          <td className="px-4 py-3.5 text-right">
+                            <span className="text-xs text-gray-500">{formatDateTime(payment.processed_at)}</span>
                           </td>
                         </tr>
                       ))}
@@ -1735,42 +1848,58 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Centres opérationnels</h3>
-              <div className="divide-y divide-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5 text-mdsc-blue-primary" />
+                Centres opérationnels
+              </h3>
+              <div className="space-y-3">
                 {[
                   {
                     title: 'Support & tickets',
                     summary: supportSummary,
                     icon: Headset,
                     accent: 'text-blue-600',
+                    bgAccent: 'bg-blue-100',
+                    gradient: 'from-blue-50 to-blue-100/50',
                   },
                   {
                     title: 'Modération & conformité',
                     summary: moderationSummary,
                     icon: Shield,
                     accent: 'text-orange-600',
+                    bgAccent: 'bg-orange-100',
+                    gradient: 'from-orange-50 to-orange-100/50',
                   },
                   {
                     title: 'Usage IA & automatisations',
                     summary: aiUsageSummary,
                     icon: Brain,
                     accent: 'text-purple-600',
+                    bgAccent: 'bg-purple-100',
+                    gradient: 'from-purple-50 to-purple-100/50',
                   },
-                ].map(({ title, summary, icon: Icon, accent }, index) => (
-                  <div key={`${title}-${index}`} className="py-3 flex items-start gap-3">
-                    <div className={`p-2 rounded-full bg-gray-100 ${accent.replace('text', 'bg').replace('-600', '-100')}`}>
-                      <Icon className={`h-5 w-5 ${accent}`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{title}</p>
-                      <p className="text-sm text-gray-600">
-                        {summary?.message ?? 'Statistiques en cours de synchronisation.'}
-                      </p>
-                      {summary?.updated_at && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Dernière mise à jour : {formatDateTime(summary.updated_at)}
+                ].map(({ title, summary, icon: Icon, accent, bgAccent, gradient }, index) => (
+                  <div 
+                    key={`${title}-${index}`} 
+                    className="group relative p-4 rounded-xl border border-gray-200 bg-gradient-to-r hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}></div>
+                    <div className="relative z-10 flex items-start gap-3">
+                      <div className={`p-2.5 rounded-xl ${bgAccent} shadow-sm group-hover:scale-110 transition-transform duration-200`}>
+                        <Icon className={`h-5 w-5 ${accent}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900 group-hover:text-gray-900 transition-colors">{title}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {summary?.message ?? 'Statistiques en cours de synchronisation.'}
                         </p>
-                      )}
+                        {summary?.updated_at && (
+                          <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Dernière mise à jour : {formatDateTime(summary.updated_at)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1780,47 +1909,57 @@ export default function AdminDashboard() {
 
           {/* Gestion notifications & événements */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Bell className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                  Notifications administrateur
-                </h3>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+                    <Bell className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Notifications administrateur</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Gestion des notifications système</p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => loadAdminNotifications()}
-                  className="inline-flex items-center text-sm px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 shadow-sm hover:shadow-md font-medium text-sm"
                   disabled={notificationsLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${notificationsLoading ? 'animate-spin' : ''}`} />
-                  Rafraîchir
+                  <RefreshCw className={`h-4 w-4 ${notificationsLoading ? 'animate-spin' : ''}`} />
+                  <span>Rafraîchir</span>
                 </button>
               </div>
 
               {unreadMessages > 0 && (
-                <p className="text-sm text-blue-600 mb-4">
-                  Vous avez {unreadMessages} message{unreadMessages > 1 ? 's' : ''} non lu{unreadMessages > 1 ? 's' : ''}.
-                </p>
+                <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm font-medium text-blue-800">
+                      Vous avez <span className="font-bold">{unreadMessages}</span> message{unreadMessages > 1 ? 's' : ''} non lu{unreadMessages > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
               )}
 
               <form onSubmit={handleNotificationSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre</label>
                     <input
                       type="text"
                       value={notificationForm.title}
                       onChange={(e) => updateNotificationForm('title', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       placeholder="Ex. Maintenance programmée"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type</label>
                     <select
                       value={notificationForm.type}
                       onChange={(e) => updateNotificationForm('type', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     >
                       <option value="system">Système</option>
                       <option value="reminder">Rappel</option>
@@ -1831,33 +1970,33 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Message</label>
                   <textarea
                     value={notificationForm.message}
                     onChange={(e) => updateNotificationForm('message', e.target.value)}
                     rows={3}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                     placeholder="Décrivez le contenu de la notification"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Déclenchement (optionnel)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Déclenchement (optionnel)</label>
                     <input
                       type="datetime-local"
                       value={notificationForm.trigger_at}
                       onChange={(e) => updateNotificationForm('trigger_at', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Métadonnées (JSON) - optionnel</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Métadonnées (JSON) - optionnel</label>
                     <textarea
                       value={notificationForm.metadata}
                       onChange={(e) => updateNotificationForm('metadata', e.target.value)}
                       rows={3}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                       placeholder='{"courseId": 42}'
                     />
                   </div>
@@ -1877,7 +2016,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition disabled:opacity-70"
+                    className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 font-semibold text-sm"
                     disabled={notificationsProcessing}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -1899,17 +2038,37 @@ export default function AdminDashboard() {
                 </div>
               </form>
 
-              <div className="mt-6 border-t border-gray-100 pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Notifications récentes</h4>
+              <div className="mt-6 border-t-2 border-gray-200 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <div className="w-1 h-5 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+                    Notifications récentes
+                  </h4>
+                  {adminNotificationsWithMessages.length > 0 && (
+                    <span className="text-xs font-medium text-gray-500">
+                      {adminNotificationsWithMessages.length} notification{adminNotificationsWithMessages.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
                 {notificationsLoading ? (
-                  <div className="py-6 text-center text-gray-500 text-sm">Chargement...</div>
+                  <div className="py-12 text-center">
+                    <div className="inline-flex items-center justify-center w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+                    <p className="text-sm font-medium text-gray-600">Chargement des notifications...</p>
+                  </div>
                 ) : notificationsError ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {notificationsError}
+                  <div className="rounded-xl border-2 border-red-300 bg-gradient-to-r from-red-50 to-red-100 px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-red-800 font-medium">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>{notificationsError}</span>
+                    </div>
                   </div>
                 ) : adminNotificationsWithMessages.length === 0 ? (
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-600 text-center">
-                    Aucune notification enregistrée.
+                  <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 py-12 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                      <Bell className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600">Aucune notification enregistrée</p>
+                    <p className="text-xs text-gray-500 mt-1">Les notifications apparaîtront ici</p>
                   </div>
                 ) : (
                   <ul className="space-y-3">
@@ -1918,41 +2077,107 @@ export default function AdminDashboard() {
                       return (
                         <li
                           key={notification.id}
-                          className={`rounded-xl border px-4 py-3 transition ${
+                          className={`group rounded-xl border-2 px-4 py-4 transition-all duration-200 hover:shadow-lg hover:scale-[1.01] ${
                             notification.is_read
-                              ? 'border-gray-200 bg-white'
-                              : 'border-blue-200 bg-blue-50'
+                              ? 'border-gray-200 bg-white hover:border-gray-300'
+                              : 'border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 hover:border-blue-400 shadow-sm'
                           }`}
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 pr-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-gray-900">{notification.title}</span>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-sm font-bold ${notification.is_read ? 'text-gray-700' : 'text-gray-900'}`}>
+                                  {notification.title}
+                                </span>
+                                {!notification.is_read && (
+                                  <span className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></span>
+                                )}
                                 {notification.type && (
-                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 uppercase">
+                                  <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 uppercase font-semibold border border-gray-300">
                                     {notification.type}
                                   </span>
                                 )}
                               </div>
                               {notification.message && (
-                                <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                                <p className={`text-sm mt-2 leading-relaxed whitespace-pre-line ${
+                                  notification.is_read ? 'text-gray-600' : 'text-gray-700 font-medium'
+                                }`}>
                                   {notification.message}
                                 </p>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                                <span>Créée : {formatDateTime(notification.created_at)}</span>
+                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                                <span className="flex items-center gap-1.5 text-gray-500 font-medium">
+                                  <Clock className="h-3.5 w-3.5" />
+                                  {formatDateTime(notification.created_at)}
+                                </span>
                                 {notification.trigger_at && (
-                                  <span className="flex items-center gap-1 text-blue-600">
-                                    <Clock className="h-3 w-3" /> {formatDateTime(notification.trigger_at)}
+                                  <span className="flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {formatDateTime(notification.trigger_at)}
                                   </span>
                                 )}
                               </div>
                               {!isMessagePlaceholder && notification.metadata && (
-                                <pre className="mt-2 text-xs bg-white border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
-                                  {JSON.stringify(notification.metadata, null, 2)}
-                                </pre>
+                                <div className="mt-3 space-y-2">
+                                  {/* Affichage formaté pour les notifications de cours */}
+                                  {notification.metadata.course_id && (
+                                    <div className="bg-gradient-to-br from-white to-blue-50/50 border-2 border-blue-200 rounded-xl p-4 space-y-3 shadow-sm">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-sm">
+                                          <BookOpen className="h-4 w-4 text-white" />
+                                        </div>
+                                        <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">Informations du cours</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-3 text-xs">
+                                        {notification.metadata.course_id && (
+                                          <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                                            <span className="text-gray-500 font-medium">ID:</span>
+                                            <span className="font-bold text-gray-900">#{notification.metadata.course_id}</span>
+                                          </div>
+                                        )}
+                                        {notification.metadata.instructor_id && (
+                                          <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                                            <span className="text-gray-500 font-medium">Instructeur ID:</span>
+                                            <span className="font-bold text-gray-900">#{notification.metadata.instructor_id}</span>
+                                          </div>
+                                        )}
+                                        {notification.metadata.instructor_name && (
+                                          <div className="col-span-2 flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                                            <User className="h-3.5 w-3.5 text-gray-400" />
+                                            <span className="text-gray-500 font-medium">Instructeur:</span>
+                                            <span className="font-bold text-gray-900">{notification.metadata.instructor_name}</span>
+                                          </div>
+                                        )}
+                                        {notification.metadata.instructor_email && (
+                                          <div className="col-span-2 flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
+                                            <Mail className="h-3.5 w-3.5 text-gray-400" />
+                                            <span className="text-gray-500 font-medium">Email:</span>
+                                            <span className="font-medium text-gray-700">{notification.metadata.instructor_email}</span>
+                                          </div>
+                                        )}
+                                        {notification.metadata.course_title && (
+                                          <div className="col-span-2 p-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                            <span className="text-gray-500 font-medium text-xs block mb-1">Titre du cours:</span>
+                                            <span className="font-bold text-gray-900 text-sm">{notification.metadata.course_title}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {notification.metadata.course_id && (
+                                        <div className="pt-3 border-t-2 border-blue-200">
+                                          <Link
+                                            href={`/dashboard/admin/courses?courseId=${notification.metadata.course_id}`}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-semibold text-xs"
+                                          >
+                                            <Eye className="h-3.5 w-3.5" />
+                                            Voir le cours
+                                          </Link>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                              {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
+                              {notification.metadata?.link && typeof notification.metadata.link === 'string' && !notification.metadata.course_id && (
                                 <Link
                                   href={notification.metadata.link}
                                   className="mt-2 inline-flex text-xs font-medium text-mdsc-blue-primary hover:underline"
@@ -1964,41 +2189,52 @@ export default function AdminDashboard() {
                             {isMessagePlaceholder ? (
                               <Link
                                 href="/dashboard/instructor/messages"
-                                className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg font-semibold text-xs"
                               >
-                                <Mail className="h-4 w-4 mr-1" /> Ouvrir la messagerie
+                                <Mail className="h-4 w-4" />
+                                <span>Ouvrir la messagerie</span>
                               </Link>
                             ) : (
-                              <div className="flex flex-col items-end gap-2 text-sm">
+                              <div className="flex flex-col items-end gap-2">
                                 <button
                                   type="button"
                                   onClick={() => handleNotificationToggleRead(notification)}
-                                  className="inline-flex items-center text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                    notification.is_read
+                                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  }`}
                                 >
                                   {notification.is_read ? (
                                     <>
-                                      <XCircle className="h-4 w-4 mr-1" /> Marquer non lu
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      <span>Marquer non lu</span>
                                     </>
                                   ) : (
                                     <>
-                                      <CheckCircle className="h-4 w-4 mr-1" /> Marquer lu
+                                      <CheckCircle className="h-3.5 w-3.5" />
+                                      <span>Marquer lu</span>
                                     </>
                                   )}
                                 </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleNotificationEdit(notification)}
-                                  className="inline-flex items-center text-sm text-gray-600 hover:text-gray-800"
-                                >
-                                  <Edit3 className="h-4 w-4 mr-1" /> Modifier
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleNotificationDelete(notification.id)}
-                                  className="inline-flex items-center text-sm text-red-600 hover:text-red-800"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-1" /> Supprimer
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNotificationEdit(notification)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 text-xs font-medium"
+                                  >
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                    <span>Modifier</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNotificationDelete(notification.id)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all duration-200 text-xs font-medium"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <span>Supprimer</span>
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2030,78 +2266,78 @@ export default function AdminDashboard() {
               <form onSubmit={handleEventSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Titre</label>
                     <input
                       type="text"
                       value={eventForm.title}
                       onChange={(e) => updateEventForm('title', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       placeholder="Ex. Webinaire en direct"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type</label>
                     <input
                       type="text"
                       value={eventForm.type}
                       onChange={(e) => updateEventForm('type', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       placeholder="general, deadline, live..."
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
                   <textarea
                     value={eventForm.description}
                     onChange={(e) => updateEventForm('description', e.target.value)}
                     rows={3}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                     placeholder="Détails sur l'événement"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Début</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Début</label>
                     <input
                       type="datetime-local"
                       value={eventForm.start_at}
                       onChange={(e) => updateEventForm('start_at', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fin (optionnel)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Fin (optionnel)</label>
                     <input
                       type="datetime-local"
                       value={eventForm.end_at}
                       onChange={(e) => updateEventForm('end_at', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Lieu / Lien</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Lieu / Lien</label>
                     <input
                       type="text"
                       value={eventForm.location}
                       onChange={(e) => updateEventForm('location', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       placeholder="Zoom, Salle 301…"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cours lié (ID)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cours lié (ID)</label>
                     <input
                       type="text"
                       value={eventForm.course_id}
                       onChange={(e) => updateEventForm('course_id', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                       placeholder="Optionnel"
                     />
                   </div>
@@ -2113,17 +2349,17 @@ export default function AdminDashboard() {
                       onChange={(e) => updateEventForm('is_public', e.target.checked)}
                       className="rounded border-gray-300 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                     />
-                    <label htmlFor="event-public" className="text-sm text-gray-700">Événement public</label>
+                    <label htmlFor="event-public" className="text-sm font-medium text-gray-700">Événement public</label>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Métadonnées (JSON) - optionnel</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Métadonnées (JSON) - optionnel</label>
                   <textarea
                     value={eventForm.metadata}
                     onChange={(e) => updateEventForm('metadata', e.target.value)}
                     rows={3}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                     placeholder='{"speaker": "Dr. Doe"}'
                   />
                 </div>
@@ -2142,7 +2378,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-3">
                   <button
                     type="submit"
-                    className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition disabled:opacity-70"
+                    className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 font-semibold text-sm"
                     disabled={eventProcessing}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -2218,11 +2454,6 @@ export default function AdminDashboard() {
                                 </span>
                               )}
                             </div>
-                            {eventItem.metadata && (
-                              <pre className="mt-2 text-xs bg-gray-50 border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
-                                {JSON.stringify(eventItem.metadata, null, 2)}
-                              </pre>
-                            )}
                           </div>
                           <div className="flex flex-col items-end gap-2 text-sm">
                             <button
@@ -2258,42 +2489,50 @@ export default function AdminDashboard() {
                   icon: Users,
                   title: 'Gestion Utilisateurs',
                   description: 'Gérer les utilisateurs',
-                  color: 'bg-blue-500',
+                  color: 'from-blue-500 to-blue-600',
+                  hoverColor: 'hover:from-blue-600 hover:to-blue-700',
                   href: '/dashboard/admin/users'
                 },
                 {
                   icon: BookOpen,
                   title: 'Modération Cours',
                   description: 'Modérer les cours',
-                  color: 'bg-green-500',
+                  color: 'from-green-500 to-emerald-600',
+                  hoverColor: 'hover:from-green-600 hover:to-emerald-700',
                   href: '/dashboard/admin/courses'
                 },
                 {
                   icon: BarChart3,
                   title: 'Statistiques',
                   description: 'Statistiques détaillées',
-                  color: 'bg-purple-500',
+                  color: 'from-purple-500 to-indigo-600',
+                  hoverColor: 'hover:from-purple-600 hover:to-indigo-700',
                   href: '/dashboard/admin/statistics'
                 },
                 {
                   icon: Settings,
                   title: 'Paramètres',
                   description: 'Configuration système',
-                  color: 'bg-gray-500',
+                  color: 'from-gray-500 to-gray-600',
+                  hoverColor: 'hover:from-gray-600 hover:to-gray-700',
                   href: '/dashboard/admin/settings'
                 }
               ].map((action, index) => (
                 <Link
                   key={index}
                   href={action.href}
-                  className="group flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all duration-300 hover:scale-105"
+                  className="group relative flex items-center p-5 bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
-                  <div className={`${action.color} p-3 rounded-xl mr-4 group-hover:scale-110 transition-transform`}>
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className={`relative z-10 bg-gradient-to-br ${action.color} ${action.hoverColor} p-3.5 rounded-xl mr-4 group-hover:scale-110 transition-transform duration-300 shadow-md`}>
                     <action.icon className="h-6 w-6 text-white" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{action.title}</p>
-                    <p className="text-sm text-gray-500">{action.description}</p>
+                  <div className="relative z-10 flex-1">
+                    <p className="font-bold text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">{action.title}</p>
+                    <p className="text-sm text-gray-600">{action.description}</p>
+                  </div>
+                  <div className="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <ArrowUp className="h-4 w-4 text-mdsc-blue-primary transform rotate-45" />
                   </div>
                 </Link>
               ))}

@@ -929,6 +929,7 @@ export class AdminService {
     userId: string | number,
     reason?: string
   ): Promise<AdminUserEntry> {
+    // La route /suspend fait un toggle: suspend si actif, réactive si suspendu
     const payload = reason ? { reason } : undefined;
     const response = await apiRequest(`/admin/users/${userId}/suspend`, {
       method: 'POST',
@@ -939,7 +940,8 @@ export class AdminService {
   }
 
   static async reactivateUser(userId: string | number): Promise<AdminUserEntry> {
-    const response = await apiRequest(`/admin/users/${userId}/reactivate`, {
+    // La route /suspend fait un toggle, donc on l'utilise aussi pour réactiver
+    const response = await apiRequest(`/admin/users/${userId}/suspend`, {
       method: 'POST',
     });
 

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import Button from '../ui/Button';
 import { Clock, Users, Star, Play, ArrowRight } from 'lucide-react';

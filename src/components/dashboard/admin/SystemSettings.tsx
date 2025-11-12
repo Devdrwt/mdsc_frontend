@@ -20,8 +20,16 @@ import {
   Lock,
   Key,
   Upload,
-  Download
+  Download,
+  Zap,
+  Eye,
+  EyeOff,
+  Info,
+  ExternalLink,
+  Copy,
+  CheckCircle2,
 } from 'lucide-react';
+import toast from '../../../lib/utils/toast';
 
 interface SystemConfig {
   general: {
@@ -109,6 +117,7 @@ export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState<'general' | 'email' | 'security' | 'features' | 'integrations'>('general');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
   const handleSave = async () => {
     setLoading(true);
@@ -116,9 +125,11 @@ export default function SystemSettings() {
       // Simulation de la sauvegarde - dans un vrai projet, on enverrait à l'API
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSaved(true);
+      toast.success('Configuration sauvegardée', 'Les paramètres ont été enregistrés avec succès.');
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur', 'Impossible de sauvegarder la configuration');
     } finally {
       setLoading(false);
     }
@@ -134,44 +145,68 @@ export default function SystemSettings() {
     }));
   };
 
+  const togglePasswordVisibility = (field: string) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copié', `${label} copié dans le presse-papiers`);
+  };
+
   const tabs = [
-    { id: 'general', label: 'Général', icon: Globe },
-    { id: 'email', label: 'Email', icon: Mail },
-    { id: 'security', label: 'Sécurité', icon: Shield },
-    { id: 'features', label: 'Fonctionnalités', icon: Settings },
-    { id: 'integrations', label: 'Intégrations', icon: Server }
+    { id: 'general', label: 'Général', icon: Globe, color: 'from-blue-500 to-blue-600' },
+    { id: 'email', label: 'Email', icon: Mail, color: 'from-purple-500 to-purple-600' },
+    { id: 'security', label: 'Sécurité', icon: Shield, color: 'from-red-500 to-red-600' },
+    { id: 'features', label: 'Fonctionnalités', icon: Zap, color: 'from-green-500 to-green-600' },
+    { id: 'integrations', label: 'Intégrations', icon: Server, color: 'from-orange-500 to-orange-600' }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-blue-dark to-gray-800 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Configuration Système ⚙️</h1>
-            <p className="text-gray-300">
+    <div className="space-y-6 animate-fade-in-up">
+      {/* En-tête moderne */}
+      <div className="relative bg-gradient-to-br from-mdsc-blue-dark via-[#0C3C5C] to-[#1a4d6b] rounded-xl p-8 text-white shadow-2xl overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-shimmer"></div>
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <Settings className="h-7 w-7 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Configuration Système</h1>
+            </div>
+            <p className="text-white/90 text-base max-w-2xl">
               Gérez les paramètres de votre plateforme d'apprentissage et configurez les intégrations.
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => window.location.reload()}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2"
+              className="group relative bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-white/20 hover:border-white/30 hover:shadow-lg flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              <span>Actualiser</span>
+              Actualiser
             </button>
             <button
               onClick={handleSave}
               disabled={loading}
-              className="bg-mdsc-gold hover:bg-yellow-600 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 disabled:opacity-50"
+              className="group relative bg-gradient-to-r from-mdsc-gold to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Sauvegarde...
+                </>
               ) : (
-                <Save className="h-4 w-4" />
+                <>
+                  <Save className="h-4 w-4" />
+                  Sauvegarder
+                </>
               )}
-              <span>{loading ? 'Sauvegarde...' : 'Sauvegarder'}</span>
             </button>
           </div>
         </div>
@@ -179,91 +214,109 @@ export default function SystemSettings() {
 
       {/* Message de sauvegarde */}
       {saved && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-2">
-          <CheckCircle className="h-5 w-5 text-green-600" />
-          <span className="text-green-800 font-medium">Configuration sauvegardée avec succès !</span>
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 flex items-center space-x-3 shadow-md animate-fade-in">
+          <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+          <span className="text-green-800 font-semibold">Configuration sauvegardée avec succès !</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Navigation des onglets */}
+        {/* Navigation des onglets moderne */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sticky top-6">
             <nav className="space-y-2">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-mdsc-blue-dark text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </button>
-              ))}
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${
+                      isActive
+                        ? `bg-gradient-to-r ${tab.color} text-white shadow-lg scale-105`
+                        : 'text-gray-700 hover:bg-gray-50 hover:scale-102'
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
         </div>
 
         {/* Contenu des onglets */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
             {/* Onglet Général */}
             {activeTab === 'general' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Globe className="h-5 w-5 mr-2 text-mdsc-blue-dark" />
-                  Configuration Générale
-                </h3>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                    <Globe className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Configuration Générale</h3>
+                    <p className="text-sm text-gray-500">Paramètres de base de votre plateforme</p>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Nom du site
                     </label>
                     <input
                       type="text"
                       value={config.general.siteName}
                       onChange={(e) => handleConfigChange('general', 'siteName', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       URL du site
                     </label>
-                    <input
-                      type="url"
-                      value={config.general.siteUrl}
-                      onChange={(e) => handleConfigChange('general', 'siteUrl', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                    />
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={config.general.siteUrl}
+                        onChange={(e) => handleConfigChange('general', 'siteUrl', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                      />
+                      <button
+                        onClick={() => copyToClipboard(config.general.siteUrl, 'URL')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                        title="Copier"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Description du site
                     </label>
                     <textarea
                       value={config.general.siteDescription}
                       onChange={(e) => handleConfigChange('general', 'siteDescription', e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 resize-none"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Langue par défaut
                     </label>
                     <select
                       value={config.general.defaultLanguage}
                       onChange={(e) => handleConfigChange('general', 'defaultLanguage', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     >
                       <option value="fr">Français</option>
                       <option value="en">English</option>
@@ -271,13 +324,13 @@ export default function SystemSettings() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Fuseau horaire
                     </label>
                     <select
                       value={config.general.timezone}
                       onChange={(e) => handleConfigChange('general', 'timezone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     >
                       <option value="Africa/Abidjan">Afrique/Abidjan</option>
                       <option value="UTC">UTC</option>
@@ -285,17 +338,22 @@ export default function SystemSettings() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <div className="flex items-center">
+                    <div className="flex items-start p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl">
                       <input
                         type="checkbox"
                         id="maintenanceMode"
                         checked={config.general.maintenanceMode}
                         onChange={(e) => handleConfigChange('general', 'maintenanceMode', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
+                        className="mt-1 h-5 w-5 text-mdsc-gold focus:ring-mdsc-gold border-gray-300 rounded"
                       />
-                      <label htmlFor="maintenanceMode" className="ml-2 block text-sm text-gray-700">
-                        Mode maintenance (désactive l'accès public)
-                      </label>
+                      <div className="ml-3 flex-1">
+                        <label htmlFor="maintenanceMode" className="block text-sm font-semibold text-gray-900">
+                          Mode maintenance
+                        </label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Désactive l'accès public à la plateforme. Seuls les administrateurs pourront se connecter.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -305,81 +363,96 @@ export default function SystemSettings() {
             {/* Onglet Email */}
             {activeTab === 'email' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Mail className="h-5 w-5 mr-2 text-mdsc-blue-dark" />
-                  Configuration Email
-                </h3>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                    <Mail className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Configuration Email</h3>
+                    <p className="text-sm text-gray-500">Paramètres SMTP pour l'envoi d'emails</p>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Serveur SMTP
                     </label>
                     <input
                       type="text"
                       value={config.email.smtpHost}
                       onChange={(e) => handleConfigChange('email', 'smtpHost', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
+                      placeholder="smtp.gmail.com"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Port SMTP
                     </label>
                     <input
                       type="number"
                       value={config.email.smtpPort}
-                      onChange={(e) => handleConfigChange('email', 'smtpPort', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      onChange={(e) => handleConfigChange('email', 'smtpPort', parseInt(e.target.value) || 587)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Nom d'utilisateur SMTP
                     </label>
                     <input
                       type="email"
                       value={config.email.smtpUser}
                       onChange={(e) => handleConfigChange('email', 'smtpUser', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Mot de passe SMTP
                     </label>
-                    <input
-                      type="password"
-                      value={config.email.smtpPassword}
-                      onChange={(e) => handleConfigChange('email', 'smtpPassword', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPasswords.smtpPassword ? 'text' : 'password'}
+                        value={config.email.smtpPassword}
+                        onChange={(e) => handleConfigChange('email', 'smtpPassword', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('smtpPassword')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                      >
+                        {showPasswords.smtpPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Email expéditeur
                     </label>
                     <input
                       type="email"
                       value={config.email.fromEmail}
                       onChange={(e) => handleConfigChange('email', 'fromEmail', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Nom expéditeur
                     </label>
                     <input
                       type="text"
                       value={config.email.fromName}
                       onChange={(e) => handleConfigChange('email', 'fromName', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                 </div>
@@ -389,73 +462,88 @@ export default function SystemSettings() {
             {/* Onglet Sécurité */}
             {activeTab === 'security' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Shield className="h-5 w-5 mr-2 text-mdsc-blue-dark" />
-                  Configuration Sécurité
-                </h3>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-red-500 to-red-600 rounded-lg">
+                    <Shield className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Configuration Sécurité</h3>
+                    <p className="text-sm text-gray-500">Paramètres de sécurité et authentification</p>
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Timeout de session (minutes)
                     </label>
                     <input
                       type="number"
                       value={config.security.sessionTimeout}
-                      onChange={(e) => handleConfigChange('security', 'sessionTimeout', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      onChange={(e) => handleConfigChange('security', 'sessionTimeout', parseInt(e.target.value) || 30)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Tentatives de connexion max
                     </label>
                     <input
                       type="number"
                       value={config.security.maxLoginAttempts}
-                      onChange={(e) => handleConfigChange('security', 'maxLoginAttempts', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      onChange={(e) => handleConfigChange('security', 'maxLoginAttempts', parseInt(e.target.value) || 5)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Longueur minimale du mot de passe
                     </label>
                     <input
                       type="number"
                       value={config.security.passwordMinLength}
-                      onChange={(e) => handleConfigChange('security', 'passwordMinLength', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                      onChange={(e) => handleConfigChange('security', 'passwordMinLength', parseInt(e.target.value) || 8)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                     />
                   </div>
                   
                   <div className="md:col-span-2 space-y-4">
-                    <div className="flex items-center">
+                    <div className="flex items-start p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
                       <input
                         type="checkbox"
                         id="requireEmailVerification"
                         checked={config.security.requireEmailVerification}
                         onChange={(e) => handleConfigChange('security', 'requireEmailVerification', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
+                        className="mt-1 h-5 w-5 text-mdsc-blue-primary focus:ring-mdsc-blue-primary border-gray-300 rounded"
                       />
-                      <label htmlFor="requireEmailVerification" className="ml-2 block text-sm text-gray-700">
-                        Exiger la vérification email
-                      </label>
+                      <div className="ml-3 flex-1">
+                        <label htmlFor="requireEmailVerification" className="block text-sm font-semibold text-gray-900">
+                          Exiger la vérification email
+                        </label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Les utilisateurs devront vérifier leur email avant de pouvoir utiliser la plateforme.
+                        </p>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center">
+                    <div className="flex items-start p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl">
                       <input
                         type="checkbox"
                         id="enableTwoFactor"
                         checked={config.security.enableTwoFactor}
                         onChange={(e) => handleConfigChange('security', 'enableTwoFactor', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
+                        className="mt-1 h-5 w-5 text-mdsc-blue-primary focus:ring-mdsc-blue-primary border-gray-300 rounded"
                       />
-                      <label htmlFor="enableTwoFactor" className="ml-2 block text-sm text-gray-700">
-                        Activer l'authentification à deux facteurs
-                      </label>
+                      <div className="ml-3 flex-1">
+                        <label htmlFor="enableTwoFactor" className="block text-sm font-semibold text-gray-900">
+                          Activer l'authentification à deux facteurs (2FA)
+                        </label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Ajoute une couche de sécurité supplémentaire avec un code de vérification.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -465,93 +553,59 @@ export default function SystemSettings() {
             {/* Onglet Fonctionnalités */}
             {activeTab === 'features' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Settings className="h-5 w-5 mr-2 text-mdsc-blue-dark" />
-                  Fonctionnalités de la Plateforme
-                </h3>
-                
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="enableGamification"
-                        checked={config.features.enableGamification}
-                        onChange={(e) => handleConfigChange('features', 'enableGamification', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
-                      />
-                      <div className="ml-3">
-                        <label htmlFor="enableGamification" className="text-sm font-medium text-gray-700">
-                          Gamification
-                        </label>
-                        <p className="text-xs text-gray-500">Badges, points, niveaux</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="enableChatIA"
-                        checked={config.features.enableChatIA}
-                        onChange={(e) => handleConfigChange('features', 'enableChatIA', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
-                      />
-                      <div className="ml-3">
-                        <label htmlFor="enableChatIA" className="text-sm font-medium text-gray-700">
-                          Chat IA
-                        </label>
-                        <p className="text-xs text-gray-500">Assistant intelligent</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="enableCertificates"
-                        checked={config.features.enableCertificates}
-                        onChange={(e) => handleConfigChange('features', 'enableCertificates', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
-                      />
-                      <div className="ml-3">
-                        <label htmlFor="enableCertificates" className="text-sm font-medium text-gray-700">
-                          Certificats
-                        </label>
-                        <p className="text-xs text-gray-500">Certificats de complétion</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="enableAnalytics"
-                        checked={config.features.enableAnalytics}
-                        onChange={(e) => handleConfigChange('features', 'enableAnalytics', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
-                      />
-                      <div className="ml-3">
-                        <label htmlFor="enableAnalytics" className="text-sm font-medium text-gray-700">
-                          Analytics
-                        </label>
-                        <p className="text-xs text-gray-500">Statistiques et rapports</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center p-4 border border-gray-200 rounded-lg">
-                      <input
-                        type="checkbox"
-                        id="enableNotifications"
-                        checked={config.features.enableNotifications}
-                        onChange={(e) => handleConfigChange('features', 'enableNotifications', e.target.checked)}
-                        className="h-4 w-4 text-mdsc-blue-dark focus:ring-mdsc-blue-dark border-gray-300 rounded"
-                      />
-                      <div className="ml-3">
-                        <label htmlFor="enableNotifications" className="text-sm font-medium text-gray-700">
-                          Notifications
-                        </label>
-                        <p className="text-xs text-gray-500">Alertes et notifications</p>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                    <Zap className="h-5 w-5 text-white" />
                   </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Fonctionnalités de la Plateforme</h3>
+                    <p className="text-sm text-gray-500">Activez ou désactivez les fonctionnalités disponibles</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { key: 'enableGamification', label: 'Gamification', desc: 'Badges, points, niveaux', icon: Award, color: 'from-yellow-500 to-amber-600' },
+                    { key: 'enableChatIA', label: 'Chat IA', desc: 'Assistant intelligent', icon: Brain, color: 'from-purple-500 to-indigo-600' },
+                    { key: 'enableCertificates', label: 'Certificats', desc: 'Certificats de complétion', icon: Award, color: 'from-blue-500 to-blue-600' },
+                    { key: 'enableAnalytics', label: 'Analytics', desc: 'Statistiques et rapports', icon: Users, color: 'from-green-500 to-emerald-600' },
+                    { key: 'enableNotifications', label: 'Notifications', desc: 'Alertes et notifications', icon: Bell, color: 'from-orange-500 to-red-600' },
+                  ].map((feature) => {
+                    const Icon = feature.icon;
+                    const isEnabled = config.features[feature.key as keyof typeof config.features] as boolean;
+                    return (
+                      <div
+                        key={feature.key}
+                        className={`group relative p-5 border-2 rounded-xl transition-all duration-200 cursor-pointer ${
+                          isEnabled
+                            ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-md'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                        onClick={() => handleConfigChange('features', feature.key, !isEnabled)}
+                      >
+                        <div className="flex items-start">
+                          <div className={`p-3 rounded-lg ${isEnabled ? `bg-gradient-to-br ${feature.color}` : 'bg-gray-100'} transition-all duration-200`}>
+                            <Icon className={`h-5 w-5 ${isEnabled ? 'text-white' : 'text-gray-400'}`} />
+                          </div>
+                          <div className="ml-4 flex-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-bold text-gray-900 cursor-pointer">
+                                {feature.label}
+                              </label>
+                              <div className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
+                                isEnabled ? 'bg-green-500' : 'bg-gray-300'
+                              }`}>
+                                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
+                                  isEnabled ? 'translate-x-6' : 'translate-x-0'
+                                }`}></div>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">{feature.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -559,102 +613,171 @@ export default function SystemSettings() {
             {/* Onglet Intégrations */}
             {activeTab === 'integrations' && (
               <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Server className="h-5 w-5 mr-2 text-mdsc-blue-dark" />
-                  Intégrations Externes
-                </h3>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
+                    <Server className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Intégrations Externes</h3>
+                    <p className="text-sm text-gray-500">Connectez votre plateforme à des services externes</p>
+                  </div>
+                </div>
                 
                 <div className="space-y-6">
                   {/* Moodle */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
-                      <BookOpen className="h-5 w-5 mr-2 text-green-600" />
-                      Moodle LMS
-                    </h4>
+                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-green-300 transition-all duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
+                          <BookOpen className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-md font-bold text-gray-900">Moodle LMS</h4>
+                          <p className="text-xs text-gray-500">Intégration avec Moodle Learning Management System</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(config.integrations.moodleUrl, 'URL Moodle')}
+                        className="p-2 text-gray-400 hover:text-green-600 transition-colors"
+                        title="Copier l'URL"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           URL Moodle
                         </label>
                         <input
                           type="url"
                           value={config.integrations.moodleUrl}
                           onChange={(e) => handleConfigChange('integrations', 'moodleUrl', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Token API
                         </label>
-                        <input
-                          type="password"
-                          value={config.integrations.moodleToken}
-                          onChange={(e) => handleConfigChange('integrations', 'moodleToken', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.moodleToken ? 'text' : 'password'}
+                            value={config.integrations.moodleToken}
+                            onChange={(e) => handleConfigChange('integrations', 'moodleToken', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility('moodleToken')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                          >
+                            {showPasswords.moodleToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* OpenAI */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
-                      <Brain className="h-5 w-5 mr-2 text-purple-600" />
-                      OpenAI API
-                    </h4>
+                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-purple-300 transition-all duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg">
+                          <Brain className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-md font-bold text-gray-900">OpenAI API</h4>
+                          <p className="text-xs text-gray-500">Intégration avec OpenAI pour l'assistant IA</p>
+                        </div>
+                      </div>
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Clé API OpenAI
                       </label>
-                      <input
-                        type="password"
-                        value={config.integrations.openaiApiKey}
-                        onChange={(e) => handleConfigChange('integrations', 'openaiApiKey', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPasswords.openaiApiKey ? 'text' : 'password'}
+                          value={config.integrations.openaiApiKey}
+                          onChange={(e) => handleConfigChange('integrations', 'openaiApiKey', e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility('openaiApiKey')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                        >
+                          {showPasswords.openaiApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   {/* MinIO */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center">
-                      <Database className="h-5 w-5 mr-2 text-blue-600" />
-                      MinIO Storage
-                    </h4>
+                  <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-blue-300 transition-all duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                          <Database className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-md font-bold text-gray-900">MinIO Storage</h4>
+                          <p className="text-xs text-gray-500">Stockage d'objets pour les médias et fichiers</p>
+                        </div>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Endpoint
                         </label>
                         <input
                           type="url"
                           value={config.integrations.minioEndpoint}
                           onChange={(e) => handleConfigChange('integrations', 'minioEndpoint', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Access Key
                         </label>
-                        <input
-                          type="password"
-                          value={config.integrations.minioAccessKey}
-                          onChange={(e) => handleConfigChange('integrations', 'minioAccessKey', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.minioAccessKey ? 'text' : 'password'}
+                            value={config.integrations.minioAccessKey}
+                            onChange={(e) => handleConfigChange('integrations', 'minioAccessKey', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility('minioAccessKey')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                          >
+                            {showPasswords.minioAccessKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Secret Key
                         </label>
-                        <input
-                          type="password"
-                          value={config.integrations.minioSecretKey}
-                          onChange={(e) => handleConfigChange('integrations', 'minioSecretKey', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                        />
+                        <div className="relative">
+                          <input
+                            type={showPasswords.minioSecretKey ? 'text' : 'password'}
+                            value={config.integrations.minioSecretKey}
+                            onChange={(e) => handleConfigChange('integrations', 'minioSecretKey', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility('minioSecretKey')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                          >
+                            {showPasswords.minioSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

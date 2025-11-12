@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo, useState } from 'react';
 import { Clock, Users, User, AlertCircle } from 'lucide-react';
 import { Course } from '../../types';

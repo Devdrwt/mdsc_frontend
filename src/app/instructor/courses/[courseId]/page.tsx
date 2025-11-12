@@ -335,32 +335,7 @@ export default function InstructorCourseDetailPage() {
                   </div>
 
                   {/* Form Content */}
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    setSaving(true);
-                    try {
-                      const { is_published: _ignoredPublishField, ...settingsWithoutPublish } = courseSettings;
-                      // Inclure les données existantes du cours pour éviter les erreurs de validation
-                      const updateData: any = {
-                        ...settingsWithoutPublish,
-                        // Inclure les champs requis qui existent déjà dans le cours
-                        title: course?.title || course?.name || '',
-                        description: course?.description || course?.long_description || '',
-                        short_description: course?.short_description || course?.shortDescription || course?.description?.substring(0, 200) || '',
-                        // S'assurer que max_students est un entier positif si défini
-                        max_students: courseSettings.max_students && courseSettings.max_students > 0 ? courseSettings.max_students : undefined,
-                      };
-                      
-                      await courseService.updateCourse(courseIdParam, updateData);
-                      success?.('Paramètres enregistrés avec succès');
-                      const updated = await courseService.getCourseById(courseIdParam);
-                      setCourse(updated);
-                    } catch (err: any) {
-                      notifyError?.('Erreur', err.message || 'Impossible de sauvegarder les paramètres');
-                    } finally {
-                      setSaving(false);
-                    }
-                  }} className="p-6 space-y-8">
+                  <div className="p-6 space-y-8">
                     {/* Statut et visibilité */}
                     <div className="bg-blue-50/50 rounded-lg p-6 border border-blue-100">
                       <div className="flex items-center space-x-3 mb-6">
@@ -665,6 +640,7 @@ export default function InstructorCourseDetailPage() {
                             setRequestingPublication(true);
                             try {
                               await courseService.requestCoursePublication(courseIdParam);
+                              // Le backend crée automatiquement une notification pour tous les admins
                               success?.('Demande envoyée', 'Votre demande de publication a été envoyée. Elle sera examinée par un administrateur.');
                               const updated = await courseService.getCourseById(courseIdParam);
                               setCourse(updated);
@@ -723,29 +699,7 @@ export default function InstructorCourseDetailPage() {
                       ) : null}
                     </div>
 
-                    {/* Boutons d'action */}
-                    <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="flex items-center space-x-2 px-6 py-2.5 bg-gradient-to-r from-mdsc-gold to-yellow-600 text-white rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg font-medium"
-                      >
-                        {saving ? (
-                          <LoaderIcon className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Save className="h-5 w-5" />
-                        )}
-                        <span>{saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}</span>
-                      </button>
-                    </div>
-                  </form>
+                  </div>
                 </div>
               </div>
             )}

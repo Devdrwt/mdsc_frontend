@@ -30,6 +30,10 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/stores/authStore';
 import NotificationContainer from '../ui/NotificationContainer';
+import { AdminService } from '../../lib/services/adminService';
+import { InstructorService } from '../../lib/services/instructorService';
+import { NotificationService } from '../../lib/services/notificationService';
+import Link from 'next/link';
 import Image from 'next/image';
 
 interface DashboardLayoutProps {
@@ -51,6 +55,10 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
@@ -113,6 +121,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           { name: 'Domaines', href: `/dashboard/${userRole}/domains`, icon: BookOpen },
           { name: 'Utilisateurs', href: `/dashboard/${userRole}/users`, icon: Users },
           { name: 'Cours', href: `/dashboard/${userRole}/courses`, icon: BookOpen },
+          { name: 'Certificats', href: `/dashboard/${userRole}/certificates`, icon: Award },
           { name: 'Statistiques', href: `/dashboard/${userRole}/statistics`, icon: BarChart3 },
           { name: 'Surveillance', href: `/dashboard/${userRole}/monitoring`, icon: Activity },
           { name: 'Gamification', href: `/dashboard/${userRole}/gamification`, icon: Trophy },
@@ -207,6 +216,90 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
+  };
+
+  // Charger les notifications selon le rôle
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!user) return;
+      
+      setLoadingNotifications(true);
+      try {
+        let notificationsData: any[] = [];
+        
+        if (userRole === 'admin') {
+          const response = await AdminService.getAdminNotifications({ page: 1, limit: 10 });
+          notificationsData = response.notifications || [];
+        } else if (userRole === 'instructor') {
+          const response = await InstructorService.getNotifications({ page: 1, limit: 10 });
+          notificationsData = response.notifications || [];
+        } else if (userRole === 'student') {
+          const response = await NotificationService.getNotifications({ page: 1, limit: 10 });
+          notificationsData = response.notifications || [];
+        }
+        
+        setNotifications(notificationsData);
+        const unread = notificationsData.filter((n: any) => !n.is_read).length;
+        setUnreadCount(unread);
+      } catch (error) {
+        console.error('Erreur lors du chargement des notifications:', error);
+        setNotifications([]);
+        setUnreadCount(0);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    loadNotifications();
+    // Recharger les notifications toutes les 30 secondes
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user, userRole]);
+
+  // Fermer le dropdown de notifications en cliquant en dehors
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (notificationsOpen && !target.closest('.notifications-dropdown')) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    if (notificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [notificationsOpen]);
+
+  const handleMarkAsRead = async (notificationId: number | string) => {
+    try {
+      if (userRole === 'admin') {
+        await AdminService.updateAdminNotification(notificationId, { is_read: true });
+      } else {
+        // Pour instructor et student, utiliser le service de notifications standard
+        await NotificationService.markAsRead(notificationId);
+      }
+      
+      // Mettre à jour l'état local
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, is_read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Erreur lors du marquage comme lu:', error);
+    }
+  };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
   };
 
   const isActive = (href: string) => {
@@ -417,10 +510,122 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 text-gray-400 hover:text-gray-600">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="relative notifications-dropdown">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Dropdown Notifications */}
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999] max-h-[600px] flex flex-col">
+                  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className="text-xs text-gray-500">{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                  
+                  <div className="overflow-y-auto flex-1">
+                    {loadingNotifications ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mdsc-blue-primary mx-auto"></div>
+                        <p className="mt-2 text-sm">Chargement...</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        <Bell className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                        <p className="text-sm">Aucune notification</p>
+                      </div>
+                    ) : (
+                      <ul className="divide-y divide-gray-100">
+                        {notifications.map((notification) => (
+                          <li
+                            key={notification.id}
+                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                              !notification.is_read ? 'bg-blue-50' : ''
+                            }`}
+                            onClick={() => {
+                              if (!notification.is_read) {
+                                handleMarkAsRead(notification.id);
+                              }
+                              if (notification.metadata?.course_id) {
+                                router.push(`/dashboard/admin/courses?courseId=${notification.metadata.course_id}`);
+                                setNotificationsOpen(false);
+                              }
+                            }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className={`text-sm font-medium ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                                    {notification.title || 'Notification'}
+                                  </p>
+                                  {!notification.is_read && (
+                                    <span className="h-2 w-2 bg-blue-500 rounded-full"></span>
+                                  )}
+                                </div>
+                                {notification.message && (
+                                  <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                                    {notification.message}
+                                  </p>
+                                )}
+                                {notification.metadata?.course_id && (
+                                  <div className="mt-2 text-xs text-gray-500">
+                                    <span className="font-medium">Cours #{notification.metadata.course_id}</span>
+                                    {notification.metadata.course_title && (
+                                      <span className="ml-2">• {notification.metadata.course_title}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {formatDateTime(notification.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  
+                  <div className="p-3 border-t border-gray-200 bg-gray-50">
+                    {userRole === 'student' ? (
+                      <Link
+                        href={`/dashboard/${userRole}/notifications`}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="block text-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                      >
+                        Voir toutes les notifications
+                      </Link>
+                    ) : userRole === 'admin' ? (
+                      <Link
+                        href="/dashboard/admin"
+                        onClick={() => setNotificationsOpen(false)}
+                        className="block text-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                      >
+                        Voir toutes les notifications
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/dashboard/${userRole}`}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="block text-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                      >
+                        Voir toutes les notifications
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Menu */}
             <div className="relative">

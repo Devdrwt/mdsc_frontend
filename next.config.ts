@@ -38,9 +38,11 @@ const nextConfig: NextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // X-Frame-Options explicitement défini à SAMEORIGIN pour permettre les iframes de la même origine
+          // Cela permet les PDFs, vidéos et autres contenus embarqués tout en protégeant contre le clickjacking
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           {
             key: 'X-Content-Type-Options',

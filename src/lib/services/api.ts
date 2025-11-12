@@ -184,10 +184,11 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     }
     
     // Construire un objet d'erreur plus informatif pour les logs
+    // S'assurer que toutes les propriétés sont définies même si response.url n'est pas disponible
     const errorLog: any = {
       status: response.status || 0,
       statusText: response.statusText || 'Unknown status',
-      url: response.url || 'URL unknown',
+      url: response.url || (typeof window !== 'undefined' ? window.location.href : 'URL unknown'),
       message: errorMessage || 'Erreur inconnue',
     };
     
@@ -298,7 +299,16 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       console.warn('⚠️ Access forbidden (403) with details:', errorLog.url, errorLog.data);
     } else {
       // Logger les autres erreurs (non-404, non-403) comme des erreurs critiques
-      console.error('❌ API Error:', errorLog);
+      // S'assurer d'afficher toutes les informations disponibles
+      const logData = {
+        status: errorLog.status || response.status,
+        statusText: errorLog.statusText || response.statusText,
+        url: errorLog.url || 'URL unknown',
+        message: errorLog.message || errorMessage || 'Erreur inconnue',
+        data: errorLog.data || data,
+        responseText: errorLog.responseText || errorLog.responseTextPreview || (responseText && responseText.length < 500 ? responseText : undefined),
+      };
+      console.error('❌ API Error:', logData);
     }
     
     const error = new ApiError(

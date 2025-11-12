@@ -17,13 +17,18 @@ export default function GamificationPanel() {
 
   useEffect(() => {
     const loadGamificationData = async () => {
-      if (!user) return;
+      if (!user || !user.id) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
         
         // Charger la progression de l'utilisateur
-        const userProgress = await gamificationService.getUserProgress(user.id.toString());
+        // user.id est déjà vérifié dans la condition ci-dessus
+        const userId = String(user.id);
+        const userProgress = await gamificationService.getUserProgress(userId);
         setProgress(userProgress);
 
         // Charger tous les badges disponibles
