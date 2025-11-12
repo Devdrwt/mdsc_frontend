@@ -9,6 +9,7 @@ import {
   DollarSign, 
   Star, 
   Users,
+  User,
   PlayCircle,
   Award,
   TrendingUp,
@@ -58,19 +59,44 @@ export default function ModuleCatalog() {
     }
   };
 
+  // Normaliser le niveau depuis la base de données
+  const normalizeLevel = (course: Course): string => {
+    const courseAny = course as any;
+    // Chercher dans toutes les variantes possibles
+    const rawLevel = courseAny.level || courseAny.difficulty || course.level || '';
+    const levelStr = String(rawLevel).toLowerCase().trim();
+    
+    // Mapper toutes les variantes possibles
+    if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
+      return 'beginner';
+    }
+    if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
+      return 'intermediate';
+    }
+    if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
+      return 'advanced';
+    }
+    // Par défaut, retourner la valeur originale
+    return levelStr || 'beginner';
+  };
+
   const filteredCourses = Array.isArray(courses) ? courses.filter(course => {
     const matchesSearch = !searchTerm || 
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (course.description && course.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesDifficulty = filterDifficulty === 'all' || course.level === filterDifficulty;
+    // Normaliser le niveau pour la comparaison
+    const normalizedCourseLevel = normalizeLevel(course);
+    const matchesDifficulty = filterDifficulty === 'all' || normalizedCourseLevel === filterDifficulty;
     
     const matchesCategory = filterCategory === 'all' || course.category === filterCategory;
     
     return matchesSearch && matchesDifficulty && matchesCategory;
   }) : [];
 
-  const getDifficultyBadge = (difficulty: string) => {
+  const getDifficultyBadge = (course: Course) => {
+    const normalized = normalizeLevel(course);
+    
     const styles = {
       beginner: 'bg-green-100 text-green-800',
       intermediate: 'bg-yellow-100 text-yellow-800',
@@ -86,8 +112,8 @@ export default function ModuleCatalog() {
     };
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[difficulty as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
-        {labels[difficulty as keyof typeof labels] || difficulty}
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${styles[normalized as keyof typeof styles] || 'bg-gray-100 text-gray-800'}`}>
+        {labels[normalized as keyof typeof labels] || normalized}
       </span>
     );
   };
@@ -202,7 +228,7 @@ export default function ModuleCatalog() {
                 </p>
 
                 <div className="flex items-center flex-wrap gap-2 mb-4">
-                  {course.level && getDifficultyBadge(course.level)}
+                  {getDifficultyBadge(course)}
                   {course.category && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                       {course.category}
@@ -210,33 +236,21 @@ export default function ModuleCatalog() {
                   )}
                 </div>
 
-                {/* Statistiques */}
-                <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                  <div className="flex items-center space-x-4">
-                    {course.duration && (
-                      <span className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {Math.ceil(course.duration / 60)}h
-                      </span>
-                    )}
-                    {course.price && course.price > 0 ? (
-                      <span className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        {course.price}€
-                      </span>
-                    ) : (
-                      <span className="flex items-center text-green-600 font-semibold">
-                        Gratuit
-                      </span>
-                    )}
-                  </div>
-                  {course.instructor && (
-                    <span className="flex items-center text-xs">
-                      <Users className="h-3 w-3 mr-1" />
-                      {course.instructor.name}
+                {/* Prix */}
+                {course.price && course.price > 0 ? (
+                  <div className="mb-4">
+                    <span className="flex items-center text-gray-700">
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      {course.price}€
                     </span>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <span className="flex items-center text-green-600 font-semibold">
+                      Gratuit
+                    </span>
+                  </div>
+                )}
 
                 {/* Actions */}
                 <button
