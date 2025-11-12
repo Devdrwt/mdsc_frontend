@@ -120,7 +120,6 @@ export default function InstructorCourseDetailPage() {
     if (tabKeys.includes(normalized as TabKey) && normalized !== activeTab) {
       setActiveTab(normalized as TabKey);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const changeTab = (tab: TabKey) => {

@@ -25,7 +25,7 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
         return `/api/media/${path}`;
       } catch (e) {
         // Si l'URL ne peut pas être parsée, essayer une extraction simple
-        const match = rawUrl.match(/https?:\/\/[^\/]+(\/.+)$/);
+        const match = rawUrl.match(/https?:\/\/[^/]+(\/.+)$/);
         if (match) {
           const path = match[1].startsWith('/') ? match[1].slice(1) : match[1];
           return `/api/media/${path}`;

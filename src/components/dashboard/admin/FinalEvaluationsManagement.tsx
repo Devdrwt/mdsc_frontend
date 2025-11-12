@@ -54,18 +54,18 @@ export default function FinalEvaluationsManagement() {
 
     // Filtrage par statut
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(eval => {
-        const courseStatus = (eval.course?.status ?? '').toLowerCase();
+      filtered = filtered.filter(evaluation => {
+        const courseStatus = (evaluation.course?.status ?? '').toLowerCase();
         return courseStatus === filterStatus;
       });
     }
 
     // Filtrage par recherche
     if (searchTerm) {
-      filtered = filtered.filter(eval =>
-        eval.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        eval.course?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ((eval.course as any)?.instructor_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(evaluation =>
+        evaluation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        evaluation.course?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ((evaluation.course as any)?.instructor_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
