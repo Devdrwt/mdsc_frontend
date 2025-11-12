@@ -602,7 +602,6 @@ export default function CourseMediaManager({
                     <div className="w-full h-[60vh] rounded-lg overflow-hidden border border-gray-200 bg-gray-50 relative">
                       <iframe
                         src={resolvedMediaUrl}
-                        type="application/pdf"
                         className="w-full h-full"
                         title={originalFilename}
                         onError={() => {

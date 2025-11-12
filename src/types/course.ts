@@ -252,6 +252,7 @@ export interface Certificate {
   expires_at?: string;
   verified?: boolean;
   is_valid: boolean;
+  status?: 'pending' | 'approved' | 'rejected' | 'issued' | 'expired'; // Statut de validation/admin
   course_title?: string;
   first_name?: string;
   last_name?: string;

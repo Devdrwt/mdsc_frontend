@@ -207,7 +207,7 @@ export default function FinalEvaluationsManagement() {
       render: (_value: any, evaluation: InstructorFinalEvaluationEntry) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
-            {evaluation.passingScore || evaluation.passing_score || 'N/A'}%
+            {evaluation.passingScore || 'N/A'}%
           </div>
         </div>
       )
@@ -379,7 +379,7 @@ export default function FinalEvaluationsManagement() {
                 </div>
                 <div>
                   <span className="text-gray-600">Score requis:</span>
-                  <p className="font-medium text-gray-900">{selectedEvaluation.passingScore || selectedEvaluation.passing_score || 'N/A'}%</p>
+                  <p className="font-medium text-gray-900">{selectedEvaluation.passingScore || 'N/A'}%</p>
                 </div>
               </div>
             </div>

@@ -119,7 +119,7 @@ export default function CoursePreviewModal({
   };
 
   const getStatusBadge = () => {
-    const isPublished = courseAny?.is_published || courseAny?.isPublished || course.status === 'published';
+    const isPublished = courseAny?.is_published || courseAny?.isPublished || (course as any)?.status === 'published';
     return (
       <span
         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
@@ -183,7 +183,7 @@ export default function CoursePreviewModal({
 
   const handleEdit = () => {
     if (onEdit) {
-      onEdit(course.id);
+      onEdit(typeof course.id === 'string' ? parseInt(course.id, 10) : course.id);
     } else {
       router.push(`/instructor/courses/${course.id}`);
     }

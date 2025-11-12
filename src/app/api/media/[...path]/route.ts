@@ -8,11 +8,11 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ path: string[] }> | { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    // Gérer les params synchrones et asynchrones (Next.js 15)
-    const resolvedParams = context.params instanceof Promise ? await context.params : context.params;
+    // Gérer les params asynchrones (Next.js 15)
+    const resolvedParams = await context.params;
     const pathArray = resolvedParams.path || [];
     
     if (!Array.isArray(pathArray) || pathArray.length === 0) {
@@ -98,7 +98,6 @@ export async function GET(
     console.error('❌ [PROXY] Erreur lors du proxy de l\'image:', {
       error: error.message,
       stack: error.stack,
-      params: context.params instanceof Promise ? 'Promise' : context.params,
     });
     return new NextResponse(`Internal Server Error: ${error.message}`, { status: 500 });
   }
