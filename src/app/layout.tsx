@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     siteName: 'Maison de la Société Civile',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/mdsc-logo.png', // Utilisation du logo existant en attendant l'image OG
         width: 1200,
         height: 630,
         alt: 'Maison de la Société Civile - Plateforme MOOC',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Maison de la Société Civile - Plateforme MOOC",
     description: "Renforcez les capacités de votre organisation avec nos formations spécialisées.",
-    images: ['/twitter-image.jpg'],
+    images: ['/mdsc-logo.png'], // Utilisation du logo existant en attendant l'image Twitter
   },
   robots: {
     index: true,

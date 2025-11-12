@@ -19,6 +19,7 @@ import {
 import { CourseService, courseService, Course } from '../../../lib/services/courseService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
 import toast from '../../../lib/utils/toast';
+import { resolveMediaUrl } from '../../../lib/utils/media';
 
 export default function ModuleCatalog() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -169,11 +170,23 @@ export default function ModuleCatalog() {
             <div key={course.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
               {/* Image du cours */}
               <div className="h-48 bg-gradient-to-br from-blue-500 to-purple-600 relative overflow-hidden">
-                {course.thumbnail ? (
-                  <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
-                ) : (
-                  <BookOpen className="h-16 w-16 text-white opacity-50 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                )}
+                {(() => {
+                  const courseAny = course as any;
+                  const rawThumbnail = course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url || null;
+                  const resolvedThumbnail = rawThumbnail ? resolveMediaUrl(rawThumbnail) : null;
+                  return resolvedThumbnail ? (
+                    <img 
+                      src={resolvedThumbnail} 
+                      alt={course.title} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <BookOpen className="h-16 w-16 text-white opacity-50 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                  );
+                })()}
               </div>
 
               {/* Contenu */}

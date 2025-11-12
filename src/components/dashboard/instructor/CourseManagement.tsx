@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BookOpen, 
   Plus, 
@@ -33,9 +33,13 @@ import {
 import { courseService, Course } from '../../../lib/services/courseService';
 import { FileService } from '../../../lib/services/fileService';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import InstructorService from '../../../lib/services/instructorService';
 import DataTable from '../shared/DataTable';
 import toast from '../../../lib/utils/toast';
 import Modal from '../../ui/Modal';
+import CoursePreviewModal from './CoursePreviewModal';
+import CourseEditModal from './CourseEditModal';
+import CourseAnalyticsModal from './CourseAnalyticsModal';
 
 interface CourseStats {
   totalStudents: number;
@@ -44,11 +48,27 @@ interface CourseStats {
   lastActivity: string;
 }
 
+interface GlobalStats {
+  totalCourses: number;
+  publishedCourses: number;
+  draftCourses: number;
+  totalStudents: number;
+  averageCompletionRate: number;
+}
+
 export default function CourseManagement() {
   const { user } = useAuthStore();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [globalStats, setGlobalStats] = useState<GlobalStats>({
+    totalCourses: 0,
+    publishedCourses: 0,
+    draftCourses: 0,
+    totalStudents: 0,
+    averageCompletionRate: 0,
+  });
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
   const [page, setPage] = useState<number>(1);
@@ -57,6 +77,15 @@ export default function CourseManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState<number | null>(null);
+  const [previewCourse, setPreviewCourse] = useState<Course | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [editCourse, setEditCourse] = useState<Course | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [analyticsCourse, setAnalyticsCourse] = useState<Course | null>(null);
+  const [courseAnalytics, setCourseAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [updating, setUpdating] = useState(false);
   
   // États pour les listes déroulantes
   const [categories, setCategories] = useState<Array<{ id: number; name: string; color: string; icon: string }>>([]);
@@ -90,6 +119,77 @@ export default function CourseManagement() {
     course_end_date: '',
   });
   const [creating, setCreating] = useState(false);
+
+  // Fonction pour charger les statistiques globales
+  const loadGlobalStats = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      setStatsLoading(true);
+      // Charger tous les cours pour calculer les statistiques globales
+      const allCoursesResponse = await InstructorService.getCourses({ status: 'all', limit: 1000 });
+      const allCourses = allCoursesResponse.courses || [];
+      
+      // Calculer les statistiques globales
+      const totalCourses = allCourses.length;
+      const publishedCourses = allCourses.filter((c: any) => c.status === 'published' || c.status === 'active').length;
+      const draftCourses = allCourses.filter((c: any) => c.status === 'draft' || c.status === 'pending').length;
+      
+      // Calculer le total d'étudiants et le taux de complétion moyen
+      let totalStudents = 0;
+      let totalCompletionRate = 0;
+      let coursesWithStats = 0;
+      
+      allCourses.forEach((course: any) => {
+        const enrollments = course.enrollments || course.total_enrollments || 0;
+        totalStudents += typeof enrollments === 'number' ? enrollments : 0;
+        
+        const completionRate = course.completion_rate || course.avg_completion_rate || 0;
+        if (completionRate > 0) {
+          totalCompletionRate += completionRate;
+          coursesWithStats++;
+        }
+      });
+      
+      const averageCompletionRate = coursesWithStats > 0 
+        ? Math.round(totalCompletionRate / coursesWithStats) 
+        : 0;
+
+      setGlobalStats({
+        totalCourses,
+        publishedCourses,
+        draftCourses,
+        totalStudents,
+        averageCompletionRate,
+      });
+    } catch (error) {
+      console.error('Erreur lors du chargement des statistiques:', error);
+      // En cas d'erreur, utiliser les statistiques du dashboard
+      try {
+        const dashboardData = await InstructorService.getDashboard();
+        const stats = dashboardData.stats || {};
+        const coursesStats = stats.courses || {};
+        const studentsStats = stats.students || {};
+        
+        setGlobalStats({
+          totalCourses: coursesStats.total || 0,
+          publishedCourses: coursesStats.published || 0,
+          draftCourses: coursesStats.draft || 0,
+          totalStudents: studentsStats.total || 0,
+          averageCompletionRate: 0, // Pas disponible dans le dashboard
+        });
+      } catch (dashboardError) {
+        console.error('Erreur lors du chargement du dashboard:', dashboardError);
+      }
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [user]);
+
+  // Charger les statistiques globales au montage
+  useEffect(() => {
+    loadGlobalStats();
+  }, [loadGlobalStats]);
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -284,6 +384,8 @@ export default function CourseManagement() {
       const instructorCourses = await courseService.getMyCourses();
       setCourses(instructorCourses || []);
       setFilteredCourses(instructorCourses || []);
+      // Recharger les statistiques globales
+      await loadGlobalStats();
     } catch (error: any) {
       console.error('Erreur lors de la création du cours:', error);
       toast.errorFromApi('Erreur de création', error, 'Erreur lors de la création du cours');
@@ -355,6 +457,8 @@ export default function CourseManagement() {
         setCourses(arr);
         setFilteredCourses(arr);
       }
+      // Recharger les statistiques globales
+      await loadGlobalStats();
       setShowDeleteModal(false);
       setCourseToDelete(null);
     } catch (error: any) {
@@ -401,7 +505,11 @@ export default function CourseManagement() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Total des cours</p>
-              <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">{globalStats.totalCourses}</p>
+              )}
             </div>
           </div>
         </div>
@@ -412,10 +520,12 @@ export default function CourseManagement() {
               <Play className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Cours actifs</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {courses.filter(c => c.progress > 0).length}
-              </p>
+              <p className="text-sm font-medium text-gray-600">Cours publiés</p>
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">{globalStats.publishedCourses}</p>
+              )}
             </div>
           </div>
         </div>
@@ -427,9 +537,11 @@ export default function CourseManagement() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Total étudiants</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {courses.reduce((acc, course) => acc + getCourseStats(course).totalStudents, 0)}
-              </p>
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">{globalStats.totalStudents}</p>
+              )}
             </div>
           </div>
         </div>
@@ -441,11 +553,11 @@ export default function CourseManagement() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Taux de complétion moyen</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {courses.length > 0 
-                  ? Math.round(courses.reduce((acc, course) => acc + getCourseStats(course).completionRate, 0) / courses.length)
-                  : 0}%
-              </p>
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">{globalStats.averageCompletionRate}%</p>
+              )}
             </div>
           </div>
         </div>
@@ -539,28 +651,46 @@ export default function CourseManagement() {
                       {/* Actions */}
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => window.open(`/courses/${course.id}`, '_blank')}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                          title="Voir le cours"
+                          onClick={() => {
+                            setPreviewCourse(course);
+                            setShowPreviewModal(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-mdsc-blue-primary hover:bg-blue-50 rounded-lg transition-all duration-200"
+                          title="Voir les détails du cours"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => {
-                            // Pour l'instant, on ouvre une alerte. 
-                            // TODO: Créer une page ou modal d'édition
-                            toast.info('Fonctionnalité à venir', 'La modification de cours sera bientôt disponible');
+                            setEditCourse(course);
+                            setShowEditModal(true);
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-mdsc-blue-primary hover:bg-blue-50 rounded-lg transition-all duration-200"
                           title="Modifier le cours"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            toast.info('Analytics', 'Les analytics détaillées sont disponibles depuis le menu Analytics');
+                          onClick={async () => {
+                            setAnalyticsCourse(course);
+                            setShowAnalyticsModal(true);
+                            setLoadingAnalytics(true);
+                            setCourseAnalytics(null);
+                            try {
+                              const analytics = await courseService.getCourseAnalytics(String(course.id));
+                              console.log('📊 Analytics récupérées:', analytics);
+                              setCourseAnalytics(analytics);
+                            } catch (error: any) {
+                              console.error('❌ Erreur lors du chargement des analytics:', error);
+                              // Afficher un message d'erreur mais garder le modal ouvert pour afficher un message
+                              toast.warning('Analytics non disponibles', 'Les analytics détaillées ne sont pas disponibles pour ce cours pour le moment.');
+                              // Définir analytics à null pour afficher le message dans le modal
+                              setCourseAnalytics(null);
+                            } finally {
+                              setLoadingAnalytics(false);
+                            }
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                          className="p-2 text-gray-400 hover:text-mdsc-blue-primary hover:bg-blue-50 rounded-lg transition-all duration-200"
                           title="Analytics du cours"
                         >
                           <BarChart3 className="h-4 w-4" />
@@ -577,8 +707,9 @@ export default function CourseManagement() {
                       {/* Bouton principal */}
                       <a
                         href={`/instructor/courses/${course.id}`}
-                        className="btn-mdsc-secondary text-sm"
+                        className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors text-sm font-medium"
                       >
+                        <Settings className="h-4 w-4 mr-2" />
                         Gérer le cours
                       </a>
                     </div>
@@ -1119,6 +1250,83 @@ export default function CourseManagement() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de prévisualisation du cours */}
+      <CoursePreviewModal
+        course={previewCourse}
+        isOpen={showPreviewModal}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setPreviewCourse(null);
+        }}
+        onEdit={(courseId) => {
+          window.location.href = `/instructor/courses/${courseId}`;
+        }}
+      />
+
+      {/* Modal d'édition rapide du cours */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditCourse(null);
+        }}
+        title="Modifier le cours"
+        size="lg"
+      >
+        {editCourse && (
+          <CourseEditModal
+            course={editCourse}
+            categories={categories}
+            availableCourses={availableCourses}
+            onSave={async (updatedData) => {
+              setUpdating(true);
+              try {
+                await courseService.updateCourse(String(editCourse.id), updatedData);
+                toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                setShowEditModal(false);
+                setEditCourse(null);
+                // Recharger les cours
+                if (user) {
+                  const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
+                  const arr = Array.isArray(list) ? list : (list as any)?.data || list || [];
+                  setCourses(arr);
+                  setFilteredCourses(arr);
+                }
+                await loadGlobalStats();
+              } catch (error: any) {
+                console.error('Erreur lors de la mise à jour:', error);
+                toast.error('Erreur', error.message || 'Impossible de mettre à jour le cours');
+              } finally {
+                setUpdating(false);
+              }
+            }}
+            onCancel={() => {
+              setShowEditModal(false);
+              setEditCourse(null);
+            }}
+            updating={updating}
+          />
+        )}
+      </Modal>
+
+      {/* Modal d'analytics du cours */}
+      <Modal
+        isOpen={showAnalyticsModal}
+        onClose={() => {
+          setShowAnalyticsModal(false);
+          setAnalyticsCourse(null);
+          setCourseAnalytics(null);
+        }}
+        title={analyticsCourse ? `Analytics - ${analyticsCourse.title}` : 'Analytics du cours'}
+        size="xl"
+      >
+        <CourseAnalyticsModal
+          course={analyticsCourse}
+          analytics={courseAnalytics}
+          loading={loadingAnalytics}
+        />
       </Modal>
     </div>
   );

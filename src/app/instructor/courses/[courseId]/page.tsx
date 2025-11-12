@@ -10,6 +10,7 @@ import { moduleService } from '../../../../lib/services/moduleService';
 import { mediaService } from '../../../../lib/services/mediaService';
 import ModuleList from '../../../../components/courses/ModuleList';
 import MediaUpload from '../../../../components/media/MediaUpload';
+import CourseMediaManager from '../../../../components/dashboard/instructor/CourseMediaManager';
 import LessonEditor from '../../../../components/instructor/LessonEditor';
 import LessonManagement from '../../../../components/dashboard/instructor/LessonManagement';
 import EvaluationBuilder from '../../../../components/dashboard/instructor/EvaluationBuilder';
@@ -285,76 +286,36 @@ export default function InstructorCourseDetailPage() {
             )}
 
             {activeTab === 'medias' && (
-              <div className="space-y-4">
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 text-gray-900">Ajouter un média au cours</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <MediaUpload
-                      contentType="document"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                    <MediaUpload
-                      contentType="image"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                    <MediaUpload
-                      contentType="video"
-                      courseId={String(course?.id)}
-                      onUploadSuccess={() => { success?.('Média ajouté'); }}
-                    />
-                  </div>
-                </div>
-
-                {/* Liste des médias du cours */}
-                <div className="bg-white border rounded-lg p-4">
-                  <h3 className="font-semibold mb-3 text-gray-900">Médias du cours</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {courseMedia.map((mf: any) => (
-                      <div key={mf.id} className="border rounded p-3 flex items-center justify-between bg-gray-50">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{mf.original_filename || mf.filename}</div>
-                          <div className="text-xs text-gray-500">{mf.file_category} • {(mf.file_size/1024/1024).toFixed(2)} MB</div>
-                        </div>
-                        <button
-                          className="text-red-600 hover:text-red-700 text-sm transition-colors"
-                          onClick={async () => {
-                            try {
-                              await mediaService.deleteMediaFile(mf.id);
-                              setCourseMedia((prev) => prev.filter((x) => x.id !== mf.id));
-                              success?.('Média supprimé');
-                            } catch (e: any) {
-                              notifyError?.('Erreur', e.message || 'Suppression échouée');
-                            }
-                          }}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    ))}
-                    {courseMedia.length === 0 && (
-                      <div className="text-sm text-gray-500">Aucun média pour ce cours.</div>
-                    )}
-                  </div>
-                </div>
-
-                {modules.map((m) => (
-                  <div key={m.id} className="bg-white border rounded-lg p-4">
-                    <h4 className="font-medium mb-3 text-gray-900">Module: {m.title}</h4>
-                    {m.lessons?.map((lesson: any) => (
-                      <div key={lesson.id} className="mb-3">
-                        <div className="text-sm text-gray-700 mb-2">Leçon: {lesson.title}</div>
-                        <MediaUpload
-                          contentType="video"
-                          lessonId={String(lesson.id)}
-                          onUploadSuccess={() => { success?.('Média ajouté'); }}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <CourseMediaManager
+                courseId={course?.id || courseIdParam}
+                modules={(() => {
+                  // Enrichir les modules avec leurs leçons depuis le cours
+                  const courseAny = course as any;
+                  const allLessons = courseAny?.lessons || [];
+                  return modules.map((m: any) => {
+                    const moduleLessons = allLessons.filter(
+                      (lesson: any) => lesson.module_id === m.id || lesson.moduleId === m.id
+                    );
+                    return {
+                      id: m.id,
+                      title: m.title,
+                      lessons: moduleLessons.map((l: any) => ({
+                        id: l.id,
+                        title: l.title,
+                        content_type: l.content_type || l.contentType || 'text',
+                      })),
+                    };
+                  });
+                })()}
+                onMediaUpdated={() => {
+                  // Recharger les médias après mise à jour
+                  if (courseIdNum) {
+                    mediaService.getCourseMedia(courseIdNum.toString())
+                      .then(setCourseMedia)
+                      .catch(() => {});
+                  }
+                }}
+              />
             )}
 
             {activeTab === 'settings' && (

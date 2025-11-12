@@ -192,29 +192,29 @@ export default function UserManagement() {
     switch (status) {
       case 'active':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200 shadow-sm">
+            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
             Actif
           </span>
         );
       case 'inactive':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            <Clock className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200 shadow-sm">
+            <Clock className="h-3.5 w-3.5 mr-1.5" />
             Inactif
           </span>
         );
       case 'suspended':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <UserX className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200 shadow-sm">
+            <UserX className="h-3.5 w-3.5 mr-1.5" />
             Suspendu
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <AlertTriangle className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 border border-yellow-200 shadow-sm">
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
             En attente
           </span>
         );
@@ -227,22 +227,22 @@ export default function UserManagement() {
     switch (role) {
       case 'admin':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <Shield className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200 shadow-sm">
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
             Admin
           </span>
         );
       case 'instructor':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-mdsc-gold text-white">
-            <Award className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-mdsc-gold to-yellow-600 text-white shadow-sm">
+            <Award className="h-3.5 w-3.5 mr-1.5" />
             Formateur
           </span>
         );
       case 'student':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <Users className="h-3 w-3 mr-1" />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200 shadow-sm">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
             Étudiant
           </span>
         );
@@ -437,27 +437,27 @@ export default function UserManagement() {
       key: 'actions',
       label: 'Actions',
       render: (_value: unknown, user: User) => (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => handleUserAction(user.id, 'edit')}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-gray-400 hover:text-mdsc-blue-dark hover:bg-blue-50 rounded-lg transition-all duration-200"
             title="Modifier"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
             onClick={() => handleUserAction(user.id, 'email')}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-gray-400 hover:text-mdsc-blue-dark hover:bg-blue-50 rounded-lg transition-all duration-200"
             title="Envoyer un email"
           >
             <Mail className="h-4 w-4" />
           </button>
           <button
             onClick={() => handleRoleToggle(user)}
-            className={`p-1 ${
+            className={`p-2 rounded-lg transition-all duration-200 ${
               user.role === 'admin'
                 ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-400 hover:text-mdsc-blue-dark transition-colors'
+                : 'text-gray-400 hover:text-mdsc-blue-dark hover:bg-blue-50'
             }`}
             title={
               user.role === 'instructor'
@@ -478,7 +478,7 @@ export default function UserManagement() {
             <>
               <button
                 onClick={() => handleSuspendToggle(user)}
-                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                 title={user.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
                 disabled={Boolean(statusUpdating[user.id])}
               >
@@ -492,7 +492,7 @@ export default function UserManagement() {
               </button>
               <button
                 onClick={() => handleDeleteUser(user)}
-                className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                 title="Supprimer l'utilisateur"
                 disabled={Boolean(statusUpdating[user.id])}
               >
@@ -506,20 +506,28 @@ export default function UserManagement() {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-blue-dark to-gray-800 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-2">Gestion des Utilisateurs 👥</h1>
-            <p className="text-gray-300">
-              Gérez les comptes utilisateurs, les rôles et les permissions de votre plateforme.
+    <div className="space-y-6 animate-fade-in-up">
+      {/* En-tête moderne avec gradient et ombre */}
+      <div className="relative bg-gradient-to-br from-mdsc-blue-dark via-[#0C3C5C] to-[#1a4d6b] rounded-xl p-8 text-white shadow-2xl overflow-hidden">
+        {/* Effet de brillance animé */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-shimmer"></div>
+        
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
+                <Users className="h-7 w-7 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Gestion des Utilisateurs</h1>
+            </div>
+            <p className="text-gray-200 text-base max-w-2xl">
+              Gérez les comptes utilisateurs, les rôles et les permissions de votre plateforme avec des outils puissants et intuitifs.
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => loadUsers()}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="group relative bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-white/20 hover:border-white/30 hover:shadow-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={loading}
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -527,70 +535,77 @@ export default function UserManagement() {
             </button>
             <button
               onClick={() => handleBulkAction('export')}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              className="group relative bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-white/20 hover:border-white/30 hover:shadow-lg"
             >
-              Exporter
+              <span className="relative z-10">Exporter</span>
             </button>
             <button
               onClick={() => handleBulkAction('invite')}
-              className="bg-mdsc-gold hover:bg-yellow-600 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              className="group relative bg-gradient-to-r from-mdsc-gold to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              Inviter des utilisateurs
+              <span className="relative z-10 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Inviter des utilisateurs
+              </span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Statistiques rapides */}
+      {/* Statistiques rapides avec design moderne */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg mr-4">
-              <Users className="h-6 w-6 text-blue-600" />
+        <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative flex items-center">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Users className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Total utilisateurs</p>
-              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">Total utilisateurs</p>
+              <p className="text-3xl font-bold text-gray-900">{users.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg mr-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+        <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative flex items-center">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <CheckCircle className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Actifs</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-gray-600 mb-1">Actifs</p>
+              <p className="text-3xl font-bold text-gray-900">
                 {users.filter(u => u.status === 'active').length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-mdsc-gold rounded-lg mr-4">
+        <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative flex items-center">
+            <div className="p-3 bg-gradient-to-br from-mdsc-gold to-yellow-600 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
               <Award className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Formateurs</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-gray-600 mb-1">Formateurs</p>
+              <p className="text-3xl font-bold text-gray-900">
                 {users.filter(u => u.role === 'instructor').length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg mr-4">
-              <AlertTriangle className="h-6 w-6 text-yellow-600" />
+        <div className="group relative bg-white rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="relative flex items-center">
+            <div className="p-3 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <AlertTriangle className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">En attente</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-gray-600 mb-1">En attente</p>
+              <p className="text-3xl font-bold text-gray-900">
                 {users.filter(u => u.status === 'pending').length}
               </p>
             </div>
@@ -604,29 +619,29 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Filtres et recherche */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+      {/* Filtres et recherche avec design moderne */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-mdsc-blue-dark transition-colors" />
               <input
                 type="text"
-                placeholder="Rechercher un utilisateur..."
+                placeholder="Rechercher un utilisateur, email, organisation..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent w-full"
+                className="pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-mdsc-blue-dark transition-all w-full bg-gray-50 focus:bg-white"
               />
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value as any)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                className="bg-transparent border-none text-sm focus:outline-none focus:ring-0 cursor-pointer text-gray-700 font-medium"
               >
                 <option value="all">Tous les rôles</option>
                 <option value="student">Étudiants</option>
@@ -634,11 +649,11 @@ export default function UserManagement() {
                 <option value="admin">Administrateurs</option>
               </select>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
+                className="bg-transparent border-none text-sm focus:outline-none focus:ring-0 cursor-pointer text-gray-700 font-medium"
               >
                 <option value="all">Tous les statuts</option>
                 <option value="active">Actifs</option>
