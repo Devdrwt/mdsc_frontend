@@ -181,7 +181,16 @@ export default function StudentNotificationsPage() {
             ) : (
               <ul className="divide-y divide-gray-200">
                 {notifications.map((notif) => (
-                  <li key={notif.id} className={`px-6 py-4 flex items-start justify-between ${notif.is_read ? 'bg-white' : 'bg-blue-50'}`}>
+                  <li 
+                    key={notif.id} 
+                    className={`px-6 py-4 flex items-start justify-between ${notif.is_read ? 'bg-white' : 'bg-blue-50'} ${notif.metadata?.action_url ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                    onClick={() => {
+                      // Gérer action_url pour les messages (créé automatiquement par le backend)
+                      if (notif.metadata?.action_url) {
+                        window.location.href = notif.metadata.action_url;
+                      }
+                    }}
+                  >
                     <div className="flex items-start space-x-3">
                       <div className={`p-2 rounded-full ${notif.is_read ? 'bg-gray-100 text-gray-500' : 'bg-blue-500/10 text-blue-600'}`}>
                         <Bell className="h-5 w-5" />

@@ -170,7 +170,7 @@ export default function StudentDashboard() {
         ]);
 
         const unreadMessagesValue = messageStatsResult.status === 'fulfilled'
-          ? messageStatsResult.value?.received_unread ?? 0
+          ? messageStatsResult.value?.unread_count ?? messageStatsResult.value?.received_unread ?? 0
           : 0;
         setUnreadMessages(unreadMessagesValue);
 

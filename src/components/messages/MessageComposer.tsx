@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Mail, User, Send, Loader, X } from 'lucide-react';
 import { MessageService } from '../../lib/services/messageService';
-import AdminService from '../../lib/services/adminService';
 import toast from '../../lib/utils/toast';
 
 interface UserSearchResult {
@@ -32,101 +31,66 @@ export default function MessageComposer({
   const [searching, setSearching] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
   const [sending, setSending] = useState(false);
-  const [searchAvailable, setSearchAvailable] = useState(true);
-  const hasAlertedSearchRef = useRef(false);
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initialReceiverEmail) {
-      triggerSearch(initialReceiverEmail);
+      handleSearch(initialReceiverEmail);
     }
   }, [initialReceiverEmail]);
 
-  useEffect(() => () => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-  }, []);
-
-  const triggerSearch = (email: string) => {
-    if (!searchAvailable || !email || email.length < 3) {
+  const handleSearch = async (email: string) => {
+    if (!email || email.length < 3) {
       setSearchResults([]);
       setShowResults(false);
       return;
     }
 
     setSearching(true);
-    AdminService.getUsers({ search: email, limit: 10 })
-      .then(({ users }) => {
-        const normalizedResults = (users ?? [])
-          .map<UserSearchResult | null>((user, index) => {
-            const emailValue = user.email ?? '';
-            if (!emailValue) {
-              return null;
-            }
-
-            const displayName =
-              user.name ||
-              [user.first_name, user.last_name]
-                .filter(Boolean)
-                .join(' ')
-                .trim() ||
-              emailValue;
-
-            const roleLabel = user.role ?? user.role_name ?? 'utilisateur';
-            const rawId = user.id ?? user.user_id ?? emailValue ?? index;
-            const normalizedId = typeof rawId === 'number' ? rawId : String(rawId);
-
-            return {
-              id: normalizedId,
-              name: displayName,
-              email: emailValue,
-              role: roleLabel,
-            };
-          })
-          .filter((user): user is UserSearchResult => Boolean(user));
-
-        setSearchResults(normalizedResults);
-        setShowResults(normalizedResults.length > 0);
-      })
-      .catch((error: any) => {
-        if (error?.status === 403) {
-          setSearchAvailable(false);
-          setSearchResults([]);
-          setShowResults(false);
-          if (!hasAlertedSearchRef.current) {
-            toast.info(
-              'Recherche désactivée',
-              'Vous pouvez saisir l’adresse email manuellement pour envoyer un message.'
-            );
-            hasAlertedSearchRef.current = true;
+    try {
+      // Utiliser la nouvelle méthode qui filtre selon le rôle de l'utilisateur
+      const users = await MessageService.searchUsersByEmail(email);
+      const normalizedResults = users
+        .map<UserSearchResult | null>((user) => {
+          const emailValue = user.email ?? '';
+          if (!emailValue) {
+            return null;
           }
-          return;
-        }
-        console.error('Erreur lors de la recherche:', error);
-        setSearchResults([]);
-        setShowResults(false);
-      })
-      .finally(() => {
-        setSearching(false);
-      });
+
+          const displayName = user.name || emailValue;
+          const roleLabel = user.role ?? 'utilisateur';
+          const rawId = user.id;
+          const normalizedId = typeof rawId === 'number' ? rawId : String(rawId);
+
+          return {
+            id: normalizedId,
+            name: displayName,
+            email: emailValue,
+            role: roleLabel,
+          };
+        })
+        .filter((user): user is UserSearchResult => Boolean(user));
+
+      setSearchResults(normalizedResults);
+      setShowResults(normalizedResults.length > 0);
+    } catch (error: any) {
+      console.error('Erreur lors de la recherche:', error);
+      setSearchResults([]);
+      setShowResults(false);
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleEmailChange = (email: string) => {
     setReceiverEmail(email);
     setSelectedUser(null);
+    
+    // Recherche en temps réel après 500ms
+    const timeoutId = setTimeout(() => {
+      handleSearch(email);
+    }, 500);
 
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    if (!searchAvailable || !email) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    searchTimeoutRef.current = setTimeout(() => triggerSearch(email), 500);
+    return () => clearTimeout(timeoutId);
   };
 
   const handleSelectUser = (user: UserSearchResult) => {
@@ -137,12 +101,13 @@ export default function MessageComposer({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!receiverEmail || !subject || !content) {
       toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs');
       return;
     }
 
+    // Vérifier que l'email est valide
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(receiverEmail)) {
       toast.warning('Email invalide', 'Veuillez entrer une adresse email valide');
@@ -159,18 +124,18 @@ export default function MessageComposer({
         type: 'direct',
       });
       toast.success('Message envoyé', 'Votre message a été envoyé avec succès');
-
+      
+      // Réinitialiser le formulaire
       setReceiverEmail('');
       setSubject('');
       setContent('');
       setSelectedUser(null);
       setSearchResults([]);
-      setShowResults(false);
-
+      
       onSend?.();
     } catch (error: any) {
-      console.error("Erreur lors de l'envoi du message:", error);
-      toast.error('Erreur', error.message || "Impossible d'envoyer le message");
+      console.error('Erreur lors de l\'envoi du message:', error);
+      toast.error('Erreur', error.message || 'Impossible d\'envoyer le message');
     } finally {
       setSending(false);
     }
@@ -178,6 +143,7 @@ export default function MessageComposer({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Destinataire avec recherche par email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Destinataire (Email) <span className="text-red-500">*</span>
@@ -196,10 +162,11 @@ export default function MessageComposer({
               }
             }}
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Saisir ou rechercher par email (ex: john@example.com)"
+            placeholder="Rechercher par email (ex: john@example.com)"
             required
           />
-
+          
+          {/* Résultats de recherche */}
           {showResults && searchResults.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {searching && (
@@ -230,6 +197,7 @@ export default function MessageComposer({
             </div>
           )}
 
+          {/* Utilisateur sélectionné */}
           {selectedUser && (
             <div className="mt-2 flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
               <User className="h-4 w-4 text-blue-600" />
@@ -249,12 +217,11 @@ export default function MessageComposer({
           )}
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          {searchAvailable
-            ? "Recherchez un utilisateur par son adresse email ou saisissez-la directement."
-            : "Recherche désactivée. Veuillez saisir l'adresse email manuellement."}
+          Recherchez un utilisateur par son adresse email. L'email sert d'identifiant unique.
         </p>
       </div>
 
+      {/* Sujet */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Sujet <span className="text-red-500">*</span>
@@ -269,6 +236,7 @@ export default function MessageComposer({
         />
       </div>
 
+      {/* Contenu */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Message <span className="text-red-500">*</span>
@@ -283,6 +251,7 @@ export default function MessageComposer({
         />
       </div>
 
+      {/* Actions */}
       <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
         {onCancel && (
           <button
