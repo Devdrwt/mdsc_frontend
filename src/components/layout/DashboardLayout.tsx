@@ -562,9 +562,13 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                                 setNotificationsOpen(false);
                                 return;
                               }
-                              // Gérer course_id pour les notifications de cours
+                              // Gérer course_id pour les notifications de cours (redirection selon le rôle)
                               if (notification.metadata?.course_id) {
-                                router.push(`/dashboard/admin/courses?courseId=${notification.metadata.course_id}`);
+                                if (userRole === 'instructor') {
+                                  router.push(`/dashboard/instructor/courses/${notification.metadata.course_id}`);
+                                } else if (userRole === 'admin') {
+                                  router.push(`/dashboard/admin/courses?courseId=${notification.metadata.course_id}`);
+                                }
                                 setNotificationsOpen(false);
                               }
                             }}
@@ -583,6 +587,20 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                                   <p className="text-xs text-gray-600 line-clamp-2 mb-2">
                                     {notification.message}
                                   </p>
+                                )}
+                                {/* Afficher le commentaire si présent */}
+                                {notification.metadata?.comment && (
+                                  <div className="mt-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
+                                    <span className="font-medium text-gray-700">Commentaire : </span>
+                                    <span className="text-gray-800">{notification.metadata.comment}</span>
+                                  </div>
+                                )}
+                                {/* Afficher la raison du rejet si présente */}
+                                {notification.metadata?.rejection_reason && (
+                                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                                    <span className="font-medium text-red-700">Raison : </span>
+                                    <span className="text-red-800">{notification.metadata.rejection_reason}</span>
+                                  </div>
                                 )}
                                 {notification.metadata?.course_id && (
                                   <div className="mt-2 text-xs text-gray-500">
