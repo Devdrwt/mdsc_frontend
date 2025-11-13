@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2 } from 'lucide-react';
+import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
@@ -379,42 +379,82 @@ export default function MyCourses() {
 
       {/* Modal de confirmation de désinscription */}
       {showUnenrollModal && courseToUnenroll && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Confirmer la désinscription</h3>
-              <button
-                onClick={() => setShowUnenrollModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center border-2 border-red-500">
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full bg-red-100 p-4">
+                <AlertTriangle className="h-16 w-16 text-red-600" />
+              </div>
             </div>
             
-            <div className="mb-6">
-              <p className="text-gray-600 mb-2">
-                Êtes-vous sûr de vouloir vous désinscrire du cours :
-              </p>
-              <p className="font-semibold text-gray-900">{courseToUnenroll.title}</p>
-              <p className="text-sm text-red-600 mt-2">
-                ⚠️ Vos progrès dans ce cours seront perdus.
-              </p>
+            <h2 className="text-2xl font-bold text-red-900 mb-2">Confirmer la désinscription</h2>
+            <p className="text-gray-600 mb-4">
+              Êtes-vous sûr de vouloir vous désinscrire de ce cours ?
+            </p>
+            
+            <div className="bg-gray-50 p-4 rounded-lg mb-6 space-y-3">
+              <p className="font-semibold text-gray-900 text-lg mb-2">{courseToUnenroll.title}</p>
+              
+              {/* Nombre d'inscrits */}
+              {(() => {
+                const enrollmentCount = (courseToUnenroll as any).enrollment_count || (courseToUnenroll as any).metrics?.enrollment_count || 0;
+                return enrollmentCount > 0 ? (
+                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-700">
+                    <Users className="h-4 w-4 text-gray-600" />
+                    <span>{enrollmentCount} personne{enrollmentCount > 1 ? 's' : ''} inscrite{enrollmentCount > 1 ? 's' : ''}</span>
+                  </div>
+                ) : null;
+              })()}
+              
+              {/* Nom de l'instructeur */}
+              {(() => {
+                const instructor = (courseToUnenroll as any).instructor;
+                let instructorName = '';
+                if (typeof instructor === 'string' && instructor && instructor !== 'Instructeur') {
+                  instructorName = instructor;
+                } else if (instructor && typeof instructor === 'object') {
+                  instructorName = instructor.name || [instructor.first_name, instructor.last_name].filter(Boolean).join(' ') || '';
+                } else if ((courseToUnenroll as any).instructor_first_name || (courseToUnenroll as any).instructor_last_name) {
+                  instructorName = [(courseToUnenroll as any).instructor_first_name, (courseToUnenroll as any).instructor_last_name].filter(Boolean).join(' ') || '';
+                }
+                return instructorName && instructorName.trim() && instructorName !== 'Instructeur' ? (
+                  <div className="flex items-center justify-center space-x-2 text-sm text-gray-700">
+                    <User className="h-4 w-4 text-gray-600" />
+                    <span>Instructeur : {instructorName}</span>
+                  </div>
+                ) : null;
+              })()}
+              
+              <div className="flex items-center justify-center space-x-2 text-sm text-red-600 pt-2 border-t border-gray-200">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Vos progrès dans ce cours seront perdus</span>
+              </div>
             </div>
             
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => setShowUnenrollModal(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 disabled={unenrollingCourse === courseToUnenroll.id}
               >
                 Annuler
               </button>
               <button
                 onClick={handleUnenroll}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center space-x-2"
                 disabled={unenrollingCourse === courseToUnenroll.id}
               >
-                {unenrollingCourse === courseToUnenroll.id ? 'Désinscription...' : 'Confirmer'}
+                {unenrollingCourse === courseToUnenroll.id ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span>Désinscription...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-5 w-5" />
+                    <span>Confirmer la désinscription</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

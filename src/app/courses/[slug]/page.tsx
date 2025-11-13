@@ -70,16 +70,21 @@ export default function CourseDetailPage() {
       
       setCourse(courseData);
       
-      // Charger les modules du cours
-      const courseId = typeof courseData.id === 'string' ? parseInt(courseData.id, 10) : courseData.id;
-      if (courseId) {
-        try {
-          const modulesData = await ModuleService.getCourseModules(courseId);
-          setModules(modulesData || []);
-        } catch (err) {
-          console.error('Erreur lors du chargement des modules:', err);
-          // Les modules ne sont pas critiques, on continue sans eux
-          setModules([]);
+      // Utiliser les modules retournés par getCourseBySlug/getCourseById qui incluent déjà les leçons
+      const courseAny = courseData as any;
+      if (courseAny.modules && Array.isArray(courseAny.modules)) {
+        setModules(courseAny.modules);
+      } else {
+        // Fallback : charger les modules séparément si pas inclus dans la réponse
+        const courseId = typeof courseData.id === 'string' ? parseInt(courseData.id, 10) : courseData.id;
+        if (courseId) {
+          try {
+            const modulesData = await ModuleService.getCourseModules(courseId);
+            setModules(modulesData || []);
+          } catch (err) {
+            console.error('Erreur lors du chargement des modules:', err);
+            setModules([]);
+          }
         }
       }
     } catch (err: any) {
@@ -264,6 +269,28 @@ export default function CourseDetailPage() {
   const maxStudents = courseAny.max_students || courseAny.maxStudents;
   const shortDescription = course.shortDescription || course.description?.substring(0, 300);
   
+  // S'assurer que l'instructeur est correctement formaté
+  let instructorName = 'Instructeur';
+  let instructorAvatar: string | undefined = undefined;
+  if (course.instructor) {
+    if (typeof course.instructor === 'string') {
+      instructorName = course.instructor;
+    } else if (course.instructor.name) {
+      instructorName = course.instructor.name;
+      instructorAvatar = course.instructor.avatar;
+    } else if ((course.instructor as any).first_name || (course.instructor as any).last_name) {
+      const firstName = (course.instructor as any).first_name || (course.instructor as any).firstName || '';
+      const lastName = (course.instructor as any).last_name || (course.instructor as any).lastName || '';
+      instructorName = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
+      instructorAvatar = (course.instructor as any).profile_picture || (course.instructor as any).avatar;
+    }
+  } else if (courseAny.instructor_first_name || courseAny.instructor_last_name) {
+    const firstName = courseAny.instructor_first_name || '';
+    const lastName = courseAny.instructor_last_name || '';
+    instructorName = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
+    instructorAvatar = courseAny.instructor_profile_picture || courseAny.instructor_avatar;
+  }
+  
   const categoryLabels: { [key: string]: string } = {
     sante: 'Santé',
     education: 'Éducation',
@@ -399,12 +426,12 @@ export default function CourseDetailPage() {
                 </div>
 
                 {/* Métriques du cours */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-t border-white/20">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 py-4 border-t border-white/20">
                   <div className="flex items-center space-x-2">
                     <User className="h-5 w-5 text-white/80" />
                     <div>
                       <p className="text-sm text-white/70">Instructeur</p>
-                      <p className="font-semibold">{course.instructor?.name || 'Instructeur'}</p>
+                      <p className="font-semibold">{instructorName}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -419,6 +446,13 @@ export default function CourseDetailPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5 text-white/80" />
+                    <div>
+                      <p className="text-sm text-white/70">Leçons</p>
+                      <p className="font-semibold">{courseAny.total_lessons || courseAny.metrics?.total_lessons || modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) || 0}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
                     <div>
                       <p className="text-sm text-white/70">Note</p>
@@ -429,7 +463,7 @@ export default function CourseDetailPage() {
                     <Users className="h-5 w-5 text-white/80" />
                     <div>
                       <p className="text-sm text-white/70">Inscrits</p>
-                      <p className="font-semibold">{course.totalStudents || 0}</p>
+                      <p className="font-semibold">{course.totalStudents || courseAny.enrollment_count || courseAny.metrics?.enrollment_count || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -525,36 +559,32 @@ export default function CourseDetailPage() {
                                 {module.description && (
                                   <p className="text-sm text-gray-600 mt-1">{module.description}</p>
                                 )}
-                                {lessons.length > 0 && (
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {lessons.length} leçon{lessons.length > 1 ? 's' : ''}
-                                  </p>
-                                )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {lessons.length} leçon{lessons.length > 1 ? 's' : ''}
+                                </p>
                               </div>
                             </div>
-                            {lessons.length > 0 && (
-                              <div className="flex-shrink-0">
-                                {isExpanded ? (
-                                  <ChevronUp className="h-5 w-5 text-gray-400" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                                )}
-                              </div>
-                            )}
+                            <div className="flex-shrink-0">
+                              {isExpanded ? (
+                                <ChevronUp className="h-5 w-5 text-gray-400" />
+                              ) : (
+                                <ChevronDown className="h-5 w-5 text-gray-400" />
+                              )}
+                            </div>
                           </button>
                           
-                          {isExpanded && lessons.length > 0 && (
+                          {isExpanded && (
                             <div className="border-t border-gray-200 bg-gray-50">
                               <div className="divide-y divide-gray-200">
                                 {lessons.map((lesson: any, lessonIndex: number) => {
-                                  const contentIcon = lesson.content_type === 'video' ? Video :
+                                  const ContentIcon = lesson.content_type === 'video' ? Video :
                                                     lesson.content_type === 'quiz' ? FileText :
                                                     lesson.content_type === 'assignment' ? FileText :
                                                     BookOpen;
                                   return (
                                     <div key={lesson.id} className="p-4 flex items-center space-x-4">
                                       <div className="flex-shrink-0">
-                                        {contentIcon({ className: "h-5 w-5 text-gray-400" })}
+                                        <ContentIcon className="h-5 w-5 text-gray-400" />
                                       </div>
                                       <div className="flex-1">
                                         <h4 className="text-sm font-medium text-gray-900">
@@ -621,10 +651,10 @@ export default function CourseDetailPage() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Votre instructeur</h2>
                 <div className="flex items-start space-x-4">
-                  {course.instructor?.avatar ? (
+                  {instructorAvatar ? (
                     <img
-                      src={course.instructor.avatar}
-                      alt={course.instructor.name}
+                      src={instructorAvatar}
+                      alt={instructorName}
                       className="w-16 h-16 rounded-full object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/default-avatar.png';
@@ -637,7 +667,7 @@ export default function CourseDetailPage() {
                   )}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {course.instructor?.name || 'Instructeur'}
+                      {instructorName}
                     </h3>
                     <p className="text-gray-600 text-sm mt-1">
                       Instructeur certifié

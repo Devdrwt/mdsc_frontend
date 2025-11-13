@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Clock, Users, User, BadgeCheck, AlertCircle } from 'lucide-react';
+import { Clock, Users, User, BadgeCheck, AlertCircle, BookOpen } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
 import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
@@ -253,12 +253,34 @@ export default function CourseCard({
           </div>
           <div className="flex items-center space-x-1">
             <Users className="h-4 w-4" />
-            <span>{course.students ?? 0}</span>
+            <span>{courseAny.enrollment_count || courseAny.metrics?.enrollment_count || courseAny.totalStudents || course.students || 0} inscrit{(courseAny.enrollment_count || courseAny.metrics?.enrollment_count || courseAny.totalStudents || course.students || 0) > 1 ? 's' : ''}</span>
           </div>
-          <div className="flex items-center space-x-1">
-            <User className="h-4 w-4" />
-            <span>{instructorName}</span>
-          </div>
+          {(() => {
+            const totalLessons = courseAny.total_lessons || courseAny.metrics?.total_lessons || 0;
+            return totalLessons > 0 ? (
+              <div className="flex items-center space-x-1">
+                <BookOpen className="h-4 w-4" />
+                <span>{totalLessons} leçon{totalLessons > 1 ? 's' : ''}</span>
+              </div>
+            ) : null;
+          })()}
+          {(() => {
+            const instructor = course.instructor;
+            let name = '';
+            if (typeof instructor === 'string' && instructor && instructor !== 'Instructeur') {
+              name = instructor;
+            } else if (instructor && typeof instructor === 'object') {
+              name = instructor.name || [instructor.first_name, instructor.last_name].filter(Boolean).join(' ') || '';
+            } else if (courseAny.instructor_first_name || courseAny.instructor_last_name) {
+              name = [courseAny.instructor_first_name, courseAny.instructor_last_name].filter(Boolean).join(' ') || '';
+            }
+            return name && name.trim() && name !== 'Instructeur' ? (
+              <div className="flex items-center space-x-1">
+                <User className="h-4 w-4" />
+                <span>{name}</span>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {showEnrollButton && (

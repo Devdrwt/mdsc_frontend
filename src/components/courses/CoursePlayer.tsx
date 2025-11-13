@@ -773,57 +773,6 @@ export default function CoursePlayer({
 
                 {isExpanded && (
                   <div className="border-t border-gray-200 bg-gray-50">
-                    {/* Quiz du module (si disponible) */}
-                    {moduleQuizzes.has(module.id) && (
-                      <button
-                        onClick={() => handleQuizClick(module.id)}
-                        disabled={!(module.lessons && module.lessons.every((l) => completedLessons.has(l.id)))}
-                            className={`w-full p-3 text-left text-sm transition-colors border-b border-gray-200 ${
-                          // Le quiz est accessible si toutes les leçons sont complétées (même si le quiz n'est pas encore réussi)
-                          module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                            ? 'bg-purple-50 hover:bg-purple-100 cursor-pointer'
-                            : 'bg-gray-100 opacity-60 cursor-not-allowed'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Award className={`h-4 w-4 flex-shrink-0 ${
-                            module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                              ? completedModuleQuizzes.has(module.id)
-                                ? 'text-green-600'
-                                : 'text-purple-600'
-                              : 'text-gray-400'
-                          }`} />
-                          <div className="flex-1">
-                            <p className={`font-medium ${
-                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                                ? completedModuleQuizzes.has(module.id)
-                                  ? 'text-green-900'
-                                  : 'text-purple-900'
-                                : 'text-gray-600'
-                            }`}>
-                              Quiz du module
-                              {completedModuleQuizzes.has(module.id) && (
-                                <span className="ml-2 text-xs text-green-600">✓ Réussi</span>
-                              )}
-                            </p>
-                            <p className={`text-xs ${
-                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                                ? completedModuleQuizzes.has(module.id)
-                                  ? 'text-green-600'
-                                  : 'text-purple-600'
-                                : 'text-gray-500'
-                            }`}>
-                              {completedModuleQuizzes.has(module.id)
-                                ? 'Quiz réussi - Module complété'
-                                : module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                                ? 'Passer le quiz pour compléter le module (obligatoire)'
-                                : 'Complétez toutes les leçons du module pour accéder au quiz'}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    )}
-
                     {/* Liste des leçons */}
                     {module.lessons && module.lessons.map((lesson, lessonIndex) => {
                       const isCompleted = completedLessons.has(lesson.id);
@@ -887,6 +836,57 @@ export default function CoursePlayer({
                         </button>
                       );
                     })}
+
+                    {/* Quiz du module (si disponible) - en bas des leçons */}
+                    {moduleQuizzes.has(module.id) && (
+                      <button
+                        onClick={() => handleQuizClick(module.id)}
+                        disabled={!(module.lessons && module.lessons.every((l) => completedLessons.has(l.id)))}
+                        className={`w-full p-3 text-left text-sm transition-colors border-t border-gray-200 ${
+                          // Le quiz est accessible si toutes les leçons sont complétées (même si le quiz n'est pas encore réussi)
+                          module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                            ? 'bg-purple-50 hover:bg-purple-100 cursor-pointer'
+                            : 'bg-gray-100 opacity-60 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Award className={`h-4 w-4 flex-shrink-0 ${
+                            module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                              ? completedModuleQuizzes.has(module.id)
+                                ? 'text-green-600'
+                                : 'text-purple-600'
+                              : 'text-gray-400'
+                          }`} />
+                          <div className="flex-1">
+                            <p className={`font-medium ${
+                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? completedModuleQuizzes.has(module.id)
+                                  ? 'text-green-900'
+                                  : 'text-purple-900'
+                                : 'text-gray-600'
+                            }`}>
+                              Quiz du module
+                              {completedModuleQuizzes.has(module.id) && (
+                                <span className="ml-2 text-xs text-green-600">✓ Réussi</span>
+                              )}
+                            </p>
+                            <p className={`text-xs ${
+                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? completedModuleQuizzes.has(module.id)
+                                  ? 'text-green-600'
+                                  : 'text-purple-600'
+                                : 'text-gray-500'
+                            }`}>
+                              {completedModuleQuizzes.has(module.id)
+                                ? 'Quiz réussi - Module complété'
+                                : module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? 'Passer le quiz pour compléter le module (obligatoire)'
+                                : 'Complétez toutes les leçons du module pour accéder au quiz'}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -971,6 +971,52 @@ export default function CoursePlayer({
               enrollmentId={course.enrollment?.id ? (typeof course.enrollment.id === 'number' ? course.enrollment.id : parseInt(course.enrollment.id)) : undefined}
               onComplete={handleLessonComplete}
             />
+            
+            {/* Quiz du module en bas des leçons */}
+            {selectedModuleId && moduleQuizzes.has(selectedModuleId) && selectedModule && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <Award className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        Quiz du module : {selectedModule.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        {completedModuleQuizzes.has(selectedModuleId) ? (
+                          <span className="text-green-600 font-medium">✓ Quiz réussi - Module complété</span>
+                        ) : selectedModule.lessons && selectedModule.lessons.every((l) => completedLessons.has(l.id)) ? (
+                          <span>Complétez le quiz pour finaliser ce module (obligatoire)</span>
+                        ) : (
+                          <span className="text-gray-500">Complétez toutes les leçons du module pour accéder au quiz</span>
+                        )}
+                      </p>
+                      {selectedModule.lessons && selectedModule.lessons.every((l) => completedLessons.has(l.id)) ? (
+                        <button
+                          onClick={() => handleQuizClick(selectedModuleId)}
+                          className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                        >
+                          <Award className="h-5 w-5 mr-2" />
+                          {completedModuleQuizzes.has(selectedModuleId) ? 'Voir les résultats du quiz' : 'Passer le quiz'}
+                        </button>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          {selectedModule.lessons ? (
+                            <>
+                              {selectedModule.lessons.filter((l) => completedLessons.has(l.id)).length} / {selectedModule.lessons.length} leçons complétées
+                            </>
+                          ) : (
+                            'Aucune leçon dans ce module'
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="h-full flex items-center justify-center px-4 py-6 sm:px-8 sm:py-8">

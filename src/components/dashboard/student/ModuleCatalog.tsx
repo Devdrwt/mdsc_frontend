@@ -218,9 +218,15 @@ const convertToDisplayCourse = (course: ExtendedCourse): DisplayCourse => {
     thumbnail: courseImage,
     instructor: instructorData,
     is_published: course.isPublished ?? true,
-    enrollment_count: course.totalStudents || 0,
+    enrollment_count: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || course.totalStudents || 0,
+    metrics: courseAny.metrics || {
+      enrollment_count: courseAny.enrollment_count || course.totalStudents || 0,
+      average_rating: courseAny.average_rating || course.rating || 0,
+      review_count: courseAny.review_count || 0,
+      total_views: courseAny.total_views || 0
+    },
     rating: course.rating || 0,
-    students: course.totalStudents || 0,
+    students: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || course.totalStudents || 0,
     price: priceValue,
     priceAmount: priceValue,
     currency: currencyCode,

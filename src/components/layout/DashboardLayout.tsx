@@ -410,7 +410,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
           <div className="flex h-16 items-center justify-between px-4">
-            <div className="flex items-center">
+            <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
               <Image 
                 src="/mdsc-logo1.png" 
                 alt="MdSC Logo" 
@@ -437,7 +437,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}>
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex h-20 items-center justify-between px-4">
-            <div className="flex items-center w-full">
+            <div className="flex items-center w-full cursor-pointer" onClick={() => router.push('/')}>
               <Image 
                 src="/mdsc-logo1.png" 
                 alt="MdSC Logo" 

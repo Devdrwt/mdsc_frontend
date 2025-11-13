@@ -84,11 +84,12 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
   const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
   
   // Convertir le niveau pour CourseCard
-  const levelString = serviceCourse.level === 'beginner' ? 'Débutant' 
-    : serviceCourse.level === 'intermediate' ? 'Intermédiaire' 
-    : 'Avancé';
-
   const courseAny = serviceCourse as any;
+  const difficultyRaw = courseAny.difficulty || serviceCourse.level || 'beginner';
+  const levelString = difficultyRaw === 'beginner' || difficultyRaw === 'debutant' ? 'Débutant' 
+    : difficultyRaw === 'intermediate' || difficultyRaw === 'intermediaire' ? 'Intermédiaire' 
+    : difficultyRaw === 'advanced' || difficultyRaw === 'avance' ? 'Avancé'
+    : 'Débutant';
 
   const instructorFirstName =
     courseAny.instructor_first_name ||
@@ -232,7 +233,8 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     thumbnail_url: courseImage,
     instructor: instructorData,
     is_published: serviceCourse.isPublished !== undefined ? serviceCourse.isPublished : true,
-    enrollment_count: serviceCourse.totalStudents || 0,
+    enrollment_count: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || serviceCourse.totalStudents || 0,
+    total_lessons: courseAny.total_lessons || courseAny.metrics?.total_lessons || 0,
     rating: serviceCourse.rating || 0,
     // Conversions pour CourseCard
     thumbnail: courseImage,

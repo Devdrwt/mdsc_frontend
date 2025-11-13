@@ -57,6 +57,7 @@ export default function ModuleQuizPlayer({
   const [result, setResult] = useState<QuizResult | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
   const [attemptInfo, setAttemptInfo] = useState<QuizAttemptInfo | null>(null);
 
@@ -216,22 +217,8 @@ export default function ModuleQuizPlayer({
       console.log('✅ [Quiz Submission] Résultat reçu:', submissionResult);
 
       setResult(submissionResult);
-      setShowResults(true);
-      onComplete?.(submissionResult);
-
-      if (submissionResult.passed && submissionResult.badge_earned) {
-        toast.success(
-          'Félicitations !',
-          `Vous avez réussi le quiz et obtenu le badge "${submissionResult.badge_name || 'Badge du module'}" !`
-        );
-      } else if (submissionResult.passed) {
-        toast.success('Quiz réussi !', `Vous avez obtenu ${submissionResult.percentage}%`);
-      } else {
-        toast.warning(
-          'Quiz non réussi',
-          `Vous avez obtenu ${submissionResult.percentage}%. Le score minimum requis est ${quiz.passing_score}%`
-        );
-      }
+      setShowResultModal(true); // Afficher le modal de résultat au lieu de showResults
+      // Ne pas appeler onComplete immédiatement, attendre que l'utilisateur choisisse une action
     } catch (error: any) {
       console.error('❌ [Quiz Submission] Erreur complète:', {
         error,
@@ -304,72 +291,20 @@ export default function ModuleQuizPlayer({
     );
   }
 
-  if (showResults && result) {
-    return (
-      <div className="space-y-6">
-        <div className={`rounded-lg p-6 text-center border-2 ${
-          result.passed
-            ? 'bg-green-50'
-            : 'bg-red-50'
-        }`}>
-          {result.passed ? (
-            <>
-              <CheckCircle className="h-16 w-16 text-green-600" />
-              <h2 className="text-2xl font-bold text-green-900">Quiz réussi !</h2>
-              {result.badge_earned && (
-                <div className="flex items-center justify-center space-x-2 mb-4">
-                  <Award className="h-6 w-6 text-yellow-600" />
-                  <p className="text-lg font-semibold text-yellow-800">
-                    Badge obtenu : {result.badge_name || 'Badge du module'}
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <XCircle className="h-16 w-16 text-red-600" />
-              <h2 className="text-2xl font-bold text-red-900">Quiz non réussi</h2>
-            </>
-          )}
+  const handleContinue = () => {
+    setShowResultModal(false);
+    setShowResults(true);
+    onComplete?.(result!);
+  };
 
-          <div className="mt-6 space-y-2">
-            <div className="flex items-center justify-center space-x-4">
-              <div>
-                <p className="text-sm text-gray-600">Score obtenu</p>
-                <p className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
-                  {result.percentage}%
-                </p>
-              </div>
-              <div className="w-px h-12 bg-gray-300"></div>
-              <div>
-                <p className="text-sm text-gray-600">Score minimum</p>
-                <p className="text-2xl font-semibold text-gray-700">{quiz.passing_score}%</p>
-              </div>
-              <div className="w-px h-12 bg-gray-300"></div>
-              <div>
-                <p className="text-sm text-gray-600">Points</p>
-                <p className="text-2xl font-semibold text-gray-700">
-                  {result.score} / {result.total_points}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="inline-flex items-center px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
-              <span>Retour aux leçons</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const handleRetry = () => {
+    setShowResultModal(false);
+    setResult(null);
+    setAnswers({});
+    setCurrentQuestionIndex(0);
+    // Recharger le quiz pour mettre à jour les tentatives
+    loadQuiz();
+  };
 
   // Calculer la progression
   const progress = sortedQuestions.length > 0 ? ((currentQuestionIndex + 1) / sortedQuestions.length) * 100 : 0;
@@ -592,6 +527,159 @@ export default function ModuleQuizPlayer({
         confirmButtonClass="bg-blue-600 hover:bg-blue-700"
         isLoading={submitting}
       />
+
+      {/* Modal de résultat du quiz */}
+      {showResultModal && result && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4">
+          <div className={`bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center ${
+            result.passed ? 'border-2 border-green-500' : 'border-2 border-red-500'
+          }`}>
+            {result.passed ? (
+              <>
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-green-100 p-4">
+                    <CheckCircle className="h-16 w-16 text-green-600" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-green-900 mb-2">Félicitations !</h2>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Quiz réussi !</h3>
+                {result.badge_earned && (
+                  <div className="flex items-center justify-center space-x-2 mb-4 p-3 bg-yellow-50 rounded-lg">
+                    <Award className="h-6 w-6 text-yellow-600" />
+                    <p className="text-lg font-semibold text-yellow-800">
+                      Badge obtenu : {result.badge_name || 'Badge du module'}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-red-100 p-4">
+                    <XCircle className="h-16 w-16 text-red-600" />
+                  </div>
+                </div>
+                <h2 className="text-2xl font-bold text-red-900 mb-2">Quiz non réussi</h2>
+                <p className="text-gray-600 mb-4">
+                  Vous devez obtenir au moins {quiz.passing_score}% pour réussir
+                </p>
+              </>
+            )}
+
+            <div className="mt-6 mb-6 space-y-3">
+              <div className="flex items-center justify-center space-x-4 bg-gray-50 p-4 rounded-lg">
+                <div>
+                  <p className="text-sm text-gray-600">Score obtenu</p>
+                  <p className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
+                    {result.percentage}%
+                  </p>
+                </div>
+                <div className="w-px h-12 bg-gray-300"></div>
+                <div>
+                  <p className="text-sm text-gray-600">Score minimum</p>
+                  <p className="text-2xl font-semibold text-gray-700">{quiz.passing_score}%</p>
+                </div>
+                <div className="w-px h-12 bg-gray-300"></div>
+                <div>
+                  <p className="text-sm text-gray-600">Points</p>
+                  <p className="text-2xl font-semibold text-gray-700">
+                    {result.score} / {result.total_points}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {!result.passed && attemptInfo && attemptInfo.remaining_attempts !== undefined && attemptInfo.remaining_attempts > 0 && (
+                <button
+                  onClick={handleRetry}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center justify-center space-x-2"
+                >
+                  <Trophy className="h-5 w-5" />
+                  <span>Réessayer ({attemptInfo.remaining_attempts} tentative{attemptInfo.remaining_attempts > 1 ? 's' : ''} restante{attemptInfo.remaining_attempts > 1 ? 's' : ''})</span>
+                </button>
+              )}
+              <button
+                onClick={handleContinue}
+                className={`px-6 py-3 rounded-lg transition-colors font-medium flex items-center justify-center space-x-2 ${
+                  result.passed
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-600 text-white hover:bg-gray-700'
+                }`}
+              >
+                <ChevronRight className="h-5 w-5" />
+                <span>{result.passed ? 'Continuer la formation' : 'Retour aux leçons'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Affichage des résultats détaillés après fermeture du modal */}
+      {showResults && result && (
+        <div className="space-y-6">
+          <div className={`rounded-lg p-6 text-center border-2 ${
+            result.passed
+              ? 'bg-green-50'
+              : 'bg-red-50'
+          }`}>
+            {result.passed ? (
+              <>
+                <CheckCircle className="h-16 w-16 text-green-600" />
+                <h2 className="text-2xl font-bold text-green-900">Quiz réussi !</h2>
+                {result.badge_earned && (
+                  <div className="flex items-center justify-center space-x-2 mb-4">
+                    <Award className="h-6 w-6 text-yellow-600" />
+                    <p className="text-lg font-semibold text-yellow-800">
+                      Badge obtenu : {result.badge_name || 'Badge du module'}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <XCircle className="h-16 w-16 text-red-600" />
+                <h2 className="text-2xl font-bold text-red-900">Quiz non réussi</h2>
+              </>
+            )}
+
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-center space-x-4">
+                <div>
+                  <p className="text-sm text-gray-600">Score obtenu</p>
+                  <p className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
+                    {result.percentage}%
+                  </p>
+                </div>
+                <div className="w-px h-12 bg-gray-300"></div>
+                <div>
+                  <p className="text-sm text-gray-600">Score minimum</p>
+                  <p className="text-2xl font-semibold text-gray-700">{quiz.passing_score}%</p>
+                </div>
+                <div className="w-px h-12 bg-gray-300"></div>
+                <div>
+                  <p className="text-sm text-gray-600">Points</p>
+                  <p className="text-2xl font-semibold text-gray-700">
+                    {result.score} / {result.total_points}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                className="inline-flex items-center px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
+                <span>Retour aux leçons</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
