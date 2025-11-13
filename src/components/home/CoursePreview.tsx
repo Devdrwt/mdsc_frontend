@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
 import { Clock, Users, Star, Play, ArrowRight } from 'lucide-react';
 
@@ -21,6 +24,8 @@ interface CoursePreviewProps {
 }
 
 export default function CoursePreview({ courses }: CoursePreviewProps) {
+  const router = useRouter();
+  
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'Débutant':
@@ -119,7 +124,12 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
         </div>
 
         <div className="text-center mt-12">
-          <Button variant="outline" size="lg" className="group">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="group"
+            onClick={() => router.push('/courses')}
+          >
             Voir toutes les formations
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
