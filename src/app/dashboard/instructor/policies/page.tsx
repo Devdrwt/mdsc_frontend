@@ -40,10 +40,60 @@ export default function InstructorPoliciesPage() {
     try {
       setAckProcessing(true);
       const updated = await InstructorService.acknowledgePolicies(POLICIES_VERSION);
-      setPreferences((prev) => ({ ...prev, ...updated }));
+      
+      // Préparer les données des policies pour l'événement
+      const acceptedAt = updated.policies?.accepted_at || new Date().toISOString();
+      
+      // Mettre à jour le state avec les nouvelles préférences
+      // La réponse devrait contenir les policies avec accepted: true et accepted_at
+      setPreferences((prev) => {
+        const newPrefs = prev ? { ...prev } : {};
+        
+        // S'assurer que les policies sont correctement fusionnées
+        if (updated.policies) {
+          newPrefs.policies = {
+            ...newPrefs.policies,
+            ...updated.policies,
+            accepted: true,
+            accepted_at: acceptedAt,
+            version: updated.policies.version || POLICIES_VERSION,
+          };
+        } else {
+          // Si updated ne contient pas policies, on les crée
+          newPrefs.policies = {
+            accepted: true,
+            accepted_at: acceptedAt,
+            version: POLICIES_VERSION,
+          };
+        }
+        
+        // Fusionner les autres propriétés de updated
+        return {
+          ...newPrefs,
+          ...updated,
+          policies: newPrefs.policies,
+        };
+      });
+      
+      // Notifier les autres composants (comme le dashboard) que les politiques ont été acceptées
+      if (typeof window !== 'undefined') {
+        // Stocker dans localStorage pour persistance
+        localStorage.setItem('instructor_policies_accepted', 'true');
+        localStorage.setItem('instructor_policies_accepted_at', acceptedAt);
+        
+        // Déclencher un événement personnalisé pour synchroniser les autres pages
+        window.dispatchEvent(new CustomEvent('policiesAccepted', { 
+          detail: { 
+            accepted: true, 
+            accepted_at: acceptedAt,
+            version: POLICIES_VERSION 
+          } 
+        }));
+      }
+      
       toast.success('Merci', 'Vous avez accepté les règles & confidentialité.');
     } catch (error) {
-      toast.errorFromApi('Erreur', error, 'Impossible d’enregistrer votre validation pour le moment.');
+      toast.errorFromApi('Erreur', error, "Impossible d'enregistrer votre validation pour le moment.");
     } finally {
       setAckProcessing(false);
     }

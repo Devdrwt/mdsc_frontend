@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { Star, Clock, Users, Play, Bookmark, Share2, Eye } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Star, Clock, Users, User, Play, Bookmark, Share2, Eye } from 'lucide-react';
 import { Course } from '../../lib/services/courseService';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface ModernCourseCardProps {
   course: Course;
@@ -23,6 +24,18 @@ export default function ModernCourseCard({
   showActions = true,
   className = ''
 }: ModernCourseCardProps) {
+  const [imageError, setImageError] = useState(false);
+  
+  const courseAny = course as any;
+  const rawThumbnail = useMemo(() => {
+    return course.thumbnail || courseAny.thumbnail_url || courseAny.thumbnailUrl || courseAny.image_url || null;
+  }, [course.thumbnail, courseAny]);
+  
+  const resolvedThumbnail = useMemo(() => resolveMediaUrl(rawThumbnail), [rawThumbnail]);
+  const imageSrc = useMemo(() => {
+    return imageError || !resolvedThumbnail ? DEFAULT_COURSE_IMAGE : resolvedThumbnail;
+  }, [imageError, resolvedThumbnail]);
+
   const handleEnroll = () => {
     if (onEnroll) {
       onEnroll(course.id);
@@ -52,17 +65,90 @@ export default function ModernCourseCard({
     return `${price.toLocaleString()} FCFA`;
   };
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'Débutant':
-        return 'bg-green-100 text-green-800';
-      case 'Intermédiaire':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Avancé':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  // Normaliser le niveau depuis la base de données
+  const normalizedLevel = useMemo(() => {
+    const courseAny = course as any;
+    // Chercher dans toutes les variantes possibles de noms de champs
+    // Priorité: difficulty (valeur brute de la DB) > level (peut être formaté)
+    const rawLevel = 
+      courseAny.difficulty ||  // Valeur brute de la base de données (beginner, intermediate, advanced)
+      courseAny.difficulty_level ||
+      course.level || 
+      courseAny.level ||  // Peut être formaté (Débutant, Intermédiaire, Avancé)
+      courseAny.level_name ||
+      (course as any).difficulty ||
+      '';
+    
+    // Si c'est null, undefined, ou une chaîne vide, retourner une chaîne vide
+    if (!rawLevel || rawLevel === 'null' || rawLevel === 'undefined') {
+      return '';
     }
+    
+    const levelStr = String(rawLevel).toLowerCase().trim();
+    
+    // Si la chaîne est vide après trim, retourner vide
+    if (!levelStr) {
+      return '';
+    }
+    
+    // Mapper toutes les variantes possibles (y compris les strings formatées)
+    if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
+      return 'debutant';
+    }
+    if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
+      return 'intermediaire';
+    }
+    if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
+      return 'avance';
+    }
+    // Si c'est une autre valeur, la retourner telle quelle (normalisée)
+    return levelStr;
+  }, [course]);
+
+  // Formater le niveau pour l'affichage
+  const levelLabel = useMemo(() => {
+    // Si le niveau est vide, retourner "Non spécifié"
+    if (!normalizedLevel || normalizedLevel.trim() === '') {
+      return 'Non spécifié';
+    }
+    
+    switch (normalizedLevel) {
+      case 'beginner':
+      case 'debutant':
+      case 'débutant':
+        return 'Débutant';
+      case 'intermediate':
+      case 'intermediaire':
+      case 'intermédiaire':
+        return 'Intermédiaire';
+      case 'advanced':
+      case 'avance':
+      case 'avancé':
+        return 'Avancé';
+      default:
+        // Si c'est une autre valeur, capitaliser la première lettre
+        return normalizedLevel.charAt(0).toUpperCase() + normalizedLevel.slice(1);
+    }
+  }, [normalizedLevel]);
+
+  const getLevelColor = (level: string) => {
+    // Si le niveau est vide, retourner une couleur par défaut
+    if (!level || level.trim() === '') {
+      return 'bg-gray-100 text-gray-600';
+    }
+    
+    const normalized = String(level).toLowerCase().trim();
+    // Gérer toutes les variantes possibles
+    if (normalized === 'beginner' || normalized === 'debutant' || normalized === 'débutant') {
+      return 'bg-green-100 text-green-800';
+    }
+    if (normalized === 'intermediate' || normalized === 'intermediaire' || normalized === 'intermédiaire') {
+      return 'bg-yellow-100 text-yellow-800';
+    }
+    if (normalized === 'advanced' || normalized === 'avance' || normalized === 'avancé') {
+      return 'bg-red-100 text-red-800';
+    }
+    return 'bg-gray-100 text-gray-600';
   };
 
   return (
@@ -74,16 +160,17 @@ export default function ModernCourseCard({
       {/* Image du cours */}
       <div className="relative h-48 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark overflow-hidden">
         <img
-          src={course.thumbnail}
+          src={imageSrc}
           alt={course.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+          onError={() => setImageError(true)}
         />
         <div className="absolute inset-0 bg-black/20"></div>
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex space-x-2">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(course.level)}`}>
-            {course.level}
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(normalizedLevel)}`}>
+            {levelLabel}
           </span>
           {course.price === 0 && (
             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
@@ -131,23 +218,9 @@ export default function ModernCourseCard({
           </p>
         </div>
 
-        {/* Instructeur */}
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-            <span className="text-xs font-medium text-gray-600">
-              {course.instructor.name.charAt(0)}
-            </span>
-          </div>
-          <span className="text-sm text-gray-600">{course.instructor.name}</span>
-        </div>
-
         {/* Métadonnées */}
         <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4" />
-              <span>{course.duration}</span>
-            </div>
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4" />
               <span>{course.totalStudents || 0}</span>

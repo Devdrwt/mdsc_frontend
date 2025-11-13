@@ -95,6 +95,7 @@ export class ProfessionalService {
     description: string;
     icon: string;
     color: string;
+    is_active?: boolean;
   }): Promise<Domain> {
     const response = await apiRequest('/professional/domains', {
       method: 'POST',

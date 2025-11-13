@@ -219,6 +219,9 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     explicitExpired: Boolean(explicitExpired),
   });
 
+  // Récupérer le niveau/difficulty depuis les données brutes de l'API
+  const rawDifficulty = courseAny.difficulty || serviceCourse.level || courseAny.level || '';
+  
   return {
     id: serviceCourse.id,
     title: serviceCourse.title,
@@ -227,6 +230,7 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     shortDescription: serviceCourse.shortDescription || '',
     category: categoryValue,
     level: levelString, // Pour CourseCard
+    difficulty: difficultyRaw, // Valeur brute de la base de données (beginner, intermediate, advanced)
     level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
     duration: durationString, // String pour CourseCard
     language: 'fr',

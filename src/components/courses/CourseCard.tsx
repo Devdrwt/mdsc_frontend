@@ -113,17 +113,90 @@ export default function CourseCard({
     return String(course.category);
   }, [course.category]);
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'Débutant':
-        return 'bg-green-100 text-green-800';
-      case 'Intermédiaire':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Avancé':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-700 text-white';
+  // Normaliser le niveau depuis la base de données
+  const normalizedLevel = useMemo(() => {
+    const courseAny = course as any;
+    // Chercher dans toutes les variantes possibles de noms de champs
+    // Priorité: difficulty (valeur brute de la DB) > level (peut être formaté)
+    const rawLevel = 
+      courseAny.difficulty ||  // Valeur brute de la base de données (beginner, intermediate, advanced)
+      courseAny.difficulty_level ||
+      course.level || 
+      courseAny.level ||  // Peut être formaté (Débutant, Intermédiaire, Avancé)
+      courseAny.level_name ||
+      (course as any).difficulty ||
+      '';
+    
+    // Si c'est null, undefined, ou une chaîne vide, retourner une chaîne vide
+    if (!rawLevel || rawLevel === 'null' || rawLevel === 'undefined') {
+      return '';
     }
+    
+    const levelStr = String(rawLevel).toLowerCase().trim();
+    
+    // Si la chaîne est vide après trim, retourner vide
+    if (!levelStr) {
+      return '';
+    }
+    
+    // Mapper toutes les variantes possibles (y compris les strings formatées)
+    if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
+      return 'debutant';
+    }
+    if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
+      return 'intermediaire';
+    }
+    if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
+      return 'avance';
+    }
+    // Si c'est une autre valeur, la retourner telle quelle (normalisée)
+    return levelStr;
+  }, [course]);
+
+  // Formater le niveau pour l'affichage
+  const levelLabel = useMemo(() => {
+    // Si le niveau est vide, retourner "Non spécifié"
+    if (!normalizedLevel || normalizedLevel.trim() === '') {
+      return 'Non spécifié';
+    }
+    
+    switch (normalizedLevel) {
+      case 'beginner':
+      case 'debutant':
+      case 'débutant':
+        return 'Débutant';
+      case 'intermediate':
+      case 'intermediaire':
+      case 'intermédiaire':
+        return 'Intermédiaire';
+      case 'advanced':
+      case 'avance':
+      case 'avancé':
+        return 'Avancé';
+      default:
+        // Si c'est une autre valeur, capitaliser la première lettre
+        return normalizedLevel.charAt(0).toUpperCase() + normalizedLevel.slice(1);
+    }
+  }, [normalizedLevel]);
+
+  const getLevelColor = (level: string) => {
+    // Si le niveau est vide, retourner une couleur par défaut
+    if (!level || level.trim() === '') {
+      return 'bg-gray-100 text-gray-600';
+    }
+    
+    const normalized = String(level).toLowerCase().trim();
+    // Gérer toutes les variantes possibles
+    if (normalized === 'beginner' || normalized === 'debutant' || normalized === 'débutant') {
+      return 'bg-green-100 text-green-800';
+    }
+    if (normalized === 'intermediate' || normalized === 'intermediaire' || normalized === 'intermédiaire') {
+      return 'bg-yellow-100 text-yellow-800';
+    }
+    if (normalized === 'advanced' || normalized === 'avance' || normalized === 'avancé') {
+      return 'bg-red-100 text-red-800';
+    }
+    return 'bg-gray-100 text-gray-600';
   };
 
   const parseISODate = (value: any): Date | null => {
@@ -208,10 +281,11 @@ export default function CourseCard({
           onError={() => setImageError(true)}
         />
         <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
-            {course.level}
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(normalizedLevel)}`}>
+            {levelLabel}
           </span>
         </div>
+        {/* Badge prix - en haut à gauche */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
           <span
             className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${
@@ -220,9 +294,11 @@ export default function CourseCard({
           >
             {priceLabel}
           </span>
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusClasses}`}>
-            {statusLabel}
-          </span>
+          {statusLabel && (
+            <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusClasses}`}>
+              {statusLabel}
+            </span>
+          )}
         </div>
         <div className="absolute bottom-3 left-3">
           <span className="bg-white bg-opacity-95 px-3 py-1 rounded-full text-xs font-medium text-gray-700">

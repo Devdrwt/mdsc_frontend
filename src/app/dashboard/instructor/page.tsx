@@ -391,9 +391,17 @@ export default function InstructorDashboard() {
 
         if (preferencesResult.status === 'fulfilled') {
           const prefs = preferencesResult.value ?? {};
-          setPoliciesAccepted(Boolean(prefs?.policies?.accepted));
+          // Vérifier aussi localStorage au cas où les politiques ont été acceptées récemment
+          const localStorageAccepted = typeof window !== 'undefined' 
+            ? localStorage.getItem('instructor_policies_accepted') === 'true'
+            : false;
+          setPoliciesAccepted(Boolean(prefs?.policies?.accepted) || localStorageAccepted);
         } else if (preferencesResult.status === 'rejected') {
-          setPoliciesAccepted(true);
+          // Vérifier localStorage en fallback
+          const localStorageAccepted = typeof window !== 'undefined' 
+            ? localStorage.getItem('instructor_policies_accepted') === 'true'
+            : false;
+          setPoliciesAccepted(localStorageAccepted);
         }
       } catch (error) {
         if (!isMounted) return;
@@ -416,6 +424,27 @@ export default function InstructorDashboard() {
       isMounted = false;
     };
   }, [user]);
+
+  // Écouter l'événement personnalisé pour mettre à jour le statut des politiques en temps réel
+  useEffect(() => {
+    const handlePoliciesAccepted = (event: CustomEvent) => {
+      setPoliciesAccepted(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('policiesAccepted', handlePoliciesAccepted as EventListener);
+      
+      // Vérifier localStorage au montage au cas où les politiques ont été acceptées dans un autre onglet
+      const localStorageAccepted = localStorage.getItem('instructor_policies_accepted') === 'true';
+      if (localStorageAccepted) {
+        setPoliciesAccepted(true);
+      }
+
+      return () => {
+        window.removeEventListener('policiesAccepted', handlePoliciesAccepted as EventListener);
+      };
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -780,17 +809,37 @@ export default function InstructorDashboard() {
                         {notification.message && (
                           <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{notification.message}</p>
                         )}
-                        {notification.metadata && (
-                          <pre className="mt-2 text-xs bg-white/70 border border-gray-200 rounded-lg p-2 overflow-auto max-h-32">
-                            {JSON.stringify(notification.metadata, null, 2)}
-                          </pre>
+                        {/* Afficher le commentaire de manière lisible pour les notifications de cours */}
+                        {notification.metadata?.comment && (
+                          <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p className="text-xs font-medium text-gray-700 mb-1">Commentaire :</p>
+                            <p className="text-sm text-gray-800 whitespace-pre-line">{notification.metadata.comment}</p>
+                          </div>
                         )}
-                        {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
+                        {/* Afficher la raison du rejet si présente */}
+                        {notification.metadata?.rejection_reason && (
+                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-xs font-medium text-red-700 mb-1">Raison du rejet :</p>
+                            <p className="text-sm text-red-800">{notification.metadata.rejection_reason}</p>
+                          </div>
+                        )}
+                        {/* Lien vers le cours si présent */}
+                        {notification.metadata?.course_id && (
+                          <Link
+                            href={`/dashboard/instructor/courses/${notification.metadata.course_id}`}
+                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark hover:underline"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Voir le cours
+                          </Link>
+                        )}
+                        {/* Lien générique si présent */}
+                        {notification.metadata?.link && typeof notification.metadata.link === 'string' && !notification.metadata?.course_id && (
                           <Link
                             href={notification.metadata.link}
                             className="mt-2 inline-flex text-sm font-medium text-mdsc-blue-primary hover:underline"
                           >
-                            Consulter les messages
+                            Consulter
                           </Link>
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   BookOpen, 
@@ -21,7 +21,8 @@ import {
   Video,
   Award,
   Info,
-  ArrowLeft
+  ArrowLeft,
+  BarChart3
 } from 'lucide-react';
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
@@ -32,6 +33,9 @@ import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
+
+const DEFAULT_INSTRUCTOR_AVATAR = '/default-avatar.png';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -44,12 +48,18 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
+  const [instructorAvatar, setInstructorAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
       loadCourse();
     }
   }, [slug]);
+
+  // Réinitialiser imageError quand le cours change
+  useEffect(() => {
+    setImageError(false);
+  }, [course]);
 
   const loadCourse = async () => {
     try {
@@ -66,6 +76,20 @@ export default function CourseDetailPage() {
         thumbnail: courseData.thumbnail,
         thumbnail_url: (courseData as any).thumbnail_url,
         thumbnailUrl: (courseData as any).thumbnailUrl,
+      });
+      console.log('👤 Données de l\'instructeur dans courseData:', {
+        instructor: (courseData as any).instructor,
+        instructor_id: (courseData as any).instructor_id,
+        instructor_name: (courseData as any).instructor_name,
+        instructor_avatar: (courseData as any).instructor_avatar,
+        instructor_avatar_url: (courseData as any).instructor_avatar_url,
+        instructor_profile_picture: (courseData as any).instructor_profile_picture,
+        instructorProfilePicture: (courseData as any).instructorProfilePicture,
+        allKeys: Object.keys(courseData as any).filter(k => 
+          k.toLowerCase().includes('instructor') || 
+          k.toLowerCase().includes('avatar') || 
+          k.toLowerCase().includes('profile')
+        ),
       });
       
       setCourse(courseData);
@@ -87,6 +111,38 @@ export default function CourseDetailPage() {
           }
         }
       }
+      
+      // Charger l'avatar de l'instructeur depuis les données du cours
+      // Le backend retourne maintenant instructor_profile_picture dans les données du cours
+      const instructor = courseAny?.instructor;
+      
+      // Log pour vérifier les données retournées par le backend
+      console.log('🔍 Vérification de l\'avatar de l\'instructeur dans les données du cours:', {
+        instructor_profile_picture: courseAny?.instructor_profile_picture,
+        instructor_avatar: courseAny?.instructor_avatar,
+        instructor: instructor,
+        instructorAvatar: instructor?.avatar,
+        instructorProfilePicture: instructor?.profile_picture,
+      });
+      
+      // Chercher l'avatar dans toutes les variantes possibles
+      // Le backend retourne maintenant instructor_profile_picture avec l'URL complète
+      const avatarUrl = courseAny?.instructor_profile_picture ||  // Priorité: champ retourné par le backend corrigé
+                       courseAny?.instructor_profile_picture_url ||
+                       instructor?.avatar || 
+                       instructor?.avatar_url || 
+                       instructor?.profile_picture || 
+                       instructor?.profile_picture_url ||
+                       courseAny?.instructor_avatar ||
+                       courseAny?.instructor_avatar_url ||
+                       null;
+      
+      if (avatarUrl && avatarUrl !== null && avatarUrl.trim() !== '') {
+        console.log('✅ Avatar de l\'instructeur trouvé dans les données du cours:', avatarUrl);
+        setInstructorAvatar(avatarUrl);
+      } else {
+        console.log('ℹ️ Aucun avatar trouvé pour l\'instructeur, utilisation de l\'image par défaut');
+      }
     } catch (err: any) {
       console.error('Erreur chargement cours:', err);
       setError(err.message || 'Erreur lors du chargement du cours');
@@ -96,11 +152,14 @@ export default function CourseDetailPage() {
     }
   };
 
+  // Tous les hooks doivent être appelés avant les retours conditionnels
+  // Utiliser useMemo pour éviter les redéfinitions
+  const courseAny = useMemo(() => course ? (course as any) : null, [course]);
+
   // Vérifier si l'inscription est possible
-  const canEnroll = () => {
-    if (!course) return false;
+  const canEnroll = useCallback(() => {
+    if (!course || !courseAny) return false;
     
-    const courseAny = course as any;
     const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
     
     // Si pas de date limite, l'inscription est toujours possible
@@ -114,16 +173,15 @@ export default function CourseDetailPage() {
     deadline.setHours(23, 59, 59, 999);
     
     return now <= deadline;
-  };
+  }, [course, courseAny]);
 
-  const handleEnroll = async () => {
-    if (!course) {
+  const handleEnroll = useCallback(async () => {
+    if (!course || !courseAny) {
       toast.error('Erreur', 'Cours non chargé');
       return;
     }
     
     // Vérifier la date limite d'inscription avant de tenter l'inscription
-    const courseAny = course as any;
     const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
     
     if (enrollmentDeadline) {
@@ -141,7 +199,7 @@ export default function CourseDetailPage() {
     }
     
     // Vérifier si le cours est payant
-    const coursePrice = courseAny.price || course.price || 0;
+    const coursePrice = courseAny?.price || course.price || 0;
     const isPaidCourse = coursePrice > 0;
     
     if (isPaidCourse) {
@@ -173,13 +231,13 @@ export default function CourseDetailPage() {
       
       toast.error('Erreur d\'inscription', errorMessage);
     }
-  };
+  }, [course, courseAny, router]);
 
-  const handleStartLearning = () => {
+  const handleStartLearning = useCallback(() => {
     if (course) {
       router.push(`/learn/${course.id}`);
     }
-  };
+  }, [course, router]);
 
   const toggleModule = (moduleId: number) => {
     setExpandedModules(prev => ({
@@ -203,8 +261,261 @@ export default function CourseDetailPage() {
     }
   };
 
-  // Image par défaut si l'image du cours ne peut pas être chargée
-  const defaultImage = '/apprenant.png';
+  const courseImageRaw = useMemo(() => {
+    if (!courseAny) return null;
+    return (
+      courseAny?.thumbnail_url ||
+      course?.thumbnail ||
+      courseAny?.thumbnailUrl ||
+      courseAny?.image_url ||
+      courseAny?.cover_image ||
+      courseAny?.coverImage ||
+      null
+    );
+  }, [courseAny, course]);
+
+  // Résoudre l'URL de l'image
+  const resolvedImageUrl = useMemo(() => resolveMediaUrl(courseImageRaw), [courseImageRaw]);
+  const courseImage = useMemo(() => {
+    return imageError || !resolvedImageUrl
+      ? DEFAULT_COURSE_IMAGE
+      : resolvedImageUrl;
+  }, [imageError, resolvedImageUrl]);
+
+  // Log pour déboguer
+  useEffect(() => {
+    if (course) {
+      console.log('🖼️ Image de couverture du cours:', {
+        courseImageRaw,
+        resolvedImageUrl,
+        courseImage,
+        imageError,
+        courseId: course.id,
+      });
+    }
+  }, [course, courseImageRaw, resolvedImageUrl, courseImage, imageError]);
+
+  const instructorInfo = useMemo(() => {
+    if (!course || !courseAny) {
+      return {
+        name: 'Instructeur',
+        title: '',
+        organization: '',
+        email: '',
+        bio: '',
+        avatar: DEFAULT_INSTRUCTOR_AVATAR,
+      };
+    }
+
+    const rawInstructor = courseAny?.instructor || {};
+    
+    // Log pour déboguer les données de l'instructeur (toutes les variantes possibles)
+    console.log('👤 Données complètes de l\'instructeur:', {
+      rawInstructor,
+      courseAnyInstructor: courseAny?.instructor,
+      instructorAvatar: courseAny?.instructor_avatar,
+      instructorAvatarUrl: courseAny?.instructor_avatar_url,
+      instructorProfilePicture: courseAny?.instructor_profile_picture,
+      instructorProfilePictureUrl: courseAny?.instructor_profile_picture_url,
+      rawInstructorAvatar: rawInstructor.avatar,
+      rawInstructorAvatarUrl: rawInstructor.avatar_url,
+      rawInstructorProfilePicture: rawInstructor.profile_picture,
+      rawInstructorProfilePictureUrl: rawInstructor.profile_picture_url,
+      courseAnyKeys: courseAny ? Object.keys(courseAny).filter(k => k.toLowerCase().includes('instructor') || k.toLowerCase().includes('avatar') || k.toLowerCase().includes('profile')) : [],
+    });
+
+    const firstName =
+      rawInstructor.firstName ||
+      rawInstructor.first_name ||
+      courseAny?.instructor_first_name ||
+      '';
+    const lastName =
+      rawInstructor.lastName ||
+      rawInstructor.last_name ||
+      courseAny?.instructor_last_name ||
+      '';
+
+    const name =
+      rawInstructor.name ||
+      courseAny?.instructor_name ||
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      'Instructeur';
+
+    const title =
+      rawInstructor.title ||
+      rawInstructor.jobTitle ||
+      rawInstructor.job_title ||
+      courseAny?.instructor_title ||
+      '';
+
+    const organization =
+      rawInstructor.organization ||
+      rawInstructor.organisation ||
+      rawInstructor.company ||
+      courseAny?.instructor_organization ||
+      '';
+
+    const email =
+      rawInstructor.email ||
+      courseAny?.instructor_email ||
+      '';
+
+    const bio =
+      rawInstructor.bio ||
+      rawInstructor.biography ||
+      rawInstructor.description ||
+      courseAny?.instructor_bio ||
+      '';
+
+    // Chercher l'avatar dans toutes les variantes possibles
+    let avatarRaw =
+      rawInstructor.avatar ||
+      rawInstructor.avatar_url ||
+      rawInstructor.avatarUrl ||
+      rawInstructor.profile_picture ||
+      rawInstructor.profile_picture_url ||
+      rawInstructor.profilePicture ||
+      rawInstructor.profilePictureUrl ||
+      courseAny?.instructor_avatar ||
+      courseAny?.instructor_avatar_url ||
+      courseAny?.instructor_profile_picture ||
+      courseAny?.instructor_profile_picture_url ||
+      courseAny?.instructorProfilePicture ||
+      courseAny?.instructorProfilePictureUrl ||
+      null;
+    
+    // Si toujours pas trouvé, chercher dans des structures imbriquées possibles
+    if (!avatarRaw && courseAny?.instructor) {
+      const nestedInstructor = courseAny.instructor as any;
+      avatarRaw =
+        nestedInstructor.avatar ||
+        nestedInstructor.avatar_url ||
+        nestedInstructor.avatarUrl ||
+        nestedInstructor.profile_picture ||
+        nestedInstructor.profile_picture_url ||
+        nestedInstructor.profilePicture ||
+        nestedInstructor.profilePictureUrl ||
+        null;
+    }
+    
+    // Si toujours pas trouvé, chercher dans toutes les clés qui pourraient contenir l'avatar
+    if (!avatarRaw && courseAny) {
+      const courseAnyInstructorKeys = courseAny?.instructor ? Object.keys(courseAny.instructor) : [];
+      const courseAnyInstructorValues: Record<string, any> = {};
+      if (courseAny?.instructor) {
+        courseAnyInstructorKeys.forEach(key => {
+          courseAnyInstructorValues[key] = (courseAny.instructor as any)[key];
+        });
+      }
+      
+      // Chercher dans toutes les valeurs possibles
+      for (const value of Object.values(courseAnyInstructorValues)) {
+        if (typeof value === 'string' && (value.includes('http') || value.includes('/') || value.includes('avatar') || value.includes('profile'))) {
+          avatarRaw = value;
+          break;
+        }
+      }
+    }
+    
+    // Le backend retourne déjà l'URL complète dans avatar, resolveMediaUrl la convertit en proxy Next.js
+    let resolvedAvatar = DEFAULT_INSTRUCTOR_AVATAR;
+    if (avatarRaw) {
+      // Vérifier si c'est déjà l'avatar par défaut pour éviter de le résoudre inutilement
+      if (avatarRaw !== DEFAULT_INSTRUCTOR_AVATAR && 
+          avatarRaw !== '/default-avatar.png' && 
+          avatarRaw.trim() !== '') {
+        resolvedAvatar = resolveMediaUrl(avatarRaw) || DEFAULT_INSTRUCTOR_AVATAR;
+      }
+    }
+    
+    console.log('🎯 Avatar final de l\'instructeur:', {
+      avatarRaw,
+      resolvedAvatar,
+      defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
+      willUseDefault: resolvedAvatar === DEFAULT_INSTRUCTOR_AVATAR,
+    });
+
+    return {
+      name,
+      title,
+      organization,
+      email,
+      bio,
+      avatar: resolvedAvatar,
+    };
+  }, [course, courseAny]);
+
+  // Fonction pour convertir les codes de langue en noms complets
+  const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {
+    if (!langCode) return 'Français';
+    
+    const lang = langCode.toLowerCase();
+    const languageMap: { [key: string]: string } = {
+      'fr': 'Français',
+      'en': 'Anglais',
+      'es': 'Espagnol',
+      'de': 'Allemand',
+      'it': 'Italien',
+      'pt': 'Portugais',
+      'ar': 'Arabe',
+      'zh': 'Chinois',
+      'ja': 'Japonais',
+      'ru': 'Russe',
+      'français': 'Français',
+      'anglais': 'Anglais',
+      'espagnol': 'Espagnol',
+      'allemand': 'Allemand',
+      'italien': 'Italien',
+      'portugais': 'Portugais',
+      'arabe': 'Arabe',
+      'chinois': 'Chinois',
+      'japonais': 'Japonais',
+      'russe': 'Russe',
+    };
+    
+    return languageMap[lang] || langCode;
+  }, []);
+
+  // Calculer la durée totale du cours (en heures)
+  const courseDuration = useMemo(() => {
+    if (!course || !courseAny) return 0;
+    
+    let duration = 
+      courseAny.duration_minutes ||
+      course.duration ||
+      courseAny.duration ||
+      courseAny.total_duration ||
+      courseAny.totalDuration ||
+      0;
+    
+    if (typeof duration === 'string') {
+      const parsed = parseInt(duration, 10);
+      duration = isNaN(parsed) ? 0 : parsed;
+    }
+    
+    if (duration === 0 && modules.length > 0) {
+      duration = modules.reduce((total, module) => {
+        const moduleAny = module as any;
+        const lessons = moduleAny.lessons || [];
+        const moduleDuration = lessons.reduce((sum: number, lesson: any) => {
+          return sum + (lesson.duration || lesson.duration_minutes || 0);
+        }, 0);
+        return total + moduleDuration;
+      }, 0);
+    }
+    
+    if (duration === 0 && course.lessons && course.lessons.length > 0) {
+      duration = course.lessons.reduce((total, lesson) => {
+        const lessonAny = lesson as any;
+        return total + (lessonAny.duration || lessonAny.duration_minutes || 0);
+      }, 0);
+    }
+    
+    return typeof duration === 'number' ? duration : 0;
+  }, [course, courseAny, modules]);
+
+  const totalDurationHours = courseDuration > 0 ? Math.floor(courseDuration / 60) : 0;
+  const totalDurationMinutes = courseDuration > 0 ? courseDuration % 60 : 0;
 
   if (loading) {
     return (
@@ -238,30 +549,13 @@ export default function CourseDetailPage() {
     );
   }
 
-  // Récupérer l'image du cours en vérifiant plusieurs champs possibles
-  // Cette fonction est appelée uniquement après avoir vérifié que course n'est pas null
-  const getCourseImage = () => {
-    if (imageError) return defaultImage;
-    
-    const courseAny = course as any;
-    // Vérifier plusieurs champs possibles pour l'image
-    const imageUrl = courseAny?.thumbnail_url 
-      || course?.thumbnail 
-      || courseAny?.thumbnailUrl
-      || null;
-    
-    return imageUrl || defaultImage;
-  };
-  
-  const courseImage = getCourseImage();
-
   const isEnrolled = course.enrollment !== undefined;
-  const courseAny = course as any;
   
   // Extraire toutes les informations du cours
   const price = courseAny.price || course.price || 0;
   const currency = courseAny.currency || 'FCFA';
-  const language = courseAny.language || courseAny.lang || 'Français';
+  const languageRaw = courseAny.language || courseAny.lang || 'fr';
+  const language = getLanguageLabel(languageRaw);
   const prerequisiteCourse = courseAny.prerequisite_course || courseAny.prerequisiteCourse;
   const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
   const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
@@ -269,27 +563,8 @@ export default function CourseDetailPage() {
   const maxStudents = courseAny.max_students || courseAny.maxStudents;
   const shortDescription = course.shortDescription || course.description?.substring(0, 300);
   
-  // S'assurer que l'instructeur est correctement formaté
-  let instructorName = 'Instructeur';
-  let instructorAvatar: string | undefined = undefined;
-  if (course.instructor) {
-    if (typeof course.instructor === 'string') {
-      instructorName = course.instructor;
-    } else if (course.instructor.name) {
-      instructorName = course.instructor.name;
-      instructorAvatar = course.instructor.avatar;
-    } else if ((course.instructor as any).first_name || (course.instructor as any).last_name) {
-      const firstName = (course.instructor as any).first_name || (course.instructor as any).firstName || '';
-      const lastName = (course.instructor as any).last_name || (course.instructor as any).lastName || '';
-      instructorName = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
-      instructorAvatar = (course.instructor as any).profile_picture || (course.instructor as any).avatar;
-    }
-  } else if (courseAny.instructor_first_name || courseAny.instructor_last_name) {
-    const firstName = courseAny.instructor_first_name || '';
-    const lastName = courseAny.instructor_last_name || '';
-    instructorName = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
-    instructorAvatar = courseAny.instructor_profile_picture || courseAny.instructor_avatar;
-  }
+  // Utiliser instructorInfo qui est déjà calculé avec useMemo plus haut
+  // Il contient toutes les informations de l'instructeur de manière optimisée
   
   const categoryLabels: { [key: string]: string } = {
     sante: 'Santé',
@@ -312,6 +587,9 @@ export default function CourseDetailPage() {
     debutant: 'Débutant',
     intermediaire: 'Intermédiaire',
     avance: 'Avancé',
+    'débutant': 'Débutant',
+    'intermédiaire': 'Intermédiaire',
+    'avancé': 'Avancé',
   };
 
   // Fonction utilitaire pour extraire la valeur de catégorie/niveau (peut être string ou objet)
@@ -339,33 +617,124 @@ export default function CourseDetailPage() {
     return 'Non spécifié';
   };
 
-  const getLevelValue = (level: any): string => {
+  // Normaliser le niveau depuis la base de données (cherche dans level ET difficulty)
+  const getLevelValue = (level: any, courseData?: any): string => {
+    // Si courseData est fourni, chercher dans level ET difficulty
+    if (courseData) {
+      const courseAny = courseData as any;
+      const rawLevel = courseAny.level || courseAny.difficulty || level || '';
+      const levelStr = String(rawLevel).toLowerCase().trim();
+      
+      // Mapper toutes les variantes possibles
+      if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
+        return 'beginner';
+      }
+      if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
+        return 'intermediate';
+      }
+      if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
+        return 'advanced';
+      }
+      return levelStr || 'beginner';
+    }
+    
+    // Sinon, utiliser l'ancienne logique pour compatibilité
     if (typeof level === 'string') {
-      return level.toLowerCase();
+      return level.toLowerCase().trim();
     }
     if (level && typeof level === 'object') {
-      return (level.name || level.level_name || '').toLowerCase();
+      return (level.name || level.level_name || '').toLowerCase().trim();
     }
     return '';
   };
 
-  const getLevelLabel = (level: any): string => {
-    const value = getLevelValue(level);
-    if (value && levelLabels[value]) {
-      return levelLabels[value];
+  const getLevelLabel = (level: any, courseData?: any): string => {
+    // Si courseData est fourni, chercher directement dans level ET difficulty
+    if (courseData) {
+      const courseAny = courseData as any;
+      const rawLevel = courseAny.level || courseAny.difficulty || level || '';
+      const levelStr = String(rawLevel).toLowerCase().trim();
+      
+      // Mapper toutes les variantes possibles
+      if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
+        return 'Débutant';
+      }
+      if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
+        return 'Intermédiaire';
+      }
+      if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
+        return 'Avancé';
+      }
+      // Si la chaîne n'est pas vide, essayer de la formater
+      if (levelStr) {
+        return levelStr.charAt(0).toUpperCase() + levelStr.slice(1);
+      }
     }
-    if (typeof level === 'string') {
-      return level;
+    
+    // Utiliser getLevelValue pour extraire la valeur
+    const value = getLevelValue(level, courseData);
+    
+    // Si value est vide, essayer de chercher directement dans level
+    if (!value || value.trim() === '') {
+      if (typeof level === 'string' && level.trim()) {
+        const trimmed = level.trim().toLowerCase();
+        if (trimmed === 'débutant' || trimmed === 'debutant' || trimmed === 'beginner') {
+          return 'Débutant';
+        }
+        if (trimmed === 'intermédiaire' || trimmed === 'intermediaire' || trimmed === 'intermediate') {
+          return 'Intermédiaire';
+        }
+        if (trimmed === 'avancé' || trimmed === 'avance' || trimmed === 'advanced') {
+          return 'Avancé';
+        }
+        return level.trim().charAt(0).toUpperCase() + level.trim().slice(1);
+      }
+      if (level && typeof level === 'object') {
+        return level.name || level.level_name || 'Non spécifié';
+      }
+      return 'Non spécifié';
     }
+    
+    // Si value existe, chercher dans levelLabels
+    const normalized = value.toLowerCase().trim();
+    if (levelLabels[normalized]) {
+      return levelLabels[normalized];
+    }
+    
+    // Gérer les variantes avec accents
+    if (normalized === 'débutant' || normalized === 'debutant' || normalized === 'beginner') {
+      return 'Débutant';
+    }
+    if (normalized === 'intermédiaire' || normalized === 'intermediaire' || normalized === 'intermediate') {
+      return 'Intermédiaire';
+    }
+    if (normalized === 'avancé' || normalized === 'avance' || normalized === 'advanced') {
+      return 'Avancé';
+    }
+    
+    // Si c'est une string, essayer de la formater
+    if (typeof level === 'string' && level.trim()) {
+      const trimmed = level.trim();
+      // Si ça ressemble à un niveau connu, le formater
+      if (trimmed.toLowerCase() === 'débutant' || trimmed.toLowerCase() === 'debutant' || trimmed.toLowerCase() === 'beginner') {
+        return 'Débutant';
+      }
+      if (trimmed.toLowerCase() === 'intermédiaire' || trimmed.toLowerCase() === 'intermediaire' || trimmed.toLowerCase() === 'intermediate') {
+        return 'Intermédiaire';
+      }
+      if (trimmed.toLowerCase() === 'avancé' || trimmed.toLowerCase() === 'avance' || trimmed.toLowerCase() === 'advanced') {
+        return 'Avancé';
+      }
+      // Sinon, capitaliser la première lettre
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    }
+    
     if (level && typeof level === 'object') {
       return level.name || level.level_name || 'Non spécifié';
     }
+    
     return 'Non spécifié';
   };
-
-  // Calculer la durée totale du cours (en heures)
-  const totalDurationHours = course.duration ? Math.round(course.duration / 60) : 0;
-  const totalDurationMinutes = course.duration ? course.duration % 60 : 0;
 
   // Vérifier si l'inscription est possible (appelé après vérification que course n'est pas null)
   const enrollmentPossible = canEnroll();
@@ -393,12 +762,27 @@ export default function CourseDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Image du cours */}
               <div className="lg:col-span-1">
-                <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                <div className="relative rounded-lg overflow-hidden shadow-2xl bg-gray-200">
                   <img
                     src={courseImage}
                     alt={course.title}
                     className="w-full h-64 lg:h-96 object-cover"
-                    onError={() => setImageError(true)}
+                    onError={(e) => {
+                      console.error('❌ Erreur de chargement de l\'image:', {
+                        courseImage,
+                        courseImageRaw,
+                        resolvedImageUrl,
+                        error: e,
+                      });
+                      setImageError(true);
+                      // Essayer de charger l'image par défaut si ce n'est pas déjà fait
+                      if (courseImage !== DEFAULT_COURSE_IMAGE) {
+                        (e.target as HTMLImageElement).src = DEFAULT_COURSE_IMAGE;
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Image chargée avec succès:', courseImage);
+                    }}
                   />
                 </div>
               </div>
@@ -411,7 +795,7 @@ export default function CourseDetailPage() {
                       {getCategoryLabel(course.category)}
                     </span>
                     <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      {getLevelLabel(course.level)}
+                      {getLevelLabel(course.level, courseAny)}
                     </span>
                     {price === 0 && (
                       <span className="inline-block px-3 py-1 bg-green-500/80 rounded-full text-sm font-medium">
@@ -431,7 +815,7 @@ export default function CourseDetailPage() {
                     <User className="h-5 w-5 text-white/80" />
                     <div>
                       <p className="text-sm text-white/70">Instructeur</p>
-                      <p className="font-semibold">{instructorName}</p>
+                      <p className="font-semibold">{instructorInfo.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -523,19 +907,74 @@ export default function CourseDetailPage() {
             {/* Contenu principal */}
             <div className="lg:col-span-2 space-y-8">
               {/* Description complète */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">À propos de ce cours</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
+                    <BookOpen className="h-6 w-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">À propos de ce cours</h2>
+                </div>
                 <div className="prose max-w-none">
-                  <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                    {course.description}
-                  </p>
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-line space-y-4">
+                    {course.description?.split('\n').map((paragraph, idx) => (
+                      paragraph.trim() && (
+                        <p key={idx} className="text-base leading-7">
+                          {paragraph.trim()}
+                        </p>
+                      )
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Statistiques du cours */}
+              <div className="bg-gradient-to-br from-mdsc-blue-primary/5 to-mdsc-blue-dark/5 rounded-xl border border-mdsc-blue-primary/20 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-mdsc-blue-primary" />
+                  Statistiques du cours
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <div className="text-2xl font-bold text-mdsc-blue-primary mb-1">
+                      {modules.length || course.lessons?.length || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Module{modules.length > 1 ? 's' : ''}</div>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <div className="text-2xl font-bold text-mdsc-blue-primary mb-1">
+                      {modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) || course.lessons?.length || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Leçon{modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) > 1 ? 's' : ''}</div>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <div className="text-2xl font-bold text-mdsc-blue-primary mb-1">
+                      {totalDurationHours > 0 ? `${totalDurationHours}h` : totalDurationMinutes > 0 ? `${totalDurationMinutes}min` : '-'}
+                    </div>
+                    <div className="text-sm text-gray-600">Durée totale</div>
+                  </div>
+                  <div className="text-center p-4 bg-white rounded-lg shadow-sm">
+                    <div className="text-2xl font-bold text-mdsc-blue-primary mb-1">
+                      {course.totalStudents || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Étudiant{(course.totalStudents || 0) > 1 ? 's' : ''}</div>
+                  </div>
                 </div>
               </div>
 
               {/* Modules et leçons */}
               {modules.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Programme du cours</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Programme du cours</h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {modules.length} module{modules.length > 1 ? 's' : ''} • {modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0)} leçon{modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
                   <div className="space-y-4">
                     {modules.map((module, moduleIndex) => {
                       const moduleAny = module as any;
@@ -612,8 +1051,18 @@ export default function CourseDetailPage() {
 
               {/* Leçons directes (si pas de modules) */}
               {course.lessons && course.lessons.length > 0 && modules.length === 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Contenu du cours</h2>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
+                      <FileText className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Contenu du cours</h2>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {course.lessons.length} leçon{course.lessons.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     {course.lessons.map((lesson, lessonIndex) => {
                       const lessonAny = lesson as any;
@@ -648,33 +1097,91 @@ export default function CourseDetailPage() {
               )}
 
               {/* Informations sur l'instructeur */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Votre instructeur</h2>
-                <div className="flex items-start space-x-4">
-                  {instructorAvatar ? (
-                    <img
-                      src={instructorAvatar}
-                      alt={instructorName}
-                      className="w-16 h-16 rounded-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/default-avatar.png';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-mdsc-blue-primary/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-mdsc-blue-primary" />
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
+                    <User className="h-6 w-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900">Votre instructeur</h2>
+                </div>
+                <div className="flex items-start space-x-6">
+                  <div className="flex-shrink-0">
+                    <div className="relative">
+                      <img
+                        src={instructorInfo.avatar || DEFAULT_INSTRUCTOR_AVATAR}
+                        alt={instructorInfo.name}
+                        className="w-24 h-24 rounded-full object-cover bg-mdsc-blue-primary/10 border-4 border-mdsc-blue-primary/20 shadow-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          console.error('❌ Erreur de chargement de l\'image de l\'instructeur:', {
+                            avatar: instructorInfo.avatar,
+                            defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
+                            rawInstructor: courseAny?.instructor,
+                            courseAnyInstructorAvatar: courseAny?.instructor_avatar,
+                            currentSrc: target.src,
+                          });
+                          // Basculer vers l'image par défaut si ce n'est pas déjà fait
+                          if (target.src !== DEFAULT_INSTRUCTOR_AVATAR && !target.src.includes('mdsc-logo.png')) {
+                            target.src = DEFAULT_INSTRUCTOR_AVATAR;
+                          }
+                        }}
+                        onLoad={(e) => {
+                          console.log('✅ Image de l\'instructeur chargée avec succès:', {
+                            avatar: instructorInfo.avatar,
+                            instructorName: instructorInfo.name,
+                            src: (e.target as HTMLImageElement).src,
+                          });
+                        }}
+                      />
                     </div>
-                  )}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {instructorName}
-                    </h3>
-                    <p className="text-gray-600 text-sm mt-1">
-                      Instructeur certifié
-                    </p>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">
+                        {instructorInfo.name}
+                      </h3>
+                      {(instructorInfo.title || instructorInfo.organization) && (
+                        <p className="text-gray-600 font-medium">
+                          {[instructorInfo.title, instructorInfo.organization].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                      {instructorInfo.email && (
+                        <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
+                          <span>{instructorInfo.email}</span>
+                        </p>
+                      )}
+                    </div>
+                    {instructorInfo.bio && (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <p className="text-gray-700 leading-relaxed text-sm">
+                          {instructorInfo.bio}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* Prérequis */}
+              {prerequisiteCourse && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 p-2 bg-amber-500 rounded-lg">
+                      <GraduationCap className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Prérequis</h3>
+                      <p className="text-gray-700">
+                        Ce cours nécessite d'avoir complété : <span className="font-semibold">
+                          {typeof prerequisiteCourse === 'string' 
+                            ? prerequisiteCourse 
+                            : prerequisiteCourse.title || 'Cours prérequis requis'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sidebar avec informations pratiques */}
@@ -774,65 +1281,70 @@ export default function CourseDetailPage() {
                         Niveau
                       </span>
                       <span className="font-medium">
-                        {getLevelLabel(course.level)}
+                        {getLevelLabel(course.level, courseAny)}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Informations pratiques */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <Info className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                    Informations pratiques
-                  </h3>
-                  <div className="space-y-3 text-sm">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="p-1.5 bg-mdsc-blue-primary/10 rounded-lg">
+                      <Info className="h-5 w-5 text-mdsc-blue-primary" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Informations pratiques</h3>
+                  </div>
+                  <div className="space-y-4">
                     {enrollmentDeadline && (
-                      <div className="flex items-start space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-600">Date limite d'inscription</p>
-                          <p className="font-medium">{formatDate(enrollmentDeadline)}</p>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="h-5 w-5 text-mdsc-blue-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Date limite d'inscription</p>
+                            <p className="font-semibold text-gray-900">{formatDate(enrollmentDeadline)}</p>
+                          </div>
                         </div>
                       </div>
                     )}
                     {courseStartDate && (
-                      <div className="flex items-start space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-600">Début du cours</p>
-                          <p className="font-medium">{formatDate(courseStartDate)}</p>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="h-5 w-5 text-mdsc-blue-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Début du cours</p>
+                            <p className="font-semibold text-gray-900">{formatDate(courseStartDate)}</p>
+                          </div>
                         </div>
                       </div>
                     )}
                     {courseEndDate && (
-                      <div className="flex items-start space-x-3">
-                        <Calendar className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-600">Fin du cours</p>
-                          <p className="font-medium">{formatDate(courseEndDate)}</p>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start space-x-3">
+                          <Calendar className="h-5 w-5 text-mdsc-blue-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fin du cours</p>
+                            <p className="font-semibold text-gray-900">{formatDate(courseEndDate)}</p>
+                          </div>
                         </div>
                       </div>
                     )}
                     {maxStudents && (
-                      <div className="flex items-start space-x-3">
-                        <Users className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-600">Places disponibles</p>
-                          <p className="font-medium">{maxStudents - (course.totalStudents || 0)} / {maxStudents}</p>
-                        </div>
-                      </div>
-                    )}
-                    {prerequisiteCourse && (
-                      <div className="flex items-start space-x-3">
-                        <GraduationCap className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-gray-600">Prérequis</p>
-                          <p className="font-medium">
-                            {typeof prerequisiteCourse === 'string' 
-                              ? prerequisiteCourse 
-                              : prerequisiteCourse.title || 'Cours prérequis requis'}
-                          </p>
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start space-x-3">
+                          <Users className="h-5 w-5 text-mdsc-blue-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Places disponibles</p>
+                            <p className="font-semibold text-gray-900">
+                              {maxStudents - (course.totalStudents || 0)} / {maxStudents}
+                            </p>
+                            <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-mdsc-blue-primary h-2 rounded-full transition-all"
+                                style={{ width: `${((maxStudents - (course.totalStudents || 0)) / maxStudents) * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

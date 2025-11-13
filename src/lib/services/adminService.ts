@@ -1,6 +1,32 @@
 import { apiRequest } from './api';
 import { resolveMediaUrl } from '../utils/media';
 
+const normalizeNumber = (value: any): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace?.(/\s/g, '') ?? value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (value && typeof value === 'object') {
+    if ('total' in value) return normalizeNumber((value as any).total);
+    if ('value' in value) return normalizeNumber((value as any).value);
+    if ('count' in value) return normalizeNumber((value as any).count);
+    if ('amount' in value) return normalizeNumber((value as any).amount);
+  }
+  return 0;
+};
+
+const extractArray = (payload: any, keys: string[] = []): any[] => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
+
 export interface CourseApproval {
   id: string;
   course_id?: string;
@@ -129,6 +155,59 @@ export interface AdminServiceStatusResponse {
   summary?: 'up' | 'degraded' | 'down';
   checked_at?: string;
   services?: AdminServiceStatusCheck[];
+}
+
+export interface AdminTopCourseEntry {
+  id: number | string;
+  course_id?: number | string;
+  title: string;
+  category?: string | null;
+  enrollments: number;
+  completions: number;
+  completion_rate: number;
+  average_rating: number;
+  revenue: number;
+  currency?: string;
+  trend?: number | null;
+}
+
+export interface AdminTopInstructorEntry {
+  id: number | string;
+  instructor_id?: number | string;
+  name: string;
+  email?: string | null;
+  courses_count: number;
+  total_enrollments: number;
+  average_rating: number;
+  revenue: number;
+  currency?: string;
+  trend?: number | null;
+}
+
+export interface AdminPaymentEntry {
+  id: number | string;
+  reference?: string;
+  amount: number;
+  currency?: string;
+  status?: string;
+  processed_at?: string | null;
+  user?: {
+    id?: number | string;
+    name?: string;
+    email?: string;
+  } | null;
+  course?: {
+    id?: number | string;
+    title?: string;
+  } | null;
+  method?: string | null;
+}
+
+export interface AdminFeatureSummary {
+  message: string;
+  status?: string;
+  updated_at?: string | null;
+  details?: Record<string, any> | null;
 }
 
 export interface AdminNotificationEntry {
@@ -681,6 +760,159 @@ export class AdminService {
     };
   }
 
+  static async getTopCourses(params?: { limit?: number }): Promise<AdminTopCourseEntry[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/courses/top${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const list = extractArray(response?.data ?? response ?? {}, ['courses', 'data', 'results']);
+    return list.map((item: any, index: number) => {
+      const revenue = normalizeNumber(item?.revenue ?? item?.total_revenue ?? item?.amount);
+      return {
+        id: item?.id ?? item?.course_id ?? index,
+        course_id: item?.course_id ?? item?.id ?? index,
+        title: String(item?.title ?? item?.course_title ?? `Cours ${index + 1}`),
+        category: item?.category ?? item?.primary_category ?? null,
+        enrollments: normalizeNumber(item?.enrollments ?? item?.total_enrollments ?? item?.count),
+        completions: normalizeNumber(item?.completions ?? item?.completed_enrollments),
+        completion_rate: normalizeNumber(
+          item?.completion_rate ?? item?.completionRatio ?? item?.completion_percentage ?? item?.completionRate,
+        ),
+        average_rating: Number.isFinite(Number(item?.average_rating ?? item?.rating))
+          ? Number(item?.average_rating ?? item?.rating)
+          : 0,
+        revenue,
+        currency: item?.currency ?? item?.currency_code ?? 'XOF',
+        trend:
+          typeof item?.trend === 'number'
+            ? item.trend
+            : normalizeNumber(item?.trend_percentage ?? item?.trend_rate ?? item?.delta),
+      };
+    });
+  }
+
+  static async getTopInstructors(params?: { limit?: number }): Promise<AdminTopInstructorEntry[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/instructors/top${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const list = extractArray(response?.data ?? response ?? {}, ['instructors', 'data', 'results']);
+    return list.map((item: any, index: number) => {
+      const firstName = item?.first_name ?? item?.firstName;
+      const lastName = item?.last_name ?? item?.lastName;
+      const fallbackName = [firstName, lastName].filter(Boolean).join(' ').trim();
+      const displayName = item?.name ?? (fallbackName || item?.email || `Instructeur ${index + 1}`);
+      return {
+        id: item?.id ?? item?.instructor_id ?? index,
+        instructor_id: item?.instructor_id ?? item?.id ?? index,
+        name: displayName,
+        email: item?.email ?? item?.contact_email ?? null,
+        courses_count: normalizeNumber(item?.courses_count ?? item?.course_count ?? item?.courses),
+        total_enrollments: normalizeNumber(item?.total_enrollments ?? item?.enrollments),
+        average_rating: Number.isFinite(Number(item?.average_rating ?? item?.rating))
+          ? Number(item?.average_rating ?? item?.rating)
+          : 0,
+        revenue: normalizeNumber(item?.revenue ?? item?.total_revenue ?? item?.amount),
+        currency: item?.currency ?? item?.currency_code ?? 'XOF',
+        trend:
+          typeof item?.trend === 'number'
+            ? item.trend
+            : normalizeNumber(item?.trend_percentage ?? item?.trend_rate ?? item?.delta),
+      };
+    });
+  }
+
+  static async getRecentPayments(params?: { limit?: number }): Promise<AdminPaymentEntry[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    const query = searchParams.toString();
+    const response = await apiRequest(`/admin/payments/recent${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+
+    const list = extractArray(response?.data ?? response ?? {}, ['payments', 'data', 'results']);
+    return list.map((item: any, index: number) => ({
+      id: item?.id ?? item?.payment_id ?? item?.reference ?? index,
+      reference: item?.reference ?? item?.transaction_reference ?? item?.payment_reference,
+      amount: normalizeNumber(item?.amount ?? item?.total ?? item?.value),
+      currency: item?.currency ?? item?.currency_code ?? 'XOF',
+      status: item?.status ?? item?.payment_status ?? 'pending',
+      processed_at: item?.processed_at ?? item?.paid_at ?? item?.created_at ?? null,
+      method: item?.method ?? item?.payment_method ?? null,
+      user: item?.user
+        ? {
+            id: item?.user?.id ?? item?.user_id,
+            name: (() => {
+              const fallback =
+                [item?.user?.first_name, item?.user?.last_name].filter(Boolean).join(' ').trim() || undefined;
+              return item?.user?.name ?? fallback ?? item?.user?.email ?? undefined;
+            })(),
+            email: item?.user?.email ?? null,
+          }
+        : item?.student
+        ? {
+            id: item?.student?.id,
+            name:
+              item?.student?.name ??
+              [item?.student?.first_name, item?.student?.last_name].filter(Boolean).join(' ').trim(),
+            email: item?.student?.email,
+          }
+        : null,
+      course:
+        item?.course || item?.course_id || item?.course_title
+          ? {
+              id: item?.course?.id ?? item?.course_id ?? null,
+              title: item?.course?.title ?? item?.course_title ?? null,
+            }
+          : null,
+    }));
+  }
+
+  static async getSupportSummary(): Promise<AdminFeatureSummary> {
+    const response = await apiRequest('/admin/support/tickets', {
+      method: 'GET',
+    });
+    const data = response?.data ?? {};
+    return {
+      message: data?.message ?? response?.message ?? 'Support en développement',
+      status: data?.status ?? data?.state ?? 'pending',
+      updated_at: data?.updated_at ?? null,
+      details: data?.details ?? null,
+    };
+  }
+
+  static async getModerationSummary(): Promise<AdminFeatureSummary> {
+    const response = await apiRequest('/admin/moderation/pending', {
+      method: 'GET',
+    });
+    const data = response?.data ?? {};
+    return {
+      message: data?.message ?? response?.message ?? 'Modération en développement',
+      status: data?.status ?? data?.state ?? 'pending',
+      updated_at: data?.updated_at ?? null,
+      details: data?.details ?? null,
+    };
+  }
+
+  static async getAiUsageSummary(): Promise<AdminFeatureSummary> {
+    const response = await apiRequest('/admin/ai/usage', {
+      method: 'GET',
+    });
+    const data = response?.data ?? {};
+    return {
+      message: data?.message ?? response?.message ?? 'Statistiques IA en développement',
+      status: data?.status ?? data?.state ?? 'pending',
+      updated_at: data?.updated_at ?? null,
+      details: data?.details ?? null,
+    };
+  }
+
   static async updateUserRole(
     userId: string | number,
     role: 'student' | 'instructor'
@@ -697,6 +929,7 @@ export class AdminService {
     userId: string | number,
     reason?: string
   ): Promise<AdminUserEntry> {
+    // La route /suspend fait un toggle: suspend si actif, réactive si suspendu
     const payload = reason ? { reason } : undefined;
     const response = await apiRequest(`/admin/users/${userId}/suspend`, {
       method: 'POST',
@@ -707,7 +940,8 @@ export class AdminService {
   }
 
   static async reactivateUser(userId: string | number): Promise<AdminUserEntry> {
-    const response = await apiRequest(`/admin/users/${userId}/reactivate`, {
+    // La route /suspend fait un toggle, donc on l'utilise aussi pour réactiver
+    const response = await apiRequest(`/admin/users/${userId}/suspend`, {
       method: 'POST',
     });
 

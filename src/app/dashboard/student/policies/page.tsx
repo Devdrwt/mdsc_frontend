@@ -40,6 +40,23 @@ export default function StudentPoliciesPage() {
       setProcessing(true);
       const updated = await StudentService.acknowledgePolicies(POLICIES_VERSION);
       setPreferences((prev) => ({ ...prev, ...updated }));
+      
+      // Préparer les données des policies pour l'événement
+      const acceptedAt = updated.policies?.accepted_at || new Date().toISOString();
+      
+      // Mettre à jour le localStorage pour persister l'état
+      localStorage.setItem('student_policies_accepted', 'true');
+      localStorage.setItem('student_policies_accepted_at', acceptedAt);
+      
+      // Déclencher un événement personnalisé pour mettre à jour le dashboard
+      window.dispatchEvent(new CustomEvent('studentPoliciesAccepted', { 
+        detail: { 
+          accepted: true,
+          accepted_at: acceptedAt,
+          version: POLICIES_VERSION 
+        } 
+      }));
+      
       toast.success('Merci', 'Vos règles & confidentialité sont maintenant acceptées.');
     } catch (error) {
       toast.errorFromApi('Erreur', error, 'Impossible de valider pour le moment.');

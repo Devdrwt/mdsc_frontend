@@ -115,19 +115,6 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Mes Certificats</h2>
-            <p className="text-yellow-100">
-              Gérez vos demandes de certificats et téléchargez vos certificats émis
-            </p>
-          </div>
-          <Award className="h-12 w-12" />
-        </div>
-      </div>
-
       {/* Liste des certificats */}
       {certificates.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">

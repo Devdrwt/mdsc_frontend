@@ -18,10 +18,12 @@ import {
   RefreshCw,
   Search,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
+import MessageComposer from '../../../../components/messages/MessageComposer';
 
 interface TabConfig {
-  key: 'inbox' | 'sent';
+  key: 'inbox' | 'sent' | 'compose';
   label: string;
   description: string;
   icon: React.ComponentType<any>;
@@ -40,6 +42,12 @@ const tabs: TabConfig[] = [
     description: 'Historique des messages envoyés',
     icon: Send,
   },
+  {
+    key: 'compose',
+    label: 'Nouveau message',
+    description: 'Composer et envoyer un nouveau message',
+    icon: Plus,
+  },
 ];
 
 function formatDateTime(iso?: string) {
@@ -54,7 +62,7 @@ function formatDateTime(iso?: string) {
 
 export default function StudentMessagesPage() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'inbox' | 'sent'>('inbox');
+  const [activeTab, setActiveTab] = useState<'inbox' | 'sent' | 'compose'>('inbox');
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [pagination, setPagination] = useState<PaginatedMessages['pagination']>();
   const [selectedMessage, setSelectedMessage] = useState<MessageEntry | null>(null);
@@ -63,21 +71,42 @@ export default function StudentMessagesPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMessages = async (tab: 'inbox' | 'sent', query = '', page = 1) => {
+  const loadMessages = async (tab: 'inbox' | 'sent' | 'compose', query = '', page = 1) => {
+    if (tab === 'compose') return; // Ne pas charger les messages en mode composition
     try {
       setLoading(true);
       setError(null);
 
       let response: PaginatedMessages;
-      if (query.trim()) {
-        response = await MessageService.search(query, { page, limit: 20 });
-      } else if (tab === 'sent') {
+      if (tab === 'sent') {
         response = await MessageService.getSentMessages({ page, limit: 20 });
       } else {
         response = await MessageService.getReceivedMessages({ page, limit: 20 });
       }
 
-      setMessages(response.messages ?? []);
+      let messages = response.messages ?? [];
+      
+      // Filtrer les messages côté client si une recherche est effectuée
+      if (query.trim()) {
+        const searchLower = query.toLowerCase();
+        messages = messages.filter(message => {
+          const subject = (message.subject || '').toLowerCase();
+          const content = (message.content || '').toLowerCase();
+          const senderName = (message.sender?.name || '').toLowerCase();
+          const senderEmail = (message.sender?.email || '').toLowerCase();
+          const recipientName = (message.recipient?.name || '').toLowerCase();
+          const recipientEmail = (message.recipient?.email || '').toLowerCase();
+          
+          return subject.includes(searchLower) ||
+                 content.includes(searchLower) ||
+                 senderName.includes(searchLower) ||
+                 senderEmail.includes(searchLower) ||
+                 recipientName.includes(searchLower) ||
+                 recipientEmail.includes(searchLower);
+        });
+      }
+
+      setMessages(messages);
       setPagination(response.pagination);
 
       if (selectedMessage) {
@@ -97,20 +126,36 @@ export default function StudentMessagesPage() {
 
   useEffect(() => {
     if (!user) return;
-    loadMessages(activeTab);
+    if (activeTab !== 'compose') {
+      loadMessages(activeTab);
+    }
   }, [user, activeTab]);
 
+  const handleComposerSend = () => {
+    loadMessages('sent');
+    setActiveTab('sent');
+    setSelectedMessage(null);
+  };
+
   const handleSelectMessage = async (message: MessageEntry) => {
+    // Afficher immédiatement le message pour une meilleure UX
     setSelectedMessage(message);
-    if (!message.is_read && activeTab === 'inbox') {
+    
+    // Si le message n'est pas lu, marquer comme lu (et la notification associée)
+    if (!message.is_read && activeTab === 'inbox' && message.id) {
       try {
+        // markAsRead marque automatiquement la notification associée comme lue côté backend
         await MessageService.markAsRead(message.id);
         setMessages((prev) =>
           prev.map((msg) => (msg.id === message.id ? { ...msg, is_read: true } : msg))
         );
         setSelectedMessage({ ...message, is_read: true });
-      } catch (err) {
-        console.error('Erreur marquage lu:', err);
+      } catch (err: any) {
+        // Ignorer silencieusement les erreurs 404 (message non trouvé) - peut arriver si le message a été supprimé
+        if (err?.status !== 404) {
+          console.error('Erreur lors du marquage du message comme lu:', err);
+        }
+        // Continuer à afficher le message même en cas d'erreur
       }
     }
   };
@@ -188,22 +233,24 @@ export default function StudentMessagesPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Messagerie</h1>
                 <p className="text-sm text-gray-600">{headerDescription}</p>
               </div>
-              <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
-                <Search className="h-4 w-4 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher un message..."
-                  className="bg-transparent focus:outline-none text-sm"
-                />
-                <button
-                  className="text-xs text-mdsc-blue-primary hover:text-mdsc-blue-dark transition"
-                  onClick={() => loadMessages(activeTab, searchQuery)}
-                >
-                  Rechercher
-                </button>
-              </div>
+              {activeTab !== 'compose' && (
+                <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded-lg">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Rechercher un message..."
+                    className="bg-transparent focus:outline-none text-sm"
+                  />
+                  <button
+                    className="text-xs text-mdsc-blue-primary hover:text-mdsc-blue-dark transition"
+                    onClick={() => loadMessages(activeTab, searchQuery)}
+                  >
+                    Rechercher
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center space-x-2 mb-4">
@@ -212,7 +259,9 @@ export default function StudentMessagesPage() {
                   key={tab.key}
                   onClick={() => {
                     setActiveTab(tab.key);
-                    setSelectedMessage(null);
+                    if (tab.key !== 'compose') {
+                      setSelectedMessage(null);
+                    }
                   }}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
                     activeTab === tab.key
@@ -226,35 +275,45 @@ export default function StudentMessagesPage() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                <div className="bg-gray-50 rounded-xl border border-gray-200 divide-y">
-                  {renderState()}
-                  {!loading && !error && messages.length > 0 && (
-                    messages.map((message) => (
-                      <button
-                        key={message.id}
-                        onClick={() => handleSelectMessage(message)}
-                        className={`w-full text-left px-4 py-3 flex flex-col space-y-1 transition ${
-                          selectedMessage?.id === message.id ? 'bg-white' : 'hover:bg-white'
-                        } ${!message.is_read && activeTab === 'inbox' ? 'border-l-4 border-mdsc-blue-primary bg-blue-50/70' : ''}`}
-                      >
-            <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm text-gray-900">
-                            {activeTab === 'sent' ? message.recipient_name ?? message.recipient_email : message.sender_name ?? message.sender_email}
-                          </span>
-                          <span className="text-xs text-gray-400">{formatDateTime(message.created_at)}</span>
-                        </div>
-                        <span className="text-sm text-gray-700 line-clamp-1">{message.subject || '(Sans objet)'}</span>
-                        <span className="text-xs text-gray-500 line-clamp-1">{message.content}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
+            {activeTab === 'compose' ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <MessageComposer 
+                  onSend={handleComposerSend} 
+                  onCancel={() => setActiveTab('inbox')} 
+                />
               </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 divide-y">
+                    {renderState()}
+                    {!loading && !error && messages.length > 0 && (
+                      messages.map((message) => (
+                        <button
+                          key={message.id}
+                          onClick={() => handleSelectMessage(message)}
+                          className={`w-full text-left px-4 py-3 flex flex-col space-y-1 transition ${
+                            selectedMessage?.id === message.id ? 'bg-white' : 'hover:bg-white'
+                          } ${!message.is_read && activeTab === 'inbox' ? 'border-l-4 border-mdsc-blue-primary bg-blue-50/70' : ''}`}
+                        >
+              <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm text-gray-900">
+                              {activeTab === 'sent' 
+                                ? (message.recipient?.name || message.recipient?.email || 'Destinataire inconnu')
+                                : (message.sender?.name || message.sender?.email || 'Expéditeur inconnu')}
+                            </span>
+                            <span className="text-xs text-gray-400">{formatDateTime(message.created_at)}</span>
+                          </div>
+                          <span className="text-sm text-gray-700 line-clamp-1">{message.subject || '(Sans objet)'}</span>
+                          <span className="text-xs text-gray-500 line-clamp-1">{message.content}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
 
-              <div className="lg:col-span-2">
-                {selectedMessage ? (
+                <div className="lg:col-span-2">
+                  {selectedMessage ? (
                   <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
                     <div className="flex items-start justify-between">
               <div>
@@ -262,11 +321,7 @@ export default function StudentMessagesPage() {
                         <div className="text-sm text-gray-500 space-y-1">
                           <p>
                             <span className="font-medium text-gray-700">De :</span>{' '}
-                            {selectedMessage.sender_name || selectedMessage.sender_email}
-                          </p>
-                          <p>
-                            <span className="font-medium text-gray-700">À :</span>{' '}
-                            {selectedMessage.recipient_name || selectedMessage.recipient_email}
+                            {selectedMessage.sender?.name || selectedMessage.sender?.email || 'Expéditeur inconnu'}
                           </p>
                           <p>{formatDateTime(selectedMessage.created_at)}</p>
                         </div>
@@ -289,9 +344,10 @@ export default function StudentMessagesPage() {
                     <MailOpen className="h-12 w-12 text-gray-300 mb-3" />
                     <p>Sélectionnez un message pour l’afficher.</p>
                   </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </DashboardLayout>

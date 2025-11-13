@@ -9,9 +9,14 @@ export class ModuleService {
     const response = await apiRequest(`/modules/courses/${courseId}/modules`, {
       method: 'GET',
     });
-    console.log('📦 getCourseModules response:', response);
-    console.log('📦 getCourseModules data:', response.data);
-    return response.data;
+    
+    // Le backend retourne maintenant image_url formatée, on normalise juste pour compatibilité
+    const modules = Array.isArray(response.data) ? response.data : [];
+    return modules.map((module: any) => ({
+      ...module,
+      image_url: module.image_url || module.imageUrl || null,
+      imageUrl: module.image_url || module.imageUrl || null, // Pour compatibilité
+    }));
   }
 
   /**
