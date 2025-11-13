@@ -14,6 +14,7 @@ interface ConfirmModalProps {
   cancelText?: string;
   confirmButtonClass?: string;
   isLoading?: boolean;
+  variant?: 'danger' | 'default';
 }
 
 export default function ConfirmModal({
@@ -47,7 +48,7 @@ export default function ConfirmModal({
             </p>
           </div>
         </div>
-        
+
         <div className="flex justify-end space-x-3 mt-6">
           <button
             onClick={onClose}
