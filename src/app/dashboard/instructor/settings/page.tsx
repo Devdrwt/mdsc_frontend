@@ -106,51 +106,45 @@ export default function InstructorSettingsPage() {
   ]);
 
   useEffect(() => {
-    let mounted = true;
-    const loadPreferences = async () => {
+    // Charger les préférences depuis localStorage si disponibles
+    if (typeof window !== 'undefined') {
       try {
-        const preferences = await InstructorService.getPreferences();
-        if (!mounted || !preferences) return;
-        if (preferences.sections && preferences.sections.length) {
-          // Optionnel : on pourrait afficher les sections côté UI si besoin
-        }
-        if (preferences.notifications) {
-          setNotificationPreferences((prev) => ({
-            ...prev,
-            courseUpdates: preferences.notifications.course_updates ?? prev.courseUpdates,
-            studentActivity: preferences.notifications.student_activity ?? prev.studentActivity,
-            platformNews: preferences.notifications.platform_news ?? prev.platformNews,
-            weeklyDigest: preferences.notifications.weekly_digest ?? prev.weeklyDigest,
-          }));
-        }
-        if (preferences.security) {
-          setSecurityPreferences((prev) => ({
-            ...prev,
-            twoFactorAuth: preferences.security.two_factor_auth ?? prev.twoFactorAuth,
-            loginAlerts: preferences.security.login_alerts ?? prev.loginAlerts,
-            deviceTrust: preferences.security.device_trust ?? prev.deviceTrust,
-          }));
-        }
-        if (preferences.language) {
-          setCommunicationLanguage(preferences.language);
-        }
-        if (preferences.theme) {
-          setThemePreference(preferences.theme);
-        }
-        if (preferences.policies?.accepted) {
-          setPoliciesAccepted(true);
+        const storedPrefs = localStorage.getItem('instructor_preferences');
+        if (storedPrefs) {
+          const preferences = JSON.parse(storedPrefs);
+          if (preferences.notifications) {
+            setNotificationPreferences((prev) => ({
+              ...prev,
+              courseUpdates: preferences.notifications.course_updates ?? prev.courseUpdates,
+              studentActivity: preferences.notifications.student_activity ?? prev.studentActivity,
+              platformNews: preferences.notifications.platform_news ?? prev.platformNews,
+              weeklyDigest: preferences.notifications.weekly_digest ?? prev.weeklyDigest,
+            }));
+          }
+          if (preferences.security) {
+            setSecurityPreferences((prev) => ({
+              ...prev,
+              twoFactorAuth: preferences.security.two_factor_auth ?? prev.twoFactorAuth,
+              loginAlerts: preferences.security.login_alerts ?? prev.loginAlerts,
+              deviceTrust: preferences.security.device_trust ?? prev.deviceTrust,
+            }));
+          }
+          if (preferences.language) {
+            setCommunicationLanguage(preferences.language);
+          }
+          if (preferences.theme) {
+            setThemePreference(preferences.theme);
+          }
+          if (preferences.policies?.accepted) {
+            setPoliciesAccepted(true);
+          }
         }
       } catch (error) {
-        toast.error('Impossible de charger vos préférences', (error as Error)?.message);
+        console.error('Erreur lors du chargement des préférences:', error);
       } finally {
-        if (mounted) setPreferencesLoading(false);
+        setPreferencesLoading(false);
       }
-    };
-
-    loadPreferences();
-    return () => {
-      mounted = false;
-    };
+    }
   }, []);
 
   useEffect(() => {
@@ -199,12 +193,13 @@ export default function InstructorSettingsPage() {
           login_alerts: securityPreferences.loginAlerts,
           device_trust: securityPreferences.deviceTrust,
         },
-      } as Parameters<typeof InstructorService.updatePreferences>[0];
+      };
 
-      const updated = await InstructorService.updatePreferences(preferencesPayload);
-      if (updated.policies?.accepted) {
-        setPoliciesAccepted(true);
+      // Sauvegarder dans localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('instructor_preferences', JSON.stringify(preferencesPayload));
       }
+      
       toast.success('Préférences enregistrées', 'Vos paramètres seront pris en compte pour les prochaines sessions.');
     } catch (error) {
       toast.errorFromApi('Erreur', error, 'Impossible de sauvegarder vos préférences pour le moment.');

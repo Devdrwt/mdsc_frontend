@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
-import InstructorService, { InstructorPreferences } from '../../../../lib/services/instructorService';
+import InstructorService from '../../../../lib/services/instructorService';
 import toast from '../../../../lib/utils/toast';
 import { ShieldCheck, FileText, AlertTriangle, CheckCircle, Lock, Globe, Info } from 'lucide-react';
 
@@ -12,26 +12,27 @@ const POLICIES_VERSION = '2025-11-11';
 
 export default function InstructorPoliciesPage() {
   const [loading, setLoading] = useState(true);
-  const [preferences, setPreferences] = useState<InstructorPreferences | null>(null);
+  const [preferences, setPreferences] = useState<{ policies?: { accepted?: boolean; accepted_at?: string; version?: string } } | null>(null);
   const [ackProcessing, setAckProcessing] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    const loadPreferences = async () => {
-      try {
-        const prefs = await InstructorService.getPreferences();
-        if (mounted) setPreferences(prefs);
-      } catch (error) {
-        toast.error('Impossible de récupérer vos préférences', (error as Error)?.message);
-      } finally {
-        if (mounted) setLoading(false);
+    // Charger les préférences depuis localStorage
+    if (typeof window !== 'undefined') {
+      const accepted = localStorage.getItem('instructor_policies_accepted') === 'true';
+      const acceptedAt = localStorage.getItem('instructor_policies_accepted_at') || undefined;
+      const version = localStorage.getItem('instructor_policies_version') || POLICIES_VERSION;
+      
+      if (accepted) {
+        setPreferences({
+          policies: {
+            accepted: true,
+            accepted_at: acceptedAt,
+            version: version,
+          },
+        });
       }
-    };
-
-    loadPreferences();
-    return () => {
-      mounted = false;
-    };
+    }
+    setLoading(false);
   }, []);
 
   const alreadyAccepted = Boolean(preferences?.policies?.accepted && preferences?.policies?.accepted_at);
@@ -39,40 +40,17 @@ export default function InstructorPoliciesPage() {
   const acknowledgePolicies = async () => {
     try {
       setAckProcessing(true);
-      const updated = await InstructorService.acknowledgePolicies(POLICIES_VERSION);
       
       // Préparer les données des policies pour l'événement
-      const acceptedAt = updated.policies?.accepted_at || new Date().toISOString();
+      const acceptedAt = new Date().toISOString();
       
       // Mettre à jour le state avec les nouvelles préférences
-      // La réponse devrait contenir les policies avec accepted: true et accepted_at
-      setPreferences((prev) => {
-        const newPrefs = prev ? { ...prev } : {};
-        
-        // S'assurer que les policies sont correctement fusionnées
-        if (updated.policies) {
-          newPrefs.policies = {
-            ...newPrefs.policies,
-            ...updated.policies,
-            accepted: true,
-            accepted_at: acceptedAt,
-            version: updated.policies.version || POLICIES_VERSION,
-          };
-        } else {
-          // Si updated ne contient pas policies, on les crée
-          newPrefs.policies = {
-            accepted: true,
-            accepted_at: acceptedAt,
-            version: POLICIES_VERSION,
-          };
-        }
-        
-        // Fusionner les autres propriétés de updated
-        return {
-          ...newPrefs,
-          ...updated,
-          policies: newPrefs.policies,
-        };
+      setPreferences({
+        policies: {
+          accepted: true,
+          accepted_at: acceptedAt,
+          version: POLICIES_VERSION,
+        },
       });
       
       // Notifier les autres composants (comme le dashboard) que les politiques ont été acceptées
@@ -80,6 +58,7 @@ export default function InstructorPoliciesPage() {
         // Stocker dans localStorage pour persistance
         localStorage.setItem('instructor_policies_accepted', 'true');
         localStorage.setItem('instructor_policies_accepted_at', acceptedAt);
+        localStorage.setItem('instructor_policies_version', POLICIES_VERSION);
         
         // Déclencher un événement personnalisé pour synchroniser les autres pages
         window.dispatchEvent(new CustomEvent('policiesAccepted', { 

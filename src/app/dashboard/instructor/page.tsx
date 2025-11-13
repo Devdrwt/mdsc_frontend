@@ -254,14 +254,13 @@ export default function InstructorDashboard() {
       setNotificationsLoading(true);
 
       try {
-        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult, preferencesResult] = await Promise.allSettled([
+        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult] = await Promise.allSettled([
           InstructorService.getDashboard(),
           InstructorService.getCourses({ limit: 12 }),
           InstructorService.getEnrollmentsTrend('90d'),
           InstructorService.getRecentActivity(20),
           InstructorService.getUnreadMessagesCount(),
           InstructorService.getNotifications({ limit: 20 }),
-          InstructorService.getPreferences(),
         ]);
 
         if (!isMounted) return;
@@ -389,18 +388,9 @@ export default function InstructorDashboard() {
           setNotifications([]);
         }
 
-        if (preferencesResult.status === 'fulfilled') {
-          const prefs = preferencesResult.value ?? {};
-          // Vérifier aussi localStorage au cas où les politiques ont été acceptées récemment
-          const localStorageAccepted = typeof window !== 'undefined' 
-            ? localStorage.getItem('instructor_policies_accepted') === 'true'
-            : false;
-          setPoliciesAccepted(Boolean(prefs?.policies?.accepted) || localStorageAccepted);
-        } else if (preferencesResult.status === 'rejected') {
-          // Vérifier localStorage en fallback
-          const localStorageAccepted = typeof window !== 'undefined' 
-            ? localStorage.getItem('instructor_policies_accepted') === 'true'
-            : false;
+        // Vérifier localStorage pour les politiques acceptées
+        if (typeof window !== 'undefined') {
+          const localStorageAccepted = localStorage.getItem('instructor_policies_accepted') === 'true';
           setPoliciesAccepted(localStorageAccepted);
         }
       } catch (error) {
