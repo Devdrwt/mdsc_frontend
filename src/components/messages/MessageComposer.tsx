@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Mail, User, Send, Loader, X } from 'lucide-react';
 import { MessageService } from '../../lib/services/messageService';
-import AdminService from '../../lib/services/adminService';
 import toast from '../../lib/utils/toast';
 
 interface UserSearchResult {
@@ -48,24 +47,18 @@ export default function MessageComposer({
 
     setSearching(true);
     try {
-      const { users } = await AdminService.getUsers({ search: email, limit: 10 });
-      const normalizedResults = (users ?? [])
-        .map<UserSearchResult | null>((user, index) => {
+      // Utiliser la nouvelle méthode qui filtre selon le rôle de l'utilisateur
+      const users = await MessageService.searchUsersByEmail(email);
+      const normalizedResults = users
+        .map<UserSearchResult | null>((user) => {
           const emailValue = user.email ?? '';
           if (!emailValue) {
             return null;
           }
 
-          const displayName =
-            user.name ||
-            [user.first_name, user.last_name]
-              .filter(Boolean)
-              .join(' ')
-              .trim() ||
-            emailValue;
-
-          const roleLabel = user.role ?? user.role_name ?? 'utilisateur';
-          const rawId = user.id ?? user.user_id ?? emailValue ?? index;
+          const displayName = user.name || emailValue;
+          const roleLabel = user.role ?? 'utilisateur';
+          const rawId = user.id;
           const normalizedId = typeof rawId === 'number' ? rawId : String(rawId);
 
           return {

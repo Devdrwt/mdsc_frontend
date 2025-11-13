@@ -86,15 +86,24 @@ export default function Messages({ courseId }: MessagesProps) {
     setActiveTab('inbox');
   };
 
-  // Ouvrir + marquer lu
+  // Ouvrir + marquer lu (markAsRead marque automatiquement la notification comme lue côté backend)
   const handleOpenMessage = async (message: MessageEntry) => {
+    // Afficher immédiatement le message pour une meilleure UX
     setSelectedMessage(message);
-    if (!message.is_read && activeTab === 'inbox') {
+    
+    // Si le message n'est pas lu, marquer comme lu (et la notification associée)
+    if (!message.is_read && activeTab === 'inbox' && message.id) {
       try {
+        // markAsRead marque automatiquement la notification associée comme lue côté backend
         await MessageService.markAsRead(message.id);
         setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m));
-      } catch (error) {
-        console.error("Erreur marquage lu:", error);
+        setSelectedMessage({ ...message, is_read: true });
+      } catch (error: any) {
+        // Ignorer silencieusement les erreurs 404 (message non trouvé) - peut arriver si le message a été supprimé
+        if (error?.status !== 404) {
+          console.error("Erreur lors du marquage du message comme lu:", error);
+        }
+        // Continuer à afficher le message même en cas d'erreur
       }
     }
   };
@@ -315,10 +324,11 @@ export default function Messages({ courseId }: MessagesProps) {
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold text-gray-900 mb-3">{selectedMessage.subject || '(Sans objet)'}</h2>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                      {/* Expéditeur */}
                       <div className="flex items-center gap-2">
-                        {renderAvatar(getPerson(selectedMessage))}
+                        {renderAvatar(selectedMessage.sender)}
                         <span className="font-medium">
-                          {(activeTab === 'inbox' || activeTab === 'course' ? 'De:' : 'À:')} {formatPerson(getPerson(selectedMessage))}
+                          De: {formatPerson(selectedMessage.sender)}
                         </span>
                       </div>
                       {selectedMessage.message_type && selectedMessage.message_type !== 'direct' && (

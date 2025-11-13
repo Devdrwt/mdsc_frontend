@@ -144,7 +144,17 @@ export class MessageService {
   }
 
   static async markAsRead(id: string | number): Promise<void> {
-    await apiRequest(`/messages/${id}/read`, { method: 'PUT' });
+    try {
+      await apiRequest(`/messages/${id}/read`, { method: 'PUT' });
+    } catch (error: any) {
+      // Ignorer silencieusement les erreurs 404 (message non trouvé) - peut arriver si le message a été supprimé
+      if (error?.status === 404) {
+        console.debug('Message non trouvé lors du marquage comme lu (peut être supprimé):', id);
+        return;
+      }
+      // Relancer les autres erreurs
+      throw error;
+    }
   }
 
   static async deleteMessage(id: string | number): Promise<void> {
@@ -154,6 +164,11 @@ export class MessageService {
   static async getMessageStats(): Promise<MessageStats> {
     const response = await apiRequest('/messages/stats', { method: 'GET' });
     return response.data ?? { unread_count: 0, received_count: 0, sent_count: 0 };
+  }
+
+  // Alias pour compatibilité avec le code existant
+  static async getStats(): Promise<MessageStats> {
+    return this.getMessageStats();
   }
 
   static async searchUsersByEmail(email: string): Promise<UserInfo[]> {

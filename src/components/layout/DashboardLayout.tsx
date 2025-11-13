@@ -556,6 +556,13 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                               if (!notification.is_read) {
                                 handleMarkAsRead(notification.id);
                               }
+                              // Gérer action_url pour les messages (créé automatiquement par le backend)
+                              if (notification.metadata?.action_url) {
+                                router.push(notification.metadata.action_url);
+                                setNotificationsOpen(false);
+                                return;
+                              }
+                              // Gérer course_id pour les notifications de cours
                               if (notification.metadata?.course_id) {
                                 router.push(`/dashboard/admin/courses?courseId=${notification.metadata.course_id}`);
                                 setNotificationsOpen(false);
