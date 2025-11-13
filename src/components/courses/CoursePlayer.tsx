@@ -677,9 +677,9 @@ export default function CoursePlayer({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row min-h-screen ${className}`}>
+    <div className={`flex flex-col lg:flex-row h-screen ${className}`}>
       {/* Sidebar - Modules et Leçons */}
-      <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto max-h-[50vh] lg:max-h-none flex-shrink-0">
+      <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto flex-shrink-0 h-full">
         <div className="p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
           <h2 className="text-xl font-bold mb-2">{course.title}</h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -896,8 +896,8 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-white">
-        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3">
+      <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col">
+        <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
               <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
@@ -924,6 +924,7 @@ export default function CoursePlayer({
             </div>
           </div>
         </div>
+        <div className="flex-1 overflow-y-auto">
         {viewMode === 'quiz' && selectedQuizId ? (
           <div className="px-4 py-6 sm:px-8 sm:py-8">
             <div className="mb-6">
@@ -993,6 +994,7 @@ export default function CoursePlayer({
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   );
