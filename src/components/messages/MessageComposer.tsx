@@ -121,7 +121,7 @@ export default function MessageComposer({
         recipient_id: selectedUser?.id,
         subject,
         content,
-        type: 'direct',
+        message_type: 'direct',
       });
       toast.success('Message envoyé', 'Votre message a été envoyé avec succès');
       

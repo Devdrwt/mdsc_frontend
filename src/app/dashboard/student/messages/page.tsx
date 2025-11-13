@@ -78,15 +78,35 @@ export default function StudentMessagesPage() {
       setError(null);
 
       let response: PaginatedMessages;
-      if (query.trim()) {
-        response = await MessageService.search(query, { page, limit: 20 });
-      } else if (tab === 'sent') {
+      if (tab === 'sent') {
         response = await MessageService.getSentMessages({ page, limit: 20 });
       } else {
         response = await MessageService.getReceivedMessages({ page, limit: 20 });
       }
 
-      setMessages(response.messages ?? []);
+      let messages = response.messages ?? [];
+      
+      // Filtrer les messages côté client si une recherche est effectuée
+      if (query.trim()) {
+        const searchLower = query.toLowerCase();
+        messages = messages.filter(message => {
+          const subject = (message.subject || '').toLowerCase();
+          const content = (message.content || '').toLowerCase();
+          const senderName = (message.sender?.name || '').toLowerCase();
+          const senderEmail = (message.sender?.email || '').toLowerCase();
+          const recipientName = (message.recipient?.name || '').toLowerCase();
+          const recipientEmail = (message.recipient?.email || '').toLowerCase();
+          
+          return subject.includes(searchLower) ||
+                 content.includes(searchLower) ||
+                 senderName.includes(searchLower) ||
+                 senderEmail.includes(searchLower) ||
+                 recipientName.includes(searchLower) ||
+                 recipientEmail.includes(searchLower);
+        });
+      }
+
+      setMessages(messages);
       setPagination(response.pagination);
 
       if (selectedMessage) {

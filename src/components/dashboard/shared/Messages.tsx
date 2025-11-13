@@ -387,7 +387,7 @@ export default function Messages({ courseId }: MessagesProps) {
         title="Supprimer le message"
         message="Cette action est irréversible."
         confirmText="Supprimer"
-        variant="danger"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
       />
     </div>
   );
