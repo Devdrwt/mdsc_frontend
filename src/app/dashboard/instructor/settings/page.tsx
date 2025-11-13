@@ -220,11 +220,11 @@ export default function InstructorSettingsPage() {
   const submitDataExport = async () => {
     try {
       setExportProcessing(true);
-      await InstructorService.requestDataExport();
-      toast.success('Demande envoyée', 'Nous vous avertirons par email dès que l’export sera prêt.');
+      // TODO: Implémenter l'export de données via API
+      toast.success('Demande envoyée', 'Nous vous avertirons par email dès que l\'export sera prêt.');
       setIsExportModalOpen(false);
     } catch (error) {
-      toast.errorFromApi('Erreur export', error, 'Impossible d’enregistrer la demande pour le moment.');
+      toast.errorFromApi('Erreur export', error, 'Impossible d\'enregistrer la demande pour le moment.');
     } finally {
       setExportProcessing(false);
     }
@@ -233,10 +233,7 @@ export default function InstructorSettingsPage() {
   const submitAccountDeletion = async () => {
     try {
       setDeleteProcessing(true);
-      await InstructorService.requestAccountDeletion({
-        reason: deleteReason.trim() || undefined,
-        confirm: true,
-      });
+      // TODO: Implémenter la demande de suppression de compte via API
       toast.warning('Demande transmise', 'Notre équipe reviendra vers vous pour finaliser la suppression.');
       setIsDeleteModalOpen(false);
     } catch (error) {

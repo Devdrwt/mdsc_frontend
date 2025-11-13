@@ -28,6 +28,8 @@ import {
   ArrowRight,
   Bookmark,
   Bell,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -195,6 +197,7 @@ export default function StudentDashboard() {
   const [badgesError, setBadgesError] = useState<string | null>(null);
   const [certificatesError, setCertificatesError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isActivitiesExpanded, setIsActivitiesExpanded] = useState(false);
 
   const formatDateTime = (iso?: string) => {
     if (!iso) return 'Non disponible';
@@ -819,10 +822,25 @@ export default function StudentDashboard() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-              <Clock className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-              Activité Récente
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Clock className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
+                Activité Récente
+              </h3>
+              {recentActivity.length > 5 && (
+                <button
+                  onClick={() => setIsActivitiesExpanded(!isActivitiesExpanded)}
+                  className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark flex items-center space-x-1 transition-colors"
+                >
+                  <span>{isActivitiesExpanded ? 'Réduire' : `Voir tout (${recentActivity.length})`}</span>
+                  {isActivitiesExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+            </div>
             {activityError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {activityError}
@@ -830,7 +848,7 @@ export default function StudentDashboard() {
             )}
             {recentActivity.length > 0 ? (
             <div className="space-y-4">
-              {recentActivity.map((activity) => (
+              {(isActivitiesExpanded ? recentActivity : recentActivity.slice(0, 5)).map((activity) => (
                   <div
                     key={activity.id}
                     className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
