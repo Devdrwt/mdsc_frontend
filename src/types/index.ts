@@ -1,4 +1,22 @@
 // Types pour les cours (selon nouvelle architecture)
+export interface InstructorInfo {
+  id: string;
+  name?: string;
+  avatar?: string;
+  first_name?: string;
+  last_name?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface CourseMetrics {
+  enrollment_count?: number;
+  average_rating?: number;
+  review_count?: number;
+  total_views?: number;
+  total_lessons?: number;
+}
+
 export interface Course {
   id: number | string; // Supporté pour compatibilité
   title: string;
@@ -11,17 +29,15 @@ export interface Course {
   language: string;
   thumbnail_url?: string;
   thumbnail?: string; // Alias pour CourseCard
-  instructor: string | {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
+  instructor: string | InstructorInfo;
   students?: number; // Alias pour enrollment_count pour CourseCard
+  totalStudents?: number;
   price?: number;
   prerequisite_course_id?: string | number;
   is_published: boolean;
   enrollment_count: number;
   rating: number;
+  metrics?: CourseMetrics;
   modules?: Module[];
   createdAt?: string;
   updatedAt?: string;
