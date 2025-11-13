@@ -27,6 +27,8 @@ export default function CoursePlayer({
   className = '',
 }: CoursePlayerProps) {
   const router = useRouter();
+
+  // Le thème est géré par ThemeContext (comme dans DashboardLayout), pas besoin de l'importer ici
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(
     initialModuleId ? parseInt(initialModuleId, 10) : (course.modules && course.modules.length > 0 ? course.modules[0].id : null)
   );
@@ -41,6 +43,7 @@ export default function CoursePlayer({
   const [selectedQuizId, setSelectedQuizId] = useState<string | null>(null);
   const [selectedEvaluationId, setSelectedEvaluationId] = useState<string | null>(null);
   const [moduleQuizzes, setModuleQuizzes] = useState<Map<number, string>>(new Map()); // moduleId -> quizId
+  const [completedModuleQuizzes, setCompletedModuleQuizzes] = useState<Set<number>>(new Set()); // moduleId des modules dont le quiz est réussi
   const [evaluationId, setEvaluationId] = useState<string | null>(null);
   const [moduleProgressMap, setModuleProgressMap] = useState<Map<number, number>>(new Map());
   const [totalDurationMinutes, setTotalDurationMinutes] = useState<number>(0);
@@ -109,6 +112,8 @@ export default function CoursePlayer({
         router.replace(`/learn/${course.id}?module=${moduleId}&lesson=${fallbackLesson.id}`);
       }
     }
+    // Ne pas forcer l'ouverture du module automatiquement quand une leçon est sélectionnée
+    // Laisser l'utilisateur contrôler l'ouverture/fermeture manuellement
   }, [course.modules, completedLessons, unlockedLessons, selectedLessonId, router, getOrderedLessons]);
 
   // Charger les quiz des modules et l'évaluation finale
@@ -123,27 +128,67 @@ export default function CoursePlayer({
         setEvaluationId(evalData.id);
       }
 
-      // Charger les quiz de chaque module
+      // Charger les quiz de chaque module et vérifier leur statut de complétion
       if (course.modules && enrollmentId) {
         const quizzesMap = new Map<number, string>();
+        const completedQuizzesSet = new Set<number>();
+        
         for (const module of course.modules) {
           // Vérifier si le module contient déjà l'ID du quiz
           const moduleAny = module as any;
-          if (moduleAny.quiz_id) {
-            quizzesMap.set(module.id, moduleAny.quiz_id);
+          // Vérifier plusieurs propriétés possibles pour le quiz_id
+          const quizId = moduleAny.quiz_id || moduleAny.module_quiz_id || (moduleAny as any).quizId;
+          
+          if (quizId) {
+            console.log(`✅ Quiz trouvé pour le module ${module.id}: quiz_id=${quizId}`);
+            quizzesMap.set(module.id, quizId.toString());
+            
+            // Vérifier si le quiz est complété/réussi
+            try {
+              const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
+              const quizData = (quiz as any)?.quiz || quiz;
+              const previousAttempts = (quiz as any)?.previous_attempts || [];
+              
+              // Vérifier si une tentative a réussi (is_passed = true)
+              const hasPassedAttempt = previousAttempts.some((attempt: any) => attempt.is_passed === true || attempt.is_passed === 1);
+              if (hasPassedAttempt) {
+                completedQuizzesSet.add(module.id);
+                console.log(`✅ Quiz du module ${module.id} est réussi`);
+              }
+            } catch (error) {
+              console.log(`⚠️ Erreur lors de la vérification du quiz pour le module ${module.id}:`, error);
+            }
           } else {
             // Essayer de récupérer le quiz via l'API pour les étudiants
             try {
               const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
-              if (quiz?.id) {
-                quizzesMap.set(module.id, quiz.id);
+              // Le quiz peut être dans quiz.id ou directement dans l'objet
+              const quizId = quiz?.id || (quiz as any)?.quiz?.id;
+              if (quizId) {
+                console.log(`✅ Quiz récupéré via API pour le module ${module.id}: quiz_id=${quizId}`);
+                quizzesMap.set(module.id, quizId.toString());
+                
+                // Vérifier si le quiz est complété/réussi
+                const quizData = (quiz as any)?.quiz || quiz;
+                const previousAttempts = (quiz as any)?.previous_attempts || [];
+                const hasPassedAttempt = previousAttempts.some((attempt: any) => attempt.is_passed === true || attempt.is_passed === 1);
+                if (hasPassedAttempt) {
+                  completedQuizzesSet.add(module.id);
+                  console.log(`✅ Quiz du module ${module.id} est réussi`);
+                }
+              } else {
+                console.log(`⚠️ Pas de quiz pour le module ${module.id} (quiz=${JSON.stringify(quiz)})`);
               }
             } catch (error) {
               // Pas de quiz pour ce module, continuer
+              console.log(`⚠️ Erreur lors de la récupération du quiz pour le module ${module.id}:`, error);
             }
           }
         }
+        console.log(`📊 Total quiz chargés: ${quizzesMap.size}`, Array.from(quizzesMap.entries()));
+        console.log(`✅ Quiz complétés: ${completedQuizzesSet.size}`, Array.from(completedQuizzesSet));
         setModuleQuizzes(quizzesMap);
+        setCompletedModuleQuizzes(completedQuizzesSet);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des quiz et évaluation:', error);
@@ -292,8 +337,13 @@ export default function CoursePlayer({
   useEffect(() => {
     if (selectedModuleId && !selectedLessonId && selectedModule?.lessons && selectedModule.lessons.length > 0) {
       const firstLesson = selectedModule.lessons[0];
-      setSelectedLessonId(firstLesson.id);
-      router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${firstLesson.id}`);
+      // S'assurer qu'on désélectionne toute leçon précédente
+      setSelectedLessonId(null);
+      // Puis sélectionner la première leçon du module
+      setTimeout(() => {
+        setSelectedLessonId(firstLesson.id);
+        router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${firstLesson.id}`);
+      }, 0);
     }
   }, [selectedModuleId]);
 
@@ -305,8 +355,20 @@ export default function CoursePlayer({
       return;
     }
 
+    // S'assurer que le module de la leçon est ouvert/expanded
+    const lessonModuleId = lesson.module_id ?? (lesson as any).moduleId;
+    
+    // D'abord, désélectionner l'ancienne leçon en mettant à jour selectedLessonId
+    // Puis ouvrir le module si nécessaire
+    if (lessonModuleId && lessonModuleId !== selectedModuleId) {
+      setSelectedModuleId(lessonModuleId);
+    }
+    
+    // Mettre à jour la leçon sélectionnée (cela désélectionnera automatiquement l'ancienne)
     setSelectedLessonId(lesson.id);
-    router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${lesson.id}`);
+    
+    // Mettre à jour l'URL
+    router.replace(`/learn/${course.id}?module=${lessonModuleId || selectedModuleId}&lesson=${lesson.id}`);
   };
 
   const handleLessonComplete = async () => {
@@ -415,10 +477,22 @@ export default function CoursePlayer({
           return true;
       }
 
+      // Vérifier que tous les modules précédents sont complétés
+      // (toutes les leçons + quiz réussi si présent)
       const previousModules = course.modules?.slice(0, moduleIndex) || [];
-      const previousModulesCompleted = previousModules.every((module) =>
-        (module.lessons || []).every((moduleLesson) => completedLessons.has(moduleLesson.id))
-      );
+      const previousModulesCompleted = previousModules.every((module) => {
+        // Vérifier que toutes les leçons sont complétées
+        const allLessonsCompleted = (module.lessons || []).every((moduleLesson) => completedLessons.has(moduleLesson.id));
+        if (!allLessonsCompleted) return false;
+        
+        // Si le module a un quiz, vérifier qu'il est réussi (obligatoire)
+        if (moduleQuizzes.has(module.id)) {
+          return completedModuleQuizzes.has(module.id);
+        }
+        
+        // Pas de quiz, le module est complété
+        return true;
+      });
 
       return previousModulesCompleted;
     }
@@ -433,17 +507,64 @@ export default function CoursePlayer({
 
   const getModuleProgress = (module: Module): number => {
     const moduleId = module.id;
-    if (moduleProgressMap.has(moduleId)) {
-      return moduleProgressMap.get(moduleId) ?? 0;
+    
+    // Si le module n'a pas de leçons, retourner 0
+    if (!module.lessons || module.lessons.length === 0) {
+      // Si le module a un quiz, vérifier s'il est complété
+      if (moduleQuizzes.has(moduleId)) {
+        return completedModuleQuizzes.has(moduleId) ? 100 : 0;
+      }
+      return 0;
     }
-
-    if (!module.lessons || module.lessons.length === 0) return 0;
-    const completed = module.lessons.filter((l) => completedLessons.has(l.id)).length;
-    return (completed / module.lessons.length) * 100;
+    
+    // Calculer la progression des leçons
+    const completedLessonsCount = module.lessons.filter((l) => completedLessons.has(l.id)).length;
+    const lessonsProgress = (completedLessonsCount / module.lessons.length) * 100;
+    
+    // Si toutes les leçons sont complétées
+    if (lessonsProgress === 100) {
+      // Vérifier si le module a un quiz
+      if (moduleQuizzes.has(moduleId)) {
+        // Le quiz est obligatoire : le module n'est complété que si le quiz est réussi
+        if (completedModuleQuizzes.has(moduleId)) {
+          return 100; // Toutes les leçons + quiz réussi = 100%
+        } else {
+          // Toutes les leçons complétées mais quiz non réussi = 90% (pour indiquer qu'il reste le quiz)
+          return 90;
+        }
+      }
+      // Pas de quiz, le module est complété à 100%
+      return 100;
+    }
+    
+    // Sinon, retourner la progression des leçons uniquement
+    return lessonsProgress;
   };
 
   const isModuleCompleted = (module: Module): boolean => {
-    return getModuleProgress(module) === 100;
+    const moduleId = module.id;
+    
+    // Vérifier que toutes les leçons sont complétées
+    if (!module.lessons || module.lessons.length === 0) {
+      // Si pas de leçons mais un quiz, vérifier le quiz
+      if (moduleQuizzes.has(moduleId)) {
+        return completedModuleQuizzes.has(moduleId);
+      }
+      return false;
+    }
+    
+    const allLessonsCompleted = module.lessons.every((l) => completedLessons.has(l.id));
+    if (!allLessonsCompleted) {
+      return false;
+    }
+    
+    // Si toutes les leçons sont complétées, vérifier le quiz (obligatoire si présent)
+    if (moduleQuizzes.has(moduleId)) {
+      return completedModuleQuizzes.has(moduleId);
+    }
+    
+    // Pas de quiz, le module est complété
+    return true;
   };
 
   const handleQuizClick = (moduleId: number) => {
@@ -468,8 +589,18 @@ export default function CoursePlayer({
   };
 
   const handleQuizComplete = (result: any) => {
+    // Si le quiz est réussi, ajouter le module aux quiz complétés
+    if (result?.passed && selectedModuleId) {
+      setCompletedModuleQuizzes((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(selectedModuleId!);
+        return newSet;
+      });
+    }
     // Recharger la progression après complétion du quiz
     loadProgress();
+    // Recharger les quiz pour mettre à jour les statuts
+    loadCourseQuizzesAndEvaluation();
     // Retourner aux leçons
     handleBackToLesson();
   };
@@ -546,9 +677,9 @@ export default function CoursePlayer({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row min-h-screen bg-gray-50 dark:bg-gray-900 ${className}`}>
+    <div className={`flex flex-col lg:flex-row min-h-screen ${className}`}>
       {/* Sidebar - Modules et Leçons */}
-      <aside className="w-full lg:w-80 bg-white dark:bg-gray-800 border-b lg:border-b-0 lg:border-r border-gray-200 dark:border-gray-700 overflow-y-auto max-h-[50vh] lg:max-h-none flex-shrink-0">
+      <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto max-h-[50vh] lg:max-h-none flex-shrink-0">
         <div className="p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
           <h2 className="text-xl font-bold mb-2">{course.title}</h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -601,22 +732,32 @@ export default function CoursePlayer({
             const isExpanded = selectedModuleId === module.id;
 
             return (
-              <div key={module.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 <button
-                  onClick={() => setSelectedModuleId(isExpanded ? null : module.id)}
-                  className="w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Permettre l'ouverture/fermeture manuelle des modules
+                    if (isExpanded) {
+                      // Fermer le module si on clique dessus quand il est ouvert
+                      setSelectedModuleId(null);
+                    } else {
+                      // Ouvrir le module si on clique dessus quand il est fermé
+                      setSelectedModuleId(module.id);
+                    }
+                  }}
+                  className="w-full p-4 text-left hover:bg-gray-50 transition-colors flex items-center justify-between"
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">{module.title}</h3>
+                      <h3 className="font-semibold text-gray-900">{module.title}</h3>
                       {moduleProgress === 100 && (
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    <p className="text-xs text-gray-500 mb-2">
                       {module.lessons?.length || 0} leçons • {module.lessons?.reduce((sum, l) => sum + getLessonDurationMinutes(l), 0) || 0} min
                     </p>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div
                         className="bg-mdsc-blue-primary h-1.5 rounded-full transition-all"
                         style={{ width: `${moduleProgress}%` }}
@@ -624,25 +765,60 @@ export default function CoursePlayer({
                     </div>
                   </div>
                   <ChevronRight
-                    className={`h-5 w-5 text-gray-400 dark:text-gray-500 transition-transform ${
+                    className={`h-5 w-5 text-gray-400 transition-transform ${
                       isExpanded ? 'rotate-90' : ''
                     }`}
                   />
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                    {/* Quiz du module (si disponible et module complété) */}
-                    {isModuleCompleted(module) && moduleQuizzes.has(module.id) && (
+                  <div className="border-t border-gray-200 bg-gray-50">
+                    {/* Quiz du module (si disponible) */}
+                    {moduleQuizzes.has(module.id) && (
                       <button
                         onClick={() => handleQuizClick(module.id)}
-                        className="w-full p-3 text-left text-sm transition-colors border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50"
+                        disabled={!(module.lessons && module.lessons.every((l) => completedLessons.has(l.id)))}
+                            className={`w-full p-3 text-left text-sm transition-colors border-b border-gray-200 ${
+                          // Le quiz est accessible si toutes les leçons sont complétées (même si le quiz n'est pas encore réussi)
+                          module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                            ? 'bg-purple-50 hover:bg-purple-100 cursor-pointer'
+                            : 'bg-gray-100 opacity-60 cursor-not-allowed'
+                        }`}
                       >
                         <div className="flex items-center space-x-2">
-                          <Award className="h-4 w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                          <Award className={`h-4 w-4 flex-shrink-0 ${
+                            module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                              ? completedModuleQuizzes.has(module.id)
+                                ? 'text-green-600'
+                                : 'text-purple-600'
+                              : 'text-gray-400'
+                          }`} />
                           <div className="flex-1">
-                            <p className="font-medium text-purple-900 dark:text-purple-300">Quiz du module</p>
-                            <p className="text-xs text-purple-600 dark:text-purple-400">Passer le quiz pour obtenir un badge</p>
+                            <p className={`font-medium ${
+                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? completedModuleQuizzes.has(module.id)
+                                  ? 'text-green-900'
+                                  : 'text-purple-900'
+                                : 'text-gray-600'
+                            }`}>
+                              Quiz du module
+                              {completedModuleQuizzes.has(module.id) && (
+                                <span className="ml-2 text-xs text-green-600">✓ Réussi</span>
+                              )}
+                            </p>
+                            <p className={`text-xs ${
+                              module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? completedModuleQuizzes.has(module.id)
+                                  ? 'text-green-600'
+                                  : 'text-purple-600'
+                                : 'text-gray-500'
+                            }`}>
+                              {completedModuleQuizzes.has(module.id)
+                                ? 'Quiz réussi - Module complété'
+                                : module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
+                                ? 'Passer le quiz pour compléter le module (obligatoire)'
+                                : 'Complétez toutes les leçons du module pour accéder au quiz'}
+                            </p>
                           </div>
                         </div>
                       </button>
@@ -652,7 +828,8 @@ export default function CoursePlayer({
                     {module.lessons && module.lessons.map((lesson, lessonIndex) => {
                       const isCompleted = completedLessons.has(lesson.id);
                       const isLocked = isLessonLocked(lesson);
-                      const isSelected = selectedLessonId === lesson.id;
+                      // Une seule leçon peut être sélectionnée à la fois - vérification stricte
+                      const isSelected = selectedLessonId !== null && selectedLessonId === lesson.id;
 
                       return (
                         <button
@@ -660,33 +837,37 @@ export default function CoursePlayer({
                           onClick={() => !isLocked && handleLessonSelect(lesson)}
                           disabled={isLocked}
                           className={`
-                            w-full p-3 text-left text-sm transition-colors border-b border-gray-200 dark:border-gray-700 last:border-b-0
-                            ${isSelected ? 'bg-mdsc-blue-primary text-white dark:bg-mdsc-blue-primary' : 'hover:bg-white dark:hover:bg-gray-800'}
+                            w-full p-3 text-left text-sm transition-all duration-200 border-b border-gray-200 last:border-b-0
+                            ${isSelected 
+                              ? 'bg-mdsc-blue-primary text-white shadow-md' 
+                              : isCompleted 
+                                ? 'bg-green-50 hover:bg-green-100' 
+                                : 'hover:bg-white'
+                            }
                             ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                            ${isCompleted && !isSelected ? 'bg-green-50 dark:bg-green-900/20' : ''}
                           `}
                         >
                           <div className="flex items-center space-x-2">
                             {isLocked ? (
-                              <Lock className="h-4 w-4 flex-shrink-0" />
+                              <Lock className={`h-4 w-4 flex-shrink-0 ${isSelected ? 'text-white/80' : 'text-gray-400'}`} />
                             ) : isCompleted ? (
-                              <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
+                              <CheckCircle className={`h-4 w-4 flex-shrink-0 ${isSelected ? 'text-white' : 'text-green-600'}`} />
                             ) : (
-                              <div className="h-4 w-4 flex-shrink-0 rounded-full border-2 border-gray-300" />
+                              <div className={`h-4 w-4 flex-shrink-0 rounded-full border-2 ${isSelected ? 'border-white/50' : 'border-gray-300'}`} />
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                              <p className={`font-medium truncate ${isSelected ? 'text-white' : 'text-gray-900'}`}>
                                 {lesson.title}
                               </p>
                               <div className="flex items-center space-x-2 mt-1">
-                                <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                                <p className={`text-xs ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
                                   {lesson.duration || 0} min
                                 </p>
                                 {isLocked && (
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     isSelected 
                                       ? 'bg-white/20 text-white' 
-                                      : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                                      : 'bg-yellow-100 text-yellow-800'
                                   }`}>
                                     Verrouillée
                                   </span>
@@ -695,7 +876,7 @@ export default function CoursePlayer({
                                   <span className={`text-xs px-2 py-0.5 rounded ${
                                     isSelected 
                                       ? 'bg-white/20 text-white' 
-                                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                                      : 'bg-gray-200 text-gray-600'
                                   }`}>
                                     {lesson.contentType}
                                   </span>
@@ -715,40 +896,42 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-900">
-        <div className="sticky top-0 z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-            <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
-              <Image
-                src="/mdsc-logo1.png"
-                alt="Maison de la Société Civile"
-                width={160}
-                height={48}
-                className="h-10 w-auto object-contain"
-                priority
-              />
-            </Link>
-            <Link
-              href="/dashboard/student/courses"
-              className="inline-flex items-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour à mes cours
-            </Link>
-          </div>
-          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-semibold text-gray-900 dark:text-white">{Math.round(courseProgress)}%</span>
-            <span className="ml-1">complété</span>
+      <main className="flex-1 overflow-y-auto bg-white">
+        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
+              <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
+                <Image
+                  src="/mdsc-logo1.png"
+                  alt="Maison de la Société Civile"
+                  width={160}
+                  height={48}
+                  className="h-10 w-auto object-contain"
+                  priority
+                />
+              </Link>
+              <Link
+                href="/dashboard/student/courses"
+                className="inline-flex items-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Retour à mes cours
+              </Link>
+            </div>
+            <div className="flex items-center text-xs sm:text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
+              <span className="ml-1">complété</span>
+            </div>
           </div>
         </div>
         {viewMode === 'quiz' && selectedQuizId ? (
           <div className="px-4 py-6 sm:px-8 sm:py-8">
-            <div className="mb-4">
+            <div className="mb-6">
               <button
                 onClick={handleBackToLesson}
-                className="text-blue-600 hover:text-blue-700 flex items-center space-x-2"
+                className="inline-flex items-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
               >
-                <ChevronRight className="h-4 w-4 rotate-180" />
+                <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
                 <span>Retour aux leçons</span>
               </button>
             </div>
@@ -762,12 +945,12 @@ export default function CoursePlayer({
           </div>
         ) : viewMode === 'evaluation' && selectedEvaluationId ? (
           <div className="px-4 py-6 sm:px-8 sm:py-8">
-            <div className="mb-4">
+            <div className="mb-6">
               <button
                 onClick={handleBackToLesson}
-                className="text-blue-600 hover:text-blue-700 flex items-center space-x-2"
+                className="inline-flex items-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
               >
-                <ChevronRight className="h-4 w-4 rotate-180" />
+                <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
                 <span>Retour aux leçons</span>
               </button>
             </div>
@@ -792,10 +975,10 @@ export default function CoursePlayer({
           <div className="h-full flex items-center justify-center px-4 py-6 sm:px-8 sm:py-8">
             <div className="text-center space-y-4">
               <BookOpen className="h-16 w-16 text-gray-400 mx-auto" />
-              <h3 className="text-xl font-semibold text-gray-700">
+              <h3 className="text-xl font-semibold text-gray-900">
                 Sélectionnez une leçon pour commencer
               </h3>
-              <p className="text-gray-500">
+              <p className="text-gray-600">
                 Choisissez un module dans la barre latérale pour voir les leçons disponibles
               </p>
               {evaluationId && (

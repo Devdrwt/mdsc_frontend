@@ -193,23 +193,75 @@ export class CourseService {
     const response = await apiRequest(`/courses/${id}`, {
       method: 'GET',
     });
-    // Le backend renvoie { course, modules, lessons, quizzes }
+    // Le backend renvoie { course, modules (avec lessons incluses), quizzes }
     if (response.data?.course) {
       const payload: any = response.data;
       const course: any = { ...payload.course };
 
-      const lessons: any[] = Array.isArray(payload.lessons) ? payload.lessons : [];
+      // Les modules contiennent déjà leurs leçons si le backend les a incluses
       const modules: any[] = Array.isArray(payload.modules)
-        ? payload.modules.map((module: any) => ({
-            ...module,
-            lessons: lessons.filter((lesson) => lesson.module_id === module.id),
-          }))
+        ? payload.modules.map((module: any) => {
+            // Si le module a déjà des leçons, les utiliser directement
+            if (Array.isArray(module.lessons) && module.lessons.length > 0) {
+              return {
+                ...module,
+                lessons: module.lessons.map((lesson: any) => {
+                  // Créer l'objet mediaFile si les données médias sont disponibles
+                  let mediaFile: any = null;
+                  const mediaFileId = lesson.media_file_id || lesson.media_file_id_from_join;
+                  if (mediaFileId || lesson.media_url || lesson.file_category) {
+                    mediaFile = {
+                      id: mediaFileId || lesson.id,
+                      url: lesson.media_url || lesson.content_url || lesson.video_url || '',
+                      thumbnail_url: lesson.thumbnail_url,
+                      thumbnailUrl: lesson.thumbnail_url,
+                      file_category: lesson.file_category,
+                      fileCategory: lesson.file_category,
+                      original_filename: lesson.original_filename || '',
+                      originalFilename: lesson.original_filename || '',
+                      file_size: lesson.file_size || 0,
+                      fileSize: lesson.file_size || 0,
+                      file_type: lesson.file_type || '',
+                      fileType: lesson.file_type || '',
+                      lesson_id: lesson.id,
+                      lessonId: lesson.id,
+                    };
+                  }
+
+                  return {
+                    ...lesson,
+                    module_id: module.id,
+                    moduleId: module.id,
+                    order_index: lesson.order_index ?? lesson.orderIndex ?? lesson.order ?? 0,
+                    order: lesson.order_index ?? lesson.orderIndex ?? lesson.order ?? 0,
+                    duration: lesson.duration_minutes ?? lesson.duration ?? 0,
+                    duration_minutes: lesson.duration_minutes ?? lesson.duration ?? 0,
+                    content_type: lesson.content_type ?? 'text',
+                    contentType: lesson.content_type ?? 'text',
+                    content_text: lesson.content_text ?? lesson.content ?? '',
+                    contentText: lesson.content_text ?? lesson.content ?? '',
+                    content_url: lesson.content_url ?? lesson.video_url ?? null,
+                    contentUrl: lesson.content_url ?? lesson.video_url ?? null,
+                    media_file_id: lesson.media_file_id,
+                    mediaFileId: lesson.media_file_id,
+                    mediaFile: mediaFile,
+                    is_published: lesson.is_published ?? true,
+                    isPublished: lesson.is_published ?? true,
+                  };
+                }),
+              };
+            }
+            // Sinon, retourner le module tel quel (pour compatibilité)
+            return module;
+          })
         : [];
 
       if (modules.length > 0) {
         course.modules = modules;
       }
 
+      // Si pas de modules mais des leçons séparées (ancien format)
+      const lessons: any[] = Array.isArray(payload.lessons) ? payload.lessons : [];
       if (lessons.length > 0 && (!course.modules || course.modules.length === 0)) {
         course.lessons = lessons;
       }

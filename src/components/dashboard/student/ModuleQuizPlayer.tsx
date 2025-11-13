@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Award, AlertCircle, Loader, Trophy } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Award, AlertCircle, Loader, Trophy, ChevronRight } from 'lucide-react';
 import { quizService, QuizResult } from '../../../lib/services/quizService';
 import toast from '../../../lib/utils/toast';
 import ConfirmModal from '../../ui/ConfirmModal';
@@ -22,8 +22,15 @@ interface ModuleQuiz {
   title: string;
   description: string;
   passing_score: number;
+  max_attempts?: number;
   duration_minutes?: number;
   questions: QuizQuestion[];
+}
+
+interface QuizAttemptInfo {
+  previous_attempts?: any[];
+  can_attempt?: boolean;
+  remaining_attempts?: number;
 }
 
 interface ModuleQuizPlayerProps {
@@ -51,6 +58,7 @@ export default function ModuleQuizPlayer({
   const [showResults, setShowResults] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
+  const [attemptInfo, setAttemptInfo] = useState<QuizAttemptInfo | null>(null);
 
   useEffect(() => {
     loadQuiz();
@@ -78,6 +86,8 @@ export default function ModuleQuizPlayer({
       setLoading(true);
       // Utiliser l'endpoint spécifique si enrollmentId est fourni
       let quizData: ModuleQuiz;
+      let attemptInfoData: QuizAttemptInfo | null = null;
+      
       if (enrollmentId) {
         const quiz = await quizService.getModuleQuizForStudent(enrollmentId, moduleId);
         if (!quiz) {
@@ -85,12 +95,19 @@ export default function ModuleQuizPlayer({
         }
         // S'assurer que l'ID est défini
         quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
+        // Extraire les informations sur les tentatives
+        attemptInfoData = {
+          previous_attempts: (quiz as any).previous_attempts || [],
+          can_attempt: (quiz as any).can_attempt !== false,
+          remaining_attempts: (quiz as any).remaining_attempts || (quizData.max_attempts ? Math.max(0, quizData.max_attempts - ((quiz as any).previous_attempts?.length || 0)) : undefined)
+        };
       } else {
         const quiz = await quizService.getQuizForStudent(quizId);
         // S'assurer que l'ID est défini
         quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
       }
       setQuiz(quizData);
+      setAttemptInfo(attemptInfoData);
       
       // Initialiser le timer si durée limitée
       if (quizData.duration_minutes) {
@@ -104,6 +121,11 @@ export default function ModuleQuizPlayer({
     }
   };
 
+  // Calculer sortedQuestions une seule fois pour éviter la duplication
+  const sortedQuestions = quiz?.questions?.sort((a, b) => (a.order_index || 0) - (b.order_index || 0)) || [];
+  const currentQuestion = sortedQuestions[currentQuestionIndex];
+  const hasCurrentAnswer = currentQuestion ? (answers[currentQuestion?.id || ''] && answers[currentQuestion?.id || ''].trim() !== '') : false;
+
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => ({
       ...prev,
@@ -112,7 +134,16 @@ export default function ModuleQuizPlayer({
   };
 
   const handleNext = () => {
-    if (quiz && currentQuestionIndex < quiz.questions.length - 1) {
+    if (!quiz || !quiz.questions) return;
+    
+    if (!currentQuestion) return;
+    
+    if (!hasCurrentAnswer) {
+      toast.warning('Réponse requise', 'Veuillez répondre à cette question avant de continuer');
+      return;
+    }
+    
+    if (currentQuestionIndex < quiz.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
   };
@@ -132,8 +163,17 @@ export default function ModuleQuizPlayer({
   const handleSubmitClick = () => {
     if (!quiz) return;
 
+    // Vérifier que la question actuelle est répondue
+    if (currentQuestion && !hasCurrentAnswer) {
+      toast.warning('Réponse requise', 'Veuillez répondre à cette question avant de soumettre');
+      return;
+    }
+
     // Vérifier que toutes les questions sont répondues
-    const unanswered = quiz.questions.filter((q) => !answers[q.id || '']);
+    const unanswered = (quiz.questions || []).filter((q) => {
+      const answer = answers[q.id || ''];
+      return !answer || answer.trim() === '';
+    });
     if (unanswered.length > 0) {
       setUnansweredCount(unanswered.length);
       setShowSubmitModal(true);
@@ -148,21 +188,32 @@ export default function ModuleQuizPlayer({
     setSubmitting(true);
     setShowSubmitModal(false);
     try {
-      // Récupérer l'enrollmentId depuis le contexte ou les props
-      // Pour l'instant, on utilise l'endpoint générique
-      // TODO: Passer enrollmentId en prop ou le récupérer depuis le contexte
+      // Logs de débogage pour voir ce qui est envoyé
+      console.log('📤 [Quiz Submission] Données envoyées:', {
+        enrollmentId,
+        moduleId,
+        quizId,
+        answersCount: Object.keys(answers).length,
+        answers: answers,
+        quizQuestions: quiz.questions?.map(q => ({ id: q.id, type: q.question_type }))
+      });
+
       let submissionResult: QuizResult;
       
       // Utiliser l'endpoint spécifique si enrollmentId est fourni
       if (enrollmentId) {
+        console.log('📤 [Quiz Submission] Utilisation de submitModuleQuizAttempt');
         submissionResult = await quizService.submitModuleQuizAttempt(enrollmentId, moduleId, answers);
       } else {
+        console.log('📤 [Quiz Submission] Utilisation de submitQuiz (fallback)');
         // Fallback vers l'endpoint générique
         submissionResult = await quizService.submitQuiz({
           quiz_id: quizId,
           answers,
         });
       }
+
+      console.log('✅ [Quiz Submission] Résultat reçu:', submissionResult);
 
       setResult(submissionResult);
       setShowResults(true);
@@ -182,8 +233,39 @@ export default function ModuleQuizPlayer({
         );
       }
     } catch (error: any) {
-      console.error('Erreur lors de la soumission du quiz:', error);
-      toast.error('Erreur', error.message || 'Impossible de soumettre le quiz');
+      console.error('❌ [Quiz Submission] Erreur complète:', {
+        error,
+        message: error?.message,
+        status: error?.status,
+        details: error?.details,
+        stack: error?.stack
+      });
+      
+      // Message d'erreur plus détaillé
+      let errorMessage = 'Impossible de soumettre le quiz';
+      if (error?.message) {
+        errorMessage = error.message;
+        // Vérifier si c'est un message sur les tentatives
+        if (error.message.toLowerCase().includes('tentative') || error.message.toLowerCase().includes('attempt')) {
+          errorMessage = `Nombre maximum de tentatives atteint. ${error.message}`;
+        }
+      } else if (error?.status === 404) {
+        errorMessage = 'Quiz non trouvé. Veuillez rafraîchir la page.';
+      } else if (error?.status === 400) {
+        // Vérifier le message dans les détails
+        const detailsMessage = error?.details?.message || error?.message || '';
+        if (detailsMessage.toLowerCase().includes('tentative') || detailsMessage.toLowerCase().includes('attempt')) {
+          errorMessage = 'Nombre maximum de tentatives atteint. Contactez un administrateur pour réinitialiser.';
+        } else {
+          errorMessage = detailsMessage || 'Données invalides. Veuillez vérifier vos réponses.';
+        }
+      } else if (error?.status === 403) {
+        errorMessage = 'Vous n\'êtes pas autorisé à soumettre ce quiz.';
+      } else if (error?.status === 500) {
+        errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+      }
+      
+      toast.error('Erreur de soumission', errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -212,18 +294,28 @@ export default function ModuleQuizPlayer({
     );
   }
 
+  // Vérifier que le quiz a des questions
+  if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+        <p className="text-gray-600">Ce quiz n'a pas encore de questions</p>
+      </div>
+    );
+  }
+
   if (showResults && result) {
     return (
       <div className="space-y-6">
-        <div className={`rounded-lg p-6 text-center ${
+        <div className={`rounded-lg p-6 text-center border-2 ${
           result.passed
-            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200'
-            : 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200'
+            ? 'bg-green-50'
+            : 'bg-red-50'
         }`}>
           {result.passed ? (
             <>
-              <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-green-900 mb-2">Quiz réussi !</h2>
+              <CheckCircle className="h-16 w-16 text-green-600" />
+              <h2 className="text-2xl font-bold text-green-900">Quiz réussi !</h2>
               {result.badge_earned && (
                 <div className="flex items-center justify-center space-x-2 mb-4">
                   <Award className="h-6 w-6 text-yellow-600" />
@@ -235,8 +327,8 @@ export default function ModuleQuizPlayer({
             </>
           ) : (
             <>
-              <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-red-900 mb-2">Quiz non réussi</h2>
+              <XCircle className="h-16 w-16 text-red-600" />
+              <h2 className="text-2xl font-bold text-red-900">Quiz non réussi</h2>
             </>
           )}
 
@@ -268,9 +360,10 @@ export default function ModuleQuizPlayer({
           {onCancel && (
             <button
               onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Fermer
+              <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
+              <span>Retour aux leçons</span>
             </button>
           )}
         </div>
@@ -278,24 +371,52 @@ export default function ModuleQuizPlayer({
     );
   }
 
-  const currentQuestion = quiz.questions.sort((a, b) => a.order_index - b.order_index)[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+  // Calculer la progression
+  const progress = sortedQuestions.length > 0 ? ((currentQuestionIndex + 1) / sortedQuestions.length) * 100 : 0;
+
+  if (!currentQuestion) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <p className="text-gray-600">Question non trouvée</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Informations sur les tentatives */}
+      {attemptInfo && quiz.max_attempts && (
+        <div className="bg-blue-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              <p className="text-sm text-blue-900">
+                <span className="font-semibold">Tentatives :</span> {attemptInfo.remaining_attempts !== undefined ? attemptInfo.remaining_attempts : quiz.max_attempts} sur {quiz.max_attempts} restante(s)
+              </p>
+            </div>
+            {attemptInfo.can_attempt === false && (
+              <span className="text-xs text-red-600">
+                Nombre maximum de tentatives atteint
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* En-tête avec timer */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
+      <div className="bg-white">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold mb-2">{quiz.title}</h2>
+            <h2 className="text-2xl font-bold mb-2 text-gray-900">{quiz.title}</h2>
             {quiz.description && (
-              <p className="text-purple-100 text-sm">{quiz.description}</p>
+              <p className="text-gray-600">{quiz.description}</p>
             )}
           </div>
           {timeRemaining !== null && (
-            <div className="flex items-center space-x-2 bg-white/20 rounded-lg px-4 py-2">
-              <Clock className="h-5 w-5" />
-              <span className="font-mono text-lg font-bold">
+            <div className="flex items-center space-x-2 bg-gray-100">
+              <Clock className="h-5 w-5 text-gray-700" />
+              <span className="font-mono text-lg font-bold text-gray-900">
                 {formatTime(timeRemaining)}
               </span>
             </div>
@@ -304,13 +425,13 @@ export default function ModuleQuizPlayer({
 
         {/* Barre de progression */}
         <div className="mt-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span>Question {currentQuestionIndex + 1} sur {quiz.questions.length}</span>
+          <div className="flex items-center justify-between text-sm mb-2 text-gray-600">
+            <span>Question {currentQuestionIndex + 1} sur {sortedQuestions.length}</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="w-full bg-white/20 rounded-full h-2">
+          <div className="w-full bg-gray-200">
             <div
-              className="bg-white h-2 rounded-full transition-all duration-300"
+              className="bg-mdsc-blue-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -318,9 +439,9 @@ export default function ModuleQuizPlayer({
       </div>
 
       {/* Question actuelle */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white">
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">
             {currentQuestion.question_text}
           </h3>
           <p className="text-sm text-gray-500">
@@ -338,8 +459,8 @@ export default function ModuleQuizPlayer({
                   key={index}
                   className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     answers[currentQuestion.id || ''] === option
-                      ? 'border-purple-600 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-mdsc-blue-primary bg-blue-50'
+                      : 'border-gray-200'
                   }`}
                 >
                   <input
@@ -348,7 +469,7 @@ export default function ModuleQuizPlayer({
                     value={option}
                     checked={answers[currentQuestion.id || ''] === option}
                     onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    className="h-4 w-4 text-purple-600 focus:ring-purple-500"
+                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                   />
                   <span className="ml-3 text-gray-700">{option}</span>
                 </label>
@@ -363,8 +484,8 @@ export default function ModuleQuizPlayer({
                   key={option}
                   className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     answers[currentQuestion.id || ''] === option.toLowerCase()
-                      ? 'border-purple-600 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-mdsc-blue-primary bg-blue-50'
+                      : 'border-gray-200'
                   }`}
                 >
                   <input
@@ -373,7 +494,7 @@ export default function ModuleQuizPlayer({
                     value={option.toLowerCase()}
                     checked={answers[currentQuestion.id || ''] === option.toLowerCase()}
                     onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    className="h-4 w-4 text-purple-600 focus:ring-purple-500"
+                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                   />
                   <span className="ml-3 text-gray-700">{option}</span>
                 </label>
@@ -386,7 +507,7 @@ export default function ModuleQuizPlayer({
               value={answers[currentQuestion.id || ''] || ''}
               onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-4 py-3 border border-gray-300"
               placeholder="Votre réponse..."
             />
           )}
@@ -404,12 +525,12 @@ export default function ModuleQuizPlayer({
         </button>
 
         <div className="flex items-center space-x-2">
-          {quiz.questions.map((q, idx) => (
+          {sortedQuestions.map((q, idx) => (
             <div
               key={q.id}
               className={`w-2 h-2 rounded-full ${
                 idx === currentQuestionIndex
-                  ? 'bg-purple-600 w-8'
+                  ? 'bg-mdsc-blue-primary w-8'
                   : answers[q.id || '']
                   ? 'bg-green-500'
                   : 'bg-gray-300'
@@ -419,18 +540,30 @@ export default function ModuleQuizPlayer({
           ))}
         </div>
 
-        {currentQuestionIndex < quiz.questions.length - 1 ? (
+        {currentQuestionIndex < sortedQuestions.length - 1 ? (
           <button
             onClick={handleNext}
-            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            disabled={!hasCurrentAnswer}
+            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+              hasCurrentAnswer
+                ? 'bg-mdsc-blue-primary text-white hover:bg-mdsc-blue-dark cursor-pointer'
+                : 'bg-gray-300'
+            }`}
           >
-            Suivant
+            <span>Suivant</span>
+            {!hasCurrentAnswer && (
+              <span className="text-xs">(Réponse requise)</span>
+            )}
           </button>
         ) : (
           <button
             onClick={handleSubmitClick}
-            disabled={submitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            disabled={submitting || !hasCurrentAnswer}
+            className={`px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+              hasCurrentAnswer && !submitting
+                ? 'bg-green-600'
+                : 'bg-gray-300'
+            }`}
           >
             {submitting ? (
               <>
@@ -440,7 +573,7 @@ export default function ModuleQuizPlayer({
             ) : (
               <>
                 <CheckCircle className="h-5 w-5" />
-                <span>Soumettre le quiz</span>
+                <span>{hasCurrentAnswer ? 'Soumettre le quiz' : 'Répondez à cette question pour soumettre'}</span>
               </>
             )}
           </button>

@@ -368,11 +368,12 @@ export async function apiRequest<T = any>(
   let hasTriedRefresh = false;
   
   const makeRequest = async (): Promise<ApiResponse<T>> => {
-    // Logger pour debug sur POST/PUT
-    if (method === 'POST' || method === 'PUT') {
+    // Logger pour debug sur POST/PUT/DELETE
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
       console.log(`📤 [${method}] ${url}`, {
         headers: requestHeaders,
-        body: body instanceof FormData ? '[FormData]' : body
+        body: body instanceof FormData ? '[FormData]' : body,
+        endpoint: endpoint
       });
     }
     

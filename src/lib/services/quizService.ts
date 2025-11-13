@@ -157,7 +157,23 @@ export class QuizService {
       const response = await apiRequest(`/enrollments/${enrollmentId}/modules/${moduleId}/quiz`, {
         method: 'GET',
       });
-      return response.data;
+      // L'API retourne { quiz, previous_attempts, can_attempt }
+      // On doit extraire le quiz et s'assurer qu'il a les questions
+      const quizData = response.data?.quiz || response.data;
+      if (!quizData) {
+        return null;
+      }
+      // Si le quiz n'a pas de questions, elles sont peut-être dans response.data.questions
+      if (!quizData.questions && response.data?.questions) {
+        quizData.questions = response.data.questions;
+      }
+      // Ajouter les informations sur les tentatives au quiz
+      if (response.data) {
+        quizData.previous_attempts = response.data.previous_attempts || [];
+        quizData.can_attempt = response.data.can_attempt !== false;
+        quizData.remaining_attempts = Math.max(0, (quizData.max_attempts || 0) - (response.data.previous_attempts?.length || 0));
+      }
+      return quizData;
     } catch (error) {
       return null;
     }

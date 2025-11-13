@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { CourseService } from '../../../lib/services/courseService';
 import CoursePlayer from '../../../components/courses/CoursePlayer';
 import { Course } from '../../../types/course';
+import { useTheme } from '../../../lib/context/ThemeContext';
 
 export default function LearnCoursePage() {
+  const { theme } = useTheme(); // Utiliser useTheme comme dans DashboardLayout
   const params = useParams();
   const searchParams = useSearchParams();
   const courseId = params?.courseId as string;
@@ -16,6 +18,51 @@ export default function LearnCoursePage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Fonction pour appliquer le thème (même logique que le script inline dans layout.tsx)
+  const applyTheme = useCallback(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    
+    const storedPref = localStorage.getItem('mdsc-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const root = document.documentElement;
+    
+    let actualTheme: 'light' | 'dark';
+    if (storedPref === 'light' || storedPref === 'dark') {
+      actualTheme = storedPref;
+    } else if (storedPref === 'system' || !storedPref) {
+      actualTheme = prefersDark ? 'dark' : 'light';
+    } else {
+      actualTheme = theme; // Fallback sur le thème du contexte
+    }
+    
+    root.classList.toggle('dark', actualTheme === 'dark');
+    root.dataset.theme = actualTheme;
+  }, [theme]);
+
+  // Appliquer le thème au chargement et lors des changements
+  useEffect(() => {
+    applyTheme();
+
+    // Écouter les changements de thème depuis le dashboard (comme DashboardLayout)
+    const handleThemeChange = () => {
+      applyTheme();
+    };
+
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === 'mdsc-theme') {
+        applyTheme();
+      }
+    };
+
+    window.addEventListener('mdsc-theme-changed', handleThemeChange);
+    window.addEventListener('storage', handleStorageEvent);
+
+    return () => {
+      window.removeEventListener('mdsc-theme-changed', handleThemeChange);
+      window.removeEventListener('storage', handleStorageEvent);
+    };
+  }, [applyTheme]);
 
   useEffect(() => {
     if (courseId) {
@@ -88,10 +135,12 @@ export default function LearnCoursePage() {
   }
 
   return (
-    <CoursePlayer
-      course={course}
-      initialModuleId={moduleId}
-      initialLessonId={lessonId}
-    />
+    <div className="min-h-screen bg-gray-50">
+      <CoursePlayer
+        course={course}
+        initialModuleId={moduleId}
+        initialLessonId={lessonId}
+      />
+    </div>
   );
 }

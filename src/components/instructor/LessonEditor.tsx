@@ -27,6 +27,15 @@ export default function LessonEditor({ courseId, lesson, onSaved }: LessonEditor
   const [isRequired, setIsRequired] = useState<boolean>(lesson.is_required ?? (lesson.isRequired as any) ?? true);
   const [saving, setSaving] = useState(false);
   const { success, error } = useNotification() as any;
+  
+  // Récupérer les informations du média existant
+  const existingMedia = (lesson as any).mediaFile || 
+    ((lesson as any).media_url ? {
+      url: (lesson as any).media_url,
+      originalFilename: (lesson as any).original_filename || (lesson as any).filename,
+      fileCategory: (lesson as any).file_category,
+      fileSize: (lesson as any).file_size
+    } : null);
 
   const handleSave = async () => {
     // Validation
@@ -136,6 +145,28 @@ export default function LessonEditor({ courseId, lesson, onSaved }: LessonEditor
         <div>
           <label className="block text-sm text-gray-600 mb-1">URL du contenu</label>
           <input value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} className="w-full border rounded px-3 py-2 text-sm" placeholder="https://..." />
+          {existingMedia && existingMedia.url && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-gray-600 mb-1">Fichier actuellement associé :</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{existingMedia.originalFilename || 'Fichier'}</p>
+                  {existingMedia.fileSize && (
+                    <p className="text-xs text-gray-500">{(existingMedia.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                  )}
+                </div>
+                <a 
+                  href={existingMedia.url.startsWith('http') ? existingMedia.url : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${existingMedia.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <ExternalLink className="h-4 w-4 inline mr-1" />
+                  Voir
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
