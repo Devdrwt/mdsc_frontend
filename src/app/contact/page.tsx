@@ -68,7 +68,7 @@ export default function ContactPage() {
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <nav className="text-white opacity-75 mb-6">
             <span className="flex items-center justify-center space-x-2">
               <span>Accueil</span>
@@ -86,7 +86,7 @@ export default function ContactPage() {
       </section>
 
       <main className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Contact Information Cards */}
           <section className="mb-16">

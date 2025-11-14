@@ -215,20 +215,24 @@ export default function ProgressPanel() {
       </div>
 
       {/* Barre de progression globale */}
-      <div className="bg-gradient-to-r from-mdsc-blue-primary to-blue-600 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold">Progression Globale</h3>
-            <p className="text-blue-100 text-sm">Votre avancement sur tous vos cours</p>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-bold">{overallStats.averageProgress}%</p>
-            <p className="text-blue-100 text-sm">
-              {overallStats.totalCompletedLessons} / {overallStats.totalLessons} leçons
-            </p>
-          </div>
-        </div>
-        <div className="w-full bg-blue-700 rounded-full h-4">
+      <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+  <div className="flex items-center justify-between mb-4">
+    <div>
+      <h3 className="text-lg font-semibold">Progression Globale</h3>
+      <p className="text-white/90 text-sm">
+        Votre avancement sur tous vos cours
+      </p>
+    </div>
+    <div className="text-right">
+      <p className="text-3xl font-bold">{overallStats.averageProgress}%</p>
+      <p className="text-white/90 text-sm">
+        {overallStats.totalCompletedLessons} / {overallStats.totalLessons} leçons
+      </p>
+    </div>
+  </div>
+{/* </div> */}
+
+        <div className="w-full bg-yellow-200 rounded-full h-4">
           <div 
             className="bg-white h-4 rounded-full transition-all duration-500"
             style={{ width: `${overallStats.averageProgress}%` }}

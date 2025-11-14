@@ -10,15 +10,19 @@ export default function StudentProgressPage() {
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
         <div className="space-y-6">
-          {/* Header */}
-          <div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary dark:from-mdsc-blue-dark dark:via-mdsc-blue-primary dark:to-mdsc-blue-dark text-white rounded-lg p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Ma Progression 📈</h1>
-                <p className="text-white/90">Suivez votre progression dans tous vos cours</p>
-              </div>
-            </div>
-          </div>
+  {/* Header */}
+  <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white rounded-lg p-6 shadow-lg">
+    <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-3xl font-bold mb-2">Ma Progression</h1>
+        <p className="text-white/90">
+          Suivez votre progression dans tous vos cours
+        </p>
+      </div>
+    </div>
+  </div>
+{/* </div> */}
+
 
           {/* Progress Panel */}
           <ProgressPanel />

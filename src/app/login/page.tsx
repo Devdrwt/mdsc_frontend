@@ -17,16 +17,16 @@ export default function LoginPage() {
         'Suivi de progression'
       ]
     },
-    {
-      title: 'FORMATEUR',
-      subtitle: 'Créer et animer des formations',
-      features: [
-        'Création de cours',
-        'Gestion des apprenants',
-        'Support IA pour formateurs',
-        'Évaluation et certification'
-      ]
-    }
+    // {
+    //   title: 'FORMATEUR',
+    //   subtitle: 'Créer et animer des formations',
+    //   features: [
+    //     'Création de cours',
+    //     'Gestion des apprenants',
+    //     'Support IA pour formateurs',
+    //     'Évaluation et certification'
+    //   ]
+    // }
   ];
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex relative">
       {/* Bouton retour accueil */}
-      <a 
+      {/* <a 
         href="/" 
         className="absolute top-4 left-4 z-20 flex items-center text-gray-600 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm"
       >
@@ -48,7 +48,7 @@ export default function LoginPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Retour à l'accueil
-      </a>
+      </a> */}
       
       {/* Colonne gauche - Image de fond avec texte */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
@@ -120,7 +120,7 @@ export default function LoginPage() {
           </div>
           
           {/* Indicateurs de slide */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+          {/* <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
             {slides.map((_, index) => (
               <button
                 key={index}
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 aria-label={`Aller au slide ${index + 1}`}
               />
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
       

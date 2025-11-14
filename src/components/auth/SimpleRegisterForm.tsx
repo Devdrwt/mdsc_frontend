@@ -230,7 +230,7 @@ const SimpleRegisterForm = () => {
       </div>
 
       {/* Badge du rôle sélectionné */}
-      <div className="text-center mt-4 space-y-2">
+      {/* <div className="text-center mt-4 space-y-2">
         <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-800 rounded-full text-sm font-medium">
           <GraduationCap className="h-4 w-4 mr-2" />
           Inscription en tant qu'Apprenant
@@ -239,7 +239,7 @@ const SimpleRegisterForm = () => {
           <ShieldAlert className="h-4 w-4 text-gray-400" />
           Le rôle formateur est attribué par un administrateur MdSC.
         </p>
-      </div>
+      </div> */}
 
       {/* Formulaire */}
       <div className="mt-8">
@@ -569,6 +569,10 @@ const SimpleRegisterForm = () => {
 
             {/* Bouton de soumission */}
             <div className="pt-4">
+
+
+
+              <div className="flex gap-4">
               <button
                 type="submit"
                 className="w-full bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -586,6 +590,20 @@ const SimpleRegisterForm = () => {
                   'Créer mon compte'
                 )}
               </button>
+
+          <a
+            href="/"
+            className="w-1/2 flex items-center justify-center bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors font-medium shadow-sm"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Retour à l'accueil
+          </a>
+        </div>
+
+
+
             </div>
 
             {/* Séparateur "Ou" */}

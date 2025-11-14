@@ -66,10 +66,10 @@ export default function GamificationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête avec niveau actuel */}
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold mb-2">Gamification 🏆</h2>
+            <h2 className="text-2xl font-bold mb-2">Gamification </h2>
             <p className="text-yellow-100">Votre parcours d'apprentissage gamifié</p>
           </div>
           <div className="text-right">

@@ -40,7 +40,7 @@ const testimonials: Testimonial[] = [
 export default function Testimonials() {
   return (
     <section className="section-mdsc bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-mdsc-orange text-white mb-4">
             Témoignages

@@ -312,7 +312,7 @@ export default function StudentDashboard() {
       <DashboardLayout userRole="student">
         <div className="space-y-8">
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-2xl p-8 text-white">
+          <div className="relative overflow-hidden bg-gradient-to-r from-[#C98C34] to-[#B87C2E] bg-opacity-50 rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">

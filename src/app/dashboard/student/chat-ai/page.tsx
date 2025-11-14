@@ -11,9 +11,9 @@ export default function ChatIAPage() {
       <DashboardLayout userRole="student">
         <div className="space-y-6">
           {/* En-tête */}
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+          <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
             <h1 className="text-2xl font-bold mb-2">
-              Assistant IA Personnel 🤖
+              Assistant IA Personnel 
             </h1>
             <p className="text-purple-100">
               Votre compagnon d'apprentissage intelligent. Posez des questions, obtenez des résumés et des recommandations personnalisées.
@@ -71,20 +71,20 @@ export default function ChatIAPage() {
           </div>
 
           {/* Conseils d'utilisation */}
-          <div className="bg-blue-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-3">💡 Conseils d'utilisation</h3>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3"> Conseils d'utilisation</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium text-blue-800 mb-2">Questions efficaces :</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
+                <h4 className="font-medium text-gray-700 mb-2">Questions efficaces :</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
                   <li>• "Explique-moi le concept de..."</li>
                   <li>• "Quelle est la différence entre... et... ?"</li>
                   <li>• "Peux-tu me donner un exemple de... ?"</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium text-blue-800 mb-2">Demandes spéciales :</h4>
-                <ul className="text-sm text-blue-700 space-y-1">
+                <h4 className="font-medium text-gray-700 mb-2">Demandes spéciales :</h4>
+                <ul className="text-sm text-gray-600 space-y-1">
                   <li>• "Résume ce module"</li>
                   <li>• "Recommande-moi des cours"</li>
                   <li>• "Crée un plan d'étude"</li>

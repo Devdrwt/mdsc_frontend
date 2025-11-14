@@ -23,7 +23,7 @@ function RegisterContent() {
 
   return (
     <div className="min-h-screen flex relative">
-      <a
+      {/* <a
         href="/"
         className="absolute top-4 left-4 z-20 flex items-center text-gray-600 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm"
       >
@@ -31,7 +31,7 @@ function RegisterContent() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
         Retour à l'accueil
-      </a>
+      </a> */}
 
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
         <div

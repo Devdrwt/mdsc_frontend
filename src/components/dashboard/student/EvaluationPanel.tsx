@@ -134,12 +134,13 @@ export default function EvaluationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-blue-primary to-blue-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Mes Évaluations 📝</h1>
-        <p className="text-blue-100">
-          Suivez vos quiz, devoirs et examens et consultez vos résultats.
-        </p>
-      </div>
+<div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+  <h1 className="text-2xl font-bold mb-2">Mes Évaluations</h1>
+  <p className="text-white/90">
+    Suivez vos quiz, devoirs et examens et consultez vos résultats.
+  </p>
+</div>
+
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

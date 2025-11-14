@@ -36,7 +36,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
 
   return (
     <section className="section-mdsc bg-white">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mb-4">
             Formations populaires

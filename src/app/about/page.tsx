@@ -106,7 +106,7 @@ export default function AboutPage() {
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             À propos de la Maison de la Société Civile
           </h1>
@@ -124,7 +124,7 @@ export default function AboutPage() {
       </section>
 
       <main className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Mission et Vision */}
           <section className="mb-16">

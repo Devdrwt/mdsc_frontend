@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CourseCard from '../../components/courses/CourseCard';
@@ -8,6 +9,7 @@ import Button from '../../components/ui/Button';
 import { Search, Clock, Users } from 'lucide-react';
 import { Course } from '../../types';
 import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
+import { useAuthStore } from '../../lib/stores/authStore';
 import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
 
 const categories = [
@@ -82,11 +84,12 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
   const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
   
   // Convertir le niveau pour CourseCard
-  const levelString = serviceCourse.level === 'beginner' ? 'Débutant' 
-    : serviceCourse.level === 'intermediate' ? 'Intermédiaire' 
-    : 'Avancé';
-
   const courseAny = serviceCourse as any;
+  const difficultyRaw = courseAny.difficulty || serviceCourse.level || 'beginner';
+  const levelString = difficultyRaw === 'beginner' || difficultyRaw === 'debutant' ? 'Débutant' 
+    : difficultyRaw === 'intermediate' || difficultyRaw === 'intermediaire' ? 'Intermédiaire' 
+    : difficultyRaw === 'advanced' || difficultyRaw === 'avance' ? 'Avancé'
+    : 'Débutant';
 
   const instructorFirstName =
     courseAny.instructor_first_name ||
@@ -115,6 +118,49 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     name: instructorName,
     avatar: resolveMediaUrl(instructorAvatarRaw) || undefined,
   };
+
+  const rawCategory =
+    courseAny.category ||
+    courseAny.course_category ||
+    courseAny.category_name ||
+    courseAny.category_label ||
+    serviceCourse.category;
+
+  const categoryValue = (() => {
+    if (!rawCategory) return 'Non catégorisé';
+    if (typeof rawCategory === 'string') {
+      return rawCategory;
+    }
+    if (Array.isArray(rawCategory)) {
+      const labels = rawCategory
+        .map((item) => {
+          if (!item) return null;
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object') {
+            return (
+              (item as any).name ||
+              (item as any).label ||
+              (item as any).title ||
+              null
+            );
+          }
+          return null;
+        })
+        .filter(Boolean);
+      return labels.length ? labels.join(', ') : 'Non catégorisé';
+    }
+    if (typeof rawCategory === 'object') {
+      const categoryAny = rawCategory as any;
+      return (
+        categoryAny.name ||
+        categoryAny.label ||
+        categoryAny.title ||
+        categoryAny.slug ||
+        'Non catégorisé'
+      );
+    }
+    return String(rawCategory);
+  })();
 
   // Gérer l'image du cours - utiliser thumbnail_url, thumbnail, etc.
   const courseImageRaw =
@@ -173,21 +219,26 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     explicitExpired: Boolean(explicitExpired),
   });
 
+  // Récupérer le niveau/difficulty depuis les données brutes de l'API
+  const rawDifficulty = courseAny.difficulty || serviceCourse.level || courseAny.level || '';
+  
   return {
     id: serviceCourse.id,
     title: serviceCourse.title,
     slug: serviceCourse.slug || serviceCourse.id, // Utiliser le slug s'il existe, sinon l'id
     description: serviceCourse.description || '',
     shortDescription: serviceCourse.shortDescription || '',
-    category: serviceCourse.category || 'non-categorisé',
+    category: categoryValue,
     level: levelString, // Pour CourseCard
+    difficulty: difficultyRaw, // Valeur brute de la base de données (beginner, intermediate, advanced)
     level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
     duration: durationString, // String pour CourseCard
     language: 'fr',
     thumbnail_url: courseImage,
     instructor: instructorData,
     is_published: serviceCourse.isPublished !== undefined ? serviceCourse.isPublished : true,
-    enrollment_count: serviceCourse.totalStudents || 0,
+    enrollment_count: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || serviceCourse.totalStudents || 0,
+    total_lessons: courseAny.total_lessons || courseAny.metrics?.total_lessons || 0,
     rating: serviceCourse.rating || 0,
     // Conversions pour CourseCard
     thumbnail: courseImage,
@@ -205,12 +256,16 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
 };
 
 export default function CoursesPage() {
+  const router = useRouter();
+  const { user } = useAuthStore();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toutes les catégories');
   const [selectedLevel, setSelectedLevel] = useState('Tous les niveaux');
   const [isLoading, setIsLoading] = useState(true);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set());
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true);
 
   // Charger les cours depuis l'API
   useEffect(() => {
@@ -239,8 +294,36 @@ export default function CoursesPage() {
         setIsLoading(false);
       }
     };
+
+    const loadEnrollments = async () => {
+      if (!user) {
+        setEnrolledCourseIds(new Set());
+        setLoadingEnrollments(false);
+        return;
+      }
+
+      try {
+        setLoadingEnrollments(true);
+        const myCourses = await CourseService.getMyCourses();
+        const ids = new Set<number>();
+        (myCourses || []).forEach((course: any) => {
+          const id = Number(course.id ?? course.course_id ?? course.courseId);
+          if (!Number.isNaN(id)) {
+            ids.add(id);
+          }
+        });
+        setEnrolledCourseIds(ids);
+      } catch (error) {
+        console.warn('Impossible de charger les cours inscrits (page publique):', error);
+        setEnrolledCourseIds(new Set());
+      } finally {
+        setLoadingEnrollments(false);
+      }
+    };
+
     loadCourses();
-  }, []);
+    loadEnrollments();
+  }, [user]);
 
   // Filtrage des cours
   useEffect(() => {
@@ -290,9 +373,17 @@ export default function CoursesPage() {
     }
   };
 
-  const handleEnroll = (courseId: string) => {
-    // TODO: Implémenter l'inscription au cours
-    console.log('Enroll in course:', courseId);
+  const handleEnroll = (course: Course) => {
+    const numericId = Number(course.id);
+    const rawSlug = (course as any).slug || course.slug || course.id;
+    const slug = typeof rawSlug === 'string' ? rawSlug : String(rawSlug);
+
+    if (!Number.isNaN(numericId) && enrolledCourseIds.has(numericId)) {
+      router.push(`/learn/${numericId}`);
+      return;
+    }
+
+    router.push(`/courses/${slug}`);
   };
 
   return (
@@ -391,13 +482,19 @@ export default function CoursesPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredCourses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  onEnroll={handleEnroll}
-                />
-              ))}
+              {filteredCourses.map((course) => {
+                const numericId = Number(course.id);
+                const isEnrolled = !Number.isNaN(numericId) && enrolledCourseIds.has(numericId);
+                return (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    onEnroll={handleEnroll}
+                    isEnrolled={isEnrolled}
+                    loadingState={loadingEnrollments}
+                  />
+                );
+              })}
             </div>
           )}
 

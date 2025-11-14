@@ -30,7 +30,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Bonjour ${user?.firstName} ! 👋 Je suis votre assistant IA personnel. Je peux vous aider avec vos cours, répondre à vos questions, générer des résumés et vous recommander du contenu. Comment puis-je vous aider aujourd'hui ?`,
+      content: `Bonjour ${user?.firstName} ! Je suis votre assistant IA personnel. Je peux vous aider avec vos cours, répondre à vos questions, générer des résumés et vous recommander du contenu. Comment puis-je vous aider aujourd'hui ?`,
       timestamp: new Date(),
       context,
     };
@@ -106,21 +106,21 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="h-full flex flex-col bg-white backdrop-blur-md  dark:bg-white rounded-lg shadow-sm  border border-gray-200 dark:border-mdsc-blue-dark">
       {/* En-tête */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-mdsc-blue-dark">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Bot className="h-6 w-6 text-purple-600" />
+          <div className="p-2 bg-orange-100 rounded-lg">  
+            <Bot className="h-6 w-6 text-orange-300" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900">Assistant IA</h3>
-            <p className="text-sm text-gray-500">Votre compagnon d'apprentissage</p>
+            <h3 className="font-semibold text-gray-900 dark:text-black">Assistant IA</h3>
+            <p className="text-sm text-gray-900 dark:text-black">Votre compagnon d'apprentissage</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Sparkles className="h-4 w-4 text-purple-500" />
-          <span className="text-sm text-gray-500">GPT-3.5</span>
+          <Sparkles className="h-4 w-4 text-orange-500 " />
+          <span className="text-sm text-gray-900 dark:text-black">GPT-3.5</span>
         </div>
       </div>
 
@@ -139,8 +139,8 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
               <div
                 className={`p-2 rounded-lg ${
                   message.role === 'user'
-                    ? 'bg-mdsc-blue-primary text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-mdsc-blue-dark text-white'
+                    : 'bg-gray-100 dark:bg-mdsc-blue-dark text-gray-900 dark:text-white'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -152,14 +152,14 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
               <div
                 className={`px-4 py-2 rounded-lg ${
                   message.role === 'user'
-                    ? 'bg-mdsc-blue-primary text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-mdsc-blue-dark text-white'
+                    : 'bg-gray-100 dark:bg-mdsc-blue-dark text-gray-900 dark:text-white'
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 <p
                   className={`text-xs mt-1 ${
-                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    message.role === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-200'
                   }`}
                 >
                   {message.timestamp.toLocaleTimeString()}
@@ -173,14 +173,14 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
         {isTyping && (
           <div className="flex justify-start">
             <div className="flex items-start space-x-2">
-              <div className="p-2 rounded-lg bg-gray-100">
-                <Bot className="h-4 w-4 text-gray-600" />
+              <div className="p-2 rounded-lg bg-gray-100 dark:bg-mdsc-blue-dark">
+                <Bot className="h-4 w-4 text-gray-600 dark:text-white" />
               </div>
-              <div className="px-4 py-2 rounded-lg bg-gray-100">
+              <div className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-mdsc-blue-dark">
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 dark:bg-white rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 dark:bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 dark:bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -192,14 +192,14 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
 
       {/* Actions rapides */}
       {messages.length === 1 && (
-        <div className="p-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600 mb-3">Actions rapides :</p>
+        <div className="p-4 border-t border-gray-200 dark:border-mdsc-blue-dark">
+          <p className="text-sm text-gray-600 dark:text-gray-200 mb-3">Actions rapides :</p>
           <div className="flex flex-wrap gap-2">
             {quickActions.map((action, index) => (
               <button
                 key={index}
                 onClick={action.action}
-                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 dark:bg-mdsc-blue-dark hover:bg-gray-200 dark:hover:bg-mdsc-blue-dark rounded-lg text-sm text-gray-700 dark:text-white transition-colors"
               >
                 <action.icon className="h-4 w-4" />
                 <span>{action.label}</span>
@@ -210,7 +210,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
       )}
 
       {/* Zone de saisie */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-gray-200 dark:border-mdsc-blue-dark">
         <div className="flex items-end space-x-2">
           <div className="flex-1">
             <textarea
@@ -218,7 +218,9 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Posez votre question..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-mdsc-blue-dark rounded-lg resize-none 
+                         focus:outline-none focus:ring-1 focus:ring-mdsc-blue-primary focus:border-transparent
+                         bg-white/20 text-white font-bold "
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
@@ -235,7 +237,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
             )}
           </button>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
           Appuyez sur Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne
         </p>
       </div>

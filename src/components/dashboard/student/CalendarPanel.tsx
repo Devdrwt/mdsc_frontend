@@ -175,7 +175,7 @@ export default function CalendarPanel() {
               onClick={() => setViewMode('month')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 viewMode === 'month'
-                  ? 'bg-mdsc-blue-primary text-white'
+                  ? 'bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -185,7 +185,7 @@ export default function CalendarPanel() {
               onClick={() => setViewMode('week')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 viewMode === 'week'
-                  ? 'bg-mdsc-blue-primary text-white'
+                  ? 'bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -206,7 +206,7 @@ export default function CalendarPanel() {
             </button>
             <button
               onClick={() => setCurrentDate(new Date())}
-              className="px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="px-4 py-2 bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               Aujourd'hui
             </button>
@@ -228,7 +228,7 @@ export default function CalendarPanel() {
           <div className="grid grid-cols-7 gap-2">
             {days.map((day, index) => {
               const dayEvents = getEventsForDate(day);
-              const todayClass = isToday(day) ? 'bg-mdsc-blue-primary text-white font-bold' : 'text-gray-700 hover:bg-gray-100';
+              const todayClass = isToday(day) ? 'bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white font-bold' : 'text-gray-700 hover:bg-gray-500';
               
               return (
                 <div
@@ -333,7 +333,7 @@ export default function CalendarPanel() {
           </div>
 
           {/* Statistiques rapides */}
-          <div className="bg-gradient-to-br from-mdsc-blue-primary to-blue-600 rounded-lg p-6 text-white">
+          <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
             <h3 className="text-lg font-semibold mb-4">Ce mois</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
