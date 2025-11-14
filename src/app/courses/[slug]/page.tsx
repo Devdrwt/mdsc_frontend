@@ -33,10 +33,8 @@ import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
-import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR } from '../../../lib/utils/media';
 import CourseSchedule from '../../../components/courses/CourseSchedule';
-
-const DEFAULT_INSTRUCTOR_AVATAR = '/default-avatar.png';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -49,7 +47,6 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
-  const [instructorAvatar, setInstructorAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -140,7 +137,6 @@ export default function CourseDetailPage() {
       
       if (avatarUrl && avatarUrl !== null && avatarUrl.trim() !== '') {
         console.log('✅ Avatar de l\'instructeur trouvé dans les données du cours:', avatarUrl);
-        setInstructorAvatar(avatarUrl);
       } else {
         console.log('ℹ️ Aucun avatar trouvé pour l\'instructeur, utilisation de l\'image par défaut');
       }
@@ -297,144 +293,62 @@ export default function CourseDetailPage() {
   }, [course, courseImageRaw, resolvedImageUrl, courseImage, imageError]);
 
   const instructorInfo = useMemo(() => {
-    if (!course || !courseAny) {
-      return {
-        name: 'Instructeur',
-        title: '',
-        organization: '',
-        email: '',
-        bio: '',
-        avatar: DEFAULT_INSTRUCTOR_AVATAR,
-      };
-    }
-
-    const rawInstructor = courseAny?.instructor || {};
-    
-    // Log pour déboguer les données de l'instructeur (toutes les variantes possibles)
-    console.log('👤 Données complètes de l\'instructeur:', {
-      rawInstructor,
-      courseAnyInstructor: courseAny?.instructor,
-      instructorAvatar: courseAny?.instructor_avatar,
-      instructorAvatarUrl: courseAny?.instructor_avatar_url,
-      instructorProfilePicture: courseAny?.instructor_profile_picture,
-      instructorProfilePictureUrl: courseAny?.instructor_profile_picture_url,
-      rawInstructorAvatar: rawInstructor.avatar,
-      rawInstructorAvatarUrl: rawInstructor.avatar_url,
-      rawInstructorProfilePicture: rawInstructor.profile_picture,
-      rawInstructorProfilePictureUrl: rawInstructor.profile_picture_url,
-      courseAnyKeys: courseAny ? Object.keys(courseAny).filter(k => k.toLowerCase().includes('instructor') || k.toLowerCase().includes('avatar') || k.toLowerCase().includes('profile')) : [],
-    });
+    const instructor = courseAny?.instructor;
 
     const firstName =
-      rawInstructor.firstName ||
-      rawInstructor.first_name ||
+      instructor?.first_name ||
+      instructor?.firstName ||
       courseAny?.instructor_first_name ||
       '';
+
     const lastName =
-      rawInstructor.lastName ||
-      rawInstructor.last_name ||
+      instructor?.last_name ||
+      instructor?.lastName ||
       courseAny?.instructor_last_name ||
       '';
 
+    const email =
+      instructor?.email ||
+      courseAny?.instructor_email ||
+      '';
+
+    const organization =
+      instructor?.organization ||
+      courseAny?.instructor_organization ||
+      '';
+
+    const title =
+      instructor?.title ||
+      instructor?.jobTitle ||
+      courseAny?.instructor_title ||
+      '';
+
+    const bio =
+      instructor?.bio ||
+      instructor?.biography ||
+      courseAny?.instructor_bio ||
+      '';
+
     const name =
-      rawInstructor.name ||
+      instructor?.name ||
       courseAny?.instructor_name ||
       [firstName, lastName].filter(Boolean).join(' ') ||
       'Instructeur';
 
-    const title =
-      rawInstructor.title ||
-      rawInstructor.jobTitle ||
-      rawInstructor.job_title ||
-      courseAny?.instructor_title ||
-      '';
-
-    const organization =
-      rawInstructor.organization ||
-      rawInstructor.organisation ||
-      rawInstructor.company ||
-      courseAny?.instructor_organization ||
-      '';
-
-    const email =
-      rawInstructor.email ||
-      courseAny?.instructor_email ||
-      '';
-
-    const bio =
-      rawInstructor.bio ||
-      rawInstructor.biography ||
-      rawInstructor.description ||
-      courseAny?.instructor_bio ||
-      '';
-
-    // Chercher l'avatar dans toutes les variantes possibles
-    let avatarRaw =
-      rawInstructor.avatar ||
-      rawInstructor.avatar_url ||
-      rawInstructor.avatarUrl ||
-      rawInstructor.profile_picture ||
-      rawInstructor.profile_picture_url ||
-      rawInstructor.profilePicture ||
-      rawInstructor.profilePictureUrl ||
-      courseAny?.instructor_avatar ||
-      courseAny?.instructor_avatar_url ||
+    const avatarRaw =
+      instructor?.avatar ||
+      instructor?.avatar_url ||
+      instructor?.avatarUrl ||
+      instructor?.profile_picture ||
+      instructor?.profile_picture_url ||
       courseAny?.instructor_profile_picture ||
-      courseAny?.instructor_profile_picture_url ||
-      courseAny?.instructorProfilePicture ||
-      courseAny?.instructorProfilePictureUrl ||
+      courseAny?.instructor_avatar ||
       null;
-    
-    // Si toujours pas trouvé, chercher dans des structures imbriquées possibles
-    if (!avatarRaw && courseAny?.instructor) {
-      const nestedInstructor = courseAny.instructor as any;
-      avatarRaw =
-        nestedInstructor.avatar ||
-        nestedInstructor.avatar_url ||
-        nestedInstructor.avatarUrl ||
-        nestedInstructor.profile_picture ||
-        nestedInstructor.profile_picture_url ||
-        nestedInstructor.profilePicture ||
-        nestedInstructor.profilePictureUrl ||
-        null;
+
+    let avatar = DEFAULT_INSTRUCTOR_AVATAR;
+    if (avatarRaw && avatarRaw.trim() !== '') {
+      avatar = resolveMediaUrl(avatarRaw) || avatarRaw || DEFAULT_INSTRUCTOR_AVATAR;
     }
-    
-    // Si toujours pas trouvé, chercher dans toutes les clés qui pourraient contenir l'avatar
-    if (!avatarRaw && courseAny) {
-      const courseAnyInstructorKeys = courseAny?.instructor ? Object.keys(courseAny.instructor) : [];
-      const courseAnyInstructorValues: Record<string, any> = {};
-      if (courseAny?.instructor) {
-        courseAnyInstructorKeys.forEach(key => {
-          courseAnyInstructorValues[key] = (courseAny.instructor as any)[key];
-        });
-      }
-      
-      // Chercher dans toutes les valeurs possibles
-      for (const value of Object.values(courseAnyInstructorValues)) {
-        if (typeof value === 'string' && (value.includes('http') || value.includes('/') || value.includes('avatar') || value.includes('profile'))) {
-          avatarRaw = value;
-          break;
-        }
-      }
-    }
-    
-    // Le backend retourne déjà l'URL complète dans avatar, resolveMediaUrl la convertit en proxy Next.js
-    let resolvedAvatar = DEFAULT_INSTRUCTOR_AVATAR;
-    if (avatarRaw) {
-      // Vérifier si c'est déjà l'avatar par défaut pour éviter de le résoudre inutilement
-      if (avatarRaw !== DEFAULT_INSTRUCTOR_AVATAR && 
-          avatarRaw !== '/default-avatar.png' && 
-          avatarRaw.trim() !== '') {
-        resolvedAvatar = resolveMediaUrl(avatarRaw) || DEFAULT_INSTRUCTOR_AVATAR;
-      }
-    }
-    
-    console.log('🎯 Avatar final de l\'instructeur:', {
-      avatarRaw,
-      resolvedAvatar,
-      defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
-      willUseDefault: resolvedAvatar === DEFAULT_INSTRUCTOR_AVATAR,
-    });
 
     return {
       name,
@@ -442,9 +356,9 @@ export default function CourseDetailPage() {
       organization,
       email,
       bio,
-      avatar: resolvedAvatar,
+      avatar,
     };
-  }, [course, courseAny]);
+  }, [courseAny]);
 
   // Fonction pour convertir les codes de langue en noms complets
   const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {
@@ -1130,24 +1044,9 @@ export default function CourseDetailPage() {
                         className="w-24 h-24 rounded-full object-cover bg-mdsc-blue-primary/10 border-4 border-mdsc-blue-primary/20 shadow-lg"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          console.error('❌ Erreur de chargement de l\'image de l\'instructeur:', {
-                            avatar: instructorInfo.avatar,
-                            defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
-                            rawInstructor: courseAny?.instructor,
-                            courseAnyInstructorAvatar: courseAny?.instructor_avatar,
-                            currentSrc: target.src,
-                          });
-                          // Basculer vers l'image par défaut si ce n'est pas déjà fait
                           if (target.src !== DEFAULT_INSTRUCTOR_AVATAR && !target.src.includes('mdsc-logo.png')) {
                             target.src = DEFAULT_INSTRUCTOR_AVATAR;
                           }
-                        }}
-                        onLoad={(e) => {
-                          console.log('✅ Image de l\'instructeur chargée avec succès:', {
-                            avatar: instructorInfo.avatar,
-                            instructorName: instructorInfo.name,
-                            src: (e.target as HTMLImageElement).src,
-                          });
                         }}
                       />
                     </div>

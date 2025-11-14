@@ -361,7 +361,7 @@ export default function CourseCard({
         </div>
 
         {showEnrollButton && (
-          <div className="pt-4">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <Button
               size="sm"
               disabled={loadingState}
@@ -372,7 +372,7 @@ export default function CourseCard({
                 }
                 handleClick();
               }}
-              className={`w-full ${
+              className={`w-full sm:flex-1 ${
                 isEnrolled
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white'
@@ -382,7 +382,15 @@ export default function CourseCard({
                 ? loadingCtaLabel || 'Chargement...'
                 : isEnrolled
                   ? enrolledCtaLabel || 'Continuer'
-                  : ctaLabel || 'Voir détails'}
+                  : ctaLabel || "S'inscrire"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleClick}
+              className="w-full sm:flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50"
+            >
+              Voir détail
             </Button>
           </div>
         )}
