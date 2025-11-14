@@ -219,12 +219,14 @@ const convertToDisplayCourse = (course: ExtendedCourse): DisplayCourse => {
     instructor: instructorData,
     is_published: course.isPublished ?? true,
     enrollment_count: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || course.totalStudents || 0,
-    metrics: courseAny.metrics || {
-      enrollment_count: courseAny.enrollment_count || course.totalStudents || 0,
-      average_rating: courseAny.average_rating || course.rating || 0,
-      review_count: courseAny.review_count || 0,
-      total_views: courseAny.total_views || 0
-    },
+    ...(courseAny.metrics ? { metrics: courseAny.metrics } : {
+      metrics: {
+        enrollment_count: courseAny.enrollment_count || course.totalStudents || 0,
+        average_rating: courseAny.average_rating || course.rating || 0,
+        review_count: courseAny.review_count || 0,
+        total_views: courseAny.total_views || 0
+      }
+    }),
     rating: course.rating || 0,
     students: courseAny.enrollment_count || courseAny.metrics?.enrollment_count || course.totalStudents || 0,
     price: priceValue,
@@ -314,10 +316,13 @@ export default function ModuleCatalog() {
       current = current.filter((course) => {
         const titleMatch = course.title?.toLowerCase().includes(lowered);
         const descriptionMatch = course.description?.toLowerCase().includes(lowered);
-        const instructorMatch =
-          typeof course.instructor === 'string'
-            ? course.instructor.toLowerCase().includes(lowered)
-            : course.instructor?.name?.toLowerCase().includes(lowered);
+        const instructorMatch = (() => {
+          if (typeof course.instructor === 'string') {
+            return course.instructor.toLowerCase().includes(lowered);
+          }
+          const instructorAny = course.instructor as any;
+          return instructorAny?.name?.toLowerCase().includes(lowered) || false;
+        })();
 
         return titleMatch || descriptionMatch || instructorMatch;
       });

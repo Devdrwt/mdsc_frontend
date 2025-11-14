@@ -380,8 +380,8 @@ export default function StudentDashboard() {
           );
 
         setStats({
-            totalCourses: totalCourses || toNumber(courseStats.total || courseStats.active),
-            completedCourses: completedCourses || toNumber(courseStats.completed),
+            totalCourses: totalCourses || toNumber((courseStats as any).total || courseStats.active || 0),
+            completedCourses: completedCourses || toNumber(courseStats.completed || 0),
             inProgressCourses,
             totalPoints: resolvedPoints > 0 ? resolvedPoints : fallbackPoints,
             currentLevel: gamification.level ?? fallbackLevel,

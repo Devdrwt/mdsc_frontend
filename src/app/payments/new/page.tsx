@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import PaymentForm from '../../../components/payments/PaymentForm';
 import { courseService } from '../../../lib/services/courseService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
-import { Payment, isDemoMode } from '../../../lib/services/paymentService';
+import { Payment, isDemoMode, paymentService } from '../../../lib/services/paymentService';
 import { Loader, AlertCircle } from 'lucide-react';
 import toast from '../../../lib/utils/toast';
 

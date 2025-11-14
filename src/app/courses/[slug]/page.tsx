@@ -34,6 +34,7 @@ import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
+import CourseSchedule from '../../../components/courses/CourseSchedule';
 
 const DEFAULT_INSTRUCTOR_AVATAR = '/default-avatar.png';
 
@@ -1046,6 +1047,22 @@ export default function CourseDetailPage() {
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* Planning d'apprentissage (uniquement si inscrit) */}
+              {isEnrolled && course && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <CourseSchedule
+                    courseId={typeof course.id === 'string' ? parseInt(course.id, 10) : course.id}
+                    onItemClick={(item) => {
+                      if (item.type === 'lesson' && item.lesson_id) {
+                        router.push(`/learn/${course.id}?lesson=${item.lesson_id}`);
+                      } else if (item.type === 'quiz' && item.quiz_id) {
+                        router.push(`/learn/${course.id}?quiz=${item.quiz_id}`);
+                      }
+                    }}
+                  />
                 </div>
               )}
 

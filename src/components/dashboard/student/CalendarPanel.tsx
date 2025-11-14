@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -10,8 +10,20 @@ import {
   AlertCircle,
   CheckCircle,
   PlayCircle,
-  Target
+  Target,
+  FileText,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
+import { calendarService } from '../../../lib/services/calendarService';
+import { scheduleService } from '../../../lib/services/scheduleService';
+import { CalendarEvent as ApiCalendarEvent } from '../../../types/schedule';
+import { ScheduleItem } from '../../../types/schedule';
+import CourseService from '../../../lib/services/courseService';
+import toast from '../../../lib/utils/toast';
+import { format, parseISO, startOfMonth, endOfMonth, isToday, isPast } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useRouter } from 'next/navigation';
 
 interface CalendarEvent {
   id: string;
@@ -19,58 +31,190 @@ interface CalendarEvent {
   description?: string;
   date: string;
   time: string;
-  type: 'course' | 'deadline' | 'exam' | 'assignment';
-  status: 'upcoming' | 'in-progress' | 'completed' | 'missed';
+  type: 'course' | 'deadline' | 'exam' | 'assignment' | 'quiz' | 'lesson' | 'milestone' | 'reminder';
+  status: 'upcoming' | 'in-progress' | 'completed' | 'missed' | 'overdue' | 'pending';
   courseTitle?: string;
+  courseId?: number;
+  lessonId?: number;
+  quizId?: number;
+  originalEvent?: ApiCalendarEvent | ScheduleItem;
 }
 
 export default function CalendarPanel() {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
-  
-  // Événements de démonstration
-  const events: CalendarEvent[] = [
-    {
-      id: '1',
-      title: 'Quiz sur le Leadership',
-      description: 'Quiz pour évaluer vos connaissances',
-      date: '2024-01-15',
-      time: '10:00',
-      type: 'exam',
-      status: 'upcoming',
-      courseTitle: 'Leadership et Management'
-    },
-    {
-      id: '2',
-      title: 'Soumission du projet',
-      description: 'Deadline pour le projet final',
-      date: '2024-01-20',
-      time: '23:59',
-      type: 'deadline',
-      status: 'upcoming',
-      courseTitle: 'Gestion de Projet'
-    },
-    {
-      id: '3',
-      title: 'Cours en direct',
-      description: 'Session en ligne avec l\'instructeur',
-      date: '2024-01-18',
-      time: '14:00',
-      type: 'course',
-      status: 'upcoming',
-      courseTitle: 'Communication Professionnelle'
-    },
-    {
-      id: '4',
-      title: 'Examen final',
-      description: 'Examen de certification',
-      date: '2024-01-25',
-      time: '09:00',
-      type: 'exam',
-      status: 'upcoming',
-      courseTitle: 'Stratégie Marketing'
-    },
-  ];
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [courses, setCourses] = useState<Map<number, { title: string; slug: string }>>(new Map());
+
+  // Charger les événements du calendrier et les plannings
+  useEffect(() => {
+    loadCalendarData();
+  }, [currentDate]);
+
+  const loadCalendarData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Calculer les dates de début et fin du mois
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      // Charger les événements du calendrier
+      const calendarEvents = await calendarService.getEvents({
+        start: monthStart.toISOString(),
+        end: monthEnd.toISOString(),
+      });
+
+      // Charger les cours de l'étudiant pour récupérer les plannings
+      const studentCourses = await CourseService.getMyCourses();
+      
+      // Créer une map des cours pour accès rapide
+      const coursesMap = new Map<number, { title: string; slug: string }>();
+      studentCourses.forEach((course: any) => {
+        coursesMap.set(course.id, {
+          title: course.title || course.course_title || 'Cours sans titre',
+          slug: course.slug || course.course_slug || '',
+        });
+      });
+      setCourses(coursesMap);
+
+      // Charger les plannings de tous les cours avec leur course_id
+      const scheduleItemsWithCourse: Array<{ item: ScheduleItem; courseId: number }> = [];
+      for (const course of studentCourses) {
+        try {
+          const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+          const schedule = await scheduleService.getCourseSchedule(courseId);
+          // Chaque item du planning est associé au course_id du schedule
+          schedule.schedule.forEach((item) => {
+            scheduleItemsWithCourse.push({ item, courseId: schedule.course_id });
+          });
+        } catch (err: any) {
+          // Ignorer les erreurs 404 (cours sans planning)
+          if (err.status !== 404) {
+            console.warn(`Erreur lors du chargement du planning pour le cours ${course.id}:`, err);
+          }
+        }
+      }
+
+      // Convertir les événements calendrier en format unifié
+      const unifiedEvents: CalendarEvent[] = [];
+
+      // Ajouter les événements du calendrier
+      calendarEvents.forEach((event) => {
+        const startDate = parseISO(event.start_date);
+        unifiedEvents.push({
+          id: `calendar-${event.id}`,
+          title: event.title,
+          description: event.description,
+          date: format(startDate, 'yyyy-MM-dd'),
+          time: format(startDate, 'HH:mm'),
+          type: mapEventType(event.event_type),
+          status: getEventStatus(event.start_date, event.end_date),
+          courseTitle: event.course?.title,
+          courseId: event.course?.id,
+          originalEvent: event,
+        });
+      });
+
+      // Ajouter les items de planning avec le bon course_id
+      scheduleItemsWithCourse.forEach(({ item, courseId }) => {
+        const scheduledDate = parseISO(item.scheduled_date);
+        const courseInfo = coursesMap.get(courseId) || { title: 'Cours', slug: '' };
+        
+        unifiedEvents.push({
+          id: `schedule-${item.id}`,
+          title: item.title,
+          description: item.metadata?.module_title ? `Module: ${item.metadata.module_title}` : undefined,
+          date: format(scheduledDate, 'yyyy-MM-dd'),
+          time: format(scheduledDate, 'HH:mm'),
+          type: mapScheduleItemType(item.type),
+          status: mapScheduleItemStatus(item.status),
+          courseTitle: courseInfo.title,
+          courseId: courseId,
+          lessonId: item.lesson_id || undefined,
+          quizId: item.quiz_id || undefined,
+          originalEvent: item,
+        });
+      });
+
+      setEvents(unifiedEvents);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement du calendrier:', err);
+      setError(err.message || 'Erreur lors du chargement du calendrier');
+      toast.error('Erreur', 'Impossible de charger les événements du calendrier');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mapEventType = (eventType: string): CalendarEvent['type'] => {
+    switch (eventType) {
+      case 'course_start':
+        return 'course';
+      case 'quiz_scheduled':
+        return 'quiz';
+      case 'deadline':
+        return 'deadline';
+      case 'announcement':
+        return 'reminder';
+      case 'milestone':
+        return 'milestone';
+      default:
+        return 'course';
+    }
+  };
+
+  const mapScheduleItemType = (type: ScheduleItem['type']): CalendarEvent['type'] => {
+    switch (type) {
+      case 'lesson':
+        return 'lesson';
+      case 'quiz':
+        return 'quiz';
+      case 'deadline':
+        return 'deadline';
+      case 'reminder':
+        return 'reminder';
+      case 'milestone':
+        return 'milestone';
+      default:
+        return 'course';
+    }
+  };
+
+  const mapScheduleItemStatus = (status: ScheduleItem['status']): CalendarEvent['status'] => {
+    switch (status) {
+      case 'pending':
+        return 'upcoming';
+      case 'in_progress':
+        return 'in-progress';
+      case 'completed':
+        return 'completed';
+      case 'overdue':
+        return 'overdue';
+      case 'skipped':
+        return 'missed';
+      default:
+        return 'upcoming';
+    }
+  };
+
+  const getEventStatus = (startDate: string, endDate: string): CalendarEvent['status'] => {
+    const now = new Date();
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+
+    if (isPast(end)) {
+      return 'completed';
+    }
+    if (isPast(start) && !isPast(end)) {
+      return 'in-progress';
+    }
+    return 'upcoming';
+  };
 
   const monthNames = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -113,40 +257,86 @@ export default function CalendarPanel() {
     return events.filter(event => event.date === dateStr);
   };
 
-  const getEventTypeColor = (type: string) => {
+  const getEventTypeColor = (type: CalendarEvent['type'], status?: CalendarEvent['status']) => {
+    if (status === 'overdue') {
+      return 'bg-red-600';
+    }
+    if (status === 'completed') {
+      return 'bg-green-500';
+    }
+    
     switch (type) {
       case 'course':
+      case 'lesson':
         return 'bg-blue-500';
+      case 'quiz':
       case 'exam':
-        return 'bg-red-500';
+        return 'bg-orange-500';
       case 'assignment':
         return 'bg-yellow-500';
       case 'deadline':
-        return 'bg-orange-500';
+        return 'bg-red-500';
+      case 'milestone':
+        return 'bg-green-600';
+      case 'reminder':
+        return 'bg-purple-500';
       default:
         return 'bg-gray-500';
     }
   };
 
-  const getEventTypeIcon = (type: string) => {
+  const getEventTypeIcon = (type: CalendarEvent['type']) => {
     switch (type) {
       case 'course':
-        return PlayCircle;
+      case 'lesson':
+        return BookOpen;
+      case 'quiz':
       case 'exam':
-        return Target;
+        return FileText;
       case 'assignment':
         return CheckCircle;
       case 'deadline':
         return AlertCircle;
-      default:
+      case 'milestone':
+        return Target;
+      case 'reminder':
         return Clock;
+      default:
+        return CalendarIcon;
     }
   };
 
-  const upcomingEvents = events
-    .filter(event => event.status === 'upcoming' || event.status === 'in-progress')
-    .sort((a, b) => new Date(a.date + ' ' + a.time).getTime() - new Date(b.date + ' ' + b.time).getTime())
-    .slice(0, 5);
+  const handleEventClick = (event: CalendarEvent) => {
+    if (event.lessonId && event.courseId) {
+      router.push(`/learn/${event.courseId}?lesson=${event.lessonId}`);
+    } else if (event.quizId && event.courseId) {
+      router.push(`/learn/${event.courseId}?quiz=${event.quizId}`);
+    } else if (event.courseId) {
+      const course = courses.get(event.courseId);
+      if (course?.slug) {
+        router.push(`/courses/${course.slug}`);
+      }
+    }
+  };
+
+  const upcomingEvents = useMemo(() => {
+    return events
+      .filter(event => {
+        const eventDate = parseISO(`${event.date}T${event.time}`);
+        return (event.status === 'upcoming' || event.status === 'in-progress' || event.status === 'pending') && 
+               !isPast(eventDate);
+      })
+      .sort((a, b) => {
+        const dateA = parseISO(`${a.date}T${a.time}`);
+        const dateB = parseISO(`${b.date}T${b.time}`);
+        return dateA.getTime() - dateB.getTime();
+      })
+      .slice(0, 5);
+  }, [events]);
+
+  const overdueEvents = useMemo(() => {
+    return events.filter(event => event.status === 'overdue');
+  }, [events]);
 
   const days = getDaysInMonth(currentDate);
   const today = new Date();
@@ -159,6 +349,14 @@ export default function CalendarPanel() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-8 w-8 animate-spin text-mdsc-blue-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Vue contrôle */}
@@ -168,6 +366,12 @@ export default function CalendarPanel() {
             <h2 className="text-2xl font-bold text-gray-900">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
+            {overdueEvents.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                <AlertTriangle className="h-4 w-4" />
+                {overdueEvents.length} en retard
+              </div>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -244,8 +448,9 @@ export default function CalendarPanel() {
                       return (
                         <div
                           key={event.id}
-                          className={`text-[10px] p-1 rounded ${getEventTypeColor(event.type)} text-white truncate`}
+                          className={`text-[10px] p-1 rounded ${getEventTypeColor(event.type, event.status)} text-white truncate cursor-pointer hover:opacity-80 transition-opacity`}
                           title={event.title}
+                          onClick={() => handleEventClick(event)}
                         >
                           {event.time} - {event.title}
                         </div>
@@ -275,12 +480,30 @@ export default function CalendarPanel() {
                 upcomingEvents.map((event) => {
                   const EventIcon = getEventTypeIcon(event.type);
                   return (
-                    <div key={event.id} className="border-l-4 border-gray-200 pl-4 py-2 hover:bg-gray-50 rounded transition-colors">
+                    <div 
+                      key={event.id} 
+                      className={`border-l-4 pl-4 py-2 hover:bg-gray-50 rounded transition-colors cursor-pointer ${
+                        event.status === 'overdue' 
+                          ? 'border-red-500 bg-red-50' 
+                          : event.status === 'completed'
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200'
+                      }`}
+                      onClick={() => handleEventClick(event)}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-1">
-                            <EventIcon className={`h-4 w-4 ${getEventTypeColor(event.type)} text-white rounded`} />
+                            <div className={`p-1 rounded ${getEventTypeColor(event.type, event.status)}`}>
+                              <EventIcon className="h-3 w-3 text-white" />
+                            </div>
                             <span className="text-sm font-medium text-gray-900">{event.title}</span>
+                            {event.status === 'overdue' && (
+                              <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">En retard</span>
+                            )}
+                            {event.status === 'completed' && (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            )}
                           </div>
                           {event.courseTitle && (
                             <p className="text-xs text-gray-500 mb-1">{event.courseTitle}</p>
@@ -309,25 +532,84 @@ export default function CalendarPanel() {
             </div>
           </div>
 
+          {/* Items en retard */}
+          {overdueEvents.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                Éléments en retard ({overdueEvents.length})
+              </h3>
+              <div className="space-y-3">
+                {overdueEvents.slice(0, 3).map((event) => {
+                  const EventIcon = getEventTypeIcon(event.type);
+                  return (
+                    <div
+                      key={event.id}
+                      className="bg-white border border-red-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleEventClick(event)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <div className={`p-1 rounded ${getEventTypeColor(event.type, event.status)}`}>
+                              <EventIcon className="h-3 w-3 text-white" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{event.title}</span>
+                          </div>
+                          {event.courseTitle && (
+                            <p className="text-xs text-gray-600 mb-1">{event.courseTitle}</p>
+                          )}
+                          <div className="flex items-center space-x-3 text-xs text-gray-600">
+                            <span className="flex items-center">
+                              <CalendarIcon className="h-3 w-3 mr-1" />
+                              {format(parseISO(event.date), 'dd MMM yyyy', { locale: fr })}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {event.time}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {overdueEvents.length > 3 && (
+                  <p className="text-xs text-red-700 text-center">
+                    +{overdueEvents.length - 3} autre(s) élément(s) en retard
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Légende */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Légende</h3>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                <span className="text-sm text-gray-700">Cours en direct</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-red-500 rounded"></div>
-                <span className="text-sm text-gray-700">Examen</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                <span className="text-sm text-gray-700">Devoir</span>
+                <span className="text-sm text-gray-700">Cours / Leçon</span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                <span className="text-sm text-gray-700">Quiz / Examen</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
                 <span className="text-sm text-gray-700">Deadline</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-green-600 rounded"></div>
+                <span className="text-sm text-gray-700">Milestone</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-purple-500 rounded"></div>
+                <span className="text-sm text-gray-700">Rappel</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-red-600 rounded"></div>
+                <span className="text-sm text-gray-700">En retard</span>
               </div>
             </div>
           </div>
@@ -341,13 +623,29 @@ export default function CalendarPanel() {
                 <span className="text-2xl font-bold">{events.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-blue-100">Cours</span>
-                <span className="text-2xl font-bold">{events.filter(e => e.type === 'course').length}</span>
+                <span className="text-blue-100">Cours / Leçons</span>
+                <span className="text-2xl font-bold">
+                  {events.filter(e => e.type === 'course' || e.type === 'lesson').length}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-blue-100">Examen</span>
-                <span className="text-2xl font-bold">{events.filter(e => e.type === 'exam').length}</span>
+                <span className="text-blue-100">Quiz / Examens</span>
+                <span className="text-2xl font-bold">
+                  {events.filter(e => e.type === 'quiz' || e.type === 'exam').length}
+                </span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="text-blue-100">Complétés</span>
+                <span className="text-2xl font-bold">
+                  {events.filter(e => e.status === 'completed').length}
+                </span>
+              </div>
+              {overdueEvents.length > 0 && (
+                <div className="flex items-center justify-between pt-2 border-t border-blue-400">
+                  <span className="text-red-200">En retard</span>
+                  <span className="text-2xl font-bold text-red-200">{overdueEvents.length}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

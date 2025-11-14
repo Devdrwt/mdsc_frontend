@@ -1,48 +1,88 @@
 import { apiRequest } from './api';
-
-export interface CalendarEvent {
-  id: number | string;
-  title: string;
-  description?: string;
-  type?: string;
-  start_at: string;
-  end_at?: string;
-  location?: string;
-  course_id?: number | string;
-  course_title?: string;
-  is_public?: boolean;
-  metadata?: Record<string, any> | null;
-}
-
-export interface CalendarFilters {
-  start?: string;
-  end?: string;
-  type?: string;
-  upcoming?: boolean;
-}
+import { CalendarEvent, CalendarQueryParams } from '../../types/schedule';
 
 export class CalendarService {
-  static async getEvents(filters: CalendarFilters = {}): Promise<CalendarEvent[]> {
-    const search = new URLSearchParams();
-    if (filters.start) search.append('start', filters.start);
-    if (filters.end) search.append('end', filters.end);
-    if (filters.type) search.append('type', filters.type);
-    if (typeof filters.upcoming === 'boolean') search.append('upcoming', String(filters.upcoming));
+  /**
+   * Récupère les événements du calendrier
+   * @param params Paramètres de requête (dates, type, upcoming)
+   * @returns Liste des événements calendrier
+   */
+  static async getEvents(params?: CalendarQueryParams): Promise<CalendarEvent[]> {
+    const queryParams = new URLSearchParams();
 
-    const response = await apiRequest(`/calendar?${search.toString()}`, {
+    if (params?.start) {
+      queryParams.append('start', params.start);
+    }
+    if (params?.end) {
+      queryParams.append('end', params.end);
+    }
+    if (params?.type) {
+      queryParams.append('type', params.type);
+    }
+    if (params?.upcoming) {
+      queryParams.append('upcoming', 'true');
+    }
+
+    const url = `/calendar${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+    const response = await apiRequest<{ success: boolean; data: CalendarEvent[] }>(url, {
       method: 'GET',
     });
 
-    return response.data?.events ?? [];
+    if (!response.success || !response.data) {
+      throw new Error('Erreur lors de la récupération des événements');
+    }
+
+    return response.data;
   }
 
-  static async getEventById(id: number | string): Promise<CalendarEvent | null> {
-    const response = await apiRequest(`/calendar/${id}`, {
-      method: 'GET',
+  /**
+   * Récupère les événements à venir
+   * @param days Nombre de jours à venir (défaut: 7)
+   * @returns Liste des événements à venir
+   */
+  static async getUpcomingEvents(days: number = 7): Promise<CalendarEvent[]> {
+    const now = new Date();
+    const endDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+    return this.getEvents({
+      start: now.toISOString(),
+      end: endDate.toISOString(),
+      upcoming: true,
+    });
+  }
+
+  /**
+   * Récupère les événements d'un cours spécifique
+   * @param courseId ID du cours
+   * @param start Date de début (optionnel)
+   * @param end Date de fin (optionnel)
+   * @returns Liste des événements du cours
+   */
+  static async getCourseEvents(
+    courseId: number,
+    start?: string,
+    end?: string
+  ): Promise<CalendarEvent[]> {
+    const allEvents = await this.getEvents({ start, end });
+    return allEvents.filter((event) => event.course?.id === courseId);
+  }
+
+  /**
+   * Récupère les événements en retard
+   * @returns Liste des événements en retard
+   */
+  static async getOverdueEvents(): Promise<CalendarEvent[]> {
+    const now = new Date();
+    const events = await this.getEvents({
+      end: now.toISOString(),
     });
 
-    return response.data ?? null;
+    return events.filter((event) => {
+      const endDate = new Date(event.end_date);
+      return endDate < now;
+    });
   }
 }
 
-export default CalendarService;
+export const calendarService = CalendarService;

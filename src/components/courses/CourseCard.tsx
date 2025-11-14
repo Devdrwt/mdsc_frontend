@@ -346,7 +346,8 @@ export default function CourseCard({
             if (typeof instructor === 'string' && instructor && instructor !== 'Instructeur') {
               name = instructor;
             } else if (instructor && typeof instructor === 'object') {
-              name = instructor.name || [instructor.first_name, instructor.last_name].filter(Boolean).join(' ') || '';
+              const instructorAny = instructor as any;
+              name = instructorAny.name || [instructorAny.first_name, instructorAny.last_name].filter(Boolean).join(' ') || '';
             } else if (courseAny.instructor_first_name || courseAny.instructor_last_name) {
               name = [courseAny.instructor_first_name, courseAny.instructor_last_name].filter(Boolean).join(' ') || '';
             }

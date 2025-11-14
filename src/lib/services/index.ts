@@ -21,6 +21,8 @@ export { MediaService, mediaService } from './mediaService';
 export { BadgeService, badgeService } from './badgeService';
 export { ProgressService, progressService } from './progressService';
 export { EnrollmentService } from './enrollmentService';
+export { ScheduleService, scheduleService } from './scheduleService';
+export { CalendarService, calendarService } from './calendarService';
 
 // Export de l'API de base
 export { default as api } from './api';
@@ -166,6 +168,13 @@ export type {
   SequenceContent, 
   MiniControl 
 } from './professionalService';
+
+export type {
+  ScheduleItem,
+  CourseSchedule,
+  CalendarEvent,
+  CalendarQueryParams,
+} from '../../types/schedule';
 
 // Export des services par catégorie
 export const AuthServices = {};
