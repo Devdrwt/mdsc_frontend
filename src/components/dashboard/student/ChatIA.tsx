@@ -110,8 +110,8 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
       {/* En-tête */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-mdsc-blue-dark">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-orange-100 rounded-lg">  
-            <Bot className="h-6 w-6 text-orange-300" />
+          <div className="p-2 bg-blue-100 rounded-lg">  
+            <Bot className="h-6 w-6 text-mdsc-blue-dark" />
           </div>
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-black">Assistant IA</h3>
@@ -119,7 +119,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Sparkles className="h-4 w-4 text-orange-500 " />
+          <Sparkles className="h-4 w-4 text-mdsc-blue-dark-500 " />
           <span className="text-sm text-gray-900 dark:text-black">GPT-3.5</span>
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
                 className={`p-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-blue-dark text-white'
-                    : 'bg-gray-100 dark:bg-mdsc-blue-dark text-gray-900 dark:text-white'
+                    : 'bg-gray-100 dark:bg-mdsc-blue-dark/50 text-gray-900 dark:text-white'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -153,7 +153,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
                 className={`px-4 py-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-blue-dark text-white'
-                    : 'bg-gray-100 dark:bg-mdsc-blue-dark text-gray-900 dark:text-white'
+                    : 'bg-gray-100 dark:bg-mdsc-blue-dark/50 text-gray-900 dark:text-white'
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>

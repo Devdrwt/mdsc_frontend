@@ -13,7 +13,7 @@ export default function InstructorChatIAPage() {
           {/* En-tête */}
           <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
             <h1 className="text-2xl font-bold mb-2">
-              Assistant IA Formateur 🤖
+              Assistant IA Formateur
             </h1>
             <p className="text-yellow-100">
               Votre compagnon pédagogique intelligent. Créez du contenu, analysez les performances et optimisez vos cours.

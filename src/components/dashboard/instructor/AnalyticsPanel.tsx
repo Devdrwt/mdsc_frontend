@@ -143,7 +143,7 @@ export default function AnalyticsPanel() {
       <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Analytics & Rapports 📊</h1>
+            <h1 className="text-2xl font-bold mb-2">Analytics & Rapports </h1>
             <p className="text-yellow-100">
               Analysez les performances de vos cours et le comportement de vos étudiants.
             </p>

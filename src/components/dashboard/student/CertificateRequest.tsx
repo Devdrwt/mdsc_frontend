@@ -116,7 +116,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   return (
     <div className="space-y-6">
       {/* En-tête */}
-<div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+<div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-lg p-6 text-white">
   <div className="flex items-center justify-between">
     <div>
       <h2 className="text-2xl font-bold mb-2">Mes Certificats</h2>

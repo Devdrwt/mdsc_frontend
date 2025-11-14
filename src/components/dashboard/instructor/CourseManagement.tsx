@@ -380,7 +380,7 @@ export default function CourseManagement() {
       <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Gestion des Cours 📚</h1>
+            <h1 className="text-2xl font-bold mb-2">Gestion des Cours </h1>
             <p className="text-yellow-100">
               Créez, gérez et suivez vos cours d'apprentissage.
             </p>
@@ -580,7 +580,7 @@ export default function CourseManagement() {
                       {/* Bouton principal */}
                       <a
                         href={`/instructor/courses/${course.id}`}
-                        className="btn-mdsc-secondary text-sm"
+                        className="btn-mdsc-secondary text-sm px-2 shadow-sm transition-all duration-300 py-2 text-sm font-semibold rounded-lg"
                       >
                         Gérer le cours
                       </a>

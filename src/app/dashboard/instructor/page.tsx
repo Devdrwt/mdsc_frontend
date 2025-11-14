@@ -406,13 +406,13 @@ export default function InstructorDashboard() {
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-gold via-orange-500 to-mdsc-gold rounded-2xl p-8 text-white">
+          <div className="relative overflow-hidden bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">
-                    Bienvenue, {user?.firstName} ! 🎓
+                    Bienvenue, {user?.firstName} ! 
                   </h1>
                   <p className="text-white/90 text-lg">
                     Gérez vos cours et accompagnez vos étudiants vers la réussite.

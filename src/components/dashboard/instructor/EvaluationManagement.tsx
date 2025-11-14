@@ -202,7 +202,7 @@ export default function EvaluationManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Gestion des Évaluations</h2>
           <p className="text-gray-600 mt-1">Créez et gérez les évaluations de vos cours</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="btn-mdsc-primary flex items-center">
+        <button onClick={() => setShowCreateModal(true)} className="btn-mdsc-secondary px-4 py-2 rounded-lg transition-all duration-300 shadow-sm flex items-center space-x-2">
           <Plus className="h-5 w-5 mr-2" />
           Nouvelle évaluation
         </button>

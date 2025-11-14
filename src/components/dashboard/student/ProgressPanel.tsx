@@ -215,7 +215,7 @@ export default function ProgressPanel() {
       </div>
 
       {/* Barre de progression globale */}
-      <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-lg p-6 text-white">
   <div className="flex items-center justify-between mb-4">
     <div>
       <h3 className="text-lg font-semibold">Progression Globale</h3>
@@ -232,7 +232,7 @@ export default function ProgressPanel() {
   </div>
 {/* </div> */}
 
-        <div className="w-full bg-yellow-200 rounded-full h-4">
+        <div className="w-full bg-blue-200 rounded-full h-4">
           <div 
             className="bg-white h-4 rounded-full transition-all duration-500"
             style={{ width: `${overallStats.averageProgress}%` }}

@@ -65,7 +65,7 @@ export default function GamificationInstructor() {
       <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Gamification (Instructeur) 🏆</h1>
+            <h1 className="text-2xl font-bold mb-2">Gamification (Instructeur) </h1>
             <p className="text-yellow-100">Gérez les badges et suivez l'obtention par vos étudiants.</p>
           </div>
           <button onClick={load} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2">

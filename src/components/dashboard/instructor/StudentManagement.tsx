@@ -233,7 +233,7 @@ export default function StudentManagement() {
     <div className="space-y-6">
       {/* En-tête */}
       <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Gestion des Étudiants 👥</h1>
+        <h1 className="text-2xl font-bold mb-2">Gestion des Étudiants </h1>
         <p className="text-yellow-100">
           Suivez la progression de vos étudiants et gérez leurs parcours d'apprentissage.
         </p>

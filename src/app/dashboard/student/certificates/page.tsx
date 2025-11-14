@@ -11,7 +11,7 @@ export default function StudentCertificatesPage() {
       <DashboardLayout userRole="student">
         <div className="space-y-6">
           {/* Header */}
-<div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] text-white rounded-lg p-6 shadow-lg">
+<div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary text-white rounded-lg p-6 shadow-lg">
   <div className="flex items-center justify-between">
     <div>
       <h1 className="text-3xl font-bold mb-2">Mes Certificats</h1>

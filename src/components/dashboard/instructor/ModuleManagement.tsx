@@ -463,7 +463,7 @@ export default function ModuleManagement() {
             setEditingModule(null);
             resetForm();
           }}
-          className="btn-mdsc-primary flex items-center space-x-2"
+          className="btn-mdsc-secondary px-4 py-2 rounded-lg transition-all duration-300 shadow-sm flex items-center space-x-2"
         >
           <Plus className="h-5 w-5" />
           <span>Nouveau Module</span>

@@ -145,7 +145,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
                 className={`p-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-gold text-white'
-                    : 'bg-orange-100 text-gray-900'
+                    : 'bg-orange-100 text-mdsc-gold'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -158,7 +158,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
                 className={`px-4 py-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-gold text-white'
-                    : 'bg-orange-100 text-gray-900'
+                    : 'bg-orange-100 text-black'
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -204,7 +204,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
               <button
                 key={index}
                 onClick={action.action}
-                className="flex items-center space-x-2 px-3 py-2 bg-orange-50 hover:bg-orange-100 rounded-lg text-sm text-gray-700 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 bg-orange-100/50 hover:bg-orange-100/70 rounded-lg text-sm text-gray-900 transition-colors"
               >
                 <action.icon className="h-4 w-4" />
                 <span>{action.label}</span>
@@ -223,7 +223,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Posez votre question pédagogique..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300  rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />

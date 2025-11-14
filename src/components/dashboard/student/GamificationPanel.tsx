@@ -66,15 +66,15 @@ export default function GamificationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête avec niveau actuel */}
-      <div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-2">Gamification </h2>
-            <p className="text-yellow-100">Votre parcours d'apprentissage gamifié</p>
+            <p className="text-blue-100">Votre parcours d'apprentissage gamifié</p>
           </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{currentLevel.levelName}</div>
-            <div className="text-sm text-yellow-100">Niveau {currentLevel.level}</div>
+            <div className="text-sm text-blue-100">Niveau {currentLevel.level}</div>
           </div>
         </div>
         
@@ -84,7 +84,7 @@ export default function GamificationPanel() {
             <span>{userPoints} points</span>
             <span>{currentLevel.pointsToNext} points vers le prochain niveau</span>
           </div>
-          <div className="w-full bg-yellow-200 rounded-full h-3">
+          <div className="w-full bg-blue-200 rounded-full h-3">
             <div 
               className="bg-white h-3 rounded-full transition-all duration-500"
               style={{ 

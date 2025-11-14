@@ -134,7 +134,7 @@ export default function EvaluationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-<div className="bg-gradient-to-r from-[#C98C34] to-[#B87C2E] rounded-lg p-6 text-white">
+<div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-lg p-6 text-white">
   <h1 className="text-2xl font-bold mb-2">Mes Évaluations</h1>
   <p className="text-white/90">
     Suivez vos quiz, devoirs et examens et consultez vos résultats.
