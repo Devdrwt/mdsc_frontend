@@ -433,8 +433,10 @@ export default function StudentManagement() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {students.length > 0 ? (
           <div className="divide-y divide-gray-200">
-            {students.map((student) => (
-              <div key={student.id} className="p-6 hover:bg-gray-50 transition-colors">
+            {students.map((student, index) => {
+              const fallbackKey = `${student.id ?? 'unknown'}-${student.enrollmentId ?? student.courseId ?? index}`;
+              return (
+                <div key={fallbackKey} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
@@ -512,7 +514,8 @@ export default function StudentManagement() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
