@@ -1,17 +1,41 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Playfair_Display, Open_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import ClientProviders from "../components/providers/ClientProviders";
 
-const playfairDisplay = Playfair_Display({
+const playfairDisplay = localFont({
   variable: "--font-playfair",
-  subsets: ["latin"],
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/PlayfairDisplay-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/PlayfairDisplay-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+  ],
 });
 
-const openSans = Open_Sans({
+const openSans = localFont({
   variable: "--font-open-sans",
-  subsets: ["latin"],
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/OpenSans-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/OpenSans-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+  ],
 });
 
 export const metadata: Metadata = {
