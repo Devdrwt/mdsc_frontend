@@ -10,7 +10,8 @@ import {
   CheckCircle, 
   AlertCircle,
   FileText,
-  BarChart3
+  BarChart3,
+  Lock
 } from 'lucide-react';
 import { evaluationService, Evaluation, EvaluationStats } from '../../../lib/services/evaluationService';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -111,6 +112,13 @@ export default function EvaluationPanel() {
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Noté
+          </span>
+        );
+      case 'locked':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <Lock className="h-3 w-3 mr-1" />
+            Verrouillé
           </span>
         );
       default:
@@ -312,8 +320,46 @@ export default function EvaluationPanel() {
                     </div>
                     
                     <div className="flex-1">
-                      {/* Ne pas afficher le titre, le badge "Noté" et le type "Examen" pour les évaluations finales */}
-                      {!(evaluation as any).is_final && (
+                      {/* Afficher les quiz de modules avec leur module */}
+                      {(evaluation as any).is_module_quiz ? (
+                        <div className="mb-3">
+                          {evaluation.courseName && (
+                            <div className="mb-2">
+                              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Formation :</span>
+                              <h4 className="text-base font-semibold text-gray-900 mt-1">{evaluation.courseName}</h4>
+                            </div>
+                          )}
+                          {(evaluation as any).module_title && (
+                            <div className="mb-2">
+                              <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Module :</span>
+                              <h4 className="text-base font-semibold text-gray-900 mt-1">{(evaluation as any).module_title}</h4>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{evaluation.title}</h3>
+                            {getStatusBadge(evaluation.status)}
+                            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                              {getTypeLabel(evaluation.type)}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-3">
+                            {evaluation.description}
+                          </p>
+                          {/* Afficher le score s'il existe */}
+                          {evaluation.score !== undefined && evaluation.score !== null && (
+                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-700">Note obtenue:</span>
+                                <span className={`text-lg font-bold ${
+                                  evaluation.score >= 80 ? 'text-green-600' : evaluation.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                  {evaluation.score.toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : !(evaluation as any).is_final ? (
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900">{evaluation.title}</h3>
                           {getStatusBadge(evaluation.status)}
@@ -321,7 +367,7 @@ export default function EvaluationPanel() {
                             {getTypeLabel(evaluation.type)}
                           </span>
                         </div>
-                      )}
+                      ) : null}
                       
                       {/* Pour les évaluations finales, afficher seulement la description */}
                       {(evaluation as any).is_final ? (
@@ -434,8 +480,66 @@ export default function EvaluationPanel() {
                   </div>
                   
                   <div className="ml-6 flex flex-col space-y-2">
-                    {/* Pour les évaluations finales, vérifier si des tentatives sont disponibles */}
-                    {(evaluation as any).is_final ? (
+                    {/* Pour les quiz de modules */}
+                    {(evaluation as any).is_module_quiz ? (
+                      <>
+                        {(evaluation as any).is_locked ? (
+                          <button
+                            disabled
+                            className="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-xl shadow-sm cursor-not-allowed text-sm whitespace-nowrap"
+                            title="Complétez toutes les leçons du module pour déverrouiller ce quiz"
+                          >
+                            Verrouillé
+                          </button>
+                        ) : evaluation.status === 'not-started' ? (
+                          <button
+                            onClick={() => {
+                              const courseId = evaluation.courseId;
+                              const moduleId = (evaluation as any).module_id;
+                              const lessonId = (evaluation as any).lesson_id;
+                              if (courseId && moduleId && lessonId) {
+                                window.location.href = `/learn/${courseId}?module=${moduleId}&lesson=${lessonId}`;
+                              }
+                            }}
+                            className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
+                          >
+                            Commencer
+                          </button>
+                        ) : evaluation.status === 'graded' ? (
+                          <button
+                            onClick={() => {
+                              // Préparer les données pour le modal de résultats
+                              const quizData = evaluation as any;
+                              const percentage = quizData.score !== null && quizData.score !== undefined ? Number(quizData.score) : 0;
+                              const passingScore = quizData.passing_score || 70;
+                              const isPassed = percentage >= passingScore;
+                              
+                              // Calculer le score en points (approximation basée sur le pourcentage)
+                              const totalPoints = 100;
+                              const scoreInPoints = Math.round((percentage / 100) * totalPoints);
+                              
+                              const result = {
+                                score: scoreInPoints,
+                                totalPoints: totalPoints,
+                                percentage: percentage,
+                                isPassed: isPassed,
+                                isTimeExpired: false,
+                                evaluationTitle: evaluation.title,
+                                courseName: evaluation.courseName || '',
+                                passingScore: passingScore,
+                                isQuiz: true
+                              };
+                              
+                              setSelectedEvaluationResult(result);
+                              setShowResultModal(true);
+                            }}
+                            className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
+                          >
+                            Voir les résultats
+                          </button>
+                        ) : null}
+                      </>
+                    ) : (evaluation as any).is_final ? (
                       <>
                         {(evaluation as any).attempts_count < (evaluation as any).max_attempts ? (
                           evaluation.status === 'not-started' ? (

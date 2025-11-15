@@ -16,6 +16,7 @@ interface EvaluationResultModalProps {
     evaluationTitle?: string;
     courseName?: string;
     passingScore?: number;
+    isQuiz?: boolean;
   };
 }
 
@@ -24,7 +25,11 @@ export default function EvaluationResultModal({
   onClose,
   result
 }: EvaluationResultModalProps) {
-  const { score, totalPoints, percentage, isPassed, isTimeExpired, evaluationTitle, courseName, passingScore } = result;
+  const { score, totalPoints, percentage, isPassed, isTimeExpired, evaluationTitle, courseName, passingScore, isQuiz } = result;
+  
+  // Déterminer les textes selon le type (quiz ou évaluation)
+  const typeLabel = isQuiz ? 'quiz' : 'évaluation';
+  const typeLabelCapitalized = isQuiz ? 'Quiz' : 'Évaluation';
 
   // Déterminer la couleur du backdrop selon le résultat
   const backdropColor = isPassed && !isTimeExpired ? 'green' : 'red';
@@ -33,7 +38,7 @@ export default function EvaluationResultModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Résultats de l'évaluation"
+      title={`Résultats du ${typeLabel}`}
       size="lg"
       closable={true}
       backdropColor={backdropColor}
@@ -76,19 +81,19 @@ export default function EvaluationResultModal({
               ) : isPassed ? (
                 <>
                   <h3 className="text-xl font-bold text-green-900 mb-2">
-                    Évaluation réussie !
+                    {typeLabelCapitalized} réussie !
                   </h3>
                   <p className="text-green-800">
-                    Félicitations ! Vous avez réussi cette évaluation.
+                    Félicitations ! Vous avez réussi ce {typeLabel}.
                   </p>
                 </>
               ) : (
                 <>
                   <h3 className="text-xl font-bold text-red-900 mb-2">
-                    ❌ Évaluation échouée
+                    ❌ {typeLabelCapitalized} échouée
                   </h3>
                   <p className="text-red-800">
-                    Malheureusement, vous n'avez pas atteint le score minimum requis pour réussir cette évaluation.
+                    Malheureusement, vous n'avez pas atteint le score minimum requis pour réussir ce {typeLabel}.
                   </p>
                 </>
               )}
@@ -96,12 +101,12 @@ export default function EvaluationResultModal({
           </div>
         </div>
 
-        {/* Informations sur l'évaluation */}
+        {/* Informations sur l'évaluation/quiz */}
         {(evaluationTitle || courseName) && (
           <div className="mb-6">
             {evaluationTitle && (
               <div className="mb-2">
-                <span className="text-sm font-medium text-gray-500">Évaluation :</span>
+                <span className="text-sm font-medium text-gray-500">{typeLabelCapitalized} :</span>
                 <p className="text-lg font-semibold text-gray-900">{evaluationTitle}</p>
               </div>
             )}
@@ -151,8 +156,8 @@ export default function EvaluationResultModal({
           )}
         </div>
 
-        {/* Message d'échec et certification */}
-        {(!isPassed || isTimeExpired) && (
+        {/* Message d'échec et certification (uniquement pour les évaluations finales) */}
+        {(!isPassed || isTimeExpired) && !isQuiz && (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 mb-6">
             <div className="flex items-start space-x-4">
               <div className="flex-shrink-0">
@@ -196,7 +201,10 @@ export default function EvaluationResultModal({
                   Félicitations !
                 </h4>
                 <p className="text-green-800">
-                  Vous avez réussi l'évaluation finale ! Vous êtes éligible pour obtenir votre certification de formation.
+                  {isQuiz 
+                    ? `Vous avez réussi ce ${typeLabel} ! Continuez ainsi pour progresser dans votre formation.`
+                    : `Vous avez réussi l'évaluation finale ! Vous êtes éligible pour obtenir votre certification de formation.`
+                  }
                 </p>
               </div>
             </div>
