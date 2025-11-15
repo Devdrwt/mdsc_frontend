@@ -30,6 +30,9 @@ import {
   Bell,
   ChevronDown,
   ChevronUp,
+  Send,
+  FileText,
+  XCircle,
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -439,9 +442,14 @@ export default function StudentDashboard() {
                 course_started: { icon: Play, color: 'text-blue-500', title: 'Cours commencé' },
                 course_completed: { icon: CheckCircle, color: 'text-green-500', title: 'Cours terminé' },
                 quiz_passed: { icon: Star, color: 'text-yellow-500', title: 'Quiz réussi' },
+                quiz_failed: { icon: XCircle, color: 'text-red-500', title: 'Quiz échoué' },
                 badge_earned: { icon: Trophy, color: 'text-orange-500', title: 'Badge obtenu' },
                 certificate_issued: { icon: Award, color: 'text-purple-500', title: 'Certificat obtenu' },
-                message_received: { icon: MessageSquare, color: 'text-cyan-500', title: 'Nouveau message' },
+                message_received: { icon: MessageSquare, color: 'text-cyan-500', title: 'Message reçu' },
+                message_sent: { icon: Send, color: 'text-[#3B7C8A]', title: 'Message envoyé' },
+                evaluation_submitted: { icon: FileText, color: 'text-blue-500', title: 'Évaluation soumise' },
+                evaluation_passed: { icon: CheckCircle, color: 'text-green-500', title: 'Évaluation réussie' },
+                evaluation_failed: { icon: XCircle, color: 'text-red-500', title: 'Évaluation échouée' },
                 course_progress: { icon: TrendingUp, color: 'text-blue-500', title: 'Progression enregistrée' },
               };
               const config = iconMap[entry.type] ?? {

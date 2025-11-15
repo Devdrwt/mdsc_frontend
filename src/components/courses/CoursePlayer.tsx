@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Modal from '../ui/Modal';
+import FloatingChatButton from './FloatingChatButton';
 
 interface CoursePlayerProps {
   course: Course;
@@ -1570,6 +1571,12 @@ export default function CoursePlayer({
         )}
         </div>
       </main>
+      
+      {/* Bouton de chat flottant pour contacter le formateur */}
+      <FloatingChatButton 
+        courseId={course.id} 
+        courseTitle={course.title}
+      />
     </div>
     </>
   );
