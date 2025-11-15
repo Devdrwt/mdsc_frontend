@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Loader, Info, Home } from 'lucide-react';
+import { Loader, Info, Home, CreditCard, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { paymentService, PaymentInitiation, isDemoMode, Payment } from '../../lib/services/paymentService';
 import { useAuthStore } from '../../lib/stores/authStore';
@@ -302,107 +302,112 @@ export default function PaymentForm({
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        {demoMode && (
-          <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
+    <div className="w-full">
+      {demoMode && (
+        <div className="mb-6 bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-400 rounded-xl p-5 shadow-sm">
+          <div className="flex items-start space-x-3">
+            <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+              <Info className="h-5 w-5 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-yellow-900 mb-1">
+                🎭 MODE DEMO ACTIVÉ
+              </p>
+              <p className="text-xs text-yellow-800">
+                Le paiement est simulé. Aucun débit réel ne sera effectué.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Résumé du cours et montant */}
+      <div className="mb-8 bg-gradient-to-br from-[#3B7C8A]/5 to-[#2d5f6a]/5 border-2 border-[#3B7C8A]/20 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Formation</p>
+            <p className="text-lg md:text-xl font-bold text-gray-900 leading-tight">{courseTitle}</p>
+          </div>
+          <div className="flex-shrink-0 md:text-right">
+            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Montant total</p>
+            <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] bg-clip-text text-transparent">
+              {amount.toLocaleString('fr-FR')} {currency}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* Instructions */}
+        <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-200/50 rounded-xl p-5">
+          <p className="text-sm text-gray-700 leading-relaxed">
+            <span className="font-semibold text-[#3B7C8A]">Cliquez sur "Payer avec Kkiapay"</span> pour ouvrir le widget de paiement sécurisé.
+            Vous pourrez y finaliser votre transaction en toute sécurité.
+          </p>
+        </div>
+
+        {/* Alertes */}
+        {!email && (
+          <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-xl p-5 shadow-sm">
             <div className="flex items-start space-x-3">
-              <Info className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
               <div>
-                <p className="text-sm font-bold text-yellow-900 mb-1">
-                  🎭 MODE DEMO ACTIVÉ
-                </p>
-                <p className="text-xs text-yellow-800">
-                  Le paiement est simulé. Aucun débit réel ne sera effectué.
+                <p className="text-sm font-semibold text-red-900 mb-1">Email requis</p>
+                <p className="text-xs text-red-700">
+                  Votre profil doit contenir une adresse email pour effectuer un paiement.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Paiement via Kkiapay</h2>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
+        {!isReady && (
+          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-2 border-yellow-200 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center space-x-3">
+              <Loader className="h-5 w-5 text-yellow-600 animate-spin flex-shrink-0" />
               <div>
-                <p className="text-sm text-gray-600">Cours</p>
-                <p className="font-semibold text-gray-900">{courseTitle}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Montant</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {amount.toLocaleString('fr-FR')} {currency}
-                </p>
+                <p className="text-sm font-semibold text-yellow-900">Chargement en cours</p>
+                <p className="text-xs text-yellow-700">Le widget de paiement se charge, veuillez patienter...</p>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <div className="space-y-6">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <p className="text-sm text-gray-700">
-              Cliquez sur "Payer avec Kkiapay" pour ouvrir le widget de paiement sécurisé.
-              Vous pourrez y finaliser votre transaction.
-            </p>
-          </div>
-
-          {!email && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-700">
-                ⚠️ Votre profil doit contenir une adresse email pour effectuer un paiement.
-              </p>
-            </div>
-          )}
-
-          {!isReady && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-700">
-                ⏳ Chargement du widget de paiement en cours... Veuillez patienter.
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => router.push('/dashboard/student')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
-              disabled={processing}
-            >
-              <Home className="h-5 w-5" />
-              <span>Retour au dashboard</span>
-            </button>
-            <div className="flex items-center space-x-4">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                disabled={processing}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handlePayWithKkiapay}
-                disabled={processing || !email}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                {processing ? (
-                  <>
-                    <Loader className="h-5 w-5 animate-spin" />
-                    <span>Ouverture du widget...</span>
-                  </>
-                ) : !isReady ? (
-                  <>
-                    <Loader className="h-5 w-5 animate-spin" />
-                    <span>Chargement...</span>
-                  </>
-                ) : (
-                  <span>Payer avec Kkiapay</span>
-                )}
-              </button>
-            </div>
-          </div>
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-6 border-t-2 border-gray-200">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-3.5 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium flex items-center justify-center space-x-2"
+            disabled={processing}
+          >
+            <span>Annuler</span>
+          </button>
+          <button
+            type="button"
+            onClick={handlePayWithKkiapay}
+            disabled={processing || !email}
+            className="px-8 py-3.5 bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] text-white rounded-xl hover:from-[#2d5f6a] hover:to-[#1f4a52] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#3B7C8A] disabled:hover:to-[#2d5f6a] font-semibold shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {processing ? (
+              <>
+                <Loader className="h-5 w-5 animate-spin" />
+                <span>Ouverture du widget...</span>
+              </>
+            ) : !isReady ? (
+              <>
+                <Loader className="h-5 w-5 animate-spin" />
+                <span>Chargement...</span>
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-5 w-5" />
+                <span>Payer avec Kkiapay</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
