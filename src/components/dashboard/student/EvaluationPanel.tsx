@@ -29,7 +29,7 @@ export default function EvaluationPanel() {
   });
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'quiz' | 'assignment' | 'exam'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'graded'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'graded' | 'pending'>('all');
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedEvaluationResult, setSelectedEvaluationResult] = useState<any>(null);
 
@@ -70,11 +70,12 @@ export default function EvaluationPanel() {
     
     // Filtre par statut
     if (filterStatus !== 'all') {
-      // Les évaluations "en cours" (in-progress) ne sont pas filtrables directement
-      // Elles apparaissent dans "Tous les statuts" ou peuvent être considérées comme "À faire"
       if (filterStatus === 'not-started') {
         // "À faire" inclut les évaluations non commencées et celles en cours
         if (evaluation.status !== 'not-started' && evaluation.status !== 'in-progress') return false;
+      } else if (filterStatus === 'pending') {
+        // "En attente" inclut tous les statuts non complétés : not-started, in-progress, locked, submitted (non noté)
+        if (evaluation.status === 'graded') return false;
       } else if (filterStatus === 'graded') {
         // "Notés" inclut uniquement les évaluations notées
         if (evaluation.status !== 'graded') return false;
@@ -276,7 +277,7 @@ export default function EvaluationPanel() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-600">En attente</p>
-                <p className="text-2xl font-bold text-gray-900">{(stats.totalEvaluations || 0) - (stats.completedEvaluations || 0)}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.pendingEvaluations !== undefined ? stats.pendingEvaluations : (stats.totalEvaluations || 0) - (stats.completedEvaluations || 0)}</p>
               </div>
             </div>
           </div>
@@ -302,6 +303,7 @@ export default function EvaluationPanel() {
           >
             <option value="all">Tous les statuts</option>
             <option value="not-started">À faire</option>
+            <option value="pending">En attente</option>
             <option value="graded">Notés</option>
           </select>
         </div>
@@ -541,7 +543,15 @@ export default function EvaluationPanel() {
                       </>
                     ) : (evaluation as any).is_final ? (
                       <>
-                        {(evaluation as any).attempts_count < (evaluation as any).max_attempts ? (
+                        {(evaluation as any).is_locked || evaluation.status === 'locked' ? (
+                          <button
+                            disabled
+                            className="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-xl shadow-sm cursor-not-allowed text-sm whitespace-nowrap"
+                            title="Complétez tous les modules de la formation pour déverrouiller cette évaluation"
+                          >
+                            Verrouillé
+                          </button>
+                        ) : (evaluation as any).attempts_count < (evaluation as any).max_attempts ? (
                           evaluation.status === 'not-started' ? (
                             <button
                               onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}

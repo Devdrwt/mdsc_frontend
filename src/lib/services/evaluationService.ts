@@ -30,6 +30,7 @@ export interface EvaluationSubmission {
 export interface EvaluationStats {
   totalEvaluations: number;
   completedEvaluations: number;
+  pendingEvaluations?: number;
   averageScore: number;
   totalPoints: number;
   earnedPoints: number;
@@ -280,6 +281,7 @@ export class EvaluationService {
     return {
       totalEvaluations: overview.total_evaluations || overview.totalEvaluations || 0,
       completedEvaluations: overview.evaluations_graded || overview.completedEvaluations || 0,
+      pendingEvaluations: overview.evaluations_pending || overview.pendingEvaluations || 0,
       averageScore: overview.average_score || overview.averageScore || 0,
       totalPoints: overview.totalPoints || 0,
       earnedPoints: overview.earnedPoints || 0
