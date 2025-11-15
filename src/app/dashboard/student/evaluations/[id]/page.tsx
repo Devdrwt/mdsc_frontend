@@ -639,7 +639,7 @@ export default function EvaluationSubmissionPage() {
             message="Êtes-vous sûr de vouloir soumettre cette évaluation ? Vous ne pourrez plus la modifier."
             confirmText="Soumettre"
             cancelText="Annuler"
-            confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+            confirmButtonClass="bg-mdsc-blue-primary hover:bg-blue-600"
             isLoading={submitting}
           />
 

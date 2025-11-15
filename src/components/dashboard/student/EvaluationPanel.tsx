@@ -365,15 +365,9 @@ export default function EvaluationPanel() {
                           evaluation.status === 'not-started' ? (
                             <button
                               onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                              className="group relative px-6 py-3 bg-gradient-to-r from-mdsc-blue-primary via-blue-600 to-mdsc-blue-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
+                              className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
                             >
-                              <span className="relative z-10 flex items-center space-x-2">
-                                <span>Commencer</span>
-                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                              </span>
-                              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              Commencer
                             </button>
                           ) : (
                             <button
@@ -428,21 +422,15 @@ export default function EvaluationPanel() {
                         {evaluation.status === 'not-started' && (
                           <button
                             onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                            className={getButtonClasses('primary')}
+                            className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
                           >
-                            <span className="relative z-10 flex items-center space-x-2">
-                              <span>Commencer</span>
-                              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                              </svg>
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            Commencer
                           </button>
                         )}
                         {evaluation.status === 'in-progress' && (
                           <button
                             onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                            className={getButtonClasses('secondary')}
+                            className="group relative px-6 py-3 bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
                           >
                             <span className="relative z-10 flex items-center space-x-2">
                               <span>Continuer</span>
