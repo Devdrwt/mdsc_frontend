@@ -10,8 +10,7 @@ import {
   CheckCircle, 
   AlertCircle,
   FileText,
-  BarChart3,
-  Download
+  BarChart3
 } from 'lucide-react';
 import { evaluationService, Evaluation, EvaluationStats } from '../../../lib/services/evaluationService';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -29,7 +28,7 @@ export default function EvaluationPanel() {
   });
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'quiz' | 'assignment' | 'exam'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'in-progress' | 'submitted' | 'graded'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'graded'>('all');
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedEvaluationResult, setSelectedEvaluationResult] = useState<any>(null);
 
@@ -58,8 +57,29 @@ export default function EvaluationPanel() {
   }, [user]);
 
   const filteredEvaluations = evaluations.filter(evaluation => {
-    if (filterType !== 'all' && evaluation.type !== filterType) return false;
-    if (filterStatus !== 'all' && evaluation.status !== filterStatus) return false;
+    // Filtre par type
+    if (filterType !== 'all') {
+      // Pour les évaluations finales, les considérer comme des examens
+      if ((evaluation as any).is_final) {
+        if (filterType !== 'exam') return false;
+      } else {
+        if (evaluation.type !== filterType) return false;
+      }
+    }
+    
+    // Filtre par statut
+    if (filterStatus !== 'all') {
+      // Les évaluations "en cours" (in-progress) ne sont pas filtrables directement
+      // Elles apparaissent dans "Tous les statuts" ou peuvent être considérées comme "À faire"
+      if (filterStatus === 'not-started') {
+        // "À faire" inclut les évaluations non commencées et celles en cours
+        if (evaluation.status !== 'not-started' && evaluation.status !== 'in-progress') return false;
+      } else if (filterStatus === 'graded') {
+        // "Notés" inclut uniquement les évaluations notées
+        if (evaluation.status !== 'graded') return false;
+      }
+    }
+    
     return true;
   });
 
@@ -124,6 +144,65 @@ export default function EvaluationPanel() {
   const isOverdue = (dueDate?: string) => {
     if (!dueDate) return false;
     return new Date(dueDate) < new Date();
+  };
+
+  // Composant Timer pour les évaluations en cours
+  const EvaluationTimer = ({ startedAt, durationMinutes, evaluationId }: { startedAt: string; durationMinutes: number; evaluationId: string }) => {
+    const [timeRemaining, setTimeRemaining] = useState<number>(0);
+    const [isExpired, setIsExpired] = useState(false);
+
+    useEffect(() => {
+      const calculateTimeRemaining = () => {
+        const startTime = new Date(startedAt).getTime();
+        const durationMs = durationMinutes * 60 * 1000;
+        const endTime = startTime + durationMs;
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+        
+        setTimeRemaining(remaining);
+        setIsExpired(remaining === 0);
+      };
+
+      calculateTimeRemaining();
+      const interval = setInterval(calculateTimeRemaining, 1000);
+
+      return () => clearInterval(interval);
+    }, [startedAt, durationMinutes]);
+
+    const formatTime = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${secs}s`;
+      }
+      return `${minutes}m ${secs}s`;
+    };
+
+    if (isExpired) {
+      return (
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-red-100 border border-red-300 rounded-lg">
+          <Clock className="h-4 w-4 text-red-600" />
+          <span className="text-sm font-semibold text-red-600">Temps écoulé</span>
+        </div>
+      );
+    }
+
+    const isWarning = timeRemaining < 300; // Moins de 5 minutes
+
+    return (
+      <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg border ${
+        isWarning 
+          ? 'bg-red-50 border-red-300' 
+          : 'bg-yellow-50 border-yellow-300'
+      }`}>
+        <Clock className={`h-4 w-4 ${isWarning ? 'text-red-600' : 'text-yellow-600'}`} />
+        <span className={`text-sm font-semibold ${isWarning ? 'text-red-600' : 'text-yellow-600'}`}>
+          {formatTime(timeRemaining)}
+        </span>
+      </div>
+    );
   };
 
   if (loading) {
@@ -197,39 +276,26 @@ export default function EvaluationPanel() {
 
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex items-center space-x-4">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-            >
-              <option value="all">Tous les types</option>
-              <option value="quiz">Quiz</option>
-              <option value="assignment">Devoirs</option>
-              <option value="exam">Examens</option>
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="not-started">À faire</option>
-              <option value="in-progress">En cours</option>
-              <option value="submitted">Soumis</option>
-              <option value="graded">Notés</option>
-            </select>
-          </div>
-
-          <button
-            onClick={() => window.location.href = '/dashboard/student/evaluations/report'}
-            className="flex items-center space-x-2 px-4 py-2 bg-mdsc-blue-primary text-white rounded-md hover:bg-blue-600 transition-colors"
+        <div className="flex items-center space-x-4">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value as any)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
           >
-            <Download className="h-4 w-4" />
-            <span>Télécharger le rapport</span>
-          </button>
+            <option value="all">Tous les types</option>
+            <option value="quiz">Quiz</option>
+            <option value="exam">Examens</option>
+          </select>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="not-started">À faire</option>
+            <option value="graded">Notés</option>
+          </select>
         </div>
       </div>
 
@@ -270,6 +336,16 @@ export default function EvaluationPanel() {
                           <p className="text-gray-600 text-sm mb-3">
                             {evaluation.description}
                           </p>
+                          {/* Afficher le timer si l'évaluation est en cours */}
+                          {evaluation.status === 'in-progress' && (evaluation as any).incomplete_started_at && (evaluation as any).duration_minutes && (
+                            <div className="mb-3">
+                              <EvaluationTimer 
+                                startedAt={(evaluation as any).incomplete_started_at}
+                                durationMinutes={(evaluation as any).duration_minutes}
+                                evaluationId={evaluation.id}
+                              />
+                            </div>
+                          )}
                           <div className="flex items-center space-x-6 text-sm text-gray-500">
                             {(evaluation as any).duration_minutes && (
                               <div className="flex items-center space-x-1">
@@ -336,7 +412,7 @@ export default function EvaluationPanel() {
                       {/* Afficher le score s'il existe et n'est pas null (pour toutes les évaluations, pas seulement "graded") */}
                       {evaluation.score !== undefined && evaluation.score !== null && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-700">Note obtenue:</span>
                             <span className={`text-lg font-bold ${
                               // Pour les évaluations finales, le score est déjà un pourcentage
@@ -372,15 +448,9 @@ export default function EvaluationPanel() {
                           ) : (
                             <button
                               onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                              className="group relative px-6 py-3 bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
+                              className="px-6 py-3 bg-mdsc-gold text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-yellow-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
                             >
-                              <span className="relative z-10 flex items-center space-x-2">
-                                <span>Continuer</span>
-                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                              </span>
-                              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                              Continuer
                             </button>
                           )
                         ) : (
@@ -430,15 +500,9 @@ export default function EvaluationPanel() {
                         {evaluation.status === 'in-progress' && (
                           <button
                             onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                            className="group relative px-6 py-3 bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
+                            className="px-6 py-3 bg-mdsc-gold text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-yellow-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
                           >
-                            <span className="relative z-10 flex items-center space-x-2">
-                              <span>Continuer</span>
-                              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                              </svg>
-                            </span>
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            Continuer
                           </button>
                         )}
                         {evaluation.status === 'graded' && (
