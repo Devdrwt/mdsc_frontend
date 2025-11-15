@@ -214,6 +214,22 @@ export class EvaluationService {
     return response.data;
   }
 
+  // Vérifier l'existence d'une tentative (sans en créer une nouvelle)
+  static async checkEvaluationAttempt(evaluationId: string): Promise<{ exists: boolean; attemptId?: number; startedAt?: string; durationMinutes: number }> {
+    const response = await apiRequest(`/evaluations/${evaluationId}/attempt`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Démarrer une tentative d'évaluation
+  static async startEvaluationAttempt(evaluationId: string): Promise<{ attemptId: number; startedAt: string; durationMinutes: number }> {
+    const response = await apiRequest(`/evaluations/${evaluationId}/start`, {
+      method: 'POST',
+    });
+    return response.data;
+  }
+
   // Soumettre une évaluation
   static async submitEvaluation(
     evaluationId: string, 
@@ -258,7 +274,16 @@ export class EvaluationService {
     const response = await apiRequest(`/evaluations/user/${userId}/stats`, {
       method: 'GET',
     });
-    return response.data;
+    const data = response.data || response;
+    const overview = data.overview || data;
+    
+    return {
+      totalEvaluations: overview.total_evaluations || overview.totalEvaluations || 0,
+      completedEvaluations: overview.evaluations_graded || overview.completedEvaluations || 0,
+      averageScore: overview.average_score || overview.averageScore || 0,
+      totalPoints: overview.totalPoints || 0,
+      earnedPoints: overview.earnedPoints || 0
+    };
   }
 
   // CRUD pour instructeurs

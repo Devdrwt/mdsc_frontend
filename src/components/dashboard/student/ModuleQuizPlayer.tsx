@@ -530,7 +530,9 @@ export default function ModuleQuizPlayer({
 
       {/* Modal de résultat du quiz */}
       {showResultModal && result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4 ${
+          result.passed ? 'bg-green-900/40' : 'bg-red-900/40'
+        }`}>
           <div className={`bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center ${
             result.passed ? 'border-2 border-green-500' : 'border-2 border-red-500'
           }`}>

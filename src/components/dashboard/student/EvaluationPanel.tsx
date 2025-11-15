@@ -11,11 +11,11 @@ import {
   AlertCircle,
   FileText,
   BarChart3,
-  Download,
-  Eye
+  Download
 } from 'lucide-react';
 import { evaluationService, Evaluation, EvaluationStats } from '../../../lib/services/evaluationService';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import EvaluationResultModal from '../../ui/EvaluationResultModal';
 
 export default function EvaluationPanel() {
   const { user } = useAuthStore();
@@ -30,6 +30,8 @@ export default function EvaluationPanel() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'all' | 'quiz' | 'assignment' | 'exam'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'in-progress' | 'submitted' | 'graded'>('all');
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [selectedEvaluationResult, setSelectedEvaluationResult] = useState<any>(null);
 
   useEffect(() => {
     const loadEvaluations = async () => {
@@ -119,7 +121,8 @@ export default function EvaluationPanel() {
     }
   };
 
-  const isOverdue = (dueDate: string) => {
+  const isOverdue = (dueDate?: string) => {
+    if (!dueDate) return false;
     return new Date(dueDate) < new Date();
   };
 
@@ -243,50 +246,111 @@ export default function EvaluationPanel() {
                     </div>
                     
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{evaluation.title}</h3>
-                        {getStatusBadge(evaluation.status)}
-                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                          {getTypeLabel(evaluation.type)}
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {evaluation.description}
-                      </p>
-                      
-                      <div className="flex items-center space-x-6 text-sm text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span className={isOverdue(evaluation.dueDate) && evaluation.status !== 'graded' ? 'text-red-500 font-medium' : ''}>
-                            {isOverdue(evaluation.dueDate) && evaluation.status !== 'graded' ? 'En retard: ' : ''}
-                            {new Date(evaluation.dueDate).toLocaleDateString('fr-FR')}
+                      {/* Ne pas afficher le titre, le badge "Noté" et le type "Examen" pour les évaluations finales */}
+                      {!(evaluation as any).is_final && (
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{evaluation.title}</h3>
+                          {getStatusBadge(evaluation.status)}
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                            {getTypeLabel(evaluation.type)}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>60 minutes</span>
+                      )}
+                      
+                      {/* Pour les évaluations finales, afficher seulement la description */}
+                      {(evaluation as any).is_final ? (
+                        <div className="mb-3">
+                          {/* Afficher le titre de la formation */}
+                          {evaluation.courseName && (
+                            <div className="mb-2">
+                              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Formation :</span>
+                              <h4 className="text-base font-semibold text-gray-900 mt-1">{evaluation.courseName}</h4>
+                            </div>
+                          )}
+                          <p className="text-gray-600 text-sm mb-3">
+                            {evaluation.description}
+                          </p>
+                          <div className="flex items-center space-x-6 text-sm text-gray-500">
+                            {(evaluation as any).duration_minutes && (
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{(evaluation as any).duration_minutes} minutes</span>
+                              </div>
+                            )}
+                            {(evaluation as any).max_attempts && (
+                              <div className="flex items-center space-x-1">
+                                <Award className="h-4 w-4" />
+                                <span>
+                                  {Math.min((evaluation as any).attempts_count || 0, (evaluation as any).max_attempts)}/{(evaluation as any).max_attempts} tentative{(evaluation as any).max_attempts > 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            )}
+                            {(evaluation as any).passing_score && (
+                              <div className="flex items-center space-x-1">
+                                <TrendingUp className="h-4 w-4" />
+                                <span>Score minimum: {(evaluation as any).passing_score}%</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Award className="h-4 w-4" />
-                          <span>3 tentatives</span>
-                        </div>
-                      </div>
+                      ) : (
+                        <>
+                          <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                            {evaluation.description}
+                          </p>
+                          
+                          <div className="flex items-center space-x-6 text-sm text-gray-500">
+                            {evaluation.dueDate && (
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-4 w-4" />
+                                <span className={isOverdue(evaluation.dueDate) && evaluation.status !== 'graded' ? 'text-red-500 font-medium' : ''}>
+                                  {isOverdue(evaluation.dueDate) && evaluation.status !== 'graded' ? 'En retard: ' : ''}
+                                  {new Date(evaluation.dueDate).toLocaleDateString('fr-FR')}
+                                </span>
+                              </div>
+                            )}
+                            {(evaluation as any).duration_minutes && (
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{(evaluation as any).duration_minutes} minutes</span>
+                              </div>
+                            )}
+                            {(evaluation as any).max_attempts && (
+                              <div className="flex items-center space-x-1">
+                                <Award className="h-4 w-4" />
+                                <span>
+                                  {Math.min((evaluation as any).attempts_count || 0, (evaluation as any).max_attempts)}/{(evaluation as any).max_attempts} tentative{(evaluation as any).max_attempts > 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            )}
+                            {(evaluation as any).passing_score && (
+                              <div className="flex items-center space-x-1">
+                                <TrendingUp className="h-4 w-4" />
+                                <span>Score minimum: {(evaluation as any).passing_score}%</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
 
-                      {evaluation.status === 'graded' && evaluation.score !== undefined && (
+                      {/* Afficher le score s'il existe et n'est pas null (pour toutes les évaluations, pas seulement "graded") */}
+                      {evaluation.score !== undefined && evaluation.score !== null && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-gray-700">Note obtenue:</span>
                             <span className={`text-lg font-bold ${
-                              (evaluation.score / (evaluation.maxScore || 100)) * 100 >= 80 ? 'text-green-600' :
-                              (evaluation.score / (evaluation.maxScore || 100)) * 100 >= 60 ? 'text-yellow-600' :
-                              'text-red-600'
+                              // Pour les évaluations finales, le score est déjà un pourcentage
+                              (evaluation as any).is_final 
+                                ? (evaluation.score >= 80 ? 'text-green-600' : evaluation.score >= 60 ? 'text-yellow-600' : 'text-red-600')
+                                : ((evaluation.score / (evaluation.maxScore || 100)) * 100 >= 80 ? 'text-green-600' :
+                                    (evaluation.score / (evaluation.maxScore || 100)) * 100 >= 60 ? 'text-yellow-600' :
+                                    'text-red-600')
                             }`}>
-                              {evaluation.score}/{evaluation.maxScore || 100} ({((evaluation.score / (evaluation.maxScore || 100)) * 100).toFixed(1)}%)
+                              {(evaluation as any).is_final 
+                                ? `${evaluation.score.toFixed(1)}%`
+                                : `${evaluation.score}/${evaluation.maxScore || 100} (${((evaluation.score / (evaluation.maxScore || 100)) * 100).toFixed(1)}%)`
+                              }
                             </span>
-                          </div>
-                          <div className="mt-2 text-sm text-gray-600">
-                            <strong>Commentaire:</strong> Excellent travail !
                           </div>
                         </div>
                       )}
@@ -294,30 +358,110 @@ export default function EvaluationPanel() {
                   </div>
                   
                   <div className="ml-6 flex flex-col space-y-2">
-                    {evaluation.status === 'not-started' && (
-                      <button
-                        onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                        className="btn-mdsc-primary text-sm"
-                      >
-                        Commencer
-                      </button>
-                    )}
-                    {evaluation.status === 'in-progress' && (
-                      <button
-                        onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
-                        className="btn-mdsc-secondary text-sm"
-                      >
-                        Continuer
-                      </button>
-                    )}
-                    {evaluation.status === 'graded' && (
-                      <button
-                        onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}/results`}
-                        className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span>Voir les résultats</span>
-                      </button>
+                    {/* Pour les évaluations finales, vérifier si des tentatives sont disponibles */}
+                    {(evaluation as any).is_final ? (
+                      <>
+                        {(evaluation as any).attempts_count < (evaluation as any).max_attempts ? (
+                          evaluation.status === 'not-started' ? (
+                            <button
+                              onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
+                              className="group relative px-6 py-3 bg-gradient-to-r from-mdsc-blue-primary via-blue-600 to-mdsc-blue-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
+                            >
+                              <span className="relative z-10 flex items-center space-x-2">
+                                <span>Commencer</span>
+                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                              </span>
+                              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
+                              className="group relative px-6 py-3 bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out overflow-hidden text-sm"
+                            >
+                              <span className="relative z-10 flex items-center space-x-2">
+                                <span>Continuer</span>
+                                <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                              </span>
+                              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            </button>
+                          )
+                        ) : (
+                          <button
+                            onClick={() => {
+                              // Préparer les données pour le modal de résultats
+                              const evalData = evaluation as any;
+                              // Pour les évaluations finales, le score est déjà un pourcentage (best_score)
+                              const percentage = evalData.score !== null && evalData.score !== undefined ? Number(evalData.score) : 0;
+                              const passingScore = evalData.passing_score || 70;
+                              const isPassed = percentage >= passingScore;
+                              
+                              // Calculer le score en points (approximation basée sur le pourcentage)
+                              const totalPoints = 100;
+                              const scoreInPoints = Math.round((percentage / 100) * totalPoints);
+                              
+                              const result = {
+                                score: scoreInPoints,
+                                totalPoints: totalPoints,
+                                percentage: percentage,
+                                isPassed: isPassed,
+                                isTimeExpired: false,
+                                evaluationTitle: evaluation.title,
+                                courseName: evaluation.courseName || '',
+                                passingScore: passingScore
+                              };
+                              
+                              setSelectedEvaluationResult(result);
+                              setShowResultModal(true);
+                            }}
+                            className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
+                          >
+                            Voir les résultats
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {evaluation.status === 'not-started' && (
+                          <button
+                            onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
+                            className={getButtonClasses('primary')}
+                          >
+                            <span className="relative z-10 flex items-center space-x-2">
+                              <span>Commencer</span>
+                              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          </button>
+                        )}
+                        {evaluation.status === 'in-progress' && (
+                          <button
+                            onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}`}
+                            className={getButtonClasses('secondary')}
+                          >
+                            <span className="relative z-10 flex items-center space-x-2">
+                              <span>Continuer</span>
+                              <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                              </svg>
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          </button>
+                        )}
+                        {evaluation.status === 'graded' && (
+                          <button
+                            onClick={() => window.location.href = `/dashboard/student/evaluations/${evaluation.id}/results`}
+                            className="px-6 py-3 bg-mdsc-blue-primary text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:bg-blue-600 transform hover:scale-105 transition-all duration-300 ease-out text-sm whitespace-nowrap"
+                          >
+                            Voir les résultats
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -336,6 +480,18 @@ export default function EvaluationPanel() {
           </div>
         )}
       </div>
+
+      {/* Modal de résultats de l'évaluation */}
+      {selectedEvaluationResult && (
+        <EvaluationResultModal
+          isOpen={showResultModal}
+          onClose={() => {
+            setShowResultModal(false);
+            setSelectedEvaluationResult(null);
+          }}
+          result={selectedEvaluationResult}
+        />
+      )}
     </div>
   );
 }
