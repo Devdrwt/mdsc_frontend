@@ -161,7 +161,10 @@ const normalizeCourses = (rawCourses: any[]): NormalizedCourse[] => {
 };
 
 export default function StudentDashboard() {
-  const { user } = useAuthStore();
+  const authStore = useAuthStore();
+  const user = authStore.user;
+  const authLoading = authStore.isLoading ?? false;
+  const hasHydrated = authStore.hasHydrated ?? false;
   const [courses, setCourses] = useState<NormalizedCourse[]>([]);
   const courseCards = useMemo<CourseProgressCard[]>(() => {
     return courses.map((course) => ({
@@ -232,7 +235,16 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-      if (!user) return;
+    // Attendre que l'authentification soit hydratée
+    if (!hasHydrated || authLoading) {
+      return;
+    }
+
+    // Si l'utilisateur n'est pas disponible après l'hydratation, arrêter le chargement
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     let isMounted = true;
 
@@ -540,7 +552,7 @@ export default function StudentDashboard() {
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user?.id, hasHydrated, authLoading]);
 
   if (loading) {
     return (

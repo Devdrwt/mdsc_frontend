@@ -75,6 +75,29 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Script Kkiapay SDK */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window === 'undefined') return;
+                var script = document.createElement('script');
+                script.src = 'https://cdn.kkiapay.me/k.js';
+                script.async = true;
+                script.onload = function() {
+                  console.log('[Kkiapay] ✅ SDK chargé avec succès');
+                  if (window.dispatchEvent) {
+                    window.dispatchEvent(new Event('kkiapay-sdk-loaded'));
+                  }
+                };
+                script.onerror = function() {
+                  console.error('[Kkiapay] ❌ Erreur lors du chargement du SDK');
+                };
+                document.head.appendChild(script);
+              })();
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
