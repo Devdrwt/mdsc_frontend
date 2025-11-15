@@ -7,8 +7,8 @@ import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
 
 const content = {
   image: '/Colleagues.png',
-  title: 'APPRENANT',
-  subtitle: 'Suivre des formations',
+  title: 'Plateforme MdSC',
+  subtitle: 'Formations et certifications',
   features: [
     'Accès à tous les cours',
     'Certifications reconnues',

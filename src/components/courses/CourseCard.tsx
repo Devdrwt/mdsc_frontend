@@ -294,7 +294,7 @@ export default function CourseCard({
           >
             {priceLabel}
           </span>
-          {statusLabel && (
+          {statusLabel && statusLabel !== 'Actif' && (
             <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusClasses}`}>
               {statusLabel}
             </span>

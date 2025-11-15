@@ -229,15 +229,15 @@ const SimpleRegisterForm = () => {
         </p>
       </div>
 
-      {/* Badge du rôle sélectionné */}
+      {/* Badge d'information */}
       <div className="text-center mt-4 space-y-2">
         <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-800 rounded-full text-sm font-medium">
           <GraduationCap className="h-4 w-4 mr-2" />
-          Inscription en tant qu'Apprenant
+          Créez votre accès MdSC
         </div>
         <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
           <ShieldAlert className="h-4 w-4 text-gray-400" />
-          Le rôle formateur est attribué par un administrateur MdSC.
+          Les privilèges avancés sont attribués après validation par l'équipe MdSC.
         </p>
       </div>
 

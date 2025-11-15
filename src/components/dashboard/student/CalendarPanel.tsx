@@ -331,7 +331,7 @@ export default function CalendarPanel() {
         const dateB = parseISO(`${b.date}T${b.time}`);
         return dateA.getTime() - dateB.getTime();
       })
-      .slice(0, 5);
+    .slice(0, 5);
   }, [events]);
 
   const overdueEvents = useMemo(() => {
@@ -644,7 +644,7 @@ export default function CalendarPanel() {
                 <div className="flex items-center justify-between pt-2 border-t border-blue-400">
                   <span className="text-red-200">En retard</span>
                   <span className="text-2xl font-bold text-red-200">{overdueEvents.length}</span>
-                </div>
+              </div>
               )}
             </div>
           </div>
