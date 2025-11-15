@@ -199,6 +199,23 @@ export class EvaluationService {
     return response.data;
   }
 
+  // Récupérer l'évaluation finale pour un enrollment (étudiant)
+  static async getEnrollmentEvaluation(enrollmentId: number): Promise<{ evaluation: FinalEvaluation | null; previous_attempts: any[]; can_attempt: boolean } | null> {
+    try {
+      const response = await apiRequest(`/evaluations/enrollments/${enrollmentId}/evaluation`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      // 404 est attendu si l'évaluation n'existe pas
+      if (error?.status === 404 || error?.response?.status === 404) {
+        return null;
+      }
+      console.warn('Erreur lors de la récupération de l\'évaluation finale:', error);
+      return null;
+    }
+  }
+
   // Récupérer les évaluations de l'utilisateur connecté
   static async getMyEvaluations(): Promise<Evaluation[]> {
     const response = await apiRequest('/evaluations/my', {
