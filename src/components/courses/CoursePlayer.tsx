@@ -14,6 +14,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Modal from '../ui/Modal';
 import FloatingChatButton from './FloatingChatButton';
+import CertificateCelebrateModal from '../certificates/CertificateCelebrateModal';
+import { certificateService } from '../../lib/services/certificateService';
+import { useAuthStore } from '../../lib/stores/authStore';
 
 interface CoursePlayerProps {
   course: Course;
@@ -56,6 +59,9 @@ export default function CoursePlayer({
   const [moduleProgressMap, setModuleProgressMap] = useState<Map<number, number>>(new Map());
   const [totalDurationMinutes, setTotalDurationMinutes] = useState<number>(0);
   const [completedDurationMinutes, setCompletedDurationMinutes] = useState<number>(0);
+  const { user } = useAuthStore();
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -496,6 +502,17 @@ export default function CoursePlayer({
       source: progressFromApi === 100 ? 'API (100%)' : progressFromApi > 0 ? 'API' : 'Calcul local'
     });
 
+    // Sécurité finale: si une évaluation finale existe mais aucune tentative complétée,
+    // ne jamais afficher 100% (cap à 90%), sauf si l'API confirme 100%.
+    if (progressFromApi !== 100 && finalEvaluation) {
+      const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+        return attempt?.completed_at !== null && attempt?.completed_at !== undefined;
+      });
+      if (!hasCompletedEvaluation && preferredProgress > 90) {
+        preferredProgress = 90;
+      }
+    }
+
     setCourseProgress(Number.isFinite(preferredProgress) ? preferredProgress : 0);
 
     if (orderedLessons.length > 0 && unlockedSet.size === 0) {
@@ -737,13 +754,14 @@ export default function CoursePlayer({
   const getModuleProgress = (module: Module): number => {
     const moduleId = module.id;
     
-    // Si le module n'a pas de leçons, retourner 0
+    // Si le module n'a pas de leçons
     if (!module.lessons || module.lessons.length === 0) {
-      // Si le module a un quiz, vérifier s'il est complété
+      // S'il a un quiz, progression 100% si quiz réussi, sinon 0
       if (moduleQuizzes.has(moduleId)) {
         return completedModuleQuizzes.has(moduleId) ? 100 : 0;
       }
-      return 0;
+      // Pas de leçons ni de quiz → considérer complété
+      return 100;
     }
     
     // Calculer la progression des leçons
@@ -752,18 +770,11 @@ export default function CoursePlayer({
     
     // Si toutes les leçons sont complétées
     if (lessonsProgress === 100) {
-      // Vérifier si le module a un quiz
+      // Si un quiz est associé, il doit être réussi pour 100% (sinon 90%)
       if (moduleQuizzes.has(moduleId)) {
-        // Le quiz est obligatoire : le module n'est complété que si le quiz est réussi
-        if (completedModuleQuizzes.has(moduleId)) {
-          return 100; // Toutes les leçons + quiz réussi = 100%
-        } else {
-          // Toutes les leçons complétées mais quiz non réussi = 90% (pour indiquer qu'il reste le quiz)
-          return 90;
-        }
+        return completedModuleQuizzes.has(moduleId) ? 100 : 90;
       }
-      // Pas de quiz, le module est complété à 100%
-      return 100;
+      return 100; // Pas de quiz → 100%
     }
     
     // Sinon, retourner la progression des leçons uniquement
@@ -773,26 +784,21 @@ export default function CoursePlayer({
   const isModuleCompleted = (module: Module): boolean => {
     const moduleId = module.id;
     
-    // Vérifier que toutes les leçons sont complétées
+    // Un module est complété si:
+    // - Toutes ses leçons sont validées
+    // - ET si un quiz est lié, ce quiz est réussi
     if (!module.lessons || module.lessons.length === 0) {
-      // Si pas de leçons mais un quiz, vérifier le quiz
+      // Aucun contenu leçon: s'il existe un quiz, il doit être réussi; sinon considéré complété
       if (moduleQuizzes.has(moduleId)) {
         return completedModuleQuizzes.has(moduleId);
       }
-      return false;
+      return true;
     }
-    
     const allLessonsCompleted = module.lessons.every((l) => completedLessons.has(l.id));
-    if (!allLessonsCompleted) {
-      return false;
-    }
-    
-    // Si toutes les leçons sont complétées, vérifier le quiz (obligatoire si présent)
+    if (!allLessonsCompleted) return false;
     if (moduleQuizzes.has(moduleId)) {
       return completedModuleQuizzes.has(moduleId);
     }
-    
-    // Pas de quiz, le module est complété
     return true;
   };
 
@@ -807,61 +813,31 @@ export default function CoursePlayer({
     
     const allCompleted = course.modules.every((module) => {
       const moduleId = module.id;
-      
-      // Vérifier que toutes les leçons sont complétées
+      // Baser l'état sur isModuleCompleted pour assurer cohérence
+      const completed = isModuleCompleted(module);
+      let reason = '';
       if (!module.lessons || module.lessons.length === 0) {
-        // Si pas de leçons mais un quiz, vérifier le quiz
-        if (moduleQuizzes.has(moduleId)) {
-          const quizCompleted = completedModuleQuizzes.has(moduleId);
-          moduleStatuses.push({
-            moduleId,
-            title: module.title || `Module ${moduleId}`,
-            completed: quizCompleted,
-            reason: quizCompleted ? 'Quiz complété' : 'Quiz non complété'
-          });
-          return quizCompleted;
+        reason = moduleQuizzes.has(moduleId)
+          ? (completed ? 'Quiz complété' : 'Quiz non complété')
+          : 'Aucune leçon ni quiz';
+      } else {
+        const lessonsCount = module.lessons.length;
+        const lessonsCompletedCount = module.lessons.filter((l) => completedLessons.has(l.id)).length;
+        if (lessonsCompletedCount < lessonsCount) {
+          reason = `${lessonsCompletedCount}/${lessonsCount} leçons complétées`;
+        } else if (moduleQuizzes.has(moduleId)) {
+          reason = completed ? 'Toutes les leçons + quiz complétés' : 'Leçons complétées mais quiz non réussi';
+        } else {
+          reason = 'Toutes les leçons complétées (pas de quiz)';
         }
-        moduleStatuses.push({
-          moduleId,
-          title: module.title || `Module ${moduleId}`,
-          completed: false,
-          reason: 'Pas de leçons ni de quiz'
-        });
-        return false;
       }
-      
-      const allLessonsCompleted = module.lessons.every((l) => completedLessons.has(l.id));
-      if (!allLessonsCompleted) {
-        const completedCount = module.lessons.filter((l) => completedLessons.has(l.id)).length;
-        moduleStatuses.push({
-          moduleId,
-          title: module.title || `Module ${moduleId}`,
-          completed: false,
-          reason: `${completedCount}/${module.lessons.length} leçons complétées`
-        });
-        return false;
-      }
-      
-      // Si toutes les leçons sont complétées, vérifier le quiz (obligatoire si présent)
-      if (moduleQuizzes.has(moduleId)) {
-        const quizCompleted = completedModuleQuizzes.has(moduleId);
-        moduleStatuses.push({
-          moduleId,
-          title: module.title || `Module ${moduleId}`,
-          completed: quizCompleted,
-          reason: quizCompleted ? 'Toutes les leçons + quiz complétés' : 'Toutes les leçons complétées mais quiz non complété'
-        });
-        return quizCompleted;
-      }
-      
-      // Pas de quiz, le module est complété
       moduleStatuses.push({
         moduleId,
         title: module.title || `Module ${moduleId}`,
-        completed: true,
-        reason: 'Toutes les leçons complétées (pas de quiz)'
+        completed,
+        reason
       });
-      return true;
+      return completed;
     });
     
     console.log('[CoursePlayer] 📊 Statut des modules:', {
@@ -999,10 +975,28 @@ export default function CoursePlayer({
   };
 
   const handleCloseEvaluationResultModal = () => {
+    const wasPassed = evaluationResult?.passed;
     setShowEvaluationResultModal(false);
     setEvaluationResult(null);
-    // Retourner aux leçons après fermeture de la modal
-    handleBackToLesson();
+    // Si réussite, générer le certificat et ouvrir la célébration (comme sur la page d'évaluation)
+    if (wasPassed) {
+      (async () => {
+        try {
+          await certificateService.generateForCourse(course.id);
+          const certs = await certificateService.getMyCertificates();
+          const cert = Array.isArray(certs)
+            ? certs.find((c: any) => String(c.course_id || c.courseId) === String(course.id))
+            : null;
+          if (cert) setGeneratedCertificate(cert);
+          setShowCertificateModal(true);
+        } catch (e) {
+          console.warn('Generation certificat (learn): ', e);
+        }
+      })();
+    } else {
+      // Retour aux leçons si non réussi
+      handleBackToLesson();
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -1141,17 +1135,6 @@ export default function CoursePlayer({
               >
                 Fermer
               </button>
-              {evaluationResult.passed && evaluationResult.certificate_eligible && (
-                <button
-                  onClick={() => {
-                    window.location.href = `/dashboard/student/certificates?courseId=${course.id}`;
-                  }}
-                  className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
-                >
-                  <Award className="h-5 w-5" />
-                  <span>Demander le certificat</span>
-                </button>
-              )}
             </div>
           </div>
         </Modal>
@@ -1431,7 +1414,7 @@ export default function CoursePlayer({
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
               <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
                 <Image
-                  src="/mdsc-logo1.png"
+                  src="/mdsc-logo.png"
                   alt="Maison de la Société Civile"
                   width={160}
                   height={48}
@@ -1576,6 +1559,27 @@ export default function CoursePlayer({
       <FloatingChatButton 
         courseId={course.id} 
         courseTitle={course.title}
+      />
+      {/* Popup Certificat avec confettis (après réussite) */}
+      <CertificateCelebrateModal
+        isOpen={showCertificateModal}
+        onClose={() => {
+          setShowCertificateModal(false);
+          // Retour aux leçons après célébration
+          handleBackToLesson();
+        }}
+        fullName={
+          (user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
+            ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
+            : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')
+        }
+        courseTitle={course.title || 'Formation'}
+        code={(generatedCertificate as any)?.certificate_code || (generatedCertificate as any)?.certificateCode}
+        issuedAt={
+          (generatedCertificate as any)?.issued_at
+            ? new Date((generatedCertificate as any).issued_at)
+            : undefined
+        }
       />
     </div>
     </>

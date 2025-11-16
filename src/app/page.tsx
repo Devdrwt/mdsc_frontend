@@ -4,6 +4,7 @@ import HeroSection from '../components/home/HeroSection';
 import CoursePreview from '../components/home/CoursePreview';
 import Testimonials from '../components/home/Testimonials';
 import CallToAction from '../components/home/CallToAction';
+import CertificateQuickVerify from '../components/home/CertificateQuickVerify';
 
 // Données de démonstration pour les cours
 const sampleCourses = [
@@ -101,6 +102,8 @@ export default function Home() {
         <HeroSection />
       </div>
       <main>
+        <CertificateQuickVerify />
+
         <CoursePreview courses={featuredCourses} />
         <Testimonials />
         <CallToAction />

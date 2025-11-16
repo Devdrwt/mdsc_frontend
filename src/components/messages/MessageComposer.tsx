@@ -148,7 +148,7 @@ export default function MessageComposer({
       
       // Réinitialiser le formulaire
       if (!hiddenReceiverEmail) {
-        setReceiverEmail('');
+      setReceiverEmail('');
       }
       setSubject('');
       setContent('');
@@ -168,27 +168,27 @@ export default function MessageComposer({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Destinataire avec recherche par email - caché si hiddenReceiverEmail est fourni */}
       {!hiddenReceiverEmail && (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Destinataire (Email) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="email"
-              value={receiverEmail}
-              onChange={(e) => handleEmailChange(e.target.value)}
-              onFocus={() => {
-                if (searchResults.length > 0) {
-                  setShowResults(true);
-                }
-              }}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Rechercher par email (ex: john@example.com)"
-              required
-            />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Destinataire (Email) <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Mail className="h-5 w-5 text-gray-400" />
+          </div>
+          <input
+            type="email"
+            value={receiverEmail}
+            onChange={(e) => handleEmailChange(e.target.value)}
+            onFocus={() => {
+              if (searchResults.length > 0) {
+                setShowResults(true);
+              }
+            }}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Rechercher par email (ex: john@example.com)"
+            required
+          />
           
           {/* Résultats de recherche */}
           {showResults && searchResults.length > 0 && (
@@ -241,9 +241,9 @@ export default function MessageComposer({
           )}
         </div>
         {!hiddenReceiverEmail && (
-          <p className="mt-1 text-xs text-gray-500">
-            Recherchez un utilisateur par son adresse email. L'email sert d'identifiant unique.
-          </p>
+        <p className="mt-1 text-xs text-gray-500">
+          Recherchez un utilisateur par son adresse email. L'email sert d'identifiant unique.
+        </p>
         )}
       </div>
       )}

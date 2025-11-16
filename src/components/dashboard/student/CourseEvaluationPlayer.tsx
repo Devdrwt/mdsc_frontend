@@ -330,24 +330,53 @@ export default function CourseEvaluationPlayer({
         // submitEvaluation attend evaluationId (string), pas enrollmentId
         const result = await evaluationService.submitEvaluation(String(evaluation.id), answers);
         // EvaluationSubmission peut ne pas avoir toutes ces propriétés, adapter selon le type réel
-        submissionResult = {
-          score: (result as any).score || 0,
-          total_points: (result as any).total_points || 0,
-          percentage: (result as any).percentage || 0,
-          passed: (result as any).passed || false,
-          certificate_eligible: (result as any).certificate_eligible || false,
-        };
-      } else {
-        // Fallback : calcul côté client (temporaire)
-        const totalPoints = (evaluation?.questions || []).reduce((sum, q) => sum + (q.points || 0), 0);
-        const score = (evaluation?.questions || []).reduce((sum, q) => {
-          const answer = answers[q.id || ''];
-          if (answer && answer.toLowerCase() === q.correct_answer.toLowerCase()) {
-            return sum + q.points;
+        const backendScore = Number((result as any).score ?? 0);
+        const backendTotal = Number((result as any).total_points ?? 0);
+        // Fallback: recalculer si nécessaire
+        const safeTotal = backendTotal > 0 ? backendTotal : (evaluation?.questions || []).reduce((sum, q) => {
+          const raw = q.points;
+          if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
+          if (typeof raw === 'string') {
+            const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
+            return sum + (Number.isFinite(parsed) ? parsed : 0);
           }
           return sum;
         }, 0);
-        const percentage = (score / totalPoints) * 100;
+        const safeScore = Number.isFinite(backendScore) ? backendScore : 0;
+        const pct = Number((result as any).percentage);
+        const safePct = Number.isFinite(pct) ? pct : (safeTotal > 0 ? (safeScore / safeTotal) * 100 : 0);
+        submissionResult = {
+          score: safeScore,
+          total_points: safeTotal,
+          percentage: Math.round(safePct),
+          passed: Boolean((result as any).passed ?? (safePct >= (evaluation.passing_score || 70))),
+          certificate_eligible: Boolean((result as any).certificate_eligible ?? ((safePct >= (evaluation.passing_score || 70)))),
+        };
+      } else {
+        // Fallback : calcul côté client (temporaire)
+        const totalPoints = (evaluation?.questions || []).reduce((sum, q) => {
+          const raw = q.points;
+          if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
+          if (typeof raw === 'string') {
+            const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
+            return sum + (Number.isFinite(parsed) ? parsed : 0);
+          }
+          return sum;
+        }, 0);
+        const score = (evaluation?.questions || []).reduce((sum, q) => {
+          const answer = answers[q.id || ''];
+          if (answer && q.correct_answer && String(answer).toLowerCase() === String(q.correct_answer).toLowerCase()) {
+            const raw = q.points;
+            if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
+            if (typeof raw === 'string') {
+              const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
+              return sum + (Number.isFinite(parsed) ? parsed : 0);
+            }
+            return sum;
+          }
+          return sum;
+        }, 0);
+        const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
         const passed = percentage >= evaluation.passing_score;
 
         submissionResult = {

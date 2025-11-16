@@ -8,6 +8,9 @@ import { evaluationService, Evaluation } from '../../../../../lib/services/evalu
 import { Clock, Send, AlertCircle, CheckCircle, Info, Timer, FileQuestion, Target, Award, AlertTriangle } from 'lucide-react';
 import ConfirmModal from '../../../../../components/ui/ConfirmModal';
 import EvaluationResultModal from '../../../../../components/ui/EvaluationResultModal';
+import CertificateCelebrateModal from '../../../../../components/certificates/CertificateCelebrateModal';
+import { certificateService } from '../../../../../lib/services/certificateService';
+import { useAuthStore } from '../../../../../lib/stores/authStore';
 import { useNotification } from '../../../../../lib/hooks/useNotification';
 
 export default function EvaluationSubmissionPage() {
@@ -15,6 +18,7 @@ export default function EvaluationSubmissionPage() {
   const router = useRouter();
   const { success: showSuccess, error: showError } = useNotification();
   const evaluationId = params.id as string;
+  const { user } = useAuthStore();
   
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +28,8 @@ export default function EvaluationSubmissionPage() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<any>(null);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false); // Flag pour éviter les soumissions multiples
@@ -51,6 +57,13 @@ export default function EvaluationSubmissionPage() {
       try {
         const data = await evaluationService.getEvaluationById(evaluationId);
         setEvaluation(data);
+        // Désactiver si déjà notée/complétée
+        const status = (data as any)?.status;
+        const attemptsCount = Number((data as any)?.attempts_count ?? 0);
+        const bestScore = (data as any)?.score ?? (data as any)?.best_score;
+        if (status === 'graded' || (attemptsCount > 0 && (bestScore !== null && bestScore !== undefined))) {
+          setIsSubmitted(true);
+        }
         
         // Initialiser les réponses vides
         const initialAnswers: Record<string, any> = {};
@@ -321,6 +334,30 @@ export default function EvaluationSubmissionPage() {
     }
   }, [evaluationId, submitting, isSubmitted, router]);
 
+  // Générer le certificat si réussite, dès que le modal de résultats s'ouvre
+  useEffect(() => {
+    const run = async () => {
+      if (!showResultModal || !evaluationResult?.isPassed) return;
+      try {
+        const courseId = (evaluation as any)?.courseId || (evaluation as any)?.course_id;
+        if (!courseId) return;
+        // Générer (idempotent côté API)
+        await certificateService.generateForCourse(courseId);
+        // Récupérer pour obtenir le code et la date
+        const myCerts = await certificateService.getMyCertificates();
+        const cert = Array.isArray(myCerts)
+          ? myCerts.find((c: any) => String(c.course_id || c.courseId) === String(courseId))
+          : null;
+        if (cert) {
+          setGeneratedCertificate(cert);
+        }
+      } catch (e) {
+        console.warn('Generation certificat: ', e);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResultModal, evaluationResult?.isPassed]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -357,6 +394,8 @@ export default function EvaluationSubmissionPage() {
       </AuthGuard>
     );
   }
+
+  // (déplacé plus haut) Génération du certificat après succès
 
   return (
     <AuthGuard requiredRole="student">
@@ -539,6 +578,7 @@ export default function EvaluationSubmissionPage() {
                                   value={answer.text}
                                   checked={answers[questionIdStr] === answer.text}
                                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                                  disabled={isSubmitted || showResultModal}
                                   className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                                 />
                                 <span className="flex-1 text-gray-700">{answer.text}</span>
@@ -567,6 +607,7 @@ export default function EvaluationSubmissionPage() {
                                   value={option}
                                   checked={answers[questionIdStr] === option}
                                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                                  disabled={isSubmitted || showResultModal}
                                   className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                                 />
                                 <span className="flex-1 text-gray-700">{option}</span>
@@ -581,6 +622,7 @@ export default function EvaluationSubmissionPage() {
                           value={answers[String(question.id)] || ''}
                           onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                           rows={4}
+                          disabled={isSubmitted || showResultModal}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary"
                           placeholder="Saisissez votre réponse ici..."
                         />
@@ -612,7 +654,7 @@ export default function EvaluationSubmissionPage() {
               <button
                 type="button"
                 onClick={handleSubmitClick}
-                disabled={submitting || (timeRemaining !== null && timeRemaining <= 0) || ((evaluation as any)?.max_attempts && (evaluation as any).attempts_count >= (evaluation as any).max_attempts)}
+                disabled={submitting || isSubmitted || (timeRemaining !== null && timeRemaining <= 0) || ((evaluation as any)?.max_attempts && (evaluation as any).attempts_count >= (evaluation as any).max_attempts)}
                 className="flex items-center space-x-2 px-6 py-2 bg-mdsc-blue-primary text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {submitting ? (
@@ -649,15 +691,34 @@ export default function EvaluationSubmissionPage() {
               isOpen={showResultModal}
               onClose={() => {
                 setShowResultModal(false);
-                // Rediriger vers la liste des évaluations après fermeture du modal
-                // Utiliser replace pour éviter de pouvoir revenir en arrière
-                setTimeout(() => {
-                  router.replace('/dashboard/student/evaluations');
-                }, 300);
+                if (evaluationResult?.isPassed) {
+                  // Afficher le popup certificat avec "feu d'artifice"
+                  setShowCertificateModal(true);
+                } else {
+                  setTimeout(() => {
+                    router.replace('/dashboard/student/evaluations');
+                  }, 300);
+                }
               }}
               result={evaluationResult}
             />
           )}
+
+          {/* Popup Certificat avec confettis */}
+          <CertificateCelebrateModal
+            isOpen={showCertificateModal}
+            onClose={() => {
+              setShowCertificateModal(false);
+              // Retour à la liste des évaluations après la célébration
+              router.replace('/dashboard/student/evaluations');
+            }}
+            fullName={(user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
+              ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
+              : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')}
+            courseTitle={(evaluation as any)?.courseName || (evaluation as any)?.course_name || 'Formation'}
+            code={generatedCertificate?.certificate_code}
+            issuedAt={generatedCertificate?.issued_at ? new Date(generatedCertificate.issued_at) : undefined}
+          />
         </div>
       </DashboardLayout>
     </AuthGuard>

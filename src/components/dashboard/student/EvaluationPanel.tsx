@@ -16,6 +16,7 @@ import {
 import { evaluationService, Evaluation, EvaluationStats } from '../../../lib/services/evaluationService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import EvaluationResultModal from '../../ui/EvaluationResultModal';
+import { progressService } from '../../../lib/services/progressService';
 
 export default function EvaluationPanel() {
   const { user } = useAuthStore();
@@ -32,6 +33,8 @@ export default function EvaluationPanel() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'not-started' | 'graded' | 'pending'>('all');
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedEvaluationResult, setSelectedEvaluationResult] = useState<any>(null);
+  // Carte des verrous dérivés côté client pour les évaluations finales
+  const [derivedLocks, setDerivedLocks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const loadEvaluations = async () => {
@@ -47,6 +50,62 @@ export default function EvaluationPanel() {
         // Récupérer les statistiques
         const userStats = await evaluationService.getUserEvaluationStats(user.id);
         setStats(userStats);
+
+        // Préparer l'état des quiz de modules par cours (passés ou non)
+        const moduleQuizzes = (userEvaluations || []).filter((ev: any) => (ev as any)?.is_module_quiz);
+        const pendingModuleQuizByCourseId: Record<string, boolean> = {};
+        moduleQuizzes.forEach((qz: any) => {
+          const cId = String(qz?.courseId ?? qz?.course_id ?? '');
+          if (!cId) return;
+          const scoreNum = typeof qz?.score === 'number' ? qz.score : Number(qz?.score || 0);
+          const passing = typeof qz?.passing_score === 'number' ? qz.passing_score : Number(qz?.passing_score || 70);
+          const isGraded = qz?.status === 'graded';
+          const isPassed = isGraded && scoreNum >= passing;
+          // S'il y a au moins un quiz non passé pour ce cours, marquer comme en attente
+          if (!isPassed) {
+            pendingModuleQuizByCourseId[cId] = true;
+          } else if (!(cId in pendingModuleQuizByCourseId)) {
+            // Si aucun état précédent, et celui-ci est passé, ne marque pas en attente
+            pendingModuleQuizByCourseId[cId] = false;
+          }
+        });
+
+        // Calculer côté client le verrouillage des évaluations finales
+        // Règle: Verrouillé si (progression du cours < 90%) OU (au moins un quiz de module non réussi)
+        const finals = (userEvaluations || []).filter((ev: any) => {
+          const courseIdNormalized = ev?.courseId ?? (ev as any)?.course_id;
+          return ev && (ev as any).is_final && courseIdNormalized;
+        });
+        if (finals.length > 0) {
+          const lockEntries = await Promise.all(
+            finals.map(async (ev: any) => {
+              try {
+                const courseIdNormalized = ev?.courseId ?? (ev as any)?.course_id;
+                const progress = await progressService.getCourseProgress(Number(courseIdNormalized));
+                const progressPercentage =
+                  typeof (progress as any)?.progress_percentage === 'number'
+                    ? (progress as any).progress_percentage
+                    : Number((progress as any)?.progress || 0);
+                // Verrouiller si progression < 90
+                const isLockedByProgress = progressPercentage < 90;
+                // Verrouiller si quiz de module non réussi détecté pour ce cours
+                const hasPendingModuleQuiz = !!pendingModuleQuizByCourseId[String(courseIdNormalized)];
+                const shouldLock = isLockedByProgress || hasPendingModuleQuiz;
+                return [String(ev.id), shouldLock] as [string, boolean];
+              } catch {
+                // En cas d'erreur, ne verrouille pas par défaut (ne pas bloquer inutilement)
+                return [String(ev.id), false] as [string, boolean];
+              }
+            })
+          );
+          const lockMap: Record<string, boolean> = {};
+          lockEntries.forEach(([id, locked]) => {
+            lockMap[id] = locked;
+          });
+          setDerivedLocks(lockMap);
+        } else {
+          setDerivedLocks({});
+        }
       } catch (error) {
         console.error('Erreur lors du chargement des évaluations:', error);
       } finally {
@@ -543,7 +602,7 @@ export default function EvaluationPanel() {
                       </>
                     ) : (evaluation as any).is_final ? (
                       <>
-                        {(evaluation as any).is_locked || evaluation.status === 'locked' ? (
+                        {((evaluation as any).is_locked || evaluation.status === 'locked' || derivedLocks[String(evaluation.id)]) ? (
                           <button
                             disabled
                             className="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-xl shadow-sm cursor-not-allowed text-sm whitespace-nowrap"

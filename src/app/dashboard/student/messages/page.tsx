@@ -391,14 +391,14 @@ export default function StudentMessagesPage() {
                             <span>Répondre</span>
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDelete(selectedMessage.id)}
-                          disabled={actionLoading}
-                          className="text-sm text-red-600 hover:text-red-800 flex items-center space-x-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span>Supprimer</span>
-                        </button>
+                      <button
+                        onClick={() => handleDelete(selectedMessage.id)}
+                        disabled={actionLoading}
+                        className="text-sm text-red-600 hover:text-red-800 flex items-center space-x-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Supprimer</span>
+                      </button>
                       </div>
                     </div>
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-700 whitespace-pre-line">
