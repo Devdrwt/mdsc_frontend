@@ -172,7 +172,7 @@ export default function RegisterForm() {
             Créer un compte
           </h2>
           <p className="text-gray-700">
-            Rejoignez la communauté MdSC
+            Rejoignez la communauté de la Maison de la Société Civile
           </p>
         </div>
 

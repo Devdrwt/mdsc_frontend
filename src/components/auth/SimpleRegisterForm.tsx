@@ -225,7 +225,7 @@ const SimpleRegisterForm = () => {
           Créer un compte
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          Rejoignez la communauté MdSC et commencez votre parcours d'apprentissage
+          Rejoignez la communauté de la Maison de la Société Civile et commencez votre parcours d'apprentissage
         </p>
       </div>
 
