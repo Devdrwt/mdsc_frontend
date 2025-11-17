@@ -8,7 +8,7 @@ export default function LoginPage() {
   
   const slides = [
     {
-      title: 'Espace MdSC',
+      title: 'Espace MOOC',
       subtitle: 'Suivre des formations',
       features: [
         'Accès à tous les cours',
@@ -18,7 +18,7 @@ export default function LoginPage() {
       ]
     },
     {
-      title: 'Studio MdSC',
+      title: 'Studio MOOC',
       subtitle: 'Créer et animer des formations',
       features: [
         'Création de cours',
