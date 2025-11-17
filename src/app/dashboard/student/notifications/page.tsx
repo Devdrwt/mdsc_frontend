@@ -17,6 +17,7 @@ import {
   Calendar as CalendarIcon,
   RefreshCw,
   Filter,
+  Award,
 } from 'lucide-react';
 
 const filtersConfig = [
@@ -24,6 +25,29 @@ const filtersConfig = [
   { label: 'Non lues', value: false },
   { label: 'Lues', value: true },
 ];
+
+const isCourseModerationNotification = (notification: NotificationEntry) => {
+  const type = notification.type?.toLowerCase() ?? '';
+  if (type.includes('course_approval') || type.includes('course_rejection') || type.includes('course_moderation')) {
+    return true;
+  }
+  const metadata = notification.metadata ?? {};
+  return Boolean(metadata.rejection_reason || metadata.moderation_status || metadata.moderation_comment);
+};
+
+const isCertificateNotification = (notification: NotificationEntry) => {
+  const type = notification.type?.toLowerCase() ?? '';
+  if (type.includes('certificate')) {
+    return true;
+  }
+  const metadata = notification.metadata ?? {};
+  return Boolean(
+    metadata?.certificate_id ||
+      metadata?.certificate_url ||
+      metadata?.certificate_title ||
+      metadata?.certificate_code
+  );
+};
 
 function formatDateTime(iso?: string) {
   if (!iso) return '—';
@@ -54,7 +78,11 @@ export default function StudentNotificationsPage() {
         is_read: isReadFilter,
         upcoming: upcomingOnly,
       });
-      setNotifications(data.notifications ?? []);
+      const rawNotifications = data.notifications ?? [];
+      const filteredNotifications = rawNotifications.filter(
+        (notif) => !isCourseModerationNotification(notif)
+      );
+      setNotifications(filteredNotifications);
       setPagination(data.pagination);
     } catch (err: any) {
       console.error('Erreur notifications:', err);
@@ -96,6 +124,25 @@ export default function StudentNotificationsPage() {
       setNotifications((prev) => prev.filter((notif) => notif.id !== id));
     } catch (err: any) {
       alert(err?.message ?? 'Impossible de supprimer la notification');
+    }
+  };
+
+  const handleNotificationRedirect = (notif: NotificationEntry) => {
+    if (notif.metadata?.action_url) {
+      window.location.href = notif.metadata.action_url;
+    }
+  };
+
+  const handleCertificateAccess = (notif: NotificationEntry) => {
+    const certificateUrl =
+      notif.metadata?.certificate_url ||
+      notif.metadata?.download_url ||
+      notif.metadata?.action_url;
+
+    if (certificateUrl) {
+      window.open(certificateUrl, '_blank');
+    } else {
+      window.location.href = '/dashboard/student/certificates';
     }
   };
 
@@ -180,58 +227,80 @@ export default function StudentNotificationsPage() {
               </div>
             ) : (
               <ul className="divide-y divide-gray-200">
-                {notifications.map((notif) => (
-                  <li 
-                    key={notif.id} 
-                    className={`px-6 py-4 flex items-start justify-between ${notif.is_read ? 'bg-white' : 'bg-blue-50'} ${notif.metadata?.action_url ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-                    onClick={() => {
-                      // Gérer action_url pour les messages (créé automatiquement par le backend)
-                      if (notif.metadata?.action_url) {
-                        window.location.href = notif.metadata.action_url;
-                      }
-                    }}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className={`p-2 rounded-full ${notif.is_read ? 'bg-gray-100 text-gray-500' : 'bg-blue-500/10 text-blue-600'}`}>
-                        <Bell className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {notif.title || `Notification ${notif.type}`}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
-                          {notif.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-2 flex items-center space-x-2">
-                          <span>{formatDateTime(notif.created_at)}</span>
-                          {notif.trigger_at && (
-                            <span className="flex items-center space-x-1 text-purple-500">
-                              <CalendarIcon className="h-3 w-3" />
-                              <span>{formatDateTime(notif.trigger_at)}</span>
-                            </span>
+                {notifications.map((notif) => {
+                  const certificateNotification = isCertificateNotification(notif);
+                  return (
+                    <li 
+                      key={notif.id} 
+                      className={`px-6 py-4 flex items-start justify-between ${notif.is_read ? 'bg-white' : 'bg-blue-50'} ${notif.metadata?.action_url ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                      onClick={() => handleNotificationRedirect(notif)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className={`p-2 rounded-full ${notif.is_read ? 'bg-gray-100 text-gray-500' : 'bg-blue-500/10 text-blue-600'}`}>
+                          {certificateNotification ? <Award className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {notif.title || `Notification ${notif.type}`}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+                            {notif.message}
+                          </p>
+                          {certificateNotification && (
+                            <div className="mt-2 space-y-1">
+                              {notif.metadata?.certificate_title && (
+                                <p className="text-xs text-gray-600">
+                                  Certificat : {notif.metadata.certificate_title}
+                                </p>
+                              )}
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleCertificateAccess(notif);
+                                }}
+                                className="inline-flex items-center text-xs font-semibold text-white bg-purple-600 px-3 py-1.5 rounded-md hover:bg-purple-700 transition-colors"
+                              >
+                                Voir mon certificat
+                              </button>
+                            </div>
                           )}
-                        </p>
+                          <p className="text-xs text-gray-400 mt-2 flex items-center space-x-2">
+                            <span>{formatDateTime(notif.created_at)}</span>
+                            {notif.trigger_at && (
+                              <span className="flex items-center space-x-1 text-purple-500">
+                                <CalendarIcon className="h-3 w-3" />
+                                <span>{formatDateTime(notif.trigger_at)}</span>
+                              </span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      {!notif.is_read && (
+                      <div className="flex items-center space-x-3">
+                        {!notif.is_read && (
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleMarkRead(notif.id);
+                            }}
+                            className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                          >
+                            Marquer comme lu
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleMarkRead(notif.id)}
-                          className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDelete(notif.id);
+                          }}
+                          className="text-sm text-red-600 hover:text-red-800 flex items-center space-x-2"
                         >
-                          Marquer comme lu
+                          <Trash2 className="h-4 w-4" />
+                          <span>Supprimer</span>
                         </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(notif.id)}
-                        className="text-sm text-red-600 hover:text-red-800 flex items-center space-x-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

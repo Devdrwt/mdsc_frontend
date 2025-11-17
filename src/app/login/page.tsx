@@ -8,7 +8,7 @@ export default function LoginPage() {
   
   const slides = [
     {
-      title: 'APPRENANT',
+      title: 'Espace MOOC',
       subtitle: 'Suivre des formations',
       features: [
         'Accès à tous les cours',
@@ -18,12 +18,12 @@ export default function LoginPage() {
       ]
     },
     {
-      title: 'FORMATEUR',
+      title: 'Studio MOOC',
       subtitle: 'Créer et animer des formations',
       features: [
         'Création de cours',
-        'Gestion des apprenants',
-        'Support IA pour formateurs',
+        'Gestion des participants',
+        'Support IA dédié',
         'Évaluation et certification'
       ]
     }
@@ -68,25 +68,15 @@ export default function LoginPage() {
                 opacity: currentSlide === 0 ? 1 : 0
               }}
             >
-              <h1 className="text-5xl font-bold mb-4 text-center">APPRENANT</h1>
-              <p className="text-2xl mb-8 text-center">Suivre des formations</p>
+              <h1 className="text-5xl font-bold mb-4 text-center">{slides[0].title}</h1>
+              <p className="text-2xl mb-8 text-center">{slides[0].subtitle}</p>
               <ul className="space-y-4 text-lg text-center">
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Accès à tous les cours</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Certifications reconnues</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Assistant IA personnel</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Suivi de progression</span>
-                </li>
+                {slides[0].features.map((feature, index) => (
+                  <li key={`slide-0-${index}`} className="flex items-center justify-center">
+                    <span className="mr-3">•</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
               </ul>
             </div>
             <div 
@@ -96,25 +86,15 @@ export default function LoginPage() {
                 opacity: currentSlide === 1 ? 1 : 0
               }}
             >
-              <h1 className="text-5xl font-bold mb-4 text-center">FORMATEUR</h1>
-              <p className="text-2xl mb-8 text-center">Créer et animer des formations</p>
+              <h1 className="text-5xl font-bold mb-4 text-center">{slides[1].title}</h1>
+              <p className="text-2xl mb-8 text-center">{slides[1].subtitle}</p>
               <ul className="space-y-4 text-lg text-center">
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Création de cours</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Gestion des apprenants</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Support IA pour formateurs</span>
-                </li>
-                <li className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>Évaluation et certification</span>
-                </li>
+                {slides[1].features.map((feature, index) => (
+                  <li key={`slide-1-${index}`} className="flex items-center justify-center">
+                    <span className="mr-3">•</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

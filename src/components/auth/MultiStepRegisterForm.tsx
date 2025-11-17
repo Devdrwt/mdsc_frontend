@@ -217,7 +217,7 @@ const MultiStepRegisterForm = () => {
             Créer votre compte
           </h1>
           <p className="text-gray-700">
-            Rejoignez la communauté MdSC et commencez votre apprentissage
+            Rejoignez la communauté de la Maison de la Société Civile et commencez votre apprentissage
           </p>
         </div>
 

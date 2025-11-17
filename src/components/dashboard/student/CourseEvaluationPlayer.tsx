@@ -12,7 +12,7 @@ interface EvaluationQuestion {
   question_type: 'multiple_choice' | 'true_false' | 'short_answer';
   options: string[];
   correct_answer: string;
-  points: number;
+  points: number | string;
   order_index: number;
 }
 
@@ -571,7 +571,7 @@ export default function CourseEvaluationPlayer({
         points = q.points;
       } else if (typeof q.points === 'string') {
         // Nettoyer la chaîne et parser (enlever tous les caractères non numériques sauf le point)
-        const cleaned = q.points.toString().replace(/[^\d.,]/g, '').replace(',', '.');
+        const cleaned = q.points.replace(/[^\d.,]/g, '').replace(',', '.');
         const parsed = parseFloat(cleaned);
         points = Number.isFinite(parsed) ? parsed : 0;
       }

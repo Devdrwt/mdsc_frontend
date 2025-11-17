@@ -314,10 +314,32 @@ export default function ModuleCatalog() {
       current = current.filter((course) => {
         const titleMatch = course.title?.toLowerCase().includes(lowered);
         const descriptionMatch = course.description?.toLowerCase().includes(lowered);
-        const instructorMatch =
-          typeof course.instructor === 'string'
-            ? course.instructor.toLowerCase().includes(lowered)
-            : course.instructor?.name?.toLowerCase().includes(lowered);
+        const instructorMatch = (() => {
+          const instructorData = course.instructor as unknown;
+          if (typeof instructorData === 'string') {
+            return instructorData.toLowerCase().includes(lowered);
+          }
+          if (instructorData && typeof instructorData === 'object') {
+            const instructorAny = instructorData as {
+              name?: string;
+              first_name?: string;
+              last_name?: string;
+              firstName?: string;
+              lastName?: string;
+            };
+            const resolvedName =
+              instructorAny.name ||
+              [instructorAny.first_name ?? instructorAny.firstName, instructorAny.last_name ?? instructorAny.lastName]
+                .filter(Boolean)
+                .join(' ');
+            return resolvedName ? resolvedName.toLowerCase().includes(lowered) : false;
+          }
+          const courseAny = course as any;
+          const fallbackName =
+            courseAny.instructor_name ||
+            [courseAny.instructor_first_name, courseAny.instructor_last_name].filter(Boolean).join(' ');
+          return fallbackName ? fallbackName.toLowerCase().includes(lowered) : false;
+        })();
 
         return titleMatch || descriptionMatch || instructorMatch;
       });

@@ -388,6 +388,14 @@ export class CourseService {
     return response.data;
   }
 
+  /**
+   * Alias pour compatibilité avec les composants qui attendent getStudentCourses.
+   * Retourne les mêmes données que getMyCourses (cours de l'étudiant connecté).
+   */
+  static async getStudentCourses(): Promise<Course[]> {
+    return this.getMyCourses();
+  }
+
   // Récupérer les cours d'un instructeur
   static async getInstructorCourses(instructorId: string | number, params?: { status?: 'all' | 'published' | 'draft'; page?: number; limit?: number; }): Promise<Course[]> {
     const search = new URLSearchParams();

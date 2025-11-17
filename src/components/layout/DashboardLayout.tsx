@@ -26,13 +26,18 @@ import {
   Moon,
   Sun,
   Activity,
-  Grid3x3
+  Grid3x3,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useAuthStore } from '../../lib/stores/authStore';
 import NotificationContainer from '../ui/NotificationContainer';
 import Image from 'next/image';
 import StudentService from '../../lib/services/studentService';
 import { useTheme } from '../../lib/context/ThemeContext';
+import NotificationService, {
+  NotificationEntry,
+} from '../../lib/services/notificationService';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -51,12 +56,193 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [openSubmenus, setOpenSubmenus] = useState<Set<string>>(new Set());
   const [language, setLanguage] = useState<'fr' | 'en'>('fr');
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const { theme, setPreference, toggle: toggleTheme } = useTheme();
+  const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
+  const notificationWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const isCourseModerationNotification = useCallback((notification: NotificationEntry) => {
+    const type = notification.type?.toLowerCase() ?? '';
+    if (type.includes('course_approval') || type.includes('course_rejection') || type.includes('course_moderation')) {
+      return true;
+    }
+    const metadata = notification.metadata ?? {};
+    if (metadata.rejection_reason || metadata.moderation_status || metadata.moderation_comment) {
+      return true;
+    }
+    return false;
+  }, []);
+
+  const isCertificateNotification = useCallback((notification: NotificationEntry) => {
+    const type = notification.type?.toLowerCase() ?? '';
+    if (type.includes('certificate')) {
+      return true;
+    }
+    const metadata = notification.metadata ?? {};
+    return Boolean(
+      metadata?.certificate_id ||
+        metadata?.certificate_url ||
+        metadata?.certificate_title ||
+        metadata?.certificate_code
+    );
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      setNotificationsLoading(true);
+      setNotificationsError(null);
+      const data = await NotificationService.getNotifications({
+        limit: 10,
+        page: 1,
+      });
+      const rawNotifications = data.notifications ?? [];
+      const filteredNotifications =
+        userRole === 'student'
+          ? rawNotifications.filter((notif) => !isCourseModerationNotification(notif))
+          : rawNotifications;
+      setNotifications(filteredNotifications);
+      const currentUnread = filteredNotifications.filter((notif) => !notif.is_read).length;
+      setUnreadCount(currentUnread);
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des notifications:', error);
+      setNotificationsError(
+        error?.message ?? 'Impossible de charger les notifications'
+      );
+      setNotifications([]);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [userRole, isCourseModerationNotification]);
+
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      const data = await NotificationService.getNotifications({
+        page: 1,
+        limit: 50,
+        is_read: false,
+      });
+      const rawUnread = data.notifications ?? [];
+      const filteredUnread =
+        userRole === 'student'
+          ? rawUnread.filter((notif) => !isCourseModerationNotification(notif))
+          : rawUnread;
+      setUnreadCount(filteredUnread.length);
+    } catch (error) {
+      console.warn('Impossible de récupérer le nombre de notifications non lues:', error);
+    }
+  }, [userRole, isCourseModerationNotification]);
+
+  const handleNotificationDropdownToggle = useCallback(() => {
+    setNotificationDropdownOpen((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (notificationDropdownOpen) {
+      loadNotifications();
+    }
+  }, [notificationDropdownOpen, loadNotifications]);
+
+  useEffect(() => {
+    refreshUnreadCount();
+  }, [refreshUnreadCount]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        notificationDropdownOpen &&
+        notificationWrapperRef.current &&
+        notificationButtonRef.current &&
+        !notificationWrapperRef.current.contains(target) &&
+        !notificationButtonRef.current.contains(target)
+      ) {
+        setNotificationDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notificationDropdownOpen]);
+
+  const handleNotificationClick = useCallback(
+    async (notification: NotificationEntry) => {
+      try {
+        const wasUnread = !notification.is_read;
+        if (wasUnread) {
+          await NotificationService.markAsRead(notification.id);
+          setNotifications((prev) =>
+            prev.map((notif) =>
+              notif.id === notification.id ? { ...notif, is_read: true } : notif
+            )
+          );
+          setUnreadCount((prev) => Math.max(prev - 1, 0));
+        }
+
+        if (notification.metadata?.action_url) {
+          setNotificationDropdownOpen(false);
+          router.push(notification.metadata.action_url);
+          return;
+        }
+
+        if (isCertificateNotification(notification)) {
+          const certificateUrl =
+            notification.metadata?.certificate_url ||
+            notification.metadata?.download_url ||
+            notification.metadata?.action_url;
+
+          setNotificationDropdownOpen(false);
+
+          if (certificateUrl) {
+            window.open(certificateUrl, '_blank');
+            return;
+          }
+
+          if (userRole === 'student') {
+            router.push(`/dashboard/${userRole}/certificates`);
+            return;
+          }
+        }
+
+        if (notification.metadata?.course_slug) {
+          setNotificationDropdownOpen(false);
+          router.push(`/courses/${notification.metadata.course_slug}`);
+          return;
+        }
+
+        if (notification.metadata?.course_id) {
+          setNotificationDropdownOpen(false);
+          router.push(`/courses/${notification.metadata.course_id}`);
+        }
+      } catch (error) {
+        console.warn('Impossible de traiter la notification:', error);
+      }
+    },
+    [router, isCertificateNotification, userRole]
+  );
+
+  const handleMarkAllNotificationsRead = useCallback(async () => {
+    try {
+      await NotificationService.markAllAsRead();
+      setNotifications((prev) =>
+        prev.map((notif) => ({ ...notif, is_read: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.warn('Impossible de marquer toutes les notifications comme lues:', error);
+    }
+  }, []);
+
 
   // Navigation items par rôle
   const getNavigationItems = (): NavigationItem[] => {
@@ -515,10 +701,139 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             </div>
 
             {/* Notifications */}
-            <button className="relative p-2 text-gray-400 hover:text-gray-600">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="relative" ref={notificationWrapperRef}>
+              <button
+                ref={notificationButtonRef}
+                onClick={handleNotificationDropdownToggle}
+                className={`relative p-2 transition-colors ${
+                  notificationDropdownOpen
+                    ? 'text-mdsc-blue-primary'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                aria-label="Notifications"
+              >
+                <Bell className="h-6 w-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 py-0.5 bg-red-500 text-white text-[10px] font-semibold rounded-full border-2 border-white flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationDropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                >
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                      <p className="text-xs text-gray-500">
+                        {unreadCount > 0
+                          ? `${unreadCount} notification${unreadCount > 1 ? 's' : ''} non lue${unreadCount > 1 ? 's' : ''}`
+                          : 'Toutes lues'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleMarkAllNotificationsRead}
+                      className="text-xs font-medium text-mdsc-blue-primary hover:underline disabled:text-gray-400"
+                      disabled={unreadCount === 0}
+                    >
+                      Tout marquer lu
+                    </button>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                    {notificationsLoading ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="h-5 w-5 animate-spin text-mdsc-blue-primary" />
+                        <span className="ml-2 text-sm text-gray-500">Chargement…</span>
+                      </div>
+                    ) : notificationsError ? (
+                      <div className="flex items-center space-x-2 px-4 py-4 text-sm text-red-600">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>{notificationsError}</span>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500">
+                        Aucune notification
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <button
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                            notification.is_read ? 'bg-white' : 'bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-start">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {notification.title || 'Notification'}
+                              </p>
+                              {notification.message && (
+                                <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                                  {notification.message}
+                                </p>
+                              )}
+                              {notification.metadata?.course_title && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Cours : {notification.metadata.course_title}
+                                </p>
+                              )}
+                              {isCertificateNotification(notification) && (
+                                <div className="mt-2 space-y-2">
+                                  <div className="flex items-center text-xs font-semibold text-purple-600">
+                                    <Award className="h-3.5 w-3.5 mr-1" />
+                                    <span>Certificat obtenu 🎉</span>
+                                  </div>
+                                  {notification.metadata?.certificate_title && (
+                                    <p className="text-xs text-gray-600">
+                                      {notification.metadata.certificate_title}
+                                    </p>
+                                  )}
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleNotificationClick(notification);
+                                    }}
+                                    className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                                  >
+                                    Voir mon certificat
+                                  </button>
+                                </div>
+                              )}
+                              <p className="text-[11px] text-gray-400 mt-2">
+                                {new Date(notification.created_at).toLocaleString('fr-FR', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                            {!notification.is_read && (
+                              <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary flex-shrink-0"></span>
+                            )}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="px-4 py-2 text-center border-t border-gray-100">
+                    <button
+                      onClick={() => {
+                        setNotificationDropdownOpen(false);
+                        router.push(`/dashboard/${userRole}/notifications`);
+                      }}
+                      className="text-sm font-medium text-mdsc-blue-primary hover:underline"
+                    >
+                      Voir toutes les notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* User Menu */}
             <div className="relative">
