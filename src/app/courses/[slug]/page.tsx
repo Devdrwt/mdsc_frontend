@@ -34,9 +34,9 @@ import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
 import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
-import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
-
-const DEFAULT_INSTRUCTOR_AVATAR = '/default-avatar.png';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR } from '../../../lib/utils/media';
+import CourseSchedule from '../../../components/courses/CourseSchedule';
+import { FileService } from '../../../lib/services/fileService';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -49,7 +49,7 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
-  const [instructorAvatar, setInstructorAvatar] = useState<string | null>(null);
+  const [instructorUploadedAvatar, setInstructorUploadedAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -62,6 +62,66 @@ export default function CourseDetailPage() {
     setImageError(false);
   }, [course]);
 
+  // Charger les fichiers uploadés de l'instructeur pour prioriser sur l'URL Google
+  useEffect(() => {
+    const loadInstructorUploadedFiles = async () => {
+      const courseData = course as any;
+      if (!courseData?.instructor?.id) return;
+      
+      try {
+        const instructorId = courseData.instructor.id;
+        const files = await FileService.getFilesByUser(String(instructorId));
+        
+        // Chercher le fichier de profil le plus récent
+        // Le backend peut retourner file_type dans les métadonnées ou comme propriété
+        const profilePictures = files.filter((f: any) => {
+          const fileType = f.file_type || (f.metadata as any)?.file_type || (f.metadata as any)?.type;
+          return fileType === 'profile_picture';
+        });
+        
+        if (profilePictures.length > 0) {
+          // Trier par date de création (le plus récent en premier)
+          profilePictures.sort((a: any, b: any) => {
+            const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
+            const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+            return dateB - dateA;
+          });
+          
+          const latestProfilePicture = profilePictures[0];
+          // Construire l'URL complète du fichier
+          const fileUrl = latestProfilePicture.url || 
+                         (latestProfilePicture.filename 
+                           ? `/uploads/profiles/${latestProfilePicture.filename}`
+                           : null);
+          
+          if (fileUrl) {
+            // Utiliser resolveMediaUrl pour construire l'URL complète
+            const fullUrl = resolveMediaUrl(fileUrl) || fileUrl;
+            setInstructorUploadedAvatar(fullUrl);
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('✅ Fichier uploadé de linstructeur trouve:', {
+                file: latestProfilePicture,
+                url: fullUrl
+              });
+            }
+          }
+        }
+      } catch (error) {
+        // Erreur silencieuse - on utilisera l'avatar par défaut
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Impossible de charger les fichiers de linstructeur:', error);
+        }
+      }
+    };
+
+    if (course) {
+      loadInstructorUploadedFiles();
+    } else {
+      setInstructorUploadedAvatar(null);
+    }
+  }, [course]);
+
   const loadCourse = async () => {
     try {
       setLoading(true);
@@ -72,26 +132,22 @@ export default function CourseDetailPage() {
         ? await CourseService.getCourseById(slug)
         : await CourseService.getCourseBySlug(slug);
       
-      console.log('📚 Données du cours récupérées:', courseData);
-      console.log('🖼️ Image du cours:', {
-        thumbnail: courseData.thumbnail,
-        thumbnail_url: (courseData as any).thumbnail_url,
-        thumbnailUrl: (courseData as any).thumbnailUrl,
-      });
-      console.log('👤 Données de l\'instructeur dans courseData:', {
-        instructor: (courseData as any).instructor,
-        instructor_id: (courseData as any).instructor_id,
-        instructor_name: (courseData as any).instructor_name,
-        instructor_avatar: (courseData as any).instructor_avatar,
-        instructor_avatar_url: (courseData as any).instructor_avatar_url,
-        instructor_profile_picture: (courseData as any).instructor_profile_picture,
-        instructorProfilePicture: (courseData as any).instructorProfilePicture,
-        allKeys: Object.keys(courseData as any).filter(k => 
-          k.toLowerCase().includes('instructor') || 
-          k.toLowerCase().includes('avatar') || 
-          k.toLowerCase().includes('profile')
-        ),
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📚 Données du cours récupérées:', courseData);
+        console.log('🖼️ Image du cours:', {
+          thumbnail: courseData.thumbnail,
+          thumbnail_url: (courseData as any).thumbnail_url,
+          thumbnailUrl: (courseData as any).thumbnailUrl,
+        });
+        // ⚠️ IMPORTANT : L'avatar se trouve dans course.instructor.avatar
+        const instructor = (courseData as any)?.instructor;
+        console.log('Donnees de linstructeur (selon guide backend):', {
+          'course.instructor': instructor,
+          'course.instructor.avatar': instructor?.avatar,
+          'course.instructor.first_name': instructor?.first_name,
+          'course.instructor.last_name': instructor?.last_name,
+        });
+      }
       
       setCourse(courseData);
       
@@ -113,36 +169,15 @@ export default function CourseDetailPage() {
         }
       }
       
-      // Charger l'avatar de l'instructeur depuis les données du cours
-      // Le backend retourne maintenant instructor_profile_picture dans les données du cours
+      // ⚠️ IMPORTANT : L'avatar de l'instructeur se trouve dans course.instructor.avatar (URL complète)
+      // Selon le guide backend, l'avatar est déjà une URL complète et se trouve uniquement ici
       const instructor = courseAny?.instructor;
       
-      // Log pour vérifier les données retournées par le backend
-      console.log('🔍 Vérification de l\'avatar de l\'instructeur dans les données du cours:', {
-        instructor_profile_picture: courseAny?.instructor_profile_picture,
-        instructor_avatar: courseAny?.instructor_avatar,
-        instructor: instructor,
-        instructorAvatar: instructor?.avatar,
-        instructorProfilePicture: instructor?.profile_picture,
-      });
-      
-      // Chercher l'avatar dans toutes les variantes possibles
-      // Le backend retourne maintenant instructor_profile_picture avec l'URL complète
-      const avatarUrl = courseAny?.instructor_profile_picture ||  // Priorité: champ retourné par le backend corrigé
-                       courseAny?.instructor_profile_picture_url ||
-                       instructor?.avatar || 
-                       instructor?.avatar_url || 
-                       instructor?.profile_picture || 
-                       instructor?.profile_picture_url ||
-                       courseAny?.instructor_avatar ||
-                       courseAny?.instructor_avatar_url ||
-                       null;
-      
-      if (avatarUrl && avatarUrl !== null && avatarUrl.trim() !== '') {
-        console.log('✅ Avatar de l\'instructeur trouvé dans les données du cours:', avatarUrl);
-        setInstructorAvatar(avatarUrl);
-      } else {
-        console.log('ℹ️ Aucun avatar trouvé pour l\'instructeur, utilisation de l\'image par défaut');
+      if (process.env.NODE_ENV === 'development' && instructor) {
+        console.log('Verification de lavatar de linstructeur:', {
+          'course.instructor.avatar': instructor.avatar,
+          'course.instructor': instructor,
+        });
       }
     } catch (err: any) {
       console.error('Erreur chargement cours:', err);
@@ -317,7 +352,27 @@ export default function CourseDetailPage() {
   }, [course, courseImageRaw, resolvedImageUrl, courseImage, imageError]);
 
   const instructorInfo = useMemo(() => {
-    if (!course || !courseAny) {
+    const instructor = courseAny?.instructor;
+
+    // Debug: Vérifier la structure de l'instructeur
+    if (courseAny && process.env.NODE_ENV === 'development') {
+      console.log('🔍 Structure complète de course:', courseAny);
+      console.log('👤 Objet instructor:', instructor);
+      console.log('🖼️ Avatar:', instructor?.avatar);
+      // Vérifier tous les champs disponibles dans instructor pour trouver un fichier uploadé
+      if (instructor) {
+        console.log('📋 Tous les champs de instructor:', Object.keys(instructor));
+        console.log('🔍 Recherche de fichiers uploadés:', {
+          uploaded_avatar: (instructor as any).uploaded_avatar,
+          local_avatar: (instructor as any).local_avatar,
+          profile_picture_local: (instructor as any).profile_picture_local,
+          profile_picture: (instructor as any).profile_picture,
+          avatar_url: (instructor as any).avatar_url,
+        });
+      }
+    }
+
+    if (!instructor) {
       return {
         name: 'Instructeur',
         title: '',
@@ -328,143 +383,57 @@ export default function CourseDetailPage() {
       };
     }
 
-    const rawInstructor = courseAny?.instructor || {};
+    // ⚠️ IMPORTANT : L'avatar se trouve dans course.instructor.avatar (URL complète depuis le backend)
+    // Selon le guide backend, les champs sont directement dans instructor
+    const firstName = instructor.first_name || '';
+    const lastName = instructor.last_name || '';
+    const name = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
+
+    // ⚠️ IMPORTANT : L'avatar est déjà une URL complète depuis le backend
+    // - URLs externes (Google OAuth, etc.) : retournées telles quelles (https://...)
+    // - Fichiers locaux : domaine déjà ajouté par buildMediaUrl() (http://localhost:5000/...)
+    // 
+    // PRIORISATION : Prioriser le fichier uploadé local (instructorUploadedAvatar) 
+    // sur l'URL Google retournée par le backend
+    const avatarRaw = instructor.avatar || null;
     
-    // Log pour déboguer les données de l'instructeur (toutes les variantes possibles)
-    console.log('👤 Données complètes de l\'instructeur:', {
-      rawInstructor,
-      courseAnyInstructor: courseAny?.instructor,
-      instructorAvatar: courseAny?.instructor_avatar,
-      instructorAvatarUrl: courseAny?.instructor_avatar_url,
-      instructorProfilePicture: courseAny?.instructor_profile_picture,
-      instructorProfilePictureUrl: courseAny?.instructor_profile_picture_url,
-      rawInstructorAvatar: rawInstructor.avatar,
-      rawInstructorAvatarUrl: rawInstructor.avatar_url,
-      rawInstructorProfilePicture: rawInstructor.profile_picture,
-      rawInstructorProfilePictureUrl: rawInstructor.profile_picture_url,
-      courseAnyKeys: courseAny ? Object.keys(courseAny).filter(k => k.toLowerCase().includes('instructor') || k.toLowerCase().includes('avatar') || k.toLowerCase().includes('profile')) : [],
-    });
-
-    const firstName =
-      rawInstructor.firstName ||
-      rawInstructor.first_name ||
-      courseAny?.instructor_first_name ||
-      '';
-    const lastName =
-      rawInstructor.lastName ||
-      rawInstructor.last_name ||
-      courseAny?.instructor_last_name ||
-      '';
-
-    const name =
-      rawInstructor.name ||
-      courseAny?.instructor_name ||
-      [firstName, lastName].filter(Boolean).join(' ') ||
-      'Instructeur';
-
-    const title =
-      rawInstructor.title ||
-      rawInstructor.jobTitle ||
-      rawInstructor.job_title ||
-      courseAny?.instructor_title ||
-      '';
-
-    const organization =
-      rawInstructor.organization ||
-      rawInstructor.organisation ||
-      rawInstructor.company ||
-      courseAny?.instructor_organization ||
-      '';
-
-    const email =
-      rawInstructor.email ||
-      courseAny?.instructor_email ||
-      '';
-
-    const bio =
-      rawInstructor.bio ||
-      rawInstructor.biography ||
-      rawInstructor.description ||
-      courseAny?.instructor_bio ||
-      '';
-
-    // Chercher l'avatar dans toutes les variantes possibles
-    let avatarRaw =
-      rawInstructor.avatar ||
-      rawInstructor.avatar_url ||
-      rawInstructor.avatarUrl ||
-      rawInstructor.profile_picture ||
-      rawInstructor.profile_picture_url ||
-      rawInstructor.profilePicture ||
-      rawInstructor.profilePictureUrl ||
-      courseAny?.instructor_avatar ||
-      courseAny?.instructor_avatar_url ||
-      courseAny?.instructor_profile_picture ||
-      courseAny?.instructor_profile_picture_url ||
-      courseAny?.instructorProfilePicture ||
-      courseAny?.instructorProfilePictureUrl ||
-      null;
+    // Vérifier si c'est une URL Google (OAuth)
+    const isGoogleUrl = avatarRaw && (
+      avatarRaw.startsWith('https://lh3.googleusercontent.com') ||
+      avatarRaw.startsWith('https://www.google.com') ||
+      avatarRaw.includes('googleusercontent.com')
+    );
     
-    // Si toujours pas trouvé, chercher dans des structures imbriquées possibles
-    if (!avatarRaw && courseAny?.instructor) {
-      const nestedInstructor = courseAny.instructor as any;
-      avatarRaw =
-        nestedInstructor.avatar ||
-        nestedInstructor.avatar_url ||
-        nestedInstructor.avatarUrl ||
-        nestedInstructor.profile_picture ||
-        nestedInstructor.profile_picture_url ||
-        nestedInstructor.profilePicture ||
-        nestedInstructor.profilePictureUrl ||
-        null;
-    }
+    // PRIORISATION : Utiliser le fichier uploadé local s'il existe (chargé via useEffect)
+    // Sinon, utiliser l'avatar retourné par le backend
+    const avatar = instructorUploadedAvatar && instructorUploadedAvatar.trim() !== ''
+      ? instructorUploadedAvatar
+      : (avatarRaw && avatarRaw.trim() !== '' 
+          ? avatarRaw 
+          : DEFAULT_INSTRUCTOR_AVATAR);
     
-    // Si toujours pas trouvé, chercher dans toutes les clés qui pourraient contenir l'avatar
-    if (!avatarRaw && courseAny) {
-      const courseAnyInstructorKeys = courseAny?.instructor ? Object.keys(courseAny.instructor) : [];
-      const courseAnyInstructorValues: Record<string, any> = {};
-      if (courseAny?.instructor) {
-        courseAnyInstructorKeys.forEach(key => {
-          courseAnyInstructorValues[key] = (courseAny.instructor as any)[key];
+    // Log pour debug
+    if (process.env.NODE_ENV === 'development') {
+      if (isGoogleUrl && instructorUploadedAvatar) {
+        console.log('🔄 Avatar Google détecté, utilisation du fichier uploadé:', {
+          googleUrl: avatarRaw,
+          uploadedFile: instructorUploadedAvatar,
+          finalAvatar: avatar
         });
-      }
-      
-      // Chercher dans toutes les valeurs possibles
-      for (const value of Object.values(courseAnyInstructorValues)) {
-        if (typeof value === 'string' && (value.includes('http') || value.includes('/') || value.includes('avatar') || value.includes('profile'))) {
-          avatarRaw = value;
-          break;
-        }
+      } else if (isGoogleUrl && !instructorUploadedAvatar) {
+        console.log('ℹ️ Avatar Google détecté, aucun fichier uploadé trouvé, utilisation de Google:', avatarRaw);
       }
     }
-    
-    // Le backend retourne déjà l'URL complète dans avatar, resolveMediaUrl la convertit en proxy Next.js
-    let resolvedAvatar = DEFAULT_INSTRUCTOR_AVATAR;
-    if (avatarRaw) {
-      // Vérifier si c'est déjà l'avatar par défaut pour éviter de le résoudre inutilement
-      if (avatarRaw !== DEFAULT_INSTRUCTOR_AVATAR && 
-          avatarRaw !== '/default-avatar.png' && 
-          avatarRaw.trim() !== '') {
-        resolvedAvatar = resolveMediaUrl(avatarRaw) || DEFAULT_INSTRUCTOR_AVATAR;
-      }
-    }
-    
-    console.log('🎯 Avatar final de l\'instructeur:', {
-      avatarRaw,
-      resolvedAvatar,
-      defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
-      willUseDefault: resolvedAvatar === DEFAULT_INSTRUCTOR_AVATAR,
-    });
 
     return {
       name,
-      title,
-      organization,
-      email,
-      bio,
-      avatar: resolvedAvatar,
+      title: instructor.title || '',
+      organization: instructor.organization || '',
+      email: instructor.email || '',
+      bio: instructor.bio || '',
+      avatar,
     };
-  }, [course, courseAny]);
+  }, [courseAny, instructorUploadedAvatar]);
 
   // Fonction pour convertir les codes de langue en noms complets
   const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {
@@ -773,7 +742,7 @@ export default function CourseDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => router.push('/courses')}
-                className="bg-white/10 hover:bg-white/20 text-white border-white/30 hover:border-white/50"
+                className="bg-white text-mdsc-blue-dark hover:bg-gray-100 border-2 border-white font-semibold shadow-xl hover:shadow-2xl transition-all px-6 py-3"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour au catalogue
@@ -892,7 +861,7 @@ export default function CourseDetailPage() {
                 {/* Bouton d'inscription */}
                 <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
                   {isEnrolled ? (
-                    <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold">
+                    <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
                       <Play className="h-5 w-5 mr-2" />
                       Continuer l'apprentissage
                     </Button>
@@ -902,11 +871,9 @@ export default function CourseDetailPage() {
                       size="lg" 
                       onClick={handleEnroll} 
                       disabled={!enrollmentPossible}
-                      className={`bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold ${
-                        !enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                      className={`bg-mdsc-blue-dark text-white hover:bg-mdsc-blue-primary font-bold text-lg px-8 py-4 shadow-2xl border-2 border-white/30 hover:border-white/50 transition-all transform hover:scale-105 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
                     >
-                      <GraduationCap className="h-5 w-5 mr-2" />
+                      <GraduationCap className="h-6 w-6 mr-2" />
                       {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
                     </Button>
                   )}
@@ -1070,6 +1037,22 @@ export default function CourseDetailPage() {
                 </div>
               )}
 
+              {/* Planning d'apprentissage (uniquement si inscrit) */}
+              {isEnrolled && course && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                  <CourseSchedule
+                    courseId={typeof course.id === 'string' ? parseInt(course.id, 10) : course.id}
+                    onItemClick={(item) => {
+                      if (item.type === 'lesson' && item.lesson_id) {
+                        router.push(`/learn/${course.id}?lesson=${item.lesson_id}`);
+                      } else if (item.type === 'quiz' && item.quiz_id) {
+                        router.push(`/learn/${course.id}?quiz=${item.quiz_id}`);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Leçons directes (si pas de modules) */}
               {course.lessons && course.lessons.length > 0 && modules.length === 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
@@ -1117,7 +1100,7 @@ export default function CourseDetailPage() {
                 </div>
               )}
 
-              {/* Informations sur l'instructeur */}
+              {/* Informations sur l'instructeur 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
@@ -1129,29 +1112,15 @@ export default function CourseDetailPage() {
                   <div className="flex-shrink-0">
                     <div className="relative">
                       <img
-                        src={instructorInfo.avatar || DEFAULT_INSTRUCTOR_AVATAR}
+                        src={instructorInfo.avatar}
                         alt={instructorInfo.name}
                         className="w-24 h-24 rounded-full object-cover bg-mdsc-blue-primary/10 border-4 border-mdsc-blue-primary/20 shadow-lg"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          console.error('❌ Erreur de chargement de l\'image de l\'instructeur:', {
-                            avatar: instructorInfo.avatar,
-                            defaultAvatar: DEFAULT_INSTRUCTOR_AVATAR,
-                            rawInstructor: courseAny?.instructor,
-                            courseAnyInstructorAvatar: courseAny?.instructor_avatar,
-                            currentSrc: target.src,
-                          });
-                          // Basculer vers l'image par défaut si ce n'est pas déjà fait
-                          if (target.src !== DEFAULT_INSTRUCTOR_AVATAR && !target.src.includes('mdsc-logo.png')) {
+                          // Fallback vers l'avatar par défaut si l'image ne charge pas
+                          if (target.src !== DEFAULT_INSTRUCTOR_AVATAR) {
                             target.src = DEFAULT_INSTRUCTOR_AVATAR;
                           }
-                        }}
-                        onLoad={(e) => {
-                          console.log('✅ Image de l\'instructeur chargée avec succès:', {
-                            avatar: instructorInfo.avatar,
-                            instructorName: instructorInfo.name,
-                            src: (e.target as HTMLImageElement).src,
-                          });
                         }}
                       />
                     </div>
@@ -1181,7 +1150,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 </div>
-              </div>
+              </div>*/}
 
               {/* Prérequis */}
               {prerequisiteCourse && (
@@ -1208,6 +1177,69 @@ export default function CourseDetailPage() {
             {/* Sidebar avec informations pratiques */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
+                {/* Informations sur l'instructeur */}
+                {courseAny?.instructor && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-1.5 bg-mdsc-blue-primary/10 rounded-lg">
+                        <User className="h-5 w-5 text-mdsc-blue-primary" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900">Votre instructeur</h3>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex justify-center mb-4">
+                        <div className="relative">
+                          <img
+                            src={instructorInfo.avatar}
+                            alt={instructorInfo.name}
+                            className="w-32 h-32 rounded-full object-cover bg-mdsc-blue-primary/10 border-4 border-mdsc-blue-primary/20 shadow-lg mx-auto"
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              // Fallback vers l'avatar par défaut si l'image ne charge pas
+                              if (target.src !== DEFAULT_INSTRUCTOR_AVATAR) {
+                                if (process.env.NODE_ENV === 'development') {
+                                  console.warn('Erreur de chargement de lavatar', {
+                                    attemptedUrl: target.src,
+                                    instructorName: instructorInfo.name,
+                                    fallbackTo: DEFAULT_INSTRUCTOR_AVATAR
+                                  });
+                                }
+                                target.src = DEFAULT_INSTRUCTOR_AVATAR;
+                              }
+                            }}
+                            onLoad={() => {
+                              if (process.env.NODE_ENV === 'development') {
+                                console.log('Avatar charge avec succes:', instructorInfo.avatar);
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">
+                        {instructorInfo.name}
+                      </h4>
+                      {(instructorInfo.title || instructorInfo.organization) && (
+                        <p className="text-gray-600 font-medium mb-3">
+                          {[instructorInfo.title, instructorInfo.organization].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                      {instructorInfo.email && (
+                        <p className="text-gray-500 text-sm mb-3">
+                          {instructorInfo.email}
+                        </p>
+                      )}
+                      {instructorInfo.bio && (
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mt-4">
+                          <p className="text-gray-700 leading-relaxed text-sm text-left">
+                            {instructorInfo.bio}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Card d'inscription */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-4">
                   <div className="text-center mb-6">
@@ -1243,9 +1275,7 @@ export default function CourseDetailPage() {
                         size="lg"
                         onClick={handleEnroll}
                         disabled={!enrollmentPossible}
-                        className={`w-full mb-4 ${
-                          !enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
+                        className={`w-full mb-4 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <GraduationCap className="h-5 w-5 mr-2" />
                         {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}

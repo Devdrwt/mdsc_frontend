@@ -73,6 +73,8 @@ export interface StudentStatsResponse {
   courses?: {
     active?: number;
     completed?: number;
+    total?: number;
+    in_progress?: number;
   };
   gamification?: {
     points?: number;

@@ -294,7 +294,7 @@ export default function CourseCard({
           >
             {priceLabel}
           </span>
-          {statusLabel && (
+          {statusLabel && statusLabel !== 'Actif' && (
             <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm ${statusClasses}`}>
               {statusLabel}
             </span>
@@ -346,7 +346,8 @@ export default function CourseCard({
             if (typeof instructor === 'string' && instructor && instructor !== 'Instructeur') {
               name = instructor;
             } else if (instructor && typeof instructor === 'object') {
-              name = instructor.name || [instructor.first_name, instructor.last_name].filter(Boolean).join(' ') || '';
+              const instructorAny = instructor as any;
+              name = instructorAny.name || [instructorAny.first_name, instructorAny.last_name].filter(Boolean).join(' ') || '';
             } else if (courseAny.instructor_first_name || courseAny.instructor_last_name) {
               name = [courseAny.instructor_first_name, courseAny.instructor_last_name].filter(Boolean).join(' ') || '';
             }
@@ -360,7 +361,7 @@ export default function CourseCard({
         </div>
 
         {showEnrollButton && (
-          <div className="pt-4">
+          <div className="pt-4 flex flex-col sm:flex-row gap-3">
             <Button
               size="sm"
               disabled={loadingState}
@@ -371,7 +372,7 @@ export default function CourseCard({
                 }
                 handleClick();
               }}
-              className={`w-full ${
+              className={`w-full sm:flex-1 ${
                 isEnrolled
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white'
@@ -381,7 +382,15 @@ export default function CourseCard({
                 ? loadingCtaLabel || 'Chargement...'
                 : isEnrolled
                   ? enrolledCtaLabel || 'Continuer'
-                  : ctaLabel || 'Voir détails'}
+                  : ctaLabel || "S'inscrire"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleClick}
+              className="w-full sm:flex-1 border border-gray-200 text-gray-700 hover:bg-gray-50"
+            >
+              Voir détail
             </Button>
           </div>
         )}
