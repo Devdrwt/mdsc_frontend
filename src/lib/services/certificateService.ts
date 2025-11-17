@@ -56,7 +56,25 @@ export class CertificateService {
           issuedAt: cert.issued_at || cert.issuedAt,
           expiresAt: cert.expires_at || cert.expiresAt,
           course: cert.course_title
-            ? { id: Number(cert.course_id), title: cert.course_title, slug: '', description: '', duration_minutes: 0, language: '', price: 0, instructor_id: 0, enrollment_count: 0, rating: 0, created_at: '', updated_at: '' }
+            ? { 
+                id: Number(cert.course_id), 
+                title: cert.course_title, 
+                slug: '', 
+                description: '', 
+                category_id: 0,
+                level: 'debutant' as const,
+                difficulty: 'beginner' as const,
+                duration_minutes: 0, 
+                language: '', 
+                price: 0, 
+                instructor_id: 0, 
+                is_published: true,
+                is_featured: false,
+                enrollment_count: 0, 
+                rating: 0, 
+                created_at: '', 
+                updated_at: '' 
+              }
             : undefined,
         }))
       : [];
@@ -147,7 +165,25 @@ export class CertificateService {
       issuedAt: raw.issued_at || raw.issuedAt,
       expiresAt: raw.expires_at || raw.expiresAt,
       course: raw.course_title
-        ? { id: Number(raw.course_id), title: raw.course_title, slug: '', description: '', duration_minutes: 0, language: '', price: 0, instructor_id: 0, enrollment_count: 0, rating: 0, created_at: '', updated_at: '' }
+        ? { 
+            id: Number(raw.course_id), 
+            title: raw.course_title, 
+            slug: '', 
+            description: '', 
+            category_id: 0,
+            level: 'debutant' as const,
+            difficulty: 'beginner' as const,
+            duration_minutes: 0, 
+            language: '', 
+            price: 0, 
+            instructor_id: 0, 
+            is_published: true,
+            is_featured: false,
+            enrollment_count: 0, 
+            rating: 0, 
+            created_at: '', 
+            updated_at: '' 
+          }
         : undefined,
     } as any;
     return cert;

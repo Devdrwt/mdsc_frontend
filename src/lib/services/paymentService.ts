@@ -83,7 +83,7 @@ export class PaymentService {
         ...rawMetadata,
       };
     } else {
-      // Pour les autres providers (GobiPay, etc.)
+      // Pour les autres providers (Kkiapay, etc.)
       const rawPaymentData =
         typeof payload.payment_data === 'string'
           ? (() => {
@@ -185,7 +185,8 @@ export class PaymentService {
         course_id: '',
         amount: 0,
         currency: 'XOF',
-        payment_method: 'gobipay',
+        payment_method: 'kkiapay',
+        payment_provider: 'kkiapay',
         status: 'completed',
         provider_transaction_id: `demo_tx_${paymentId}`,
         created_at: new Date().toISOString(),

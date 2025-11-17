@@ -602,7 +602,7 @@ export default function EvaluationPanel() {
                       </>
                     ) : (evaluation as any).is_final ? (
                       <>
-                        {((evaluation as any).is_locked || evaluation.status === 'locked' || derivedLocks[String(evaluation.id)]) ? (
+                        {((evaluation as any).is_locked || derivedLocks[String(evaluation.id)]) ? (
                           <button
                             disabled
                             className="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-xl shadow-sm cursor-not-allowed text-sm whitespace-nowrap"
