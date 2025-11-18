@@ -42,7 +42,8 @@ export default function CertificateViewer({
   };
 
   const handleVerify = () => {
-    const verifyUrl = `/verify-certificate/${certificate.certificateCode}`;
+    const code = (certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
+    const verifyUrl = `/verify-certificate/${encodeURIComponent(code)}`;
     window.open(verifyUrl, '_blank');
   };
 
@@ -95,7 +96,7 @@ export default function CertificateViewer({
               courseTitle={certificate.course?.title || (certificate as any).course_title || '—'}
               location="Cotonou, Bénin"
               issuedAt={new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now())}
-              code={(certificate as any).certificate_code || certificate.certificateCode}
+              code={((certificate as any).certificate_code || certificate.certificateCode || '').toUpperCase()}
             />
           </div>
         </div>
@@ -105,7 +106,7 @@ export default function CertificateViewer({
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-1">Code de vérification</h3>
             <p className="font-mono text-lg font-bold text-gray-900">
-              {certificate.certificateCode || (certificate as any).certificate_code || '—'}
+              {(certificate.certificateCode || (certificate as any).certificate_code || '—').toUpperCase()}
             </p>
           </div>
 

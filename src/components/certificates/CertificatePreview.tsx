@@ -10,10 +10,10 @@ interface CertificatePreviewProps {
   code?: string;
 }
 
-// Génère un code de certificat au format Mdsc-########-Bj
+// Génère un code de certificat au format MDSC-########-BJ
 function generateCertificateCode(): string {
   const random = Math.floor(10000000 + Math.random() * 90000000);
-  return `Mdsc-${random}-Bj`;
+  return `MDSC-${random}-BJ`;
 }
 
 export default function CertificatePreview({
@@ -23,7 +23,10 @@ export default function CertificatePreview({
   issuedAt,
   code,
 }: CertificatePreviewProps) {
-  const certificateCode = useMemo(() => code || generateCertificateCode(), [code]);
+  const certificateCode = useMemo(() => {
+    const generated = code || generateCertificateCode();
+    return generated.toUpperCase();
+  }, [code]);
 
   // URL du QR réel (service public, scannable). On encode une URL de vérification si disponible.
   const qrUrl = useMemo(() => {

@@ -146,7 +146,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                   {certificate.certificate_code && (
                     <div className="bg-gray-50 rounded-lg p-3 mb-3">
                       <p className="text-xs text-gray-600 mb-1">Code de vérification</p>
-                      <p className="font-mono text-sm font-semibold text-gray-900">{certificate.certificate_code}</p>
+                      <p className="font-mono text-sm font-semibold text-gray-900">{certificate.certificate_code.toUpperCase()}</p>
                     </div>
                   )}
 
@@ -170,7 +170,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                     <>
                       {certificate.certificate_code && (
                         <a
-                          href={`/verify-certificate/${certificate.certificate_code}`}
+                          href={`/verify-certificate/${encodeURIComponent(certificate.certificate_code.toUpperCase())}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors"

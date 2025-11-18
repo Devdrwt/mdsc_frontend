@@ -192,7 +192,9 @@ export class CertificateService {
   // Vérifier un certificat par code (endpoint public, pas d'auth)
   static async verifyCertificate(code: string): Promise<{ valid: boolean; certificate?: Certificate; message?: string; notFound?: boolean }> {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'}/certificates/verify/${code}`, {
+      // Convertir le code en majuscule pour la cohérence
+      const upperCode = code.toUpperCase();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'}/certificates/verify/${encodeURIComponent(upperCode)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

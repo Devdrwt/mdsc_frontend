@@ -11,7 +11,8 @@ import CertificateViewer from '../../../components/certificates/CertificateViewe
 
 export default function VerifyCertificatePage() {
   const params = useParams();
-  const code = params?.code as string;
+  const rawCode = params?.code as string;
+  const code = rawCode ? rawCode.toUpperCase() : '';
   
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,7 @@ export default function VerifyCertificatePage() {
         setCertificate(result.certificate);
       } else {
         // Fallback DEMO: accepter le code d'exemple pour valider le design
-        if (code === 'Mdsc-23974999-Bj') {
+        if (code === 'MDSC-23974999-BJ') {
           const now = new Date();
           const origin =
             typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
@@ -96,7 +97,7 @@ export default function VerifyCertificatePage() {
             Vérification de Certificat
           </h1>
           <p className="text-gray-600">
-            Code de vérification: <span className="font-mono font-semibold">{code}</span>
+            Code de vérification: <span className="font-mono font-semibold">{code.toUpperCase()}</span>
           </p>
         </div>
 
