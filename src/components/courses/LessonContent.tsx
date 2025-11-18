@@ -158,12 +158,13 @@ export default function LessonContent({
     } 
     // Priorité 3: Construire mediaFile à partir des champs individuels (fallback)
     else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join) {
-      const fileCategory = lessonAny.file_category || 
-                          (contentType === 'video' ? 'video' : 
-                           contentType === 'audio' ? 'audio' :
-                           contentType === 'document' ? 'document' :
-                           contentType === 'presentation' ? 'presentation' :
-                           contentType === 'h5p' ? 'h5p' : 'other');
+      const fileCategory: 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other' = 
+        (lessonAny.file_category as 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other') || 
+        (contentType === 'video' ? 'video' : 
+         contentType === 'audio' ? 'audio' :
+         contentType === 'document' ? 'document' :
+         contentType === 'presentation' ? 'presentation' :
+         contentType === 'h5p' ? 'h5p' : 'other');
       
       const mediaFileId = lessonAny.media_file_id || lessonAny.media_file_id_from_join;
       const mediaUrl = lessonAny.media_url || contentUrl || lessonAny.content_url || '';
@@ -198,16 +199,16 @@ export default function LessonContent({
         url: resolvedMedia.url || '',
         thumbnail_url: resolvedMedia.thumbnail_url || resolvedMedia.thumbnailUrl || lessonAny.thumbnail_url || '',
         thumbnailUrl: resolvedMedia.thumbnailUrl || resolvedMedia.thumbnail_url || lessonAny.thumbnail_url || '',
-        file_category: resolvedMedia.file_category || resolvedMedia.fileCategory || '',
-        fileCategory: resolvedMedia.fileCategory || resolvedMedia.file_category || '',
+        file_category: (resolvedMedia.file_category || resolvedMedia.fileCategory || 'other') as 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other',
+        fileCategory: (resolvedMedia.fileCategory || resolvedMedia.file_category || 'other') as 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other',
         original_filename: resolvedMedia.original_filename || resolvedMedia.originalFilename || lesson.title || '',
         originalFilename: resolvedMedia.originalFilename || resolvedMedia.original_filename || lesson.title || '',
         file_size: resolvedMedia.file_size || resolvedMedia.fileSize || 0,
         fileSize: resolvedMedia.fileSize || resolvedMedia.file_size || 0,
         file_type: resolvedMedia.file_type || resolvedMedia.fileType || '',
         fileType: resolvedMedia.fileType || resolvedMedia.file_type || '',
-        lesson_id: resolvedMedia.lesson_id || resolvedMedia.lessonId || lesson.id,
-        lessonId: resolvedMedia.lessonId || resolvedMedia.lesson_id || lesson.id,
+        lesson_id: (typeof resolvedMedia.lesson_id === 'number' ? resolvedMedia.lesson_id : typeof resolvedMedia.lessonId === 'number' ? resolvedMedia.lessonId : lesson.id),
+        lessonId: (typeof resolvedMedia.lessonId === 'number' ? resolvedMedia.lessonId : typeof resolvedMedia.lesson_id === 'number' ? resolvedMedia.lesson_id : lesson.id),
       };
       
       setMediaFile(normalizedMedia);
