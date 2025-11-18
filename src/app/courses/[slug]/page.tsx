@@ -336,20 +336,22 @@ export default function CourseDetailPage() {
     const avatarRaw = instructor.avatar || null;
     
     // Résoudre l'URL de l'avatar
-    // Selon la documentation, l'URL est déjà complète, mais on utilise resolveMediaUrl
-    // pour gérer les cas où l'URL pourrait être relative ou pour utiliser le proxy Next.js
+    // Selon la documentation, l'URL est déjà complète (ex: http://localhost:5000/uploads/profiles/...)
+    // On utilise resolveMediaUrl pour convertir en proxy Next.js pour éviter les problèmes CORS
     let resolvedAvatar: string;
     if (avatarRaw && avatarRaw.trim() !== '') {
-      // Vérifier si c'est une URL complète (http:// ou https://)
-      const isFullUrl = avatarRaw.startsWith('http://') || avatarRaw.startsWith('https://');
+      // Toujours utiliser resolveMediaUrl pour convertir en proxy Next.js
+      // Cela garantit que les images passent par le proxy et évite les problèmes CORS
+      const resolved = resolveMediaUrl(avatarRaw);
+      resolvedAvatar = resolved || avatarRaw;
       
-      if (isFullUrl) {
-        // URL complète : utiliser resolveMediaUrl pour convertir en proxy Next.js si nécessaire
-        // (pour éviter les problèmes CORS)
-        resolvedAvatar = resolveMediaUrl(avatarRaw) || avatarRaw;
-      } else {
-        // URL relative : résoudre avec resolveMediaUrl
-        resolvedAvatar = resolveMediaUrl(avatarRaw) || avatarRaw;
+      // Si resolveMediaUrl retourne null ou si l'URL n'a pas été convertie, utiliser l'URL originale
+      // mais seulement si c'est une URL complète valide
+      if (!resolved && (avatarRaw.startsWith('http://') || avatarRaw.startsWith('https://'))) {
+        resolvedAvatar = avatarRaw;
+      } else if (!resolved) {
+        // URL relative non résolue, utiliser l'image par défaut
+        resolvedAvatar = DEFAULT_INSTRUCTOR_AVATAR;
       }
     } else {
       // Aucun avatar : utiliser l'image par défaut
@@ -1048,6 +1050,7 @@ export default function CourseDetailPage() {
               )}
 
               {/* Informations sur l'instructeur 
+              {courseAny?.instructor && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
@@ -1064,9 +1067,43 @@ export default function CourseDetailPage() {
                         className="w-24 h-24 rounded-full object-cover bg-mdsc-blue-primary/10 border-4 border-mdsc-blue-primary/20 shadow-lg"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          // Fallback vers l'avatar par défaut si l'image ne charge pas
+                          const attemptedUrl = target.src;
+                          
+                          // Si le proxy a échoué, essayer l'URL directe du backend
+                          if (attemptedUrl.includes('/api/media/')) {
+                            // Extraire le chemin depuis l'URL du proxy
+                            const pathMatch = attemptedUrl.match(/\/api\/media\/(.+)$/);
+                            if (pathMatch) {
+                              const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                              const directUrl = `${backendUrl}/${pathMatch[1]}`;
+                              
+                              if (process.env.NODE_ENV === 'development') {
+                                console.warn('⚠️ Proxy échoué, essai avec URL directe:', {
+                                  proxyUrl: attemptedUrl,
+                                  directUrl: directUrl
+                                });
+                              }
+                              
+                              target.src = directUrl;
+                              return;
+                            }
+                          }
+                          
+                          // Fallback vers l'avatar par défaut si l'image ne charge toujours pas
                           if (target.src !== DEFAULT_INSTRUCTOR_AVATAR) {
+                            if (process.env.NODE_ENV === 'development') {
+                              console.warn('❌ Erreur de chargement de lavatar, utilisation de l\'avatar par défaut', {
+                                attemptedUrl: attemptedUrl,
+                                instructorName: instructorInfo.name,
+                                fallbackTo: DEFAULT_INSTRUCTOR_AVATAR
+                              });
+                            }
                             target.src = DEFAULT_INSTRUCTOR_AVATAR;
+                          }
+                        }}
+                        onLoad={() => {
+                          if (process.env.NODE_ENV === 'development') {
+                            console.log('✅ Avatar charge avec succes:', instructorInfo.avatar);
                           }
                         }}
                       />
@@ -1097,7 +1134,8 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 </div>
-              </div>*/}
+              </div>
+              )}*/}
 
               {/* Prérequis */}
               {prerequisiteCourse && (
@@ -1143,11 +1181,33 @@ export default function CourseDetailPage() {
                             loading="lazy"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              // Fallback vers l'avatar par défaut si l'image ne charge pas
+                              const attemptedUrl = target.src;
+                              
+                              // Si le proxy a échoué, essayer l'URL directe du backend
+                              if (attemptedUrl.includes('/api/media/')) {
+                                // Extraire le chemin depuis l'URL du proxy
+                                const pathMatch = attemptedUrl.match(/\/api\/media\/(.+)$/);
+                                if (pathMatch) {
+                                  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+                                  const directUrl = `${backendUrl}/${pathMatch[1]}`;
+                                  
+                                  if (process.env.NODE_ENV === 'development') {
+                                    console.warn('⚠️ Proxy échoué, essai avec URL directe:', {
+                                      proxyUrl: attemptedUrl,
+                                      directUrl: directUrl
+                                    });
+                                  }
+                                  
+                                  target.src = directUrl;
+                                  return;
+                                }
+                              }
+                              
+                              // Fallback vers l'avatar par défaut si l'image ne charge toujours pas
                               if (target.src !== DEFAULT_INSTRUCTOR_AVATAR) {
                                 if (process.env.NODE_ENV === 'development') {
-                                  console.warn('Erreur de chargement de lavatar', {
-                                    attemptedUrl: target.src,
+                                  console.warn('❌ Erreur de chargement de lavatar, utilisation de l\'avatar par défaut', {
+                                    attemptedUrl: attemptedUrl,
                                     instructorName: instructorInfo.name,
                                     fallbackTo: DEFAULT_INSTRUCTOR_AVATAR
                                   });
@@ -1157,7 +1217,7 @@ export default function CourseDetailPage() {
                             }}
                             onLoad={() => {
                               if (process.env.NODE_ENV === 'development') {
-                                console.log('Avatar charge avec succes:', instructorInfo.avatar);
+                                console.log('✅ Avatar charge avec succes:', instructorInfo.avatar);
                               }
                             }}
                           />
