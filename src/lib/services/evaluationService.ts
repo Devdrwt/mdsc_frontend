@@ -30,6 +30,7 @@ export interface EvaluationSubmission {
 export interface EvaluationStats {
   totalEvaluations: number;
   completedEvaluations: number;
+  pendingEvaluations?: number;
   averageScore: number;
   totalPoints: number;
   earnedPoints: number;
@@ -198,6 +199,23 @@ export class EvaluationService {
     return response.data;
   }
 
+  // Récupérer l'évaluation finale pour un enrollment (étudiant)
+  static async getEnrollmentEvaluation(enrollmentId: number): Promise<{ evaluation: FinalEvaluation | null; previous_attempts: any[]; can_attempt: boolean } | null> {
+    try {
+      const response = await apiRequest(`/evaluations/enrollments/${enrollmentId}/evaluation`, {
+        method: 'GET',
+      });
+      return response.data;
+    } catch (error: any) {
+      // 404 est attendu si l'évaluation n'existe pas
+      if (error?.status === 404 || error?.response?.status === 404) {
+        return null;
+      }
+      console.warn('Erreur lors de la récupération de l\'évaluation finale:', error);
+      return null;
+    }
+  }
+
   // Récupérer les évaluations de l'utilisateur connecté
   static async getMyEvaluations(): Promise<Evaluation[]> {
     const response = await apiRequest('/evaluations/my', {
@@ -210,6 +228,22 @@ export class EvaluationService {
   static async getEvaluationById(evaluationId: string): Promise<Evaluation> {
     const response = await apiRequest(`/evaluations/${evaluationId}`, {
       method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Vérifier l'existence d'une tentative (sans en créer une nouvelle)
+  static async checkEvaluationAttempt(evaluationId: string): Promise<{ exists: boolean; attemptId?: number; startedAt?: string; durationMinutes: number }> {
+    const response = await apiRequest(`/evaluations/${evaluationId}/attempt`, {
+      method: 'GET',
+    });
+    return response.data;
+  }
+
+  // Démarrer une tentative d'évaluation
+  static async startEvaluationAttempt(evaluationId: string): Promise<{ attemptId: number; startedAt: string; durationMinutes: number }> {
+    const response = await apiRequest(`/evaluations/${evaluationId}/start`, {
+      method: 'POST',
     });
     return response.data;
   }
@@ -258,7 +292,17 @@ export class EvaluationService {
     const response = await apiRequest(`/evaluations/user/${userId}/stats`, {
       method: 'GET',
     });
-    return response.data;
+    const data = response.data || response;
+    const overview = data.overview || data;
+    
+    return {
+      totalEvaluations: overview.total_evaluations || overview.totalEvaluations || 0,
+      completedEvaluations: overview.evaluations_graded || overview.completedEvaluations || 0,
+      pendingEvaluations: overview.evaluations_pending || overview.pendingEvaluations || 0,
+      averageScore: overview.average_score || overview.averageScore || 0,
+      totalPoints: overview.totalPoints || 0,
+      earnedPoints: overview.earnedPoints || 0
+    };
   }
 
   // CRUD pour instructeurs

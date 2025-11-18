@@ -3,13 +3,14 @@
 import React, { Suspense } from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
-import CertificateRequest from '../../../../components/dashboard/student/CertificateRequest';
+import CertificateCollection from '../../../../components/certificates/CertificateCollection';
 import { Loader } from 'lucide-react';
 
 function CertificatesContent() {
   return (
     <div className="space-y-6">
-      <CertificateRequest />
+      {/* Liste des certificats de l'utilisateur */}
+      <CertificateCollection />
     </div>
   );
 }

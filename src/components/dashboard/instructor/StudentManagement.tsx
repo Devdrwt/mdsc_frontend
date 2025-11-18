@@ -434,7 +434,8 @@ export default function StudentManagement() {
         {students.length > 0 ? (
           <div className="divide-y divide-gray-200">
             {students.map((student, index) => {
-              const fallbackKey = `${student.id ?? 'unknown'}-${student.enrollmentId ?? student.courseId ?? index}`;
+              const studentAny = student as any;
+              const fallbackKey = `${student.id ?? 'unknown'}-${studentAny.enrollmentId ?? studentAny.courseId ?? studentAny.enrollment_id ?? index}`;
               return (
                 <div key={fallbackKey} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">

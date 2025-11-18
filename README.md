@@ -65,7 +65,7 @@ Clonez le dépôt et installez les dépendances :
 git clone <url-du-repo>
 cd <nom-du-projet>
 
-# Installer les dépendances
+# Installer les dépendance
 npm install
 # ou
 yarn install

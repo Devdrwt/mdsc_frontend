@@ -5,55 +5,51 @@ import { Award, Download, X, QrCode, CheckCircle, ExternalLink } from 'lucide-re
 import { Certificate } from '../../types/course';
 import { certificateService } from '../../lib/services/certificateService';
 import Button from '../ui/Button';
+import CertificatePreview from './CertificatePreview';
 
 interface CertificateViewerProps {
   certificate: Certificate;
   onClose?: () => void;
   className?: string;
+  showDownload?: boolean; // permettre de masquer le téléchargement (ex: page de vérification publique)
+  showVerifyOnline?: boolean; // permettre de masquer le bouton "Vérifier en ligne"
+  showPrint?: boolean; // afficher le bouton Imprimer
 }
 
 export default function CertificateViewer({
   certificate,
   onClose,
   className = '',
+  showDownload = true,
+  showVerifyOnline = true,
+  showPrint = true,
 }: CertificateViewerProps) {
   const [loading, setLoading] = useState(false);
 
   const handleDownload = async () => {
-    setLoading(true);
     try {
       const downloadUrl = await certificateService.downloadCertificate(certificate.id.toString());
-      // Si c'est une URL, l'ouvrir directement, sinon traiter comme un blob
-      if (typeof downloadUrl === 'string') {
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `certificat-${certificate.certificateCode}.pdf`;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } else {
-        // Si c'est un Blob (ancien format)
-        const url = window.URL.createObjectURL(downloadUrl);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `certificat-${certificate.certificateCode}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `certificat-${certificate.certificateCode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (error) {
       console.error('Erreur lors du téléchargement:', error);
       alert('Erreur lors du téléchargement du certificat');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleVerify = () => {
-    const verifyUrl = `/verify-certificate/${certificate.certificateCode}`;
+    const code = (certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
+    const verifyUrl = `/verify-certificate/${encodeURIComponent(code)}`;
     window.open(verifyUrl, '_blank');
+  };
+
+  const handlePrint = () => {
+    const printUrl = `/certificates/${certificate.id}/print`;
+    window.open(printUrl, '_blank');
   };
 
   return (
@@ -76,9 +72,9 @@ export default function CertificateViewer({
           </div>
           <div>
             <h2 className="text-2xl font-bold">Certificat de Formation</h2>
-            {certificate.course && (
-              <p className="text-white/90 mt-1">{certificate.course.title}</p>
-            )}
+            <p className="text-white/90 mt-1">
+              {certificate.course?.title || (certificate as any).course_title || '—'}
+            </p>
           </div>
         </div>
 
@@ -92,31 +88,33 @@ export default function CertificateViewer({
 
       {/* Content */}
       <div className="p-6">
-        {/* Certificate Preview */}
-        {certificate.pdfUrl && (
-          <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="aspect-[4/3] bg-white rounded border border-gray-200 flex items-center justify-center">
-              <iframe
-                src={certificate.pdfUrl}
-                className="w-full h-full rounded"
-                title="Aperçu du certificat"
-              />
-            </div>
+        {/* Certificate Preview plein largeur (forme réelle, non compressée) */}
+        <div className="mb-6 w-full">
+          <div className="w-full">
+            <CertificatePreview
+              fullName={`${(certificate as any).first_name || (certificate as any).firstName || ''} ${(certificate as any).last_name || (certificate as any).lastName || ''}`.trim() || 'Étudiant(e)'}
+              courseTitle={certificate.course?.title || (certificate as any).course_title || '—'}
+              location="Cotonou, Bénin"
+              issuedAt={new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now())}
+              code={((certificate as any).certificate_code || certificate.certificateCode || '').toUpperCase()}
+            />
           </div>
-        )}
+        </div>
 
         {/* Certificate Details */}
         <div className="space-y-4 mb-6">
           <div>
             <h3 className="text-sm font-medium text-gray-500 mb-1">Code de vérification</h3>
-            <p className="font-mono text-lg font-bold text-gray-900">{certificate.certificateCode}</p>
+            <p className="font-mono text-lg font-bold text-gray-900">
+              {(certificate.certificateCode || (certificate as any).certificate_code || '—').toUpperCase()}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <h3 className="text-sm font-medium text-gray-500 mb-1">Date d'émission</h3>
               <p className="text-gray-900">
-                {new Date(certificate.issuedAt).toLocaleDateString('fr-FR', {
+                {new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now()).toLocaleDateString('fr-FR', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric',
@@ -138,24 +136,12 @@ export default function CertificateViewer({
             )}
           </div>
 
-          {/* QR Code */}
-          {certificate.qrCodeUrl && (
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center space-x-3 mb-3">
-                <QrCode className="h-5 w-5 text-gray-600" />
-                <h3 className="text-sm font-medium text-gray-700">Code QR de vérification</h3>
-              </div>
-              <img
-                src={certificate.qrCodeUrl}
-                alt="QR Code"
-                className="w-32 h-32 mx-auto"
-              />
-            </div>
-          )}
+          {/* Pas d'affichage de QR ici, seulement le certificat lui-même */}
         </div>
 
         {/* Actions */}
         <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
+          {showDownload && (
           <Button
             variant="primary"
             onClick={handleDownload}
@@ -165,14 +151,27 @@ export default function CertificateViewer({
             <Download className="h-5 w-5 mr-2" />
             {loading ? 'Téléchargement...' : 'Télécharger PDF'}
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleVerify}
-            className="flex-1"
-          >
-            <ExternalLink className="h-5 w-5 mr-2" />
-            Vérifier en ligne
-          </Button>
+          )}
+          {showPrint && (
+            <Button
+              variant="outline"
+              onClick={handlePrint}
+              className="flex-1"
+            >
+              <QrCode className="h-5 w-5 mr-2" />
+              Imprimer
+            </Button>
+          )}
+          {showVerifyOnline && (
+            <Button
+              variant="outline"
+              onClick={handleVerify}
+              className="flex-1"
+            >
+              <ExternalLink className="h-5 w-5 mr-2" />
+              Vérifier en ligne
+            </Button>
+          )}
         </div>
       </div>
     </div>

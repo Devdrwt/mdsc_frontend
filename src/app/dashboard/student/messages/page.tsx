@@ -21,6 +21,8 @@ import {
   Plus,
 } from 'lucide-react';
 import MessageComposer from '../../../../components/messages/MessageComposer';
+import ConfirmModal from '../../../../components/ui/ConfirmModal';
+import toast from '../../../../lib/utils/toast';
 
 interface TabConfig {
   key: 'inbox' | 'sent' | 'compose';
@@ -70,6 +72,11 @@ export default function StudentMessagesPage() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReplyComposer, setShowReplyComposer] = useState(false);
+  const [replyToEmail, setReplyToEmail] = useState<string | null>(null);
+  const [replySubject, setReplySubject] = useState<string>('');
 
   const loadMessages = async (tab: 'inbox' | 'sent' | 'compose', query = '', page = 1) => {
     if (tab === 'compose') return; // Ne pas charger les messages en mode composition
@@ -135,6 +142,20 @@ export default function StudentMessagesPage() {
     loadMessages('sent');
     setActiveTab('sent');
     setSelectedMessage(null);
+    setShowReplyComposer(false);
+    setReplyToEmail(null);
+    setReplySubject('');
+  };
+
+  const handleReply = () => {
+    if (selectedMessage && activeTab === 'inbox' && selectedMessage.sender?.email) {
+      const originalSubject = selectedMessage.subject || '';
+      const replyPrefix = originalSubject.startsWith('Re: ') ? '' : 'Re: ';
+      setReplySubject(`${replyPrefix}${originalSubject}`);
+      setReplyToEmail(selectedMessage.sender.email);
+      setShowReplyComposer(true);
+      setActiveTab('compose');
+    }
   };
 
   const handleSelectMessage = async (message: MessageEntry) => {
@@ -160,20 +181,32 @@ export default function StudentMessagesPage() {
     }
   };
 
-  const handleDelete = async (messageId: string | number) => {
-    if (!window.confirm('Supprimer ce message ?')) return;
+  const handleDelete = (messageId: string | number) => {
+    setMessageToDelete(messageId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!messageToDelete) return;
     try {
       setActionLoading(true);
-      await MessageService.deleteMessage(messageId);
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
-      if (selectedMessage?.id === messageId) {
+      await MessageService.deleteMessage(messageToDelete);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageToDelete));
+      if (selectedMessage?.id === messageToDelete) {
         setSelectedMessage(null);
       }
+      setShowDeleteConfirm(false);
+      setMessageToDelete(null);
     } catch (err: any) {
-      alert(err?.message ?? 'Impossible de supprimer ce message.');
+      toast.error('Erreur', err?.message ?? 'Impossible de supprimer ce message.');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setMessageToDelete(null);
   };
 
   const renderState = () => {
@@ -226,6 +259,19 @@ export default function StudentMessagesPage() {
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
+        {/* Modal de confirmation de suppression */}
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={cancelDelete}
+          onConfirm={confirmDelete}
+          title="Confirmer la suppression"
+          message="Êtes-vous sûr de vouloir supprimer ce message ? Cette action est irréversible."
+          confirmText="Supprimer"
+          cancelText="Annuler"
+          confirmButtonClass="bg-red-600 hover:bg-red-700"
+          isLoading={actionLoading}
+        />
+
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
@@ -278,8 +324,14 @@ export default function StudentMessagesPage() {
             {activeTab === 'compose' ? (
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <MessageComposer 
+                  initialReceiverEmail={replyToEmail || undefined}
                   onSend={handleComposerSend} 
-                  onCancel={() => setActiveTab('inbox')} 
+                  onCancel={() => {
+                    setActiveTab('inbox');
+                    setShowReplyComposer(false);
+                    setReplyToEmail(null);
+                    setReplySubject('');
+                  }} 
                 />
               </div>
             ) : (
@@ -321,11 +373,24 @@ export default function StudentMessagesPage() {
                         <div className="text-sm text-gray-500 space-y-1">
                           <p>
                             <span className="font-medium text-gray-700">De :</span>{' '}
-                            {selectedMessage.sender?.name || selectedMessage.sender?.email || 'Expéditeur inconnu'}
+                            {selectedMessage.sender?.name || 'Expéditeur inconnu'}
+                            {selectedMessage.sender?.email && (
+                              <span className="text-gray-600 ml-2">({selectedMessage.sender.email})</span>
+                            )}
                           </p>
                           <p>{formatDateTime(selectedMessage.created_at)}</p>
                         </div>
                       </div>
+                      <div className="flex items-center space-x-3">
+                        {activeTab === 'inbox' && selectedMessage.sender?.email && (
+                          <button
+                            onClick={handleReply}
+                            className="text-sm text-[#3B7C8A] hover:text-[#2d5f6a] flex items-center space-x-2 font-medium"
+                          >
+                            <Send className="h-4 w-4" />
+                            <span>Répondre</span>
+                          </button>
+                        )}
                       <button
                         onClick={() => handleDelete(selectedMessage.id)}
                         disabled={actionLoading}
@@ -334,6 +399,7 @@ export default function StudentMessagesPage() {
                         <Trash2 className="h-4 w-4" />
                         <span>Supprimer</span>
                       </button>
+                      </div>
                     </div>
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-700 whitespace-pre-line">
                       {selectedMessage.content}

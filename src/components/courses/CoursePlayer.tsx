@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
 import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
@@ -12,6 +12,11 @@ import { evaluationService } from '../../lib/services/evaluationService';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import Modal from '../ui/Modal';
+import FloatingChatButton from './FloatingChatButton';
+import CertificateCelebrateModal from '../certificates/CertificateCelebrateModal';
+import { certificateService } from '../../lib/services/certificateService';
+import { useAuthStore } from '../../lib/stores/authStore';
 
 interface CoursePlayerProps {
   course: Course;
@@ -45,9 +50,18 @@ export default function CoursePlayer({
   const [moduleQuizzes, setModuleQuizzes] = useState<Map<number, string>>(new Map()); // moduleId -> quizId
   const [completedModuleQuizzes, setCompletedModuleQuizzes] = useState<Set<number>>(new Set()); // moduleId des modules dont le quiz est réussi
   const [evaluationId, setEvaluationId] = useState<string | null>(null);
+  const [finalEvaluation, setFinalEvaluation] = useState<any | null>(null);
+  const [finalEvaluationAttempts, setFinalEvaluationAttempts] = useState<any[]>([]);
+  const [allModulesCompleted, setAllModulesCompleted] = useState<boolean>(false);
+  const [evaluationResult, setEvaluationResult] = useState<any | null>(null);
+  const [showEvaluationResultModal, setShowEvaluationResultModal] = useState(false);
+  const [evaluationAttemptsUsed, setEvaluationAttemptsUsed] = useState(0);
   const [moduleProgressMap, setModuleProgressMap] = useState<Map<number, number>>(new Map());
   const [totalDurationMinutes, setTotalDurationMinutes] = useState<number>(0);
   const [completedDurationMinutes, setCompletedDurationMinutes] = useState<number>(0);
+  const { user } = useAuthStore();
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -89,9 +103,33 @@ export default function CoursePlayer({
 
   useEffect(() => {
     if (enrollmentId) {
-      loadCourseQuizzesAndEvaluation();
+      loadCourseQuizzesAndEvaluation().then(() => {
+        // Recharger la progression après avoir chargé l'évaluation finale
+        // pour ajuster le pourcentage si nécessaire
+        loadProgress();
+      });
     }
   }, [enrollmentId, course.id]);
+
+  // Recalculer la progression quand l'évaluation finale ou ses tentatives changent
+  // MAIS seulement si la progression actuelle n'est pas déjà à 100% depuis l'API
+  useEffect(() => {
+    if (enrollmentId) {
+      // Attendre un peu pour s'assurer que finalEvaluation et finalEvaluationAttempts sont à jour
+      const timer = setTimeout(() => {
+        // Ne recharger que si la progression n'est pas déjà à 100%
+        // Si elle est à 100%, c'est que le backend a confirmé que l'évaluation est complétée
+        // On ne veut pas risquer de la réduire à 90% avec une vérification qui pourrait échouer
+        if (courseProgress < 100) {
+          console.log('[CoursePlayer] 🔄 Recalcul de la progression (actuellement < 100%)');
+          loadProgress();
+        } else {
+          console.log('[CoursePlayer] ⏭️ Progression déjà à 100%, pas de recalcul nécessaire');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [finalEvaluation, finalEvaluationAttempts.length, enrollmentId, courseProgress]);
 
   useEffect(() => {
     if (!course.modules) {
@@ -122,10 +160,36 @@ export default function CoursePlayer({
     
     try {
       // Charger l'évaluation finale pour l'étudiant
-      // Note: getEvaluationForStudent n'existe pas, utiliser getCourseEvaluation à la place
-      const evalData = null; // TODO: Implémenter getEvaluationForStudent si nécessaire
-      if (evalData?.id) {
-        setEvaluationId(evalData.id);
+      try {
+        const evalData = await evaluationService.getEnrollmentEvaluation(enrollmentId);
+        console.log('[CoursePlayer] 📊 Données d\'évaluation chargées:', {
+          hasEvaluation: !!evalData?.evaluation,
+          evaluationId: evalData?.evaluation?.id,
+          previousAttemptsCount: evalData?.previous_attempts?.length || 0,
+          previousAttempts: evalData?.previous_attempts?.map((a: any) => ({
+            id: a.id,
+            completed_at: a.completed_at,
+            percentage: a.percentage,
+            is_passed: a.is_passed
+          })) || []
+        });
+        
+        if (evalData?.evaluation?.id) {
+          setEvaluationId(String(evalData.evaluation.id));
+          setFinalEvaluation(evalData.evaluation);
+          setFinalEvaluationAttempts(evalData.previous_attempts || []);
+          console.log('[CoursePlayer] ✅ Évaluation finale chargée, tentatives:', evalData.previous_attempts?.length || 0);
+        } else {
+          setEvaluationId(null);
+          setFinalEvaluation(null);
+          setFinalEvaluationAttempts([]);
+          console.log('[CoursePlayer] ⚠️ Pas d\'évaluation finale trouvée');
+        }
+      } catch (error) {
+        console.log('[CoursePlayer] ⚠️ Pas d\'évaluation finale pour ce cours:', error);
+        setEvaluationId(null);
+        setFinalEvaluation(null);
+        setFinalEvaluationAttempts([]);
       }
 
       // Charger les quiz de chaque module et vérifier leur statut de complétion
@@ -269,10 +333,67 @@ export default function CoursePlayer({
         }
       }
 
-      const courseProgressValueRaw =
+      let courseProgressValueRaw =
         typeof enrollmentInfo?.progress_percentage === 'number'
           ? enrollmentInfo.progress_percentage
           : Number(summary.progress_percentage || summary.progress || 0);
+
+      console.log('[CoursePlayer] 📊 Progression depuis l\'API:', {
+        courseProgressValueRaw,
+        enrollmentInfo: enrollmentInfo ? {
+          progress_percentage: enrollmentInfo.progress_percentage,
+          status: enrollmentInfo.status
+        } : null,
+        summary: summary ? {
+          progress_percentage: summary.progress_percentage,
+          progress: summary.progress
+        } : null,
+        finalEvaluation: finalEvaluation ? { id: finalEvaluation.id } : null,
+        finalEvaluationAttemptsCount: finalEvaluationAttempts.length,
+        finalEvaluationAttempts: finalEvaluationAttempts.map((a: any) => ({
+          id: a.id,
+          completed_at: a.completed_at,
+          percentage: a.percentage
+        }))
+      });
+
+      // IMPORTANT: Si la progression de l'API est à 100%, on fait TOUJOURS confiance au backend
+      // Le backend a déjà vérifié que l'évaluation finale est complétée
+      // On ne fait AUCUNE vérification supplémentaire qui pourrait réduire cette valeur
+      if (courseProgressValueRaw === 100) {
+        // Le backend indique 100%, donc l'évaluation finale est complétée
+        // On garde 100% sans ajustement - AUCUNE vérification supplémentaire
+        console.log('[CoursePlayer] ✅ Progression à 100% depuis l\'API - évaluation finale complétée (confiance totale au backend)');
+        // Ne pas modifier courseProgressValueRaw, garder 100%
+      } else if (courseProgressValueRaw > 100) {
+        // Cas anormal, limiter à 100%
+        courseProgressValueRaw = 100;
+        console.log('[CoursePlayer] ⚠️ Progression > 100% détectée, limitée à 100%');
+      } else if (finalEvaluation && courseProgressValueRaw >= 90 && courseProgressValueRaw < 100) {
+        // Si la progression est entre 90% et 100%, vérifier côté frontend
+        // Vérifier si l'évaluation finale est complétée (peu importe si réussie ou échouée)
+        const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+          return attempt.completed_at !== null && attempt.completed_at !== undefined;
+        });
+        
+        console.log('[CoursePlayer] 🔍 Vérification évaluation finale (progression entre 90-100%):', {
+          hasCompletedEvaluation,
+          attempts: finalEvaluationAttempts.map((a: any) => ({
+            completed_at: a.completed_at,
+            hasCompletedAt: a.completed_at !== null && a.completed_at !== undefined
+          }))
+        });
+        
+        if (hasCompletedEvaluation) {
+          // L'évaluation est complétée, mettre à 100%
+          courseProgressValueRaw = 100;
+          console.log('[CoursePlayer] ✅ Évaluation complétée détectée, progression mise à 100%');
+        } else {
+          // L'évaluation n'est pas complétée, garder à 90%
+          courseProgressValueRaw = 90;
+          console.log('[CoursePlayer] ⚠️ Évaluation non complétée détectée, progression limitée à 90%');
+        }
+      }
 
       const courseProgressValue = Number.isFinite(courseProgressValueRaw)
         ? courseProgressValueRaw
@@ -290,11 +411,107 @@ export default function CoursePlayer({
     const lessonsCount = orderedLessons.length;
     const progressFromLessons = lessonsCount > 0 ? (completedSet.size / lessonsCount) * 100 : 0;
     const progressFromDuration = totalMinutes > 0 ? (completedMinutes / Math.max(totalMinutes, 1)) * 100 : 0;
-    const computedProgress = Number.isFinite(progressFromDuration) && progressFromDuration > 0
+    let computedProgress = Number.isFinite(progressFromDuration) && progressFromDuration > 0
       ? progressFromDuration
       : progressFromLessons;
 
-    const preferredProgress = progressFromApi > 0 ? progressFromApi : computedProgress;
+    // Ajuster le calcul local si une évaluation finale existe et n'est pas complétée
+    // MAIS seulement si progressFromApi n'est pas déjà à 100%
+    // Si progressFromApi est à 100%, on ne touche pas à computedProgress car le backend a déjà vérifié
+    if (progressFromApi !== 100 && finalEvaluation && computedProgress >= 100) {
+      // Vérifier si l'évaluation finale est complétée (peu importe si réussie ou échouée)
+      const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+        return attempt.completed_at !== null && attempt.completed_at !== undefined;
+      });
+      
+      if (!hasCompletedEvaluation) {
+        // Tous les modules sont complétés mais l'évaluation finale n'est pas encore complétée
+        computedProgress = 90;
+        console.log('[CoursePlayer] ⚠️ Calcul local ajusté à 90% (évaluation non complétée, progressFromApi !== 100)');
+      } else {
+        // L'évaluation est complétée, mettre à 100%
+        computedProgress = 100;
+        console.log('[CoursePlayer] ✅ Calcul local ajusté à 100% (évaluation complétée, progressFromApi !== 100)');
+      }
+    } else if (progressFromApi === 100) {
+      // Si progressFromApi est à 100%, on ne touche pas à computedProgress
+      // Le backend a déjà confirmé que l'évaluation est complétée
+      console.log('[CoursePlayer] ⏭️ Calcul local non ajusté (progressFromApi === 100%, confiance au backend)');
+    }
+
+    // Utiliser la progression de l'API (qui tient compte de l'évaluation finale) en priorité
+    // La valeur de l'API est déjà ajustée par le backend pour tenir compte de l'évaluation finale
+    // Si l'API renvoie 0 ou n'est pas disponible, utiliser le calcul local (déjà ajusté)
+    let preferredProgress = progressFromApi > 0 ? progressFromApi : computedProgress;
+    
+    console.log('[CoursePlayer] 🔄 Calcul de preferredProgress:', {
+      progressFromApi,
+      computedProgress,
+      preferredProgress,
+      finalEvaluation: finalEvaluation ? { id: finalEvaluation.id } : null,
+      finalEvaluationAttemptsCount: finalEvaluationAttempts.length
+    });
+    
+    // IMPORTANT: Si la progression de l'API est à 100%, on fait TOUJOURS confiance au backend
+    // Le backend a déjà vérifié que l'évaluation finale est complétée
+    // On ne fait AUCUNE vérification supplémentaire qui pourrait réduire cette valeur
+    if (progressFromApi === 100) {
+      // Le backend confirme 100%, on garde cette valeur SANS AUCUNE vérification
+      preferredProgress = 100;
+      console.log('[CoursePlayer] ✅ Progression confirmée à 100% par le backend (progressFromApi === 100) - AUCUNE vérification supplémentaire');
+    } else if (preferredProgress >= 100 && progressFromApi !== 100) {
+      // Si preferredProgress >= 100 mais que progressFromApi n'est pas 100, c'est que computedProgress est à 100%
+      // Dans ce cas, vérifier si l'évaluation finale est complétée
+      if (finalEvaluation) {
+        // L'évaluation finale est chargée, vérifier si elle est complétée
+        const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+          const hasCompleted = attempt.completed_at !== null && attempt.completed_at !== undefined;
+          console.log('[CoursePlayer] 🔍 Tentative d\'évaluation:', {
+            id: attempt.id,
+            completed_at: attempt.completed_at,
+            hasCompleted
+          });
+          return hasCompleted;
+        });
+        
+        console.log('[CoursePlayer] 🔍 Résultat vérification évaluation:', {
+          hasCompletedEvaluation,
+          attemptsCount: finalEvaluationAttempts.length
+        });
+        
+        if (hasCompletedEvaluation) {
+          // L'évaluation est complétée, mettre à 100%
+          preferredProgress = 100;
+          console.log('[CoursePlayer] ✅ Évaluation complétée détectée, progression à 100%');
+        } else {
+          preferredProgress = 90;
+          console.log('[CoursePlayer] ⚠️ Évaluation non complétée, progression limitée à 90%');
+        }
+      } else {
+        // L'évaluation finale n'est pas encore chargée, mais toutes les leçons sont complétées
+        // Limiter temporairement à 90% pour éviter d'afficher 100% avant que l'évaluation soit vérifiée
+        preferredProgress = 90;
+        console.log('[CoursePlayer] ⚠️ Évaluation finale non chargée, progression limitée à 90%');
+      }
+    }
+    
+    console.log('[CoursePlayer] 📊 Progression finale calculée:', {
+      preferredProgress,
+      progressFromApi,
+      computedProgress,
+      source: progressFromApi === 100 ? 'API (100%)' : progressFromApi > 0 ? 'API' : 'Calcul local'
+    });
+
+    // Sécurité finale: si une évaluation finale existe mais aucune tentative complétée,
+    // ne jamais afficher 100% (cap à 90%), sauf si l'API confirme 100%.
+    if (progressFromApi !== 100 && finalEvaluation) {
+      const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+        return attempt?.completed_at !== null && attempt?.completed_at !== undefined;
+      });
+      if (!hasCompletedEvaluation && preferredProgress > 90) {
+        preferredProgress = 90;
+      }
+    }
 
     setCourseProgress(Number.isFinite(preferredProgress) ? preferredProgress : 0);
 
@@ -401,11 +618,40 @@ export default function CoursePlayer({
 
       const lessonsCount = orderedLessons.length;
       if (lessonsCount > 0) {
-        const progressRatio =
+        let progressRatio =
           (optimisticCompleted.size / Math.max(lessonsCount, 1)) * 100;
-        setCourseProgress((current) =>
-          progressRatio > current ? progressRatio : current
-        );
+        
+        // Ajuster la progression si une évaluation finale existe et n'est pas complétée
+        // IMPORTANT: Ne jamais dépasser 90% si l'évaluation finale n'est pas complétée
+        if (finalEvaluation && progressRatio >= 100) {
+          // Vérifier si l'évaluation finale est complétée (peu importe si réussie ou échouée)
+          const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+            return attempt.completed_at !== null && attempt.completed_at !== undefined;
+          });
+          
+          if (!hasCompletedEvaluation) {
+            // Tous les modules sont complétés mais l'évaluation finale n'est pas encore complétée
+            progressRatio = 90;
+          }
+        } else if (finalEvaluation === null && progressRatio >= 100) {
+          // Si l'évaluation finale n'est pas encore chargée mais que toutes les leçons sont complétées,
+          // limiter temporairement à 90% pour éviter d'afficher 100% avant que l'évaluation soit chargée
+          progressRatio = 90;
+        }
+        
+        // Ne mettre à jour que si la nouvelle valeur est supérieure ET ne dépasse pas 90% si évaluation non complétée
+        setCourseProgress((current) => {
+          // Si l'évaluation finale existe et n'est pas complétée, ne jamais dépasser 90%
+          if (finalEvaluation) {
+            const hasCompletedEvaluation = finalEvaluationAttempts.some((attempt: any) => {
+              return attempt.completed_at !== null && attempt.completed_at !== undefined;
+            });
+            if (!hasCompletedEvaluation && progressRatio > 90) {
+              return Math.max(current, 90);
+            }
+          }
+          return progressRatio > current ? progressRatio : current;
+        });
       }
 
       if (moduleId !== null) {
@@ -508,13 +754,14 @@ export default function CoursePlayer({
   const getModuleProgress = (module: Module): number => {
     const moduleId = module.id;
     
-    // Si le module n'a pas de leçons, retourner 0
+    // Si le module n'a pas de leçons
     if (!module.lessons || module.lessons.length === 0) {
-      // Si le module a un quiz, vérifier s'il est complété
+      // S'il a un quiz, progression 100% si quiz réussi, sinon 0
       if (moduleQuizzes.has(moduleId)) {
         return completedModuleQuizzes.has(moduleId) ? 100 : 0;
       }
-      return 0;
+      // Pas de leçons ni de quiz → considérer complété
+      return 100;
     }
     
     // Calculer la progression des leçons
@@ -523,18 +770,11 @@ export default function CoursePlayer({
     
     // Si toutes les leçons sont complétées
     if (lessonsProgress === 100) {
-      // Vérifier si le module a un quiz
+      // Si un quiz est associé, il doit être réussi pour 100% (sinon 90%)
       if (moduleQuizzes.has(moduleId)) {
-        // Le quiz est obligatoire : le module n'est complété que si le quiz est réussi
-        if (completedModuleQuizzes.has(moduleId)) {
-          return 100; // Toutes les leçons + quiz réussi = 100%
-        } else {
-          // Toutes les leçons complétées mais quiz non réussi = 90% (pour indiquer qu'il reste le quiz)
-          return 90;
-        }
+        return completedModuleQuizzes.has(moduleId) ? 100 : 90;
       }
-      // Pas de quiz, le module est complété à 100%
-      return 100;
+      return 100; // Pas de quiz → 100%
     }
     
     // Sinon, retourner la progression des leçons uniquement
@@ -544,28 +784,115 @@ export default function CoursePlayer({
   const isModuleCompleted = (module: Module): boolean => {
     const moduleId = module.id;
     
-    // Vérifier que toutes les leçons sont complétées
+    // Un module est complété si:
+    // - Toutes ses leçons sont validées
+    // - ET si un quiz est lié, ce quiz est réussi
     if (!module.lessons || module.lessons.length === 0) {
-      // Si pas de leçons mais un quiz, vérifier le quiz
+      // Aucun contenu leçon: s'il existe un quiz, il doit être réussi; sinon considéré complété
       if (moduleQuizzes.has(moduleId)) {
         return completedModuleQuizzes.has(moduleId);
       }
-      return false;
+      return true;
     }
-    
     const allLessonsCompleted = module.lessons.every((l) => completedLessons.has(l.id));
-    if (!allLessonsCompleted) {
-      return false;
-    }
-    
-    // Si toutes les leçons sont complétées, vérifier le quiz (obligatoire si présent)
+    if (!allLessonsCompleted) return false;
     if (moduleQuizzes.has(moduleId)) {
       return completedModuleQuizzes.has(moduleId);
     }
-    
-    // Pas de quiz, le module est complété
     return true;
   };
+
+  // Vérifier si tous les modules sont complétés
+  const checkAllModulesCompleted = useCallback(() => {
+    if (!course.modules || course.modules.length === 0) {
+      setAllModulesCompleted(false);
+      return false;
+    }
+    
+    const moduleStatuses: Array<{ moduleId: number; title: string; completed: boolean; reason: string }> = [];
+    
+    const allCompleted = course.modules.every((module) => {
+      const moduleId = module.id;
+      // Baser l'état sur isModuleCompleted pour assurer cohérence
+      const completed = isModuleCompleted(module);
+      let reason = '';
+      if (!module.lessons || module.lessons.length === 0) {
+        reason = moduleQuizzes.has(moduleId)
+          ? (completed ? 'Quiz complété' : 'Quiz non complété')
+          : 'Aucune leçon ni quiz';
+      } else {
+        const lessonsCount = module.lessons.length;
+        const lessonsCompletedCount = module.lessons.filter((l) => completedLessons.has(l.id)).length;
+        if (lessonsCompletedCount < lessonsCount) {
+          reason = `${lessonsCompletedCount}/${lessonsCount} leçons complétées`;
+        } else if (moduleQuizzes.has(moduleId)) {
+          reason = completed ? 'Toutes les leçons + quiz complétés' : 'Leçons complétées mais quiz non réussi';
+        } else {
+          reason = 'Toutes les leçons complétées (pas de quiz)';
+        }
+      }
+      moduleStatuses.push({
+        moduleId,
+        title: module.title || `Module ${moduleId}`,
+        completed,
+        reason
+      });
+      return completed;
+    });
+    
+    console.log('[CoursePlayer] 📊 Statut des modules:', {
+      totalModules: course.modules.length,
+      allCompleted,
+      moduleStatuses
+    });
+    
+    setAllModulesCompleted(allCompleted);
+    return allCompleted;
+  }, [course.modules, completedLessons, moduleQuizzes, completedModuleQuizzes]);
+
+  // Vérifier si l'évaluation finale peut être activée
+  const canActivateFinalEvaluation = useMemo(() => {
+    const debugInfo = {
+      hasFinalEvaluation: !!finalEvaluation,
+      hasEnrollmentId: !!enrollmentId,
+      allModulesCompleted,
+      courseProgress,
+      finalEvaluationId: finalEvaluation?.id,
+      enrollmentIdValue: enrollmentId
+    };
+    
+    if (!finalEvaluation || !enrollmentId) {
+      console.log('[CoursePlayer] 🔒 Évaluation finale verrouillée:', {
+        ...debugInfo,
+        reason: !finalEvaluation ? 'Pas d\'évaluation finale' : 'Pas d\'enrollment ID'
+      });
+      return false;
+    }
+    
+    // Tous les modules doivent être complétés
+    if (!allModulesCompleted) {
+      console.log('[CoursePlayer] 🔒 Évaluation finale verrouillée:', {
+        ...debugInfo,
+        reason: 'Tous les modules ne sont pas complétés',
+        allModulesCompletedValue: allModulesCompleted
+      });
+      return false;
+    }
+    
+    // L'évaluation finale est accessible si tous les modules sont complétés
+    // (même si le cours est à 100%, car l'évaluation finale fait partie du cours)
+    // La progression peut être à 90% (modules complétés mais évaluation pas encore faite) ou 100% (évaluation complétée)
+    console.log('[CoursePlayer] ✅ Évaluation finale débloquée:', {
+      ...debugInfo,
+      note: 'Tous les modules sont complétés, évaluation finale accessible'
+    });
+    return true;
+  }, [finalEvaluation, allModulesCompleted, courseProgress, enrollmentId]);
+
+  // Mettre à jour le statut de complétion des modules
+  useEffect(() => {
+    checkAllModulesCompleted();
+  }, [checkAllModulesCompleted, completedLessons, moduleQuizzes, completedModuleQuizzes]);
 
   const handleQuizClick = (moduleId: number) => {
     const quizId = moduleQuizzes.get(moduleId);
@@ -576,9 +903,13 @@ export default function CoursePlayer({
   };
 
   const handleEvaluationClick = () => {
-    if (evaluationId) {
-      setSelectedEvaluationId(evaluationId);
+    // Utiliser l'ID de l'évaluation finale chargée
+    const evalId = finalEvaluation?.id ? String(finalEvaluation.id) : evaluationId;
+    if (evalId) {
+      setSelectedEvaluationId(evalId);
       setViewMode('evaluation');
+    } else {
+      console.error('[CoursePlayer] ❌ Pas d\'ID d\'évaluation disponible');
     }
   };
 
@@ -605,11 +936,67 @@ export default function CoursePlayer({
     handleBackToLesson();
   };
 
-  const handleEvaluationComplete = (result: any) => {
+  const handleEvaluationComplete = async (result: any) => {
+    console.log('[CoursePlayer] 🎉 handleEvaluationComplete appelé:', {
+      result,
+      enrollmentId,
+      hasFinalEvaluation: !!finalEvaluation
+    });
+    
+    // Stocker le résultat et afficher la modal
+    setEvaluationResult(result);
+    setShowEvaluationResultModal(true);
+    setEvaluationAttemptsUsed(prev => prev + 1);
+    
+    // Recharger les tentatives d'évaluation pour mettre à jour finalEvaluationAttempts
+    if (enrollmentId) {
+      console.log('[CoursePlayer] 🔄 Rechargement des quiz et évaluation...');
+      await loadCourseQuizzesAndEvaluation();
+      console.log('[CoursePlayer] ✅ Quiz et évaluation rechargés');
+      
+      // Attendre un peu pour s'assurer que les données sont bien chargées
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
     // Recharger la progression après complétion de l'évaluation
-    loadProgress();
-    // Retourner aux leçons
-    handleBackToLesson();
+    // La progression devrait maintenant être à 100% car l'évaluation est complétée
+    console.log('[CoursePlayer] 🔄 Rechargement de la progression...');
+    await loadProgress();
+    console.log('[CoursePlayer] ✅ Progression rechargée');
+    
+    // Attendre encore un peu et recharger une dernière fois pour s'assurer que tout est à jour
+    // Le backend a peut-être besoin d'un peu de temps pour mettre à jour la progression
+    setTimeout(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement final après délai...');
+      await loadCourseQuizzesAndEvaluation();
+      await loadProgress();
+      console.log('[CoursePlayer] ✅ Rechargement final terminé');
+    }, 1500);
+  };
+
+  const handleCloseEvaluationResultModal = () => {
+    const wasPassed = evaluationResult?.passed;
+    setShowEvaluationResultModal(false);
+    setEvaluationResult(null);
+    // Si réussite, générer le certificat et ouvrir la célébration (comme sur la page d'évaluation)
+    if (wasPassed) {
+      (async () => {
+        try {
+          await certificateService.generateForCourse(course.id);
+          const certs = await certificateService.getMyCertificates();
+          const cert = Array.isArray(certs)
+            ? certs.find((c: any) => String(c.course_id || c.courseId) === String(course.id))
+            : null;
+          if (cert) setGeneratedCertificate(cert);
+          setShowCertificateModal(true);
+        } catch (e) {
+          console.warn('Generation certificat (learn): ', e);
+        }
+      })();
+    } else {
+      // Retour aux leçons si non réussi
+      handleBackToLesson();
+    }
   };
 
   const formatDuration = (minutes: number) => {
@@ -677,7 +1064,83 @@ export default function CoursePlayer({
   };
 
   return (
-    <div className={`flex flex-col lg:flex-row h-screen ${className}`}>
+    <>
+      {/* Modal de résultats d'évaluation */}
+      {showEvaluationResultModal && evaluationResult && finalEvaluation && (
+        <Modal
+          isOpen={showEvaluationResultModal}
+          onClose={handleCloseEvaluationResultModal}
+          title="Résultats de l'évaluation"
+          size="lg"
+        >
+          <div className="space-y-6">
+            <div className={`rounded-lg p-6 text-center ${
+              evaluationResult.passed
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200'
+                : 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200'
+            }`}>
+              {evaluationResult.passed ? (
+                <>
+                  <GraduationCap className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-green-900 mb-2">Évaluation réussie !</h2>
+                  {evaluationResult.certificate_eligible && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Award className="h-6 w-6 text-yellow-600" />
+                        <p className="text-lg font-semibold text-yellow-800">
+                          Vous êtes éligible pour obtenir un certificat !
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
+                  <h2 className="text-2xl font-bold text-red-900 mb-2">Évaluation non réussie</h2>
+                  <p className="text-gray-600 mt-2">
+                    Il vous reste {finalEvaluation.max_attempts - evaluationAttemptsUsed} tentative(s)
+                  </p>
+                </>
+              )}
+
+              <div className="mt-6 space-y-2">
+                <div className="flex items-center justify-center space-x-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Score obtenu</p>
+                    <p className={`text-3xl font-bold ${evaluationResult.passed ? 'text-green-600' : 'text-red-600'}`}>
+                      {evaluationResult.percentage}%
+                    </p>
+                  </div>
+                  <div className="w-px h-12 bg-gray-300"></div>
+                  <div>
+                    <p className="text-sm text-gray-600">Score minimum</p>
+                    <p className="text-2xl font-semibold text-gray-700">{finalEvaluation.passing_score}%</p>
+                  </div>
+                  <div className="w-px h-12 bg-gray-300"></div>
+                  <div>
+                    <p className="text-sm text-gray-600">Points</p>
+                    <p className="text-2xl font-semibold text-gray-700">
+                      {evaluationResult.score} / {evaluationResult.total_points}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={handleCloseEvaluationResultModal}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <div className={`flex flex-col lg:flex-row h-screen ${className}`}>
       {/* Sidebar - Modules et Leçons */}
       <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto flex-shrink-0 h-full">
         <div className="p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
@@ -711,22 +1174,6 @@ export default function CoursePlayer({
         </div>
 
         <div className="p-4 space-y-2">
-          {/* Bouton Évaluation Finale */}
-          {evaluationId && courseProgress >= 100 && (
-            <button
-              onClick={handleEvaluationClick}
-              className="w-full p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md mb-4"
-            >
-              <div className="flex items-center space-x-3">
-                <GraduationCap className="h-5 w-5" />
-                <div className="text-left">
-                  <p className="font-semibold">Évaluation Finale</p>
-                  <p className="text-xs text-blue-100">Passer l'évaluation pour obtenir un certificat</p>
-                </div>
-              </div>
-            </button>
-          )}
-
           {course.modules?.map((module, moduleIndex) => {
             const moduleProgress = getModuleProgress(module);
             const isExpanded = selectedModuleId === module.id;
@@ -845,7 +1292,7 @@ export default function CoursePlayer({
                         className={`w-full p-3 text-left text-sm transition-colors border-t border-gray-200 ${
                           // Le quiz est accessible si toutes les leçons sont complétées (même si le quiz n'est pas encore réussi)
                           module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
-                            ? 'bg-purple-50 hover:bg-purple-100 cursor-pointer'
+                            ? 'bg-[#3B7C8A]/10 hover:bg-[#3B7C8A]/20 cursor-pointer'
                             : 'bg-gray-100 opacity-60 cursor-not-allowed'
                         }`}
                       >
@@ -854,7 +1301,7 @@ export default function CoursePlayer({
                             module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
                               ? completedModuleQuizzes.has(module.id)
                                 ? 'text-green-600'
-                                : 'text-purple-600'
+                                : 'text-[#3B7C8A]'
                               : 'text-gray-400'
                           }`} />
                           <div className="flex-1">
@@ -862,7 +1309,7 @@ export default function CoursePlayer({
                               module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
                                 ? completedModuleQuizzes.has(module.id)
                                   ? 'text-green-900'
-                                  : 'text-purple-900'
+                                  : 'text-[#2d5f6a]'
                                 : 'text-gray-600'
                             }`}>
                               Quiz du module
@@ -874,7 +1321,7 @@ export default function CoursePlayer({
                               module.lessons && module.lessons.every((l) => completedLessons.has(l.id))
                                 ? completedModuleQuizzes.has(module.id)
                                   ? 'text-green-600'
-                                  : 'text-purple-600'
+                                  : 'text-[#3B7C8A]'
                                 : 'text-gray-500'
                             }`}>
                               {completedModuleQuizzes.has(module.id)
@@ -892,6 +1339,71 @@ export default function CoursePlayer({
               </div>
             );
           })}
+
+          {/* Évaluation Finale - En bas de tous les modules */}
+          {finalEvaluation ? (
+            <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                onClick={canActivateFinalEvaluation ? handleEvaluationClick : undefined}
+                disabled={!canActivateFinalEvaluation}
+                className={`w-full p-4 text-left transition-all ${
+                  canActivateFinalEvaluation
+                    ? 'bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] text-white hover:from-[#2d5f6a] hover:to-[#1f4a52] cursor-pointer shadow-md'
+                    : 'bg-gray-100 text-gray-500 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <GraduationCap className={`h-5 w-5 flex-shrink-0 ${
+                    canActivateFinalEvaluation ? 'text-white' : 'text-gray-400'
+                  }`} />
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <p className={`font-semibold ${
+                        canActivateFinalEvaluation ? 'text-white' : 'text-gray-600'
+                      }`}>
+                        Évaluation Finale
+                      </p>
+                      {finalEvaluationAttempts.length > 0 && (
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          canActivateFinalEvaluation
+                            ? 'bg-white/20 text-white'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {finalEvaluationAttempts.length} tentative(s)
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs ${
+                      canActivateFinalEvaluation ? 'text-white/80' : 'text-gray-500'
+                    }`}>
+                      {canActivateFinalEvaluation
+                        ? 'Tous les modules sont complétés. Passez l\'évaluation finale pour obtenir votre certificat.'
+                        : !allModulesCompleted
+                          ? 'Complétez tous les modules et leurs quiz pour accéder à l\'évaluation finale'
+                          : 'En attente...'}
+                    </p>
+                  </div>
+                  {!canActivateFinalEvaluation && (
+                    <Lock className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
+            </div>
+          ) : (
+            // Afficher un message si l'évaluation finale n'est pas encore chargée mais que les modules sont complétés
+            allModulesCompleted && enrollmentId && (
+              <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 p-4">
+                <div className="flex items-center space-x-3">
+                  <GraduationCap className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-600">Évaluation Finale</p>
+                    <p className="text-xs text-gray-500">Chargement des informations de l'évaluation...</p>
+                  </div>
+                  <Loader className="h-5 w-5 text-gray-400 animate-spin flex-shrink-0" />
+                </div>
+              </div>
+            )
+          )}
         </div>
       </aside>
 
@@ -902,7 +1414,7 @@ export default function CoursePlayer({
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
               <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
                 <Image
-                  src="/mdsc-logo1.png"
+                  src="/mdsc-logo.png"
                   alt="Maison de la Société Civile"
                   width={160}
                   height={48}
@@ -975,10 +1487,10 @@ export default function CoursePlayer({
             {/* Quiz du module en bas des leçons */}
             {selectedModuleId && moduleQuizzes.has(selectedModuleId) && selectedModule && (
               <div className="mt-8 pt-8 border-t border-gray-200">
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+                <div className="bg-gradient-to-r from-[#3B7C8A]/10 to-[#3B7C8A]/5 rounded-lg p-6 border border-[#3B7C8A]/30">
                   <div className="flex items-start space-x-4">
                     <div className="flex-shrink-0">
-                      <Award className="h-8 w-8 text-purple-600" />
+                      <Award className="h-8 w-8 text-[#3B7C8A]" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -996,7 +1508,7 @@ export default function CoursePlayer({
                       {selectedModule.lessons && selectedModule.lessons.every((l) => completedLessons.has(l.id)) ? (
                         <button
                           onClick={() => handleQuizClick(selectedModuleId)}
-                          className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                          className="inline-flex items-center px-6 py-3 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors font-medium"
                         >
                           <Award className="h-5 w-5 mr-2" />
                           {completedModuleQuizzes.has(selectedModuleId) ? 'Voir les résultats du quiz' : 'Passer le quiz'}
@@ -1031,7 +1543,7 @@ export default function CoursePlayer({
               {evaluationId && (
                 <button
                   onClick={handleEvaluationClick}
-                  className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 mx-auto"
+                  className="mt-4 px-6 py-3 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors flex items-center space-x-2 mx-auto"
                 >
                   <GraduationCap className="h-5 w-5" />
                   <span>Passer l'évaluation finale</span>
@@ -1042,6 +1554,34 @@ export default function CoursePlayer({
         )}
         </div>
       </main>
+      
+      {/* Bouton de chat flottant pour contacter le formateur */}
+      <FloatingChatButton 
+        courseId={course.id} 
+        courseTitle={course.title}
+      />
+      {/* Popup Certificat avec confettis (après réussite) */}
+      <CertificateCelebrateModal
+        isOpen={showCertificateModal}
+        onClose={() => {
+          setShowCertificateModal(false);
+          // Retour aux leçons après célébration
+          handleBackToLesson();
+        }}
+        fullName={
+          (user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
+            ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
+            : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')
+        }
+        courseTitle={course.title || 'Formation'}
+        code={(generatedCertificate as any)?.certificate_code || (generatedCertificate as any)?.certificateCode}
+        issuedAt={
+          (generatedCertificate as any)?.issued_at
+            ? new Date((generatedCertificate as any).issued_at)
+            : undefined
+        }
+      />
     </div>
+    </>
   );
 }

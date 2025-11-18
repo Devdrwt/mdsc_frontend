@@ -8,7 +8,7 @@ export class ScheduleService {
    * @returns Planning du cours avec tous les items (leçons, quiz, milestones)
    */
   static async getCourseSchedule(courseId: number): Promise<CourseSchedule> {
-    const response = await apiRequest<{ success: boolean; data: CourseSchedule }>(
+    const response = await apiRequest<CourseSchedule>(
       `/student/schedule/${courseId}`,
       {
         method: 'GET',
@@ -19,6 +19,7 @@ export class ScheduleService {
       throw new Error('Erreur lors de la récupération du planning');
     }
 
+    // response.data est de type CourseSchedule selon le type générique
     return response.data;
   }
 

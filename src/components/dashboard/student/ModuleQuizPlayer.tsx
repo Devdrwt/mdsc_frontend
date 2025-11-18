@@ -66,6 +66,11 @@ export default function ModuleQuizPlayer({
   }, [quizId]);
 
   useEffect(() => {
+    // Arrêter le timer si le quiz est soumis
+    if (result) {
+      return;
+    }
+    
     if (quiz?.duration_minutes && timeRemaining !== null && timeRemaining > 0) {
       const timer = setInterval(() => {
         setTimeRemaining((prev) => {
@@ -80,7 +85,7 @@ export default function ModuleQuizPlayer({
 
       return () => clearInterval(timer);
     }
-  }, [quiz, timeRemaining]);
+  }, [quiz, timeRemaining, result]);
 
   const loadQuiz = async () => {
     try {
@@ -392,7 +397,11 @@ export default function ModuleQuizPlayer({
               {currentQuestion.options.filter(opt => opt.trim()).map((option, index) => (
                 <label
                   key={index}
-                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  className={`flex items-center p-4 border-2 rounded-lg transition-all ${
+                    result
+                      ? 'cursor-not-allowed opacity-60'
+                      : 'cursor-pointer'
+                  } ${
                     answers[currentQuestion.id || ''] === option
                       ? 'border-mdsc-blue-primary bg-blue-50'
                       : 'border-gray-200'
@@ -404,7 +413,8 @@ export default function ModuleQuizPlayer({
                     value={option}
                     checked={answers[currentQuestion.id || ''] === option}
                     onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                    disabled={!!result}
+                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary disabled:cursor-not-allowed"
                   />
                   <span className="ml-3 text-gray-700">{option}</span>
                 </label>
@@ -417,7 +427,11 @@ export default function ModuleQuizPlayer({
               {['Vrai', 'Faux'].map((option) => (
                 <label
                   key={option}
-                  className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                  className={`flex items-center p-4 border-2 rounded-lg transition-all ${
+                    result
+                      ? 'cursor-not-allowed opacity-60'
+                      : 'cursor-pointer'
+                  } ${
                     answers[currentQuestion.id || ''] === option.toLowerCase()
                       ? 'border-mdsc-blue-primary bg-blue-50'
                       : 'border-gray-200'
@@ -429,7 +443,8 @@ export default function ModuleQuizPlayer({
                     value={option.toLowerCase()}
                     checked={answers[currentQuestion.id || ''] === option.toLowerCase()}
                     onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
+                    disabled={!!result}
+                    className="h-4 w-4 text-mdsc-blue-primary focus:ring-mdsc-blue-primary disabled:cursor-not-allowed"
                   />
                   <span className="ml-3 text-gray-700">{option}</span>
                 </label>
@@ -441,8 +456,10 @@ export default function ModuleQuizPlayer({
             <textarea
               value={answers[currentQuestion.id || ''] || ''}
               onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
+              disabled={!!result}
+              readOnly={!!result}
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300"
+              className="w-full px-4 py-3 border border-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
               placeholder="Votre réponse..."
             />
           )}
@@ -453,7 +470,7 @@ export default function ModuleQuizPlayer({
       <div className="flex items-center justify-between">
         <button
           onClick={handlePrevious}
-          disabled={currentQuestionIndex === 0}
+          disabled={currentQuestionIndex === 0 || !!result}
           className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Précédent
@@ -478,9 +495,9 @@ export default function ModuleQuizPlayer({
         {currentQuestionIndex < sortedQuestions.length - 1 ? (
           <button
             onClick={handleNext}
-            disabled={!hasCurrentAnswer}
-            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
-              hasCurrentAnswer
+            disabled={!hasCurrentAnswer || !!result}
+            className={`px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              hasCurrentAnswer && !result
                 ? 'bg-mdsc-blue-primary text-white hover:bg-mdsc-blue-dark cursor-pointer'
                 : 'bg-gray-300'
             }`}
@@ -493,9 +510,9 @@ export default function ModuleQuizPlayer({
         ) : (
           <button
             onClick={handleSubmitClick}
-            disabled={submitting || !hasCurrentAnswer}
+            disabled={submitting || !hasCurrentAnswer || !!result}
             className={`px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
-              hasCurrentAnswer && !submitting
+              hasCurrentAnswer && !submitting && !result
                 ? 'bg-green-600'
                 : 'bg-gray-300'
             }`}
@@ -504,6 +521,11 @@ export default function ModuleQuizPlayer({
               <>
                 <Loader className="h-5 w-5 animate-spin" />
                 <span>Soumission...</span>
+              </>
+            ) : result ? (
+              <>
+                <CheckCircle className="h-5 w-5" />
+                <span>Quiz soumis</span>
               </>
             ) : (
               <>
@@ -530,7 +552,9 @@ export default function ModuleQuizPlayer({
 
       {/* Modal de résultat du quiz */}
       {showResultModal && result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4">
+        <div className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4 ${
+          result.passed ? 'bg-green-900/40' : 'bg-red-900/40'
+        }`}>
           <div className={`bg-white rounded-lg shadow-xl max-w-md w-full p-6 text-center ${
             result.passed ? 'border-2 border-green-500' : 'border-2 border-red-500'
           }`}>

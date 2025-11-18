@@ -25,7 +25,7 @@ export class CalendarService {
 
     const url = `/calendar${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
-    const response = await apiRequest<{ success: boolean; data: CalendarEvent[] }>(url, {
+    const response = await apiRequest<CalendarEvent[]>(url, {
       method: 'GET',
     });
 
@@ -33,7 +33,8 @@ export class CalendarService {
       throw new Error('Erreur lors de la récupération des événements');
     }
 
-    return response.data;
+    // response.data est de type CalendarEvent[] selon le type générique
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   /**

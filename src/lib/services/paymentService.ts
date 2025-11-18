@@ -2,24 +2,29 @@ import { apiRequest } from './api';
 
 export interface Payment {
   id: string;
+  temp_payment_id?: string; // Pour Kkiapay, ID temporaire avant création dans le webhook
   user_id?: string;
   course_id: string;
   amount: number;
   currency: string;
-  payment_method: 'card' | 'mobile_money' | 'gobipay';
+  payment_method: 'card' | 'mobile_money' | 'kkiapay';
   payment_provider?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
   provider_transaction_id?: string | null;
   created_at: string;
   redirect_url?: string | null;
   instructions?: any;
-  metadata?: any;
+  metadata?: {
+    public_key?: string;
+    sandbox?: boolean | string;
+    [key: string]: any;
+  };
   raw?: any;
 }
 
 export interface PaymentInitiation {
   courseId: string;
-  paymentMethod: 'card' | 'mobile_money' | 'gobipay';
+  paymentMethod: 'card' | 'mobile_money' | 'kkiapay';
   paymentProvider?: string;
   customerFullname?: string;
   customerEmail?: string;
@@ -49,60 +54,95 @@ export class PaymentService {
     });
 
     const payload = response.data || {};
-    const rawPaymentData =
-      typeof payload.payment_data === 'string'
-        ? (() => {
-            try {
-              return JSON.parse(payload.payment_data);
-            } catch {
-              return payload.payment_data;
-            }
-          })()
-        : payload.payment_data;
+    
+    // Pour Kkiapay, extraire public_key et sandbox depuis metadata
+    let metadata = {};
+    let publicKey = null;
+    let sandbox = false;
+    
+    if (data.paymentMethod === 'kkiapay') {
+      const rawPaymentData =
+        typeof payload.payment_data === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(payload.payment_data);
+              } catch {
+                return payload.payment_data;
+              }
+            })()
+          : payload.payment_data;
+      
+      // Extraire public_key et sandbox depuis metadata
+      const rawMetadata = rawPaymentData?.raw || rawPaymentData || {};
+      publicKey = rawMetadata.public_key || null;
+      sandbox = rawMetadata.sandbox === true || rawMetadata.sandbox === 'true';
+      
+      metadata = {
+        public_key: publicKey,
+        sandbox: sandbox,
+        ...rawMetadata,
+      };
+    } else {
+      // Pour les autres providers (Kkiapay, etc.)
+      const rawPaymentData =
+        typeof payload.payment_data === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(payload.payment_data);
+              } catch {
+                return payload.payment_data;
+              }
+            })()
+          : payload.payment_data;
 
-    const instructions =
-      rawPaymentData?.pay?.data?.payload ||
-      rawPaymentData?.pay?.payload ||
-      rawPaymentData?.pay?.data ||
-      rawPaymentData?.pay ||
-      rawPaymentData?.transaction?.data?.payload;
+      const instructions =
+        rawPaymentData?.pay?.data?.payload ||
+        rawPaymentData?.pay?.payload ||
+        rawPaymentData?.pay?.data ||
+        rawPaymentData?.pay ||
+        rawPaymentData?.transaction?.data?.payload;
+
+      metadata = {
+        instructions,
+        ...rawPaymentData,
+      };
+    }
 
     const redirectCandidate =
       payload.redirect_url ||
       payload.payment_url ||
-      rawPaymentData?.pay?.data?.redirect_url ||
-      rawPaymentData?.pay?.redirect_url ||
-      rawPaymentData?.pay?.payment_url ||
       null;
 
     const amount = Number(
       payload.payment_data?.total ??
-      rawPaymentData?.transaction?.data?.amount ??
       payload.total ??
+      payload.amount ??
       0
     );
 
+    // Pour Kkiapay, utiliser temp_payment_id au lieu de payment_id
+    const paymentId = data.paymentMethod === 'kkiapay' 
+      ? (payload.temp_payment_id || payload.data?.temp_payment_id || '')
+      : (payload.payment_id ?? payload.temp_payment_id ?? '');
+
     return {
-      id: String(payload.payment_id ?? ''),
+      id: String(paymentId),
+      temp_payment_id: data.paymentMethod === 'kkiapay' ? String(paymentId) : undefined,
       user_id: String(payload.user_id ?? ''),
       course_id: data.courseId,
       amount,
       currency:
         payload.payment_data?.currency ||
-        rawPaymentData?.transaction?.data?.currency ||
         payload.currency ||
         'XOF',
       payment_method: data.paymentMethod,
       payment_provider: data.paymentProvider,
-      status: 'processing',
+      status: data.paymentMethod === 'kkiapay' ? 'pending' : 'processing',
       provider_transaction_id:
         payload.provider_transaction_id ||
-        rawPaymentData?.transaction?.data?.slug ||
-        rawPaymentData?.transaction?.slug ||
         null,
       redirect_url: redirectCandidate,
-      instructions,
-      metadata: rawPaymentData,
+      metadata,
       created_at: new Date().toISOString(),
       raw: payload,
     };
@@ -117,7 +157,7 @@ export class PaymentService {
         ? `card_${Math.random().toString(36).slice(2, 14).toUpperCase()}`
         : data.paymentMethod === 'mobile_money'
         ? `mm_${data.paymentProvider}_${Math.random().toString(36).slice(2, 12).toUpperCase()}`
-        : `gobipay_${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
+        : `kkiapay_${Math.random().toString(36).slice(2, 12).toUpperCase()}`;
 
     const payment: Payment = {
       id: paymentId,
@@ -145,7 +185,8 @@ export class PaymentService {
         course_id: '',
         amount: 0,
         currency: 'XOF',
-        payment_method: 'gobipay',
+        payment_method: 'kkiapay',
+        payment_provider: 'kkiapay',
         status: 'completed',
         provider_transaction_id: `demo_tx_${paymentId}`,
         created_at: new Date().toISOString(),
@@ -165,7 +206,7 @@ export class PaymentService {
       course_id: String(payload.course_id ?? ''),
       amount: Number(payload.amount ?? 0),
       currency: payload.currency || 'XOF',
-      payment_method: (payload.payment_method || 'gobipay') as Payment['payment_method'],
+        payment_method: (payload.payment_method || 'kkiapay') as Payment['payment_method'],
       payment_provider: payload.payment_provider,
       status: payload.status || 'processing',
       provider_transaction_id: payload.provider_transaction_id || null,

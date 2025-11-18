@@ -16,15 +16,21 @@ interface MessageComposerProps {
   onSend?: () => void;
   onCancel?: () => void;
   initialReceiverEmail?: string;
+  hiddenReceiverEmail?: string; // Email caché, rempli automatiquement mais non visible
+  initialSubject?: string; // Sujet initial (pour les réponses)
 }
 
 export default function MessageComposer({
   onSend,
   onCancel,
   initialReceiverEmail,
+  hiddenReceiverEmail,
+  initialSubject,
 }: MessageComposerProps) {
+  // Si hiddenReceiverEmail est fourni, l'utiliser comme email mais ne pas l'afficher dans le champ
+  const effectiveEmail = hiddenReceiverEmail || initialReceiverEmail || '';
   const [receiverEmail, setReceiverEmail] = useState(initialReceiverEmail || '');
-  const [subject, setSubject] = useState('');
+  const [subject, setSubject] = useState(initialSubject || '');
   const [content, setContent] = useState('');
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -33,10 +39,22 @@ export default function MessageComposer({
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (initialReceiverEmail) {
+    if (hiddenReceiverEmail) {
+      // Si email caché, le définir automatiquement mais ne pas faire de recherche visible
+      setReceiverEmail(hiddenReceiverEmail);
+      // Faire une recherche silencieuse pour obtenir les infos de l'utilisateur
+      handleSearch(hiddenReceiverEmail);
+    } else if (initialReceiverEmail) {
+      setReceiverEmail(initialReceiverEmail);
       handleSearch(initialReceiverEmail);
     }
-  }, [initialReceiverEmail]);
+  }, [initialReceiverEmail, hiddenReceiverEmail]);
+
+  useEffect(() => {
+    if (initialSubject) {
+      setSubject(initialSubject);
+    }
+  }, [initialSubject]);
 
   const handleSearch = async (email: string) => {
     if (!email || email.length < 3) {
@@ -102,14 +120,17 @@ export default function MessageComposer({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!receiverEmail || !subject || !content) {
+    // Utiliser l'email caché si disponible, sinon l'email saisi
+    const finalEmail = hiddenReceiverEmail || receiverEmail;
+    
+    if (!finalEmail || !subject || !content) {
       toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs');
       return;
     }
 
     // Vérifier que l'email est valide
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(receiverEmail)) {
+    if (!emailRegex.test(finalEmail)) {
       toast.warning('Email invalide', 'Veuillez entrer une adresse email valide');
       return;
     }
@@ -117,7 +138,7 @@ export default function MessageComposer({
     setSending(true);
     try {
       await MessageService.sendMessage({
-        recipient_email: receiverEmail,
+        recipient_email: finalEmail,
         recipient_id: selectedUser?.id,
         subject,
         content,
@@ -126,7 +147,9 @@ export default function MessageComposer({
       toast.success('Message envoyé', 'Votre message a été envoyé avec succès');
       
       // Réinitialiser le formulaire
+      if (!hiddenReceiverEmail) {
       setReceiverEmail('');
+      }
       setSubject('');
       setContent('');
       setSelectedUser(null);
@@ -143,7 +166,8 @@ export default function MessageComposer({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Destinataire avec recherche par email */}
+      {/* Destinataire avec recherche par email - caché si hiddenReceiverEmail est fourni */}
+      {!hiddenReceiverEmail && (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Destinataire (Email) <span className="text-red-500">*</span>
@@ -197,8 +221,8 @@ export default function MessageComposer({
             </div>
           )}
 
-          {/* Utilisateur sélectionné */}
-          {selectedUser && (
+          {/* Utilisateur sélectionné - caché si hiddenReceiverEmail est fourni */}
+          {!hiddenReceiverEmail && selectedUser && (
             <div className="mt-2 flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
               <User className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-900">{selectedUser.name}</span>
@@ -216,10 +240,13 @@ export default function MessageComposer({
             </div>
           )}
         </div>
+        {!hiddenReceiverEmail && (
         <p className="mt-1 text-xs text-gray-500">
           Recherchez un utilisateur par son adresse email. L'email sert d'identifiant unique.
         </p>
+        )}
       </div>
+      )}
 
       {/* Sujet */}
       <div>
@@ -265,8 +292,8 @@ export default function MessageComposer({
         )}
         <button
           type="submit"
-          disabled={sending || !receiverEmail || !subject || !content}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          disabled={sending || !(hiddenReceiverEmail || receiverEmail) || !subject || !content}
+          className="px-6 py-2 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
           {sending ? (
             <>

@@ -1,95 +1,63 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import HeroSection from '../components/home/HeroSection';
 import CoursePreview from '../components/home/CoursePreview';
 import Testimonials from '../components/home/Testimonials';
 import CallToAction from '../components/home/CallToAction';
-
-// Données de démonstration pour les cours
-const sampleCourses = [
-  {
-    id: '1',
-    title: 'Leadership et Management d\'Équipe',
-    description: 'Développez vos compétences en leadership et apprenez à gérer des équipes performantes dans un environnement dynamique.',
-    instructor: 'Dr. Kouassi Jean',
-    duration: '8 semaines',
-    students: 245,
-    rating: 4.8,
-    thumbnail: '/apprenant.png',
-    category: 'Management',
-    level: 'Intermédiaire' as const,
-    price: 0,
-  },
-  {
-    id: '2',
-    title: 'Communication Efficace et Prise de Parole',
-    description: 'Maîtrisez l\'art de la communication professionnelle et développez votre aisance à l\'oral dans toutes les situations.',
-    instructor: 'Mme. Traoré Aminata',
-    duration: '6 semaines',
-    students: 189,
-    rating: 4.9,
-    thumbnail: '/apprenant.png',
-    category: 'Communication',
-    level: 'Débutant' as const,
-    price: 15000,
-  },
-  {
-    id: '3',
-    title: 'Gestion de Projet Agile',
-    description: 'Apprenez les méthodologies agiles et devenez un chef de projet efficace capable de mener vos équipes au succès.',
-    instructor: 'Prof. N\'Guessan Paul',
-    duration: '10 semaines',
-    students: 167,
-    rating: 4.7,
-    thumbnail: '/apprenant.png',
-    category: 'Gestion de projet',
-    level: 'Avancé' as const,
-    price: 25000,
-  },
-  {
-    id: '4',
-    title: 'Mobilisation communautaire',
-    description: 'Techniques éprouvées pour mobiliser et engager efficacement les communautés.',
-    instructor: 'M. Koné Ibrahim',
-    duration: '5 semaines',
-    students: 203,
-    rating: 4.6,
-    thumbnail: '/apprenant.png',
-    category: 'Mobilisation',
-    level: 'Intermédiaire' as const,
-    price: 0,
-  },
-  {
-    id: '5',
-    title: 'Gestion de projet participative',
-    description: 'Approches collaboratives pour la planification et l\'exécution de projets sociaux.',
-    instructor: 'Dr. Diabaté Fatou',
-    duration: '4 semaines',
-    students: 178,
-    rating: 4.8,
-    thumbnail: '/apprenant.png',
-    category: 'Gestion',
-    level: 'Intermédiaire' as const,
-    price: 20000,
-  },
-  {
-    id: '6',
-    title: 'Leadership transformationnel',
-    description: 'Développez votre leadership pour inspirer et transformer votre organisation.',
-    instructor: 'Mme. Ouattara Mariam',
-    duration: '3 semaines',
-    students: 134,
-    rating: 4.9,
-    thumbnail: '/apprenant.png',
-    category: 'Leadership',
-    level: 'Débutant' as const,
-    price: 0,
-  },
-];
+import CertificateQuickVerify from '../components/home/CertificateQuickVerify';
+import { courseService } from '../lib/services/courseService';
 
 export default function Home() {
-  // Limiter à 3 cours pour correspondre à la maquette
-  const featuredCourses = sampleCourses.slice(0, 3);
+  const [featuredCourses, setFeaturedCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPopularCourses = async () => {
+      try {
+        setLoading(true);
+        // Récupérer les cours populaires triés par nombre d'inscrits (limit 3)
+        const courses = await courseService.getPopularCourses(3);
+        
+        // Transformer les données de l'API au format attendu par CoursePreview
+        const formattedCourses = courses.map((course: any) => ({
+          id: String(course.id),
+          slug: course.slug || String(course.id),
+          title: course.title,
+          description: course.description || course.short_description || '',
+          instructor: course.instructor 
+            ? `${course.instructor.first_name || ''} ${course.instructor.last_name || ''}`.trim()
+            : 'Instructeur',
+          duration: course.duration_minutes 
+            ? course.duration_minutes >= 60
+              ? `${Math.floor(course.duration_minutes / 60)}h${course.duration_minutes % 60 > 0 ? course.duration_minutes % 60 + 'min' : ''}`
+              : `${course.duration_minutes}min`
+            : 'Non spécifié',
+          students: course.enrollment_count || 0,
+          thumbnail: course.thumbnail_url || '/apprenant.png',
+          category: course.category?.name || 'Formation',
+          level: course.difficulty === 'beginner' ? 'Débutant' as const
+            : course.difficulty === 'intermediate' ? 'Intermédiaire' as const
+            : course.difficulty === 'advanced' ? 'Avancé' as const
+            : 'Intermédiaire' as const,
+          price: course.price || 0,
+          total_lessons: course.total_lessons || 0,
+        }));
+        
+        setFeaturedCourses(formattedCourses);
+      } catch (error) {
+        console.error('Erreur lors du chargement des cours populaires:', error);
+        // En cas d'erreur, utiliser un tableau vide
+        setFeaturedCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPopularCourses();
+  }, []);
   
   return (
     <div className="min-h-screen bg-white">
@@ -101,7 +69,17 @@ export default function Home() {
         <HeroSection />
       </div>
       <main>
-        <CoursePreview courses={featuredCourses} />
+        <CertificateQuickVerify />
+
+        {loading ? (
+          <div className="section-mdsc bg-white">
+            <div className="max-w-7xl mx-auto text-center py-12">
+              <p className="text-gray-600">Chargement des formations populaires...</p>
+            </div>
+          </div>
+        ) : (
+          <CoursePreview courses={featuredCourses} />
+        )}
         <Testimonials />
         <CallToAction />
       </main>

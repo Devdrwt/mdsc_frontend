@@ -66,15 +66,12 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   const requestCertificateDirectly = async (courseIdOrEnrollmentId: string | number) => {
     setRequesting(true);
     try {
-      // Utiliser enrollmentId si fourni, sinon courseId
-      if (enrollmentId) {
-        await certificateService.requestCertificate(enrollmentId);
-      } else if (typeof courseIdOrEnrollmentId === 'string') {
-        await certificateService.requestCertificateByCourseId(courseIdOrEnrollmentId);
-      } else {
-        await certificateService.requestCertificate(courseIdOrEnrollmentId);
-      }
-      toast.success('Demande envoyée', 'Votre demande de certificat a été envoyée. Elle sera examinée par un administrateur.');
+      // Génération immédiate (logique auto, pas de validation admin)
+      const targetCourseId = typeof courseIdOrEnrollmentId === 'string'
+        ? courseIdOrEnrollmentId
+        : String(courseIdOrEnrollmentId);
+      await certificateService.generateForCourse(targetCourseId);
+      toast.success('Certificat généré', 'Votre certificat a été généré automatiquement.');
       loadCertificates();
     } catch (error: any) {
       console.error('Erreur lors de la demande de certificat:', error);
@@ -128,33 +125,21 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   };
 
   const getStatusBadge = (certificate: Certificate) => {
-    // Utiliser is_valid et verified pour déterminer le statut
-    const status = certificate.is_valid ? (certificate.verified ? 'issued' : 'pending') : 'rejected';
-    switch (status) {
-      case 'issued':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Émis
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            En attente
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Rejeté
-          </span>
-        );
-      default:
-        return null;
+    // Pas d'attente: si valide => Émis, sinon Rejeté
+    if (certificate.is_valid) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Émis
+        </span>
+      );
     }
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        Rejeté
+      </span>
+    );
   };
 
   if (loading) {
@@ -213,7 +198,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                   {certificate.certificate_code && (
                     <div className="bg-gray-50 rounded-lg p-3 mb-3">
                       <p className="text-xs text-gray-600 mb-1">Code de vérification</p>
-                      <p className="font-mono text-sm font-semibold text-gray-900">{certificate.certificate_code}</p>
+                      <p className="font-mono text-sm font-semibold text-gray-900">{certificate.certificate_code.toUpperCase()}</p>
                     </div>
                   )}
 
@@ -229,23 +214,22 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                     </div>
                   )}
 
-                  {certificate.is_valid && !certificate.verified && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <div className="flex items-start space-x-2">
-                        <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-yellow-900">En attente de validation</p>
-                          <p className="text-xs text-yellow-700 mt-1">
-                            Votre demande est en cours d'examen par un administrateur.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Plus de statut "En attente": génération automatique */}
                 </div>
 
                 <div className="flex items-center space-x-2 ml-4">
-                  {certificate.is_valid && certificate.verified && (
+                  {certificate.is_valid && (
+                    <>
+                      {certificate.certificate_code && (
+                        <a
+                          href={`/verify-certificate/${encodeURIComponent(certificate.certificate_code.toUpperCase())}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          Voir
+                        </a>
+                      )}
                     <button
                       onClick={() => handleDownloadCertificate(String(certificate.id))}
                       className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
@@ -253,6 +237,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                       <Download className="h-4 w-4" />
                       <span>Télécharger</span>
                     </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -269,8 +254,7 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 mb-2">Demander un certificat</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Si vous avez réussi l'évaluation finale de ce cours, vous pouvez demander un certificat.
-                Votre demande sera examinée par un administrateur.
+                Si vous avez réussi l'évaluation finale de ce cours, vous pouvez générer automatiquement votre certificat.
               </p>
               <button
                 onClick={() => handleRequestCertificate(courseId)}

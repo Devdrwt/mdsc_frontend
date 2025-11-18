@@ -11,6 +11,7 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   closable?: boolean;
   className?: string;
+  backdropColor?: 'red' | 'green' | 'default';
 }
 
 const sizeClasses = {
@@ -27,7 +28,8 @@ export default function Modal({
   children,
   size = 'md',
   closable = true,
-  className = ''
+  className = '',
+  backdropColor = 'default'
 }: ModalProps) {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -49,17 +51,20 @@ export default function Modal({
 
   if (!isOpen) return null;
 
+  const backdropColorClasses = {
+    default: 'bg-black/50',
+    red: 'bg-red-900/40',
+    green: 'bg-green-900/40'
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={closable ? onClose : undefined}
-        />
-        
-        {/* Modal */}
-        <div className={`
+    <div 
+      className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md p-4 ${backdropColorClasses[backdropColor]}`}
+      onClick={closable ? onClose : undefined}
+    >
+      {/* Modal */}
+      <div 
+        className={`
           relative bg-white rounded-xl shadow-xl w-full
           ${sizeClasses[size]}
           transform transition-all duration-300 ease-out
@@ -69,7 +74,9 @@ export default function Modal({
           flex
           flex-col
           ${className}
-        `}>
+        `}
+        onClick={(e) => e.stopPropagation()}
+      >
           {/* Header */}
           {title && (
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
@@ -89,7 +96,6 @@ export default function Modal({
           <div className="p-6 overflow-y-auto flex-1">
             {children}
           </div>
-        </div>
       </div>
     </div>
   );

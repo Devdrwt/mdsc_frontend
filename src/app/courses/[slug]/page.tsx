@@ -28,6 +28,7 @@ import { CourseService, Course as ServiceCourse } from '../../../lib/services/co
 import { ModuleService } from '../../../lib/services/moduleService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
 import { paymentService } from '../../../lib/services/paymentService';
+import { isAuthenticated } from '../../../lib/services/authService';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
@@ -154,6 +155,16 @@ export default function CourseDetailPage() {
       return;
     }
     
+    // Vérifier si l'utilisateur est connecté
+    if (!isAuthenticated()) {
+      toast.error(
+        'Connexion requise', 
+        'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.'
+      );
+      router.push(`/login?redirect=/courses/${slug}`);
+      return;
+    }
+    
     // Vérifier la date limite d'inscription avant de tenter l'inscription
     const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
     
@@ -192,7 +203,17 @@ export default function CourseDetailPage() {
       
       // Messages d'erreur plus spécifiques
       let errorMessage = 'Impossible de s\'inscrire au cours';
-      if (err.message) {
+      
+      // Détecter les erreurs d'authentification
+      if (err.message && (
+        err.message.includes('Non autorisé') || 
+        err.message.includes('Token manquant') || 
+        err.message.includes('Non authentifié') ||
+        err.statusCode === 401
+      )) {
+        errorMessage = 'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.';
+        router.push(`/login?redirect=/courses/${slug}`);
+      } else if (err.message) {
         if (err.message.includes('date limite')) {
           errorMessage = `La date limite d'inscription est dépassée. Les inscriptions sont maintenant fermées pour ce cours.`;
         } else if (err.message.includes('prérequis')) {
@@ -204,7 +225,7 @@ export default function CourseDetailPage() {
       
       toast.error('Erreur d\'inscription', errorMessage);
     }
-  }, [course, courseAny, router]);
+  }, [course, courseAny, router, slug]);
 
   const handleStartLearning = useCallback(() => {
     if (course) {

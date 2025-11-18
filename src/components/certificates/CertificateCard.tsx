@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Award, Download, ExternalLink, Calendar, CheckCircle } from 'lucide-react';
+import { BadgeCheck, FileDown, ExternalLink, Calendar, CheckCircle } from 'lucide-react';
 import { Certificate } from '../../types/course';
 import { certificateService } from '../../lib/services/certificateService';
 import Button from '../ui/Button';
@@ -18,34 +18,10 @@ export default function CertificateCard({
   onDownload,
 }: CertificateCardProps) {
   const handleDownload = async () => {
-    try {
-      const downloadUrl = await certificateService.downloadCertificate(certificate.id.toString());
-      // Si c'est une URL, l'ouvrir directement, sinon traiter comme un blob
-      if (typeof downloadUrl === 'string') {
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `certificat-${certificate.certificateCode}.pdf`;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } else {
-        // Si c'est un Blob (ancien format)
-        const url = window.URL.createObjectURL(downloadUrl);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `certificat-${certificate.certificateCode}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }
-      
-      onDownload?.();
-    } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
-      alert('Erreur lors du téléchargement du certificat');
-    }
+    // Ouvrir la page d'impression dédiée qui lance window.print()
+    const printUrl = `/certificates/${certificate.id}/print`;
+    window.open(printUrl, '_blank');
+    onDownload?.();
   };
 
   const handleVerify = () => {
@@ -58,7 +34,7 @@ export default function CertificateCard({
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="p-3 bg-mdsc-gold/10 rounded-lg">
-            <Award className="h-6 w-6 text-mdsc-gold" />
+            <BadgeCheck className="h-6 w-6 text-mdsc-gold" />
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900">
@@ -120,7 +96,7 @@ export default function CertificateCard({
           onClick={handleDownload}
           className="flex-1"
         >
-          <Download className="h-4 w-4 mr-2" />
+          <FileDown className="h-4 w-4 mr-2" />
           Télécharger PDF
         </Button>
         <Button

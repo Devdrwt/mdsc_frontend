@@ -3,21 +3,22 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
-import { Clock, Users, Star, Play, ArrowRight } from 'lucide-react';
+import { Clock, Users, BookOpen, ArrowRight } from 'lucide-react';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface Course {
   id: string;
+  slug?: string;
   title: string;
   description: string;
   instructor: string;
   duration: string;
   students: number;
-  rating: number;
   thumbnail: string;
   category: string;
   level: 'Débutant' | 'Intermédiaire' | 'Avancé';
   price: number;
+  total_lessons?: number;
 }
 
 interface CoursePreviewProps {
@@ -59,7 +60,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
           {courses.map((course) => (
             <div
               key={course.id}
-              className="card-mdsc hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
+              className="card-mdsc hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group flex flex-col h-full"
             >
               {/* Thumbnail */}
               <div className="relative mb-4 overflow-hidden rounded-lg">
@@ -78,13 +79,6 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                     />
                   );
                 })()}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-white rounded-full p-3">
-                      <Play className="h-6 w-6 text-mdsc-blue" />
-                    </div>
-                  </div>
-                </div>
                 <div className="absolute top-3 right-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
                     {course.level}
@@ -93,39 +87,47 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
               </div>
 
               {/* Contenu */}
-              <div className="space-y-4">
-                <div>
-                         <h3 className="text-heading text-lg mb-2 line-clamp-2">
-                           {course.title}
-                         </h3>
-                         <p className="text-body text-sm line-clamp-2">
+              <div className="flex flex-col flex-1 space-y-4">
+                <div className="flex-1">
+                  <h3 className="text-heading text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
+                    {course.title}
+                  </h3>
+                  <p className="text-body text-sm line-clamp-3 min-h-[4.5rem]">
                     {course.description}
                   </p>
                 </div>
 
-                       <div className="flex items-center space-x-4 text-small">
+                <div className="flex items-center flex-wrap gap-3 text-small">
                   <div className="flex items-center space-x-1">
                     <Clock className="h-4 w-4" />
                     <span>{course.duration}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4" />
-                    <span>{course.students}</span>
+                    <span>{course.students} inscrit{course.students > 1 ? 's' : ''}</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span>{course.rating}</span>
-                  </div>
+                  {course.total_lessons && course.total_lessons > 0 && (
+                    <div className="flex items-center space-x-1">
+                      <BookOpen className="h-4 w-4" />
+                      <span>{course.total_lessons} leçon{course.total_lessons > 1 ? 's' : ''}</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                <div className="flex items-end justify-between pt-4 border-t border-gray-100 mt-auto">
                   <div>
-                           <p className="text-small">Par {course.instructor}</p>
-                           <p className="text-lg text-heading">
+                    <p className="text-small">Par {course.instructor}</p>
+                    <p className="text-lg text-heading">
                       {course.price === 0 ? 'Gratuit' : `${course.price} FCFA`}
                     </p>
                   </div>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      const slug = course.slug || course.id;
+                      router.push(`/courses/${slug}`);
+                    }}
+                  >
                     Voir détails
                   </Button>
                 </div>
