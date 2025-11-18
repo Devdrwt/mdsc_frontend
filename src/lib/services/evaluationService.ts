@@ -233,11 +233,60 @@ export class EvaluationService {
   }
 
   // Vérifier l'existence d'une tentative (sans en créer une nouvelle)
+  // Retourne la dernière tentative non complétée si elle existe
   static async checkEvaluationAttempt(evaluationId: string): Promise<{ exists: boolean; attemptId?: number; startedAt?: string; durationMinutes: number }> {
-    const response = await apiRequest(`/evaluations/${evaluationId}/attempt`, {
-      method: 'GET',
-    });
-    return response.data;
+    try {
+      const response = await apiRequest(`/evaluations/${evaluationId}/attempt`, {
+        method: 'GET',
+      });
+      
+      const data = response.data;
+      
+      // Si pas de tentatives, retourner exists: false
+      if (!data.attempts || !Array.isArray(data.attempts) || data.attempts.length === 0) {
+        return {
+          exists: false,
+          durationMinutes: 0
+        };
+      }
+      
+      // Trouver la dernière tentative non complétée (sans completed_at)
+      const incompleteAttempt = data.attempts.find((attempt: any) => 
+        !attempt.completed_at && !attempt.completedAt && attempt.started_at
+      );
+      
+      if (incompleteAttempt) {
+        // Récupérer la durée de l'évaluation depuis les métadonnées ou la tentative
+        // Le backend devrait inclure duration_minutes dans la réponse
+        const durationMinutes = incompleteAttempt.duration_minutes || 
+                                data.duration_minutes || 
+                                (incompleteAttempt.durationMinutes || 0);
+        
+        return {
+          exists: true,
+          attemptId: incompleteAttempt.id,
+          startedAt: incompleteAttempt.started_at || incompleteAttempt.startedAt,
+          durationMinutes: durationMinutes
+        };
+      }
+      
+      // Toutes les tentatives sont complétées
+      return {
+        exists: false,
+        durationMinutes: 0
+      };
+    } catch (error: any) {
+      // 404 est attendu si la route n'existe pas encore côté backend
+      // Retourner une réponse par défaut sans erreur
+      if (error?.status === 404 || error?.response?.status === 404) {
+        return {
+          exists: false,
+          durationMinutes: 0
+        };
+      }
+      // Pour les autres erreurs, relancer
+      throw error;
+    }
   }
 
   // Démarrer une tentative d'évaluation
@@ -249,13 +298,31 @@ export class EvaluationService {
   }
 
   // Soumettre une évaluation
+  // Le backend récupère automatiquement l'enrollmentId si non fourni
   static async submitEvaluation(
     evaluationId: string, 
-    answers: Record<string, any>
-  ): Promise<EvaluationSubmission> {
+    answers: Record<string, any>,
+    enrollmentId?: number
+  ): Promise<{
+    attempt_id?: number;
+    score: number;
+    total_points: number;
+    percentage: number;
+    passed: boolean;
+    is_passed?: boolean;
+    correct_answers?: number;
+    total_questions?: number;
+    certificate_eligible?: boolean;
+  }> {
+    const body: any = { answers };
+    // Inclure enrollmentId si fourni (le backend peut aussi le récupérer automatiquement)
+    if (enrollmentId) {
+      body.enrollmentId = enrollmentId;
+    }
+    
     const response = await apiRequest(`/evaluations/${evaluationId}/submit`, {
       method: 'POST',
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify(body),
     });
     return response.data;
   }

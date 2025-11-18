@@ -111,7 +111,10 @@ export default function EvaluationSubmissionPage() {
               setTimeRemaining(null);
             }
           } catch (error: any) {
-            console.error('Erreur lors de la vérification de la tentative:', error);
+            // Ne pas logger les erreurs 404 - c'est normal si la route n'existe pas encore
+            if (error?.status !== 404 && error?.response?.status !== 404) {
+              console.error('Erreur lors de la vérification de la tentative:', error);
+            }
             // En cas d'erreur, on attendra quand même la première réponse
             setHasStarted(false);
             setTimeRemaining(null);

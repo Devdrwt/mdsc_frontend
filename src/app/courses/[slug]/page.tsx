@@ -437,7 +437,12 @@ export default function CourseDetailPage() {
         const moduleAny = module as any;
         const lessons = moduleAny.lessons || [];
         const moduleDuration = lessons.reduce((sum: number, lesson: any) => {
-          return sum + (lesson.duration || lesson.duration_minutes || 0);
+          const duration = typeof lesson.duration === 'number' ? lesson.duration : 
+                          typeof lesson.duration_minutes === 'number' ? lesson.duration_minutes : 
+                          typeof lesson.duration === 'string' ? parseFloat(lesson.duration) || 0 :
+                          typeof lesson.duration_minutes === 'string' ? parseFloat(lesson.duration_minutes) || 0 :
+                          0;
+          return sum + duration;
         }, 0);
         return total + moduleDuration;
       }, 0);
@@ -446,7 +451,12 @@ export default function CourseDetailPage() {
     if (duration === 0 && course.lessons && course.lessons.length > 0) {
       duration = course.lessons.reduce((total, lesson) => {
         const lessonAny = lesson as any;
-        return total + (lessonAny.duration || lessonAny.duration_minutes || 0);
+        const lessonDuration = typeof lessonAny.duration === 'number' ? lessonAny.duration : 
+                              typeof lessonAny.duration_minutes === 'number' ? lessonAny.duration_minutes : 
+                              typeof lessonAny.duration === 'string' ? parseFloat(lessonAny.duration) || 0 :
+                              typeof lessonAny.duration_minutes === 'string' ? parseFloat(lessonAny.duration_minutes) || 0 :
+                              0;
+        return total + lessonDuration;
       }, 0);
     }
     
@@ -1135,7 +1145,7 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
               </div>
-              )}*/}
+              )}
 
               {/* Prérequis */}
               {prerequisiteCourse && (

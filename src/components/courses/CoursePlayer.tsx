@@ -15,8 +15,10 @@ import Image from 'next/image';
 import Modal from '../ui/Modal';
 import FloatingChatButton from './FloatingChatButton';
 import CertificateCelebrateModal from '../certificates/CertificateCelebrateModal';
+import ProfileVerificationModal from '../dashboard/student/ProfileVerificationModal';
 import { certificateService } from '../../lib/services/certificateService';
 import { useAuthStore } from '../../lib/stores/authStore';
+import toast from '../../lib/utils/toast';
 
 interface CoursePlayerProps {
   course: Course;
@@ -56,6 +58,8 @@ export default function CoursePlayer({
   const [evaluationResult, setEvaluationResult] = useState<any | null>(null);
   const [showEvaluationResultModal, setShowEvaluationResultModal] = useState(false);
   const [evaluationAttemptsUsed, setEvaluationAttemptsUsed] = useState(0);
+  const [showProfileVerificationModal, setShowProfileVerificationModal] = useState(false);
+  const [requestingCertificate, setRequestingCertificate] = useState(false);
   const [moduleProgressMap, setModuleProgressMap] = useState<Map<number, number>>(new Map());
   const [totalDurationMinutes, setTotalDurationMinutes] = useState<number>(0);
   const [completedDurationMinutes, setCompletedDurationMinutes] = useState<number>(0);
@@ -948,6 +952,16 @@ export default function CoursePlayer({
     setShowEvaluationResultModal(true);
     setEvaluationAttemptsUsed(prev => prev + 1);
     
+    // Si l'évaluation est réussie et éligible pour certificat, ouvrir le modal de vérification
+    // Le modal de vérification doit s'afficher après la modal de résultat
+    if (result.passed && result.certificate_eligible) {
+      console.log('[CoursePlayer] ✅ Évaluation réussie et éligible, ouverture du modal de vérification après 1 seconde...');
+      setTimeout(() => {
+        console.log('[CoursePlayer] 🎯 Affichage du modal de vérification maintenant');
+        setShowProfileVerificationModal(true);
+      }, 1000);
+    }
+    
     // Recharger les tentatives d'évaluation pour mettre à jour finalEvaluationAttempts
     if (enrollmentId) {
       console.log('[CoursePlayer] 🔄 Rechargement des quiz et évaluation...');
@@ -974,29 +988,54 @@ export default function CoursePlayer({
     }, 1500);
   };
 
+  const handleConfirmProfileData = async () => {
+    if (!course.id) {
+      toast.error('Erreur', 'Impossible de générer le certificat sans courseId');
+      return;
+    }
+
+    setRequestingCertificate(true);
+    try {
+      // Utiliser generateForCourse pour créer le certificat après confirmation des données
+      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
+      const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
+      await certificateService.generateForCourse(courseId);
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
+      );
+      setShowProfileVerificationModal(false);
+      // Rediriger vers la page des certificats
+      window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+    } catch (error: any) {
+      console.error('Erreur lors de la génération du certificat:', error);
+      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
+    } finally {
+      setRequestingCertificate(false);
+    }
+  };
+
+  const handleUpdateProfile = () => {
+    if (!course.id) return;
+    // Rediriger vers le profil avec un paramètre pour revenir après
+    const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
+    const returnUrl = encodeURIComponent(`/dashboard/student/certificates?courseId=${courseId}&requestCertificate=true`);
+    window.location.href = `/dashboard/student/profile?returnUrl=${returnUrl}`;
+  };
+
   const handleCloseEvaluationResultModal = () => {
     const wasPassed = evaluationResult?.passed;
     setShowEvaluationResultModal(false);
     setEvaluationResult(null);
-    // Si réussite, générer le certificat et ouvrir la célébration (comme sur la page d'évaluation)
-    if (wasPassed) {
-      (async () => {
-        try {
-          await certificateService.generateForCourse(course.id);
-          const certs = await certificateService.getMyCertificates();
-          const cert = Array.isArray(certs)
-            ? certs.find((c: any) => String(c.course_id || c.courseId) === String(course.id))
-            : null;
-          if (cert) setGeneratedCertificate(cert);
-          setShowCertificateModal(true);
-        } catch (e) {
-          console.warn('Generation certificat (learn): ', e);
-        }
-      })();
-    } else {
+    // Ne plus générer automatiquement le certificat ici
+    // Le modal de vérification dans CourseEvaluationPlayer gère la création du certificat
+    // après vérification des données du profil
+    if (!wasPassed) {
       // Retour aux leçons si non réussi
       handleBackToLesson();
     }
+    // Si réussi, le modal de vérification dans CourseEvaluationPlayer s'affichera
+    // et le certificat sera créé seulement après confirmation des données
   };
 
   const formatDuration = (minutes: number) => {
@@ -1580,6 +1619,15 @@ export default function CoursePlayer({
             ? new Date((generatedCertificate as any).issued_at)
             : undefined
         }
+      />
+
+      {/* Modal de vérification des données du profil */}
+      <ProfileVerificationModal
+        isOpen={showProfileVerificationModal}
+        onClose={() => setShowProfileVerificationModal(false)}
+        onConfirm={handleConfirmProfileData}
+        onUpdateProfile={handleUpdateProfile}
+        courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
       />
     </div>
     </>

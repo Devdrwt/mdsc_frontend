@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Award, AlertCircle, Loader, FileText, GraduationCap, Info, Timer, Target, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Award, AlertCircle, Loader, FileText, GraduationCap, Info, Timer, Target, AlertTriangle, RotateCcw } from 'lucide-react';
 import { evaluationService } from '../../../lib/services/evaluationService';
 import { certificateService } from '../../../lib/services/certificateService';
 import toast from '../../../lib/utils/toast';
@@ -12,7 +12,7 @@ interface EvaluationQuestion {
   id?: string;
   question_text: string;
   question_type: 'multiple_choice' | 'true_false' | 'short_answer';
-  options: string[];
+  options: string[] | Array<{ id: string | number; text: string }>; // Supporte les deux formats
   correct_answer: string;
   points: number | string;
   order_index: number;
@@ -72,6 +72,19 @@ export default function CourseEvaluationPlayer({
   useEffect(() => {
     loadEvaluation();
   }, [evaluationId]);
+
+  // Log pour déboguer l'état du modal de vérification
+  useEffect(() => {
+    if (showProfileVerificationModal) {
+      console.log('[CourseEvaluationPlayer] ✅ Modal de vérification ouvert:', {
+        showProfileVerificationModal,
+        courseId,
+        enrollmentId
+      });
+    } else {
+      console.log('[CourseEvaluationPlayer] ❌ Modal de vérification fermé');
+    }
+  }, [showProfileVerificationModal, courseId, enrollmentId]);
 
   // Gérer le cas où le temps est écoulé au chargement
   useEffect(() => {
@@ -143,6 +156,19 @@ export default function CourseEvaluationPlayer({
         toast.error('Erreur', 'Évaluation non trouvée');
         return;
       }
+      
+      // Normaliser les questions pour s'assurer que le format est cohérent
+      if (evalData.questions && Array.isArray(evalData.questions)) {
+        evalData.questions = evalData.questions.map((q: any) => {
+          // S'assurer que les options sont dans le bon format
+          if (q.options && Array.isArray(q.options)) {
+            // Les options peuvent être des strings ou des objets {id, text}
+            // On les laisse telles quelles, le rendu s'en chargera
+          }
+          return q;
+        });
+      }
+      
       setEvaluation(evalData);
       
       // Vérifier si l'évaluation a déjà été soumise (tentative complétée)
@@ -155,8 +181,35 @@ export default function CourseEvaluationPlayer({
               (attempt: any) => attempt.completed_at || attempt.completedAt
             );
             if (completedAttempt) {
-              setIsSubmitted(true);
-              console.log('[CourseEvaluationPlayer] ⚠️ Évaluation déjà soumise');
+              // Charger et afficher les résultats de la tentative complétée
+              const attemptResult: EvaluationResult = {
+                score: Number(completedAttempt.score ?? 0),
+                total_points: Number(completedAttempt.total_points ?? 0),
+                percentage: Number(completedAttempt.percentage ?? 0),
+                passed: Boolean(completedAttempt.is_passed ?? completedAttempt.passed ?? false),
+                certificate_eligible: Boolean(completedAttempt.certificate_eligible ?? (completedAttempt.is_passed ?? completedAttempt.passed ?? false)),
+              };
+              
+              // Mettre à jour le nombre de tentatives utilisées
+              const attemptsCount = evalDataResult.previous_attempts.length;
+              setAttemptsUsed(attemptsCount);
+              
+              // Vérifier si l'étudiant peut réessayer (pas réussi ET tentatives restantes)
+              const canRetry = !attemptResult.passed && attemptsCount < evalData.max_attempts;
+              
+              if (canRetry) {
+                // Si l'étudiant peut réessayer, ne pas marquer comme soumis pour permettre une nouvelle tentative
+                setIsSubmitted(false);
+                setResult(attemptResult);
+                setShowResults(true);
+                console.log('[CourseEvaluationPlayer] ⚠️ Évaluation non réussie, possibilité de réessayer:', { attemptsCount, maxAttempts: evalData.max_attempts });
+              } else {
+                // Si l'étudiant a réussi ou n'a plus de tentatives, marquer comme soumis
+                setIsSubmitted(true);
+                setResult(attemptResult);
+                setShowResults(true);
+                console.log('[CourseEvaluationPlayer] ⚠️ Évaluation déjà soumise, résultats chargés:', attemptResult);
+              }
             }
           }
         } catch (error) {
@@ -169,12 +222,15 @@ export default function CourseEvaluationPlayer({
         try {
           const attemptCheck = await evaluationService.checkEvaluationAttempt(evalData.id);
           
-          if (attemptCheck.exists && attemptCheck.startedAt && attemptCheck.durationMinutes) {
+          // Utiliser la durée de l'évaluation si elle n'est pas dans la tentative
+          const durationMinutes = attemptCheck.durationMinutes || evalData.duration_minutes;
+          
+          if (attemptCheck.exists && attemptCheck.startedAt && durationMinutes) {
             // Calculer le temps restant basé sur startedAt
             const startedAt = new Date(attemptCheck.startedAt);
             const now = new Date();
             const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
-            const totalSeconds = attemptCheck.durationMinutes * 60;
+            const totalSeconds = durationMinutes * 60;
             const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
             
             if (remainingSeconds > 0) {
@@ -205,8 +261,11 @@ export default function CourseEvaluationPlayer({
             setTimerStarted(false);
             setStartTime(null);
           }
-        } catch (attemptError) {
-          console.warn('[CourseEvaluationPlayer] Erreur lors de la vérification de la tentative:', attemptError);
+        } catch (attemptError: any) {
+          // Ne pas logger les erreurs 404 - c'est normal si la route n'existe pas encore
+          if (attemptError?.status !== 404 && attemptError?.response?.status !== 404) {
+            console.warn('[CourseEvaluationPlayer] Erreur lors de la vérification de la tentative:', attemptError);
+          }
           // En cas d'erreur, réinitialiser les états
           setTimeRemaining(null);
           setTimerStarted(false);
@@ -246,12 +305,14 @@ export default function CourseEvaluationPlayer({
           setStartTime(startedAtDate);
           setTimerStarted(true);
           setTimeRemaining(evaluation.duration_minutes * 60);
-        } else if (attemptCheck.startedAt && attemptCheck.durationMinutes) {
+        } else if (attemptCheck.startedAt) {
           // Tentative existante, utiliser le startedAt pour calculer en temps réel
+          // Utiliser la durée de l'évaluation si elle n'est pas dans la tentative
+          const durationMinutes = attemptCheck.durationMinutes || evaluation.duration_minutes || 0;
           const startedAtDate = new Date(attemptCheck.startedAt);
           const now = new Date();
           const elapsedSeconds = Math.floor((now.getTime() - startedAtDate.getTime()) / 1000);
-          const totalSeconds = attemptCheck.durationMinutes * 60;
+          const totalSeconds = durationMinutes * 60;
           const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
           
           console.log('[CourseEvaluationPlayer] ⏱️ Tentative existante, temps restant:', remainingSeconds);
@@ -266,8 +327,11 @@ export default function CourseEvaluationPlayer({
           setTimerStarted(true);
           setTimeRemaining(evaluation.duration_minutes * 60);
         }
-      } catch (error) {
-        console.error('[CourseEvaluationPlayer] Erreur lors du démarrage de la tentative:', error);
+      } catch (error: any) {
+        // Ne pas logger les erreurs 404 - c'est normal si la route n'existe pas encore
+        if (error?.status !== 404 && error?.response?.status !== 404) {
+          console.error('[CourseEvaluationPlayer] Erreur lors du démarrage de la tentative:', error);
+        }
         // En cas d'erreur, utiliser l'heure actuelle comme startTime
         const now = new Date();
         setStartTime(now);
@@ -329,35 +393,63 @@ export default function CourseEvaluationPlayer({
     try {
       let submissionResult: EvaluationResult;
       
-      // Utiliser l'endpoint spécifique si enrollmentId est fourni
-      if (enrollmentId && evaluation?.id) {
-        // submitEvaluation attend evaluationId (string), pas enrollmentId
-        const result = await evaluationService.submitEvaluation(String(evaluation.id), answers);
-        // EvaluationSubmission peut ne pas avoir toutes ces propriétés, adapter selon le type réel
-        const backendScore = Number((result as any).score ?? 0);
-        const backendTotal = Number((result as any).total_points ?? 0);
-        // Fallback: recalculer si nécessaire
-        const safeTotal = backendTotal > 0 ? backendTotal : (evaluation?.questions || []).reduce((sum, q) => {
-          const raw = q.points;
-          if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
-          if (typeof raw === 'string') {
-            const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
-            return sum + (Number.isFinite(parsed) ? parsed : 0);
-          }
-          return sum;
-        }, 0);
-        const safeScore = Number.isFinite(backendScore) ? backendScore : 0;
-        const pct = Number((result as any).percentage);
-        const safePct = Number.isFinite(pct) ? pct : (safeTotal > 0 ? (safeScore / safeTotal) * 100 : 0);
-        submissionResult = {
-          score: safeScore,
-          total_points: safeTotal,
-          percentage: Math.round(safePct),
-          passed: Boolean((result as any).passed ?? (safePct >= (evaluation.passing_score || 70))),
-          certificate_eligible: Boolean((result as any).certificate_eligible ?? ((safePct >= (evaluation.passing_score || 70)))),
-        };
+      // Utiliser l'endpoint standard - le backend récupère automatiquement l'enrollmentId si nécessaire
+      if (evaluation?.id) {
+        try {
+          // Le backend gère automatiquement l'enrollmentId et retourne une réponse structurée
+          const result = await evaluationService.submitEvaluation(
+            String(evaluation.id), 
+            answers,
+            enrollmentId || undefined
+          );
+          
+          // Utiliser les données du backend (qui sont maintenant fiables)
+          submissionResult = {
+            score: Number(result.score ?? 0),
+            total_points: Number(result.total_points ?? 0),
+            percentage: Number(result.percentage ?? 0),
+            passed: Boolean(result.passed ?? result.is_passed ?? false),
+            certificate_eligible: Boolean(result.certificate_eligible ?? (result.passed ?? result.is_passed ?? false)),
+          };
+        } catch (error: any) {
+          // Si l'endpoint échoue, utiliser le calcul côté client comme fallback
+          console.warn('[CourseEvaluationPlayer] Erreur lors de la soumission, utilisation du calcul côté client:', error);
+          // Fallback : calcul côté client
+          const totalPoints = (evaluation?.questions || []).reduce((sum, q) => {
+            const raw = q.points;
+            if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
+            if (typeof raw === 'string') {
+              const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
+              return sum + (Number.isFinite(parsed) ? parsed : 0);
+            }
+            return sum;
+          }, 0);
+          const score = (evaluation?.questions || []).reduce((sum, q) => {
+            const answer = answers[q.id || ''];
+            if (answer && q.correct_answer && String(answer).toLowerCase() === String(q.correct_answer).toLowerCase()) {
+              const raw = q.points;
+              if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
+              if (typeof raw === 'string') {
+                const parsed = parseFloat(String(raw).replace(/[^\d.,-]/g, '').replace(',', '.'));
+                return sum + (Number.isFinite(parsed) ? parsed : 0);
+              }
+              return sum;
+            }
+            return sum;
+          }, 0);
+          const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+          const passed = percentage >= evaluation.passing_score;
+
+          submissionResult = {
+            score,
+            total_points: totalPoints,
+            percentage: Math.round(percentage),
+            passed,
+            certificate_eligible: passed,
+          };
+        }
       } else {
-        // Fallback : calcul côté client (temporaire)
+        // Si pas d'evaluation.id, utiliser le calcul côté client
         const totalPoints = (evaluation?.questions || []).reduce((sum, q) => {
           const raw = q.points;
           if (typeof raw === 'number' && Number.isFinite(raw)) return sum + raw;
@@ -418,8 +510,38 @@ export default function CourseEvaluationPlayer({
       }
 
       // Si l'évaluation est réussie et éligible pour certificat, ouvrir le modal de vérification
-      if (submissionResult.passed && submissionResult.certificate_eligible) {
-        setShowProfileVerificationModal(true);
+      // IMPORTANT: Le modal de vérification doit s'afficher AVANT toute création de certificat
+      console.log('[CourseEvaluationPlayer] 🔍 Vérification éligibilité certificat:', {
+        passed: submissionResult.passed,
+        certificate_eligible: submissionResult.certificate_eligible,
+        hasParentHandler,
+        willShowModal: submissionResult.passed && submissionResult.certificate_eligible,
+        submissionResult
+      });
+      
+      // Si l'évaluation est réussie, afficher le modal de vérification
+      // certificate_eligible peut être undefined, donc on considère que si passed est true, on est éligible
+      const isEligible = submissionResult.passed && (submissionResult.certificate_eligible !== false);
+      
+      // Si onComplete est fourni, c'est que le parent (CoursePlayer) gère le modal de vérification
+      // Sinon, on gère le modal ici
+      if (isEligible && !hasParentHandler) {
+        console.log('[CourseEvaluationPlayer] ✅ Ouverture du modal de vérification (pas de parent handler)...');
+        // Afficher le modal immédiatement si pas de parent handler
+        setTimeout(() => {
+          console.log('[CourseEvaluationPlayer] 🎯 Affichage du modal de vérification maintenant');
+          setShowProfileVerificationModal(true);
+        }, 100);
+      } else if (isEligible && hasParentHandler) {
+        console.log('[CourseEvaluationPlayer] ℹ️ Modal de vérification géré par le parent (CoursePlayer)');
+      } else {
+        console.log('[CourseEvaluationPlayer] ❌ Modal de vérification non affiché:', {
+          reason: !submissionResult.passed ? 'Évaluation non réussie' : 'Non éligible pour certificat',
+          passed: submissionResult.passed,
+          certificate_eligible: submissionResult.certificate_eligible,
+          isEligible,
+          hasParentHandler
+        });
       }
     } catch (error: any) {
       console.error('Erreur lors de la soumission de l\'évaluation:', error);
@@ -436,24 +558,26 @@ export default function CourseEvaluationPlayer({
   };
 
   const handleConfirmProfileData = async () => {
-    if (!enrollmentId) {
-      toast.error('Erreur', 'Impossible de demander le certificat sans enrollmentId');
+    if (!courseId) {
+      toast.error('Erreur', 'Impossible de générer le certificat sans courseId');
       return;
     }
 
     setRequestingCertificate(true);
     try {
-      await certificateService.requestCertificate(enrollmentId);
+      // Utiliser generateForCourse pour créer le certificat après confirmation des données
+      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
+      await certificateService.generateForCourse(courseId);
       toast.success(
-        'Demande envoyée',
-        'Votre demande de certificat a été envoyée. Elle sera examinée par un administrateur.'
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
       );
       setShowProfileVerificationModal(false);
       // Rediriger vers la page des certificats
       window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
     } catch (error: any) {
-      console.error('Erreur lors de la demande de certificat:', error);
-      toast.error('Erreur', error.message || 'Impossible d\'envoyer la demande de certificat');
+      console.error('Erreur lors de la génération du certificat:', error);
+      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
     } finally {
       setRequestingCertificate(false);
     }
@@ -566,6 +690,26 @@ export default function CourseEvaluationPlayer({
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Fermer
+            </button>
+          )}
+          {!result.passed && attemptsUsed < evaluation.max_attempts && (
+            <button
+              onClick={() => {
+                // Réinitialiser l'état pour permettre une nouvelle tentative
+                setResult(null);
+                setShowResults(false);
+                setIsSubmitted(false);
+                setAnswers({});
+                setCurrentQuestionIndex(0);
+                setTimeRemaining(null);
+                setTimerStarted(false);
+                setStartTime(null);
+                console.log('[CourseEvaluationPlayer] 🔄 Nouvelle tentative démarrée');
+              }}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            >
+              <RotateCcw className="h-5 w-5" />
+              <span>Réessayer ({evaluation.max_attempts - attemptsUsed} tentative{evaluation.max_attempts - attemptsUsed > 1 ? 's' : ''} restante{evaluation.max_attempts - attemptsUsed > 1 ? 's' : ''})</span>
             </button>
           )}
           {result.passed && result.certificate_eligible && (
@@ -766,61 +910,102 @@ export default function CourseEvaluationPlayer({
         <div className="space-y-3">
           {currentQuestion.question_type === 'multiple_choice' && (
             <>
-              {currentQuestion.options.filter(opt => opt.trim()).map((option, index) => (
-                <label
-                  key={index}
-                  className={`flex items-center p-4 border-2 rounded-lg transition-all ${
-                    result || isSubmitted
-                      ? 'cursor-not-allowed opacity-60'
-                      : 'cursor-pointer'
-                  } ${
-                    answers[currentQuestion.id || ''] === option
-                      ? 'border-[#3B7C8A] bg-[#3B7C8A]/10'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    value={option}
-                    checked={answers[currentQuestion.id || ''] === option}
-                    onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    disabled={!!result || isSubmitted}
-                    className="h-4 w-4 text-[#3B7C8A] focus:ring-[#3B7C8A] disabled:cursor-not-allowed"
-                  />
-                  <span className="ml-3 text-gray-700">{option}</span>
-                </label>
-              ))}
+              {(() => {
+                // Normaliser les options : gérer les deux formats (string[] ou Array<{id, text}>)
+                const normalizedOptions = currentQuestion.options.map((opt: any) => {
+                  if (typeof opt === 'string') {
+                    return { id: opt, text: opt };
+                  }
+                  return { id: String(opt.id || opt), text: opt.text || String(opt) };
+                }).filter((opt: any) => opt.text && opt.text.trim());
+                
+                return normalizedOptions.map((option: any, index: number) => {
+                  const optionValue = String(option.id);
+                  const optionText = option.text;
+                  
+                  return (
+                    <label
+                      key={index}
+                      className={`flex items-center p-4 border-2 rounded-lg transition-all ${
+                        result || isSubmitted
+                          ? 'cursor-not-allowed opacity-60'
+                          : 'cursor-pointer'
+                      } ${
+                        answers[currentQuestion.id || ''] === optionValue
+                          ? 'border-[#3B7C8A] bg-[#3B7C8A]/10'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={optionValue}
+                        checked={answers[currentQuestion.id || ''] === optionValue}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
+                        disabled={!!result || isSubmitted}
+                        className="h-4 w-4 text-[#3B7C8A] focus:ring-[#3B7C8A] disabled:cursor-not-allowed"
+                      />
+                      <span className="ml-3 text-gray-700">{optionText}</span>
+                    </label>
+                  );
+                });
+              })()}
             </>
           )}
 
           {currentQuestion.question_type === 'true_false' && (
             <>
-              {['Vrai', 'Faux'].map((option) => (
-                <label
-                  key={option}
-                  className={`flex items-center p-4 border-2 rounded-lg transition-all ${
-                    result || isSubmitted
-                      ? 'cursor-not-allowed opacity-60'
-                      : 'cursor-pointer'
-                  } ${
-                    answers[currentQuestion.id || ''] === option.toLowerCase()
-                      ? 'border-[#3B7C8A] bg-[#3B7C8A]/10'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`question-${currentQuestion.id}`}
-                    value={option.toLowerCase()}
-                    checked={answers[currentQuestion.id || ''] === option.toLowerCase()}
-                    onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
-                    disabled={!!result || isSubmitted}
-                    className="h-4 w-4 text-[#3B7C8A] focus:ring-[#3B7C8A] disabled:cursor-not-allowed"
-                  />
-                  <span className="ml-3 text-gray-700">{option}</span>
-                </label>
-              ))}
+              {(() => {
+                // Normaliser les options vrai/faux : utiliser les options du backend si disponibles, sinon fallback
+                let trueFalseOptions: Array<{ id: string; text: string }> = [];
+                
+                if (Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+                  // Utiliser les options du backend
+                  trueFalseOptions = currentQuestion.options.map((opt: any) => {
+                    if (typeof opt === 'string') {
+                      return { id: opt, text: opt };
+                    }
+                    return { id: String(opt.id || opt), text: opt.text || String(opt) };
+                  });
+                } else {
+                  // Fallback : valeurs par défaut
+                  trueFalseOptions = [
+                    { id: 'true', text: 'Vrai' },
+                    { id: 'false', text: 'Faux' }
+                  ];
+                }
+                
+                return trueFalseOptions.map((option: any) => {
+                  const optionValue = String(option.id);
+                  const optionText = option.text;
+                  
+                  return (
+                    <label
+                      key={optionValue}
+                      className={`flex items-center p-4 border-2 rounded-lg transition-all ${
+                        result || isSubmitted
+                          ? 'cursor-not-allowed opacity-60'
+                          : 'cursor-pointer'
+                      } ${
+                        answers[currentQuestion.id || ''] === optionValue
+                          ? 'border-[#3B7C8A] bg-[#3B7C8A]/10'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={optionValue}
+                        checked={answers[currentQuestion.id || ''] === optionValue}
+                        onChange={(e) => handleAnswerChange(currentQuestion.id || '', e.target.value)}
+                        disabled={!!result || isSubmitted}
+                        className="h-4 w-4 text-[#3B7C8A] focus:ring-[#3B7C8A] disabled:cursor-not-allowed"
+                      />
+                      <span className="ml-3 text-gray-700">{optionText}</span>
+                    </label>
+                  );
+                });
+              })()}
             </>
           )}
 
@@ -914,7 +1099,10 @@ export default function CourseEvaluationPlayer({
       {/* Modal de vérification des données du profil */}
       <ProfileVerificationModal
         isOpen={showProfileVerificationModal}
-        onClose={() => setShowProfileVerificationModal(false)}
+        onClose={() => {
+          console.log('[CourseEvaluationPlayer] ❌ Fermeture du modal de vérification');
+          setShowProfileVerificationModal(false);
+        }}
         onConfirm={handleConfirmProfileData}
         onUpdateProfile={handleUpdateProfile}
         courseId={courseId}

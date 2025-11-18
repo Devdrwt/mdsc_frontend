@@ -45,12 +45,26 @@ export default function ProfileVerificationModal({
     }
   };
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[ProfileVerificationModal] 🎯 Modal ouvert, chargement des données du profil...');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) {
+    console.log('[ProfileVerificationModal] ❌ Modal fermé (isOpen=false)');
+    return null;
+  }
 
   const displayData = profileData || user;
+  console.log('[ProfileVerificationModal] ✅ Rendu du modal avec données:', {
+    hasProfileData: !!profileData,
+    hasUser: !!user,
+    displayDataKeys: displayData ? Object.keys(displayData) : []
+  });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* En-tête */}
         <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4 rounded-t-lg">

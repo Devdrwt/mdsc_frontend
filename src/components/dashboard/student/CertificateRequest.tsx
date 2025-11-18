@@ -82,27 +82,25 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   };
 
   const handleConfirmProfileData = async () => {
-    if (!enrollmentId && !courseId) {
-      toast.error('Erreur', 'Impossible de demander le certificat sans enrollmentId ou courseId');
+    if (!courseId) {
+      toast.error('Erreur', 'Impossible de générer le certificat sans courseId');
       return;
     }
 
     setRequesting(true);
     try {
-      if (enrollmentId) {
-        await certificateService.requestCertificate(enrollmentId);
-      } else if (courseId) {
-        await certificateService.requestCertificateByCourseId(courseId);
-      }
+      // Utiliser generateForCourse pour créer le certificat après confirmation des données
+      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
+      await certificateService.generateForCourse(courseId);
       toast.success(
-        'Demande envoyée',
-        'Votre demande de certificat a été envoyée. Elle sera examinée par un administrateur.'
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
       );
       setShowProfileVerificationModal(false);
       loadCertificates();
     } catch (error: any) {
-      console.error('Erreur lors de la demande de certificat:', error);
-      toast.error('Erreur', error.message || 'Impossible d\'envoyer la demande de certificat');
+      console.error('Erreur lors de la génération du certificat:', error);
+      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
     } finally {
       setRequesting(false);
     }

@@ -7,6 +7,7 @@ import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
 import { progressService } from '../../lib/services/progressService';
 import { init } from 'pptx-preview';
+import { resolveMediaUrl } from '../../lib/utils/media';
 
 interface LessonContentProps {
   lesson: Lesson;
@@ -40,6 +41,26 @@ export default function LessonContent({
   const [pptxError, setPptxError] = useState(false);
   const [pptxData, setPptxData] = useState<ArrayBuffer | null>(null);
   const [isLoadingPptx, setIsLoadingPptx] = useState(false);
+
+  // Normalisation des champs provenant du backend (snake_case vs camelCase)
+  const lessonAny = lesson as any;
+  const contentType = (lesson.contentType ||
+    lessonAny.content_type ||
+    lessonAny.type ||
+    (lessonAny.is_quiz ? 'quiz' : undefined) ||
+    'text') as Lesson['content_type'];
+
+  const contentUrl =
+    lesson.contentUrl ||
+    lessonAny.content_url ||
+    lessonAny.media_url ||
+    lessonAny.video_url ||
+    lessonAny.document_url ||
+    '';
+
+  const contentText = lesson.contentText || lessonAny.content_text || lessonAny.content || '';
+  const lessonDescription = lesson.description || lessonAny.description || '';
+  const lessonDuration = lesson.duration || lessonAny.duration_minutes || lessonAny.duration;
 
   useEffect(() => {
     setIsCompleted(deriveCompletedStatus(lesson));
@@ -117,30 +138,43 @@ export default function LessonContent({
     };
 
     // Charger les médias de la leçon si disponibles
-    // Priorité 1: mediaFile (objet complet)
-    if (lesson.mediaFile) {
-      setMediaFile(lesson.mediaFile);
+    // Priorité 1: lesson.media (nouvelle structure du backend - peut être un objet ou un tableau)
+    const lessonAny = lesson as any;
+    let resolvedMedia: MediaFile | null = null;
+    
+    if (lessonAny.media) {
+      // Si c'est un tableau, prendre le premier média
+      if (Array.isArray(lessonAny.media) && lessonAny.media.length > 0) {
+        resolvedMedia = lessonAny.media[0] as MediaFile;
+      } 
+      // Si c'est un objet
+      else if (typeof lessonAny.media === 'object' && lessonAny.media !== null) {
+        resolvedMedia = lessonAny.media as MediaFile;
+      }
+    }
+    // Priorité 2: lesson.mediaFile (ancienne structure)
+    else if (lesson.mediaFile) {
+      resolvedMedia = lesson.mediaFile;
     } 
-    // Priorité 2: Construire mediaFile à partir des champs individuels
-    else if (lesson.media_url || lesson.contentUrl || lesson.content_url || lesson.media_file_id || (lesson as any).media_file_id_from_join) {
-      const fileCategory = lesson.file_category || 
-                          (lesson.contentType === 'video' ? 'video' : 
-                           lesson.contentType === 'audio' ? 'audio' :
-                           lesson.contentType === 'document' ? 'document' :
-                           lesson.contentType === 'presentation' ? 'presentation' :
-                           lesson.contentType === 'h5p' ? 'h5p' : 'other');
+    // Priorité 3: Construire mediaFile à partir des champs individuels (fallback)
+    else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join) {
+      const fileCategory = lessonAny.file_category || 
+                          (contentType === 'video' ? 'video' : 
+                           contentType === 'audio' ? 'audio' :
+                           contentType === 'document' ? 'document' :
+                           contentType === 'presentation' ? 'presentation' :
+                           contentType === 'h5p' ? 'h5p' : 'other');
       
-      const lessonAny = lesson as any;
-      const mediaFileId = lesson.media_file_id || lessonAny.media_file_id_from_join;
-      const mediaUrl = lesson.media_url || lesson.contentUrl || lesson.content_url || '';
+      const mediaFileId = lessonAny.media_file_id || lessonAny.media_file_id_from_join;
+      const mediaUrl = lessonAny.media_url || contentUrl || lessonAny.content_url || '';
       
       // Si on a un media_file_id ou media_url, créer l'objet mediaFile
       if (mediaFileId || mediaUrl) {
-        const newMediaFile = {
+        resolvedMedia = {
           id: mediaFileId || lesson.id,
           url: mediaUrl,
-          thumbnail_url: lesson.thumbnail_url,
-          thumbnailUrl: lesson.thumbnail_url,
+          thumbnail_url: lessonAny.thumbnail_url,
+          thumbnailUrl: lessonAny.thumbnail_url,
           file_category: fileCategory,
           fileCategory: fileCategory,
           original_filename: lessonAny.original_filename || lessonAny.filename || lesson.title || '',
@@ -152,22 +186,49 @@ export default function LessonContent({
           lesson_id: lesson.id,
           lessonId: lesson.id,
         } as MediaFile;
-        setMediaFile(newMediaFile);
-        
-        // Activer la protection globale si c'est un document PDF
-        if (fileCategory === 'document' && (mediaUrl.toLowerCase().endsWith('.pdf') || lessonAny.file_type === 'application/pdf')) {
-          // Utiliser capture phase pour intercepter avant que l'événement n'atteigne l'iframe
-          document.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
-          document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-          document.addEventListener('mousedown', handleMouseDown, { capture: true, passive: false });
-          document.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
-          document.addEventListener('auxclick', handleAuxClick, { capture: true, passive: false });
-          // Ajouter aussi au niveau window pour plus de sécurité
-          window.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
-          window.addEventListener('mousedown', handleMouseDown, { capture: true, passive: false });
-          window.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
-        }
       }
+    }
+    
+    // Normaliser le mediaFile résolu pour s'assurer qu'il a toutes les propriétés nécessaires
+    if (resolvedMedia) {
+      // S'assurer que les propriétés camelCase et snake_case sont présentes
+      const normalizedMedia: MediaFile = {
+        ...resolvedMedia,
+        id: resolvedMedia.id || lesson.id,
+        url: resolvedMedia.url || '',
+        thumbnail_url: resolvedMedia.thumbnail_url || resolvedMedia.thumbnailUrl || lessonAny.thumbnail_url || '',
+        thumbnailUrl: resolvedMedia.thumbnailUrl || resolvedMedia.thumbnail_url || lessonAny.thumbnail_url || '',
+        file_category: resolvedMedia.file_category || resolvedMedia.fileCategory || '',
+        fileCategory: resolvedMedia.fileCategory || resolvedMedia.file_category || '',
+        original_filename: resolvedMedia.original_filename || resolvedMedia.originalFilename || lesson.title || '',
+        originalFilename: resolvedMedia.originalFilename || resolvedMedia.original_filename || lesson.title || '',
+        file_size: resolvedMedia.file_size || resolvedMedia.fileSize || 0,
+        fileSize: resolvedMedia.fileSize || resolvedMedia.file_size || 0,
+        file_type: resolvedMedia.file_type || resolvedMedia.fileType || '',
+        fileType: resolvedMedia.fileType || resolvedMedia.file_type || '',
+        lesson_id: resolvedMedia.lesson_id || resolvedMedia.lessonId || lesson.id,
+        lessonId: resolvedMedia.lessonId || resolvedMedia.lesson_id || lesson.id,
+      };
+      
+      setMediaFile(normalizedMedia);
+      
+      // Activer la protection globale si c'est un document PDF
+      const mediaUrl = normalizedMedia.url || '';
+      const fileCategory = normalizedMedia.fileCategory || normalizedMedia.file_category || '';
+      if (fileCategory === 'document' && (mediaUrl.toLowerCase().endsWith('.pdf') || normalizedMedia.fileType === 'application/pdf' || normalizedMedia.file_type === 'application/pdf')) {
+        // Utiliser capture phase pour intercepter avant que l'événement n'atteigne l'iframe
+        document.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
+        document.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
+        document.addEventListener('mousedown', handleMouseDown, { capture: true, passive: false });
+        document.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
+        document.addEventListener('auxclick', handleAuxClick, { capture: true, passive: false });
+        // Ajouter aussi au niveau window pour plus de sécurité
+        window.addEventListener('contextmenu', handleContextMenu, { capture: true, passive: false });
+        window.addEventListener('mousedown', handleMouseDown, { capture: true, passive: false });
+        window.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
+      }
+    } else {
+      setMediaFile(null);
     }
 
     // Cleanup: retirer les event listeners quand le composant se démonte ou change de leçon
@@ -209,14 +270,9 @@ export default function LessonContent({
       setPptxError(false);
       
       try {
-        // Construire l'URL complète
-        const apiBaseUrl = typeof window !== 'undefined'
-          ? (process.env.NEXT_PUBLIC_API_URL || window.location.origin.replace(':3000', ':5000'))
-          : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
-        
-        const fileUrl = mediaFile.url.startsWith('http') 
-          ? mediaFile.url 
-          : `${apiBaseUrl}${mediaFile.url}`;
+        // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
+        const fileUrlRaw = mediaFile.url || '';
+        const fileUrl = resolveMediaUrl(fileUrlRaw) || fileUrlRaw;
         
         // Télécharger le fichier PPTX
         const response = await fetch(fileUrl);
@@ -325,25 +381,45 @@ export default function LessonContent({
   };
 
   const renderMediaContent = () => {
-    if (!mediaFile) {
+    // Si mediaFile n'existe pas mais contentUrl existe, construire un mediaFile minimal
+    let effectiveMediaFile = mediaFile;
+    if (!effectiveMediaFile && contentUrl) {
+      // Déterminer le type de média basé sur contentType et contentUrl
+      const fileCategory = contentType === 'video' ? 'video' :
+                          contentType === 'audio' ? 'audio' :
+                          contentType === 'document' ? 'document' :
+                          contentType === 'presentation' ? 'presentation' :
+                          contentType === 'h5p' ? 'h5p' : 'other';
+      
+      effectiveMediaFile = {
+        id: lesson.id,
+        url: contentUrl,
+        thumbnail_url: lesson.thumbnail_url,
+        thumbnailUrl: lesson.thumbnail_url,
+        file_category: fileCategory,
+        fileCategory: fileCategory,
+        original_filename: lesson.title || '',
+        originalFilename: lesson.title || '',
+        file_size: 0,
+        fileSize: 0,
+        file_type: '',
+        fileType: '',
+        lesson_id: lesson.id,
+        lessonId: lesson.id,
+      } as MediaFile;
+    }
+    
+    if (!effectiveMediaFile) {
       return null;
     }
 
-    const mediaType = mediaFile.fileCategory;
-    
-    // Construire l'URL de base une seule fois
-    const getApiBaseUrl = () => {
-      return typeof window !== 'undefined' 
-        ? (process.env.NEXT_PUBLIC_API_URL || window.location.origin.replace(':3000', ':5000'))
-        : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000');
-    };
+    const mediaType = effectiveMediaFile.fileCategory;
 
     switch (mediaType) {
       case 'video':
-        // Construire l'URL complète de la vidéo
-        const videoUrl = mediaFile.url.startsWith('http') 
-          ? mediaFile.url 
-          : `${getApiBaseUrl()}${mediaFile.url}`;
+        // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
+        const videoUrlRaw = effectiveMediaFile.url || '';
+        const videoUrl = resolveMediaUrl(videoUrlRaw) || videoUrlRaw;
         
         return (
           <div className="bg-white">
@@ -356,20 +432,15 @@ export default function LessonContent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white truncate">
-                      {mediaFile.originalFilename || lesson.title}
+                      {effectiveMediaFile.originalFilename || lesson.title}
                     </p>
-                    <div className="flex items-center space-x-3 mt-1">
-                      {mediaFile.fileSize && (
+                    {lessonDuration && (
+                      <div className="flex items-center space-x-3 mt-1">
                         <p className="text-xs text-white/80">
-                          {(mediaFile.fileSize / 1024 / 1024).toFixed(2)} MB
+                          {lessonDuration} min
                         </p>
-                      )}
-                      {lesson.duration && (
-                        <p className="text-xs text-white/80">
-                          {lesson.duration} min
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isCompleted && (
@@ -398,7 +469,7 @@ export default function LessonContent({
               }}
             >
               <video
-                key={`video-${lesson.id}-${mediaFile.id || mediaFile.url}`}
+                key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                 src={videoUrl}
                 controls
                 controlsList="nodownload noplaybackrate nofullscreen"
@@ -415,7 +486,7 @@ export default function LessonContent({
                 }}
                 onEnded={() => {
                   // Auto-mark as complete when video ends
-                  if (!isCompleted && lesson.contentType === 'video') {
+                  if (!isCompleted && contentType === 'video') {
                     handleMarkComplete();
                   }
                 }}
@@ -459,7 +530,36 @@ export default function LessonContent({
                   }
                 }}
                 onError={(e) => {
-                  console.error('Erreur lors du chargement de la vidéo:', e);
+                  const videoElement = e.currentTarget;
+                  const error = videoElement.error;
+                  console.error('Erreur lors du chargement de la vidéo:', {
+                    url: videoUrl,
+                    errorCode: error?.code,
+                    errorMessage: error?.message,
+                    networkState: videoElement.networkState,
+                    readyState: videoElement.readyState,
+                    src: videoElement.src,
+                  });
+                  
+                  // Afficher un message d'erreur plus détaillé dans la console
+                  if (error) {
+                    switch (error.code) {
+                      case MediaError.MEDIA_ERR_ABORTED:
+                        console.error('Le chargement de la vidéo a été interrompu');
+                        break;
+                      case MediaError.MEDIA_ERR_NETWORK:
+                        console.error('Une erreur réseau a empêché le chargement de la vidéo');
+                        break;
+                      case MediaError.MEDIA_ERR_DECODE:
+                        console.error('Le décodage de la vidéo a échoué');
+                        break;
+                      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        console.error('Le format de la vidéo n\'est pas supporté ou l\'URL est invalide');
+                        break;
+                      default:
+                        console.error('Erreur inconnue lors du chargement de la vidéo');
+                    }
+                  }
                 }}
               >
                 Votre navigateur ne supporte pas la lecture vidéo.
@@ -484,10 +584,9 @@ export default function LessonContent({
         );
 
       case 'audio':
-        // Construire l'URL complète de l'audio
-        const audioUrl = mediaFile.url.startsWith('http') 
-          ? mediaFile.url 
-          : `${getApiBaseUrl()}${mediaFile.url}`;
+        // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
+        const audioUrlRaw = effectiveMediaFile.url || '';
+        const audioUrl = resolveMediaUrl(audioUrlRaw) || audioUrlRaw;
         
         return (
           <div className="bg-white">
@@ -500,20 +599,15 @@ export default function LessonContent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white truncate">
-                      {mediaFile.originalFilename || lesson.title}
+                      {effectiveMediaFile.originalFilename || lesson.title}
                     </p>
-                    <div className="flex items-center space-x-3 mt-1">
-                      {mediaFile.fileSize && (
+                    {lessonDuration && (
+                      <div className="flex items-center space-x-3 mt-1">
                         <p className="text-xs text-white/80">
-                          {(mediaFile.fileSize / 1024 / 1024).toFixed(2)} MB
+                          {lessonDuration} min
                         </p>
-                      )}
-                      {lesson.duration && (
-                        <p className="text-xs text-white/80">
-                          {lesson.duration} min
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isCompleted && (
@@ -560,7 +654,7 @@ export default function LessonContent({
               }}
             >
               <audio
-                key={`audio-${lesson.id}-${mediaFile.id || mediaFile.url}`}
+                key={`audio-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                 src={audioUrl}
                 controls
                 controlsList="nodownload noplaybackrate"
@@ -575,7 +669,7 @@ export default function LessonContent({
                 }}
                 onEnded={() => {
                   // Auto-mark as complete when audio ends
-                  if (!isCompleted && lesson.contentType === 'audio') {
+                  if (!isCompleted && contentType === 'audio') {
                     handleMarkComplete();
                   }
                 }}
@@ -606,7 +700,36 @@ export default function LessonContent({
                   }
                 }}
                 onError={(e) => {
-                  console.error('Erreur lors du chargement de l\'audio:', e);
+                  const audioElement = e.currentTarget;
+                  const error = audioElement.error;
+                  console.error('Erreur lors du chargement de l\'audio:', {
+                    url: audioUrl,
+                    errorCode: error?.code,
+                    errorMessage: error?.message,
+                    networkState: audioElement.networkState,
+                    readyState: audioElement.readyState,
+                    src: audioElement.src,
+                  });
+                  
+                  // Afficher un message d'erreur plus détaillé dans la console
+                  if (error) {
+                    switch (error.code) {
+                      case MediaError.MEDIA_ERR_ABORTED:
+                        console.error('Le chargement de l\'audio a été interrompu');
+                        break;
+                      case MediaError.MEDIA_ERR_NETWORK:
+                        console.error('Une erreur réseau a empêché le chargement de l\'audio');
+                        break;
+                      case MediaError.MEDIA_ERR_DECODE:
+                        console.error('Le décodage de l\'audio a échoué');
+                        break;
+                      case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        console.error('Le format de l\'audio n\'est pas supporté ou l\'URL est invalide');
+                        break;
+                      default:
+                        console.error('Erreur inconnue lors du chargement de l\'audio');
+                    }
+                  }
                 }}
               >
                 Votre navigateur ne supporte pas la lecture audio.
@@ -624,18 +747,16 @@ export default function LessonContent({
 
       case 'document':
       case 'presentation':
-        // Construire l'URL complète du fichier
-        // Utiliser window.location.origin si disponible pour éviter les problèmes CORS
-        const documentUrl = mediaFile.url.startsWith('http') 
-          ? mediaFile.url 
-          : `${getApiBaseUrl()}${mediaFile.url}`;
+        // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
+        const documentUrlRaw = effectiveMediaFile.url || '';
+        const documentUrl = resolveMediaUrl(documentUrlRaw) || documentUrlRaw;
         
         // Vérifier le type de fichier
-        const filename = mediaFile.originalFilename?.toLowerCase() || mediaFile.url.toLowerCase();
-        const isPDF = mediaFile.fileType === 'application/pdf' || 
+        const filename = effectiveMediaFile.originalFilename?.toLowerCase() || effectiveMediaFile.url.toLowerCase();
+        const isPDF = effectiveMediaFile.fileType === 'application/pdf' || 
                      filename.endsWith('.pdf');
-        const isPPTX = mediaFile.fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
-                      mediaFile.fileType === 'application/vnd.ms-powerpoint' ||
+        const isPPTX = effectiveMediaFile.fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+                      effectiveMediaFile.fileType === 'application/vnd.ms-powerpoint' ||
                       filename.endsWith('.pptx') ||
                       filename.endsWith('.ppt');
         
@@ -648,12 +769,7 @@ export default function LessonContent({
                 <div className="flex items-center space-x-3">
                   <File className="h-5 w-5 text-mdsc-blue-primary" />
                   <div>
-                    <p className="font-medium text-gray-900">{mediaFile.originalFilename}</p>
-                    {mediaFile.fileSize && (
-                      <p className="text-xs text-gray-500">
-                        {(mediaFile.fileSize / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    )}
+                    <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
                   </div>
                 </div>
                 {/* Supprimé le bouton "Ouvrir dans un nouvel onglet" pour empêcher le téléchargement */}
@@ -752,10 +868,10 @@ export default function LessonContent({
                 ) : (
                   <>
                     <iframe
-                      key={`pdf-${lesson.id}-${mediaFile.id || mediaFile.url}`}
+                      key={`pdf-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                       src={`${documentUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
                       className="w-full h-full border-0 relative z-10"
-                      title={mediaFile.originalFilename || 'Document'}
+                      title={effectiveMediaFile.originalFilename || 'Document'}
                       allow="fullscreen"
                       style={{ 
                         border: 'none',
@@ -800,7 +916,7 @@ export default function LessonContent({
                         setPdfLoadError(false);
                         // Désactiver le menu contextuel et autres interactions dans l'iframe après chargement
                         try {
-                          const iframe = document.querySelector(`iframe[title="${mediaFile.originalFilename || 'Document'}"]`) as HTMLIFrameElement;
+                          const iframe = document.querySelector(`iframe[title="${effectiveMediaFile.originalFilename || 'Document'}"]`) as HTMLIFrameElement;
                           if (iframe?.contentDocument) {
                             const doc = iframe.contentDocument;
                             const win = iframe.contentWindow;
@@ -916,12 +1032,7 @@ export default function LessonContent({
                 <div className="flex items-center space-x-3">
                   <File className="h-5 w-5 text-mdsc-blue-primary" />
                   <div>
-                    <p className="font-medium text-gray-900">{mediaFile.originalFilename}</p>
-                    {mediaFile.fileSize && (
-                      <p className="text-xs text-gray-500">
-                        {(mediaFile.fileSize / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    )}
+                    <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
                   </div>
                 </div>
               </div>
@@ -1014,10 +1125,7 @@ export default function LessonContent({
             <div className="flex items-center space-x-3 mb-4">
               <File className="h-6 w-6 text-mdsc-blue-primary" />
               <div>
-                <p className="font-medium text-gray-900">{mediaFile.originalFilename}</p>
-                <p className="text-sm text-gray-500">
-                  {(mediaFile.fileSize / 1024 / 1024).toFixed(2)} MB
-                </p>
+                <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
               </div>
             </div>
             <a
@@ -1036,7 +1144,7 @@ export default function LessonContent({
         return (
           <div className="w-full aspect-video">
             <iframe
-              src={mediaFile.url}
+              src={effectiveMediaFile.url}
               className="w-full h-full rounded-lg border border-gray-200"
               allowFullScreen
               title={lesson.title}
@@ -1054,7 +1162,7 @@ export default function LessonContent({
   };
 
   const getContentIcon = () => {
-    switch (lesson.contentType) {
+    switch (contentType) {
       case 'video':
         return <Video className="h-6 w-6" />;
       case 'text':
@@ -1083,12 +1191,12 @@ export default function LessonContent({
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-gray-900">{lesson.title}</h2>
-              {lesson.description && (
-                <p className="text-gray-600">{lesson.description}</p>
+              {lessonDescription && (
+                <p className="text-gray-600">{lessonDescription}</p>
               )}
-              {lesson.duration && (
+              {lessonDuration && (
                 <p className="text-sm text-gray-500">
-                  Durée estimée: {lesson.duration} min
+                  Durée estimée: {lessonDuration} min
                 </p>
               )}
             </div>
@@ -1105,20 +1213,20 @@ export default function LessonContent({
       </div>
 
       {/* Media Content */}
-      {lesson.contentType !== 'quiz' && renderMediaContent()}
+      {contentType !== 'quiz' && renderMediaContent()}
 
-      {/* Text Content */}
-      {lesson.contentText && lesson.contentType === 'text' && (
-        <div className="bg-white">
+      {/* Text Content - Afficher pour tous les types si contentText existe */}
+      {contentText && (
+        <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div
             className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: lesson.contentText }}
+            dangerouslySetInnerHTML={{ __html: contentText }}
           />
         </div>
       )}
 
       {/* Quiz */}
-      {lesson.contentType === 'quiz' && (
+      {contentType === 'quiz' && (
         <div>
           {showQuiz ? (
             <QuizComponent
@@ -1148,21 +1256,21 @@ export default function LessonContent({
       )}
 
       {/* Forum Content */}
-      {lesson.contentType === 'forum' && (
+      {contentType === 'forum' && (
         <div className="bg-white">
           <div className="flex items-center space-x-3 mb-4">
             <FileText className="h-6 w-6 text-mdsc-blue-primary" />
             <h3 className="text-lg font-semibold text-gray-900">Forum de Discussion</h3>
           </div>
-          {lesson.contentText && (
+          {contentText && (
             <div
               className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: lesson.contentText }}
+              dangerouslySetInnerHTML={{ __html: contentText }}
             />
           )}
-          {lesson.contentUrl ? (
+          {contentUrl ? (
             <a
-              href={lesson.contentUrl}
+              href={contentUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
@@ -1176,16 +1284,16 @@ export default function LessonContent({
       )}
 
       {/* Assignment Content */}
-      {lesson.contentType === 'assignment' && (
+      {contentType === 'assignment' && (
         <div className="bg-white">
           <div className="flex items-center space-x-3 mb-4">
             <FileText className="h-6 w-6 text-mdsc-blue-primary" />
             <h3 className="text-lg font-semibold text-gray-900">Devoir</h3>
           </div>
-          {lesson.contentText && (
+          {contentText && (
             <div
               className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: lesson.contentText }}
+              dangerouslySetInnerHTML={{ __html: contentText }}
             />
           )}
           {lesson.content && (
@@ -1194,9 +1302,9 @@ export default function LessonContent({
               dangerouslySetInnerHTML={{ __html: lesson.content }}
             />
           )}
-          {lesson.contentUrl && (
+          {contentUrl && (
             <a
-              href={lesson.contentUrl}
+              href={contentUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
@@ -1208,17 +1316,17 @@ export default function LessonContent({
       )}
 
       {/* External Content (fallback pour autres types) */}
-      {lesson.contentUrl && 
-       lesson.contentType !== 'video' && 
-       lesson.contentType !== 'document' && 
-       lesson.contentType !== 'presentation' &&
-       lesson.contentType !== 'h5p' &&
-       lesson.contentType !== 'forum' &&
-       lesson.contentType !== 'assignment' && (
+      {contentUrl && 
+       contentType !== 'video' && 
+       contentType !== 'document' && 
+       contentType !== 'presentation' &&
+       contentType !== 'h5p' &&
+       contentType !== 'forum' &&
+       contentType !== 'assignment' && (
         <div className="bg-white">
           <p className="text-gray-700">Contenu externe:</p>
           <a
-            href={lesson.contentUrl}
+            href={contentUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
@@ -1229,7 +1337,7 @@ export default function LessonContent({
       )}
 
       {/* Completion Button */}
-      {lesson.contentType !== 'quiz' && (
+      {contentType !== 'quiz' && (
         <div className="flex justify-end">
           {!isCompleted ? (
             <Button
