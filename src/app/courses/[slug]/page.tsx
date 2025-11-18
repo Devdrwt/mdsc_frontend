@@ -35,7 +35,6 @@ import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR } from '../../../lib/utils/media';
 import CourseSchedule from '../../../components/courses/CourseSchedule';
-import { FileService } from '../../../lib/services/fileService';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -48,7 +47,6 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
-  const [instructorUploadedAvatar, setInstructorUploadedAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) {
@@ -59,66 +57,6 @@ export default function CourseDetailPage() {
   // Réinitialiser imageError quand le cours change
   useEffect(() => {
     setImageError(false);
-  }, [course]);
-
-  // Charger les fichiers uploadés de l'instructeur pour prioriser sur l'URL Google
-  useEffect(() => {
-    const loadInstructorUploadedFiles = async () => {
-      const courseData = course as any;
-      if (!courseData?.instructor?.id) return;
-      
-      try {
-        const instructorId = courseData.instructor.id;
-        const files = await FileService.getFilesByUser(String(instructorId));
-        
-        // Chercher le fichier de profil le plus récent
-        // Le backend peut retourner file_type dans les métadonnées ou comme propriété
-        const profilePictures = files.filter((f: any) => {
-          const fileType = f.file_type || (f.metadata as any)?.file_type || (f.metadata as any)?.type;
-          return fileType === 'profile_picture';
-        });
-        
-        if (profilePictures.length > 0) {
-          // Trier par date de création (le plus récent en premier)
-          profilePictures.sort((a: any, b: any) => {
-            const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
-            const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
-            return dateB - dateA;
-          });
-          
-          const latestProfilePicture = profilePictures[0];
-          // Construire l'URL complète du fichier
-          const fileUrl = latestProfilePicture.url || 
-                         (latestProfilePicture.filename 
-                           ? `/uploads/profiles/${latestProfilePicture.filename}`
-                           : null);
-          
-          if (fileUrl) {
-            // Utiliser resolveMediaUrl pour construire l'URL complète
-            const fullUrl = resolveMediaUrl(fileUrl) || fileUrl;
-            setInstructorUploadedAvatar(fullUrl);
-            
-            if (process.env.NODE_ENV === 'development') {
-              console.log('✅ Fichier uploadé de linstructeur trouve:', {
-                file: latestProfilePicture,
-                url: fullUrl
-              });
-            }
-          }
-        }
-      } catch (error) {
-        // Erreur silencieuse - on utilisera l'avatar par défaut
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Impossible de charger les fichiers de linstructeur:', error);
-        }
-      }
-    };
-
-    if (course) {
-      loadInstructorUploadedFiles();
-    } else {
-      setInstructorUploadedAvatar(null);
-    }
   }, [course]);
 
   const loadCourse = async () => {
@@ -362,46 +300,55 @@ export default function CourseDetailPage() {
       };
     }
 
-    // ⚠️ IMPORTANT : L'avatar se trouve dans course.instructor.avatar (URL complète depuis le backend)
-    // Selon le guide backend, les champs sont directement dans instructor
+    // Selon la documentation backend :
+    // L'avatar se trouve dans course.instructor.avatar
+    // Le backend gère la priorité : image uploadée localement > URL Google OAuth
+    // Format : response.data.course.instructor.avatar
+    // L'URL peut être complète (ex: http://localhost:5000/uploads/profiles/image.jpg)
+    // ou relative (ex: /uploads/profiles/image.jpg)
     const firstName = instructor.first_name || '';
     const lastName = instructor.last_name || '';
     const name = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
 
-    // ⚠️ IMPORTANT : L'avatar est déjà une URL complète depuis le backend
-    // - URLs externes (Google OAuth, etc.) : retournées telles quelles (https://...)
-    // - Fichiers locaux : domaine déjà ajouté par buildMediaUrl() (http://localhost:5000/...)
-    // 
-    // PRIORISATION : Prioriser le fichier uploadé local (instructorUploadedAvatar) 
-    // sur l'URL Google retournée par le backend
+    // Récupérer l'avatar depuis course.instructor.avatar
+    // Le backend retourne déjà l'image avec la bonne priorité (uploadée > Google)
     const avatarRaw = instructor.avatar || null;
     
-    // Vérifier si c'est une URL Google (OAuth)
-    const isGoogleUrl = avatarRaw && (
-      avatarRaw.startsWith('https://lh3.googleusercontent.com') ||
-      avatarRaw.startsWith('https://www.google.com') ||
-      avatarRaw.includes('googleusercontent.com')
-    );
+    // Résoudre l'URL de l'avatar
+    // Selon la documentation, l'URL est déjà complète, mais on utilise resolveMediaUrl
+    // pour gérer les cas où l'URL pourrait être relative ou pour utiliser le proxy Next.js
+    let resolvedAvatar: string;
+    if (avatarRaw && avatarRaw.trim() !== '') {
+      // Vérifier si c'est une URL complète (http:// ou https://)
+      const isFullUrl = avatarRaw.startsWith('http://') || avatarRaw.startsWith('https://');
+      
+      if (isFullUrl) {
+        // URL complète : utiliser resolveMediaUrl pour convertir en proxy Next.js si nécessaire
+        // (pour éviter les problèmes CORS)
+        resolvedAvatar = resolveMediaUrl(avatarRaw) || avatarRaw;
+      } else {
+        // URL relative : résoudre avec resolveMediaUrl
+        resolvedAvatar = resolveMediaUrl(avatarRaw) || avatarRaw;
+      }
+    } else {
+      // Aucun avatar : utiliser l'image par défaut
+      resolvedAvatar = DEFAULT_INSTRUCTOR_AVATAR;
+    }
     
-    // PRIORISATION : Utiliser le fichier uploadé local s'il existe (chargé via useEffect)
-    // Sinon, utiliser l'avatar retourné par le backend
-    const avatar = instructorUploadedAvatar && instructorUploadedAvatar.trim() !== ''
-      ? instructorUploadedAvatar
-      : (avatarRaw && avatarRaw.trim() !== '' 
-          ? avatarRaw 
-          : DEFAULT_INSTRUCTOR_AVATAR);
+    const avatar = resolvedAvatar;
     
     // Log pour debug
     if (process.env.NODE_ENV === 'development') {
-      if (isGoogleUrl && instructorUploadedAvatar) {
-        console.log('🔄 Avatar Google détecté, utilisation du fichier uploadé:', {
-          googleUrl: avatarRaw,
-          uploadedFile: instructorUploadedAvatar,
-          finalAvatar: avatar
-        });
-      } else if (isGoogleUrl && !instructorUploadedAvatar) {
-        console.log('ℹ️ Avatar Google détecté, aucun fichier uploadé trouvé, utilisation de Google:', avatarRaw);
-      }
+      console.log('🖼️ Avatar de l\'instructeur (selon documentation backend):', {
+        'course.instructor.avatar': avatarRaw,
+        resolvedAvatar: avatar,
+        instructor: {
+          id: instructor.id,
+          first_name: firstName,
+          last_name: lastName,
+          name: name
+        }
+      });
     }
 
     return {
@@ -412,7 +359,7 @@ export default function CourseDetailPage() {
       bio: instructor.bio || '',
       avatar,
     };
-  }, [courseAny, instructorUploadedAvatar]);
+  }, [courseAny]);
 
   // Fonction pour convertir les codes de langue en noms complets
   const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {

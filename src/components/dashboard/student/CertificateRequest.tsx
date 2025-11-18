@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Award, CheckCircle, Clock, AlertCircle, Download, Loader, GraduationCap, User, Calendar } from 'lucide-react';
 import { certificateService } from '../../../lib/services/certificateService';
 import { Certificate } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
+import ProfileVerificationModal from './ProfileVerificationModal';
 
 interface CertificateRequestProps {
   courseId?: string;
@@ -12,13 +14,20 @@ interface CertificateRequestProps {
 }
 
 export default function CertificateRequest({ courseId, enrollmentId }: CertificateRequestProps) {
+  const searchParams = useSearchParams();
+  const requestCertificate = searchParams.get('requestCertificate') === 'true';
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [showProfileVerificationModal, setShowProfileVerificationModal] = useState(false);
 
   useEffect(() => {
     loadCertificates();
-  }, [courseId, enrollmentId]);
+    // Si l'utilisateur vient du profil après mise à jour, ouvrir le modal
+    if (requestCertificate && courseId) {
+      setShowProfileVerificationModal(true);
+    }
+  }, [courseId, enrollmentId, requestCertificate]);
 
   const loadCertificates = async () => {
     try {
@@ -45,6 +54,16 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   };
 
   const handleRequestCertificate = async (courseIdOrEnrollmentId: string | number) => {
+    // Ouvrir le modal de vérification au lieu de demander directement
+    if (enrollmentId || courseId) {
+      setShowProfileVerificationModal(true);
+    } else {
+      // Fallback si pas d'enrollmentId ni courseId
+      await requestCertificateDirectly(courseIdOrEnrollmentId);
+    }
+  };
+
+  const requestCertificateDirectly = async (courseIdOrEnrollmentId: string | number) => {
     setRequesting(true);
     try {
       // Utiliser enrollmentId si fourni, sinon courseId
@@ -63,6 +82,39 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
     } finally {
       setRequesting(false);
     }
+  };
+
+  const handleConfirmProfileData = async () => {
+    if (!enrollmentId && !courseId) {
+      toast.error('Erreur', 'Impossible de demander le certificat sans enrollmentId ou courseId');
+      return;
+    }
+
+    setRequesting(true);
+    try {
+      if (enrollmentId) {
+        await certificateService.requestCertificate(enrollmentId);
+      } else if (courseId) {
+        await certificateService.requestCertificateByCourseId(courseId);
+      }
+      toast.success(
+        'Demande envoyée',
+        'Votre demande de certificat a été envoyée. Elle sera examinée par un administrateur.'
+      );
+      setShowProfileVerificationModal(false);
+      loadCertificates();
+    } catch (error: any) {
+      console.error('Erreur lors de la demande de certificat:', error);
+      toast.error('Erreur', error.message || 'Impossible d\'envoyer la demande de certificat');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleUpdateProfile = () => {
+    // Rediriger vers le profil avec un paramètre pour revenir après
+    const returnUrl = encodeURIComponent(`/dashboard/student/certificates?courseId=${courseId}&requestCertificate=true`);
+    window.location.href = `/dashboard/student/profile?returnUrl=${returnUrl}`;
   };
 
   const handleDownloadCertificate = async (certificateId: string) => {
@@ -240,6 +292,17 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de vérification des données du profil */}
+      {courseId && (
+        <ProfileVerificationModal
+          isOpen={showProfileVerificationModal}
+          onClose={() => setShowProfileVerificationModal(false)}
+          onConfirm={handleConfirmProfileData}
+          onUpdateProfile={handleUpdateProfile}
+          courseId={courseId}
+        />
       )}
     </div>
   );

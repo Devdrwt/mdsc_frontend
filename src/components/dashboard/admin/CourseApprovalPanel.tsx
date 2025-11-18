@@ -5,6 +5,7 @@ import { CheckCircle, XCircle, Eye, Clock, AlertTriangle, MessageSquare, User, C
 import { adminService, CourseApproval } from '../../../lib/services/adminService';
 import { courseService } from '../../../lib/services/courseService';
 import { QuizService } from '../../../lib/services/quizService';
+import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
 import toast from '../../../lib/utils/toast';
 
 interface CourseApprovalPanelProps {
@@ -384,78 +385,9 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
             <div className="p-6 space-y-6">
               {/* Image de couverture */}
               {(() => {
-                // Construire l'URL complète de l'image
-                const getImageUrl = (imagePath: string | null | undefined): string | null => {
-                  if (!imagePath) return null;
-                  
-                  // Si c'est déjà une URL complète (http:// ou https://)
-                  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-                    // Si c'est une URL complète avec localhost:5000, la retourner telle quelle
-                    return imagePath;
-                  }
-                  
-                  // Obtenir l'URL de base du serveur (sans /api)
-                  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-                  const baseUrl = apiBaseUrl.replace(/\/api$/, '');
-                  
-                  // Si le chemin commence par /uploads/, l'utiliser tel quel
-                  if (imagePath.startsWith('/uploads/')) {
-                    return `${baseUrl}${imagePath}`;
-                  }
-                  
-                  // Si le chemin commence par /, l'utiliser tel quel
-                  if (imagePath.startsWith('/')) {
-                    return `${baseUrl}${imagePath}`;
-                  }
-                  
-                  // Si c'est un chemin relatif (ex: courses/thumbnails/...), ajouter /uploads/
-                  if (imagePath.includes('thumbnails') || imagePath.includes('courses')) {
-                    const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-                    // Si le chemin ne commence pas par /uploads/, l'ajouter
-                    const finalPath = path.startsWith('/uploads/') ? path : `/uploads${path}`;
-                    return `${baseUrl}${finalPath}`;
-                  }
-                  
-                  // Par défaut, ajouter /uploads/ si ce n'est pas déjà présent
-                  const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
-                  const finalPath = path.startsWith('/uploads/') ? path : `/uploads${path}`;
-                  
-                  return `${baseUrl}${finalPath}`;
-                };
-
-                const thumbnailUrl = selectedCourse.thumbnail_url || selectedCourse.thumbnail;
-                const imageUrl = getImageUrl(thumbnailUrl);
+                const thumbnailUrl = selectedCourse.thumbnail_url || selectedCourse.thumbnail || (selectedCourse as any).image_url || (selectedCourse as any).cover_image;
+                const imageUrl = resolveMediaUrl(thumbnailUrl) || DEFAULT_COURSE_IMAGE;
                 
-                console.log('🖼️ [CourseApprovalPanel] Image URL:', {
-                  original: thumbnailUrl,
-                  constructed: imageUrl,
-                  apiBaseUrl: process.env.NEXT_PUBLIC_API_URL
-                });
-                
-                // Tester si l'image est accessible (seulement en mode développement)
-                if (imageUrl && process.env.NODE_ENV === 'development') {
-                  fetch(imageUrl, { method: 'HEAD' })
-                    .then(response => {
-                      if (!response.ok) {
-                        console.warn('⚠️ [CourseApprovalPanel] Image non accessible (status:', response.status, '):', imageUrl);
-                      }
-                    })
-                    .catch(() => {
-                      // Erreur silencieuse - l'image sera gérée par onError
-                    });
-                }
-                
-                if (!imageUrl) {
-                  return (
-                    <div className="w-full h-64 rounded-lg overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                      <div className="text-center text-gray-500">
-                        <BookOpen className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Aucune image de couverture</p>
-                      </div>
-                    </div>
-                  );
-                }
-
                 return (
                   <div className="w-full h-64 rounded-lg overflow-hidden bg-gray-100 relative">
                     <img
@@ -463,33 +395,9 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                       alt={selectedCourse.title || selectedCourse.course_title || 'Cours'}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Log silencieux (seulement en mode développement)
-                        if (process.env.NODE_ENV === 'development') {
-                          console.warn('⚠️ [CourseApprovalPanel] Image non accessible:', imageUrl);
-                        }
-                        // Remplacer par une image par défaut en cas d'erreur
+                        // En cas d'erreur, utiliser l'image par défaut
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.image-error')) {
-                          const errorDiv = document.createElement('div');
-                          errorDiv.className = 'image-error w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300';
-                          errorDiv.innerHTML = `
-                            <div class="text-center text-gray-500">
-                              <svg class="h-16 w-16 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <p class="text-sm font-medium mb-1">Image non disponible</p>
-                            </div>
-                          `;
-                          parent.appendChild(errorDiv);
-                        }
-                      }}
-                      onLoad={() => {
-                        // Log silencieux (seulement en mode développement si nécessaire)
-                        if (process.env.NODE_ENV === 'development' && false) {
-                          console.log('✅ [CourseApprovalPanel] Image chargée:', imageUrl);
-                        }
+                        target.src = DEFAULT_COURSE_IMAGE;
                       }}
                     />
                   </div>

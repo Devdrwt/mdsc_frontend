@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import { useAuthStore } from '../../../../lib/stores/authStore';
 import { updateProfile, uploadAvatar, getProfile } from '../../../../lib/services/authService';
 import { FileService, FileUpload } from '../../../../lib/services/fileService';
-import { Upload, Camera, Loader, FileText, CheckCircle } from 'lucide-react';
+import { Upload, Camera, Loader, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import toast from '../../../../lib/utils/toast';
 
-export default function StudentProfilePage() {
+function ProfileContent() {
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl');
   const { user, setUser } = useAuthStore();
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -134,6 +137,13 @@ export default function StudentProfilePage() {
         setUser({ ...user!, ...formData });
         setIsEditing(false);
         toast.success('Profil mis à jour', 'Vos modifications ont été enregistrées');
+        
+        // Si un returnUrl est présent, rediriger après la mise à jour
+        if (returnUrl) {
+          setTimeout(() => {
+            window.location.href = decodeURIComponent(returnUrl);
+          }, 1000);
+        }
       }
     } catch (error: any) {
       console.error('Error updating profile:', error);
@@ -142,10 +152,8 @@ export default function StudentProfilePage() {
   };
 
   return (
-    <AuthGuard requiredRole="student">
-      <DashboardLayout userRole="student">
-        <div className="container mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="container mx-auto px-4 py-8">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">Profil Étudiant</h1>
@@ -160,6 +168,23 @@ export default function StudentProfilePage() {
                 </button>
               )}
             </div>
+
+            {/* Message si l'utilisateur vient du flux de certificat */}
+            {returnUrl && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-900 mb-1">
+                      Mise à jour du profil requise
+                    </p>
+                    <p className="text-sm text-yellow-700">
+                      Veuillez mettre à jour vos informations personnelles. Une fois les modifications enregistrées, vous serez redirigé pour demander votre certificat.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {!isEditing ? (
               <div className="space-y-6">
@@ -331,6 +356,22 @@ export default function StudentProfilePage() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export default function StudentProfilePage() {
+  return (
+    <AuthGuard requiredRole="student">
+      <DashboardLayout userRole="student">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <Loader className="h-12 w-12 text-blue-600 animate-spin" />
+          </div>
+        }>
+          <ProfileContent />
+        </Suspense>
       </DashboardLayout>
     </AuthGuard>
   );

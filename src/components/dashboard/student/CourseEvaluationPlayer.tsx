@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, Award, AlertCircle, Loader, FileText, GraduationCap } from 'lucide-react';
 import { evaluationService } from '../../../lib/services/evaluationService';
+import { certificateService } from '../../../lib/services/certificateService';
 import toast from '../../../lib/utils/toast';
 import ConfirmModal from '../../ui/ConfirmModal';
+import ProfileVerificationModal from './ProfileVerificationModal';
 
 interface EvaluationQuestion {
   id?: string;
@@ -61,6 +63,8 @@ export default function CourseEvaluationPlayer({
   const [attemptsUsed, setAttemptsUsed] = useState(0);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [unansweredCount, setUnansweredCount] = useState(0);
+  const [showProfileVerificationModal, setShowProfileVerificationModal] = useState(false);
+  const [requestingCertificate, setRequestingCertificate] = useState(false);
 
   useEffect(() => {
     loadEvaluation();
@@ -214,6 +218,10 @@ export default function CourseEvaluationPlayer({
           'Félicitations !',
           `Vous avez réussi l'évaluation finale ! Vous êtes maintenant éligible pour obtenir un certificat.`
         );
+        // Si l'évaluation est réussie et éligible pour certificat, ouvrir le modal de vérification
+        if (submissionResult.certificate_eligible) {
+          setShowProfileVerificationModal(true);
+        }
       } else {
         toast.warning(
           'Évaluation non réussie',
@@ -232,6 +240,36 @@ export default function CourseEvaluationPlayer({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleConfirmProfileData = async () => {
+    if (!enrollmentId) {
+      toast.error('Erreur', 'Impossible de demander le certificat sans enrollmentId');
+      return;
+    }
+
+    setRequestingCertificate(true);
+    try {
+      await certificateService.requestCertificate(enrollmentId);
+      toast.success(
+        'Demande envoyée',
+        'Votre demande de certificat a été envoyée. Elle sera examinée par un administrateur.'
+      );
+      setShowProfileVerificationModal(false);
+      // Rediriger vers la page des certificats
+      window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+    } catch (error: any) {
+      console.error('Erreur lors de la demande de certificat:', error);
+      toast.error('Erreur', error.message || 'Impossible d\'envoyer la demande de certificat');
+    } finally {
+      setRequestingCertificate(false);
+    }
+  };
+
+  const handleUpdateProfile = () => {
+    // Rediriger vers le profil avec un paramètre pour revenir après
+    const returnUrl = encodeURIComponent(`/dashboard/student/certificates?courseId=${courseId}&requestCertificate=true`);
+    window.location.href = `/dashboard/student/profile?returnUrl=${returnUrl}`;
   };
 
   if (loading) {
@@ -340,8 +378,8 @@ export default function CourseEvaluationPlayer({
           {result.passed && result.certificate_eligible && (
             <button
               onClick={() => {
-                // Rediriger vers la demande de certificat
-                window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+                // Ouvrir le modal de vérification des données
+                setShowProfileVerificationModal(true);
               }}
               className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
             >
@@ -537,6 +575,15 @@ export default function CourseEvaluationPlayer({
         cancelText="Annuler"
         confirmButtonClass="bg-blue-600 hover:bg-blue-700"
         isLoading={submitting}
+      />
+
+      {/* Modal de vérification des données du profil */}
+      <ProfileVerificationModal
+        isOpen={showProfileVerificationModal}
+        onClose={() => setShowProfileVerificationModal(false)}
+        onConfirm={handleConfirmProfileData}
+        onUpdateProfile={handleUpdateProfile}
+        courseId={courseId}
       />
     </div>
   );
