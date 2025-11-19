@@ -1315,26 +1315,6 @@ export default function LessonContent({
         </div>
       )}
 
-      {/* External Content (fallback pour autres types) */}
-      {contentUrl && 
-       contentType !== 'video' && 
-       contentType !== 'document' && 
-       contentType !== 'presentation' &&
-       contentType !== 'h5p' &&
-       contentType !== 'forum' &&
-       contentType !== 'assignment' && (
-        <div className="bg-white">
-          <p className="text-gray-700">Contenu externe:</p>
-          <a
-            href={contentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
-          >
-            Ouvrir le contenu externe
-          </a>
-        </div>
-      )}
 
       {/* Completion Button */}
       {contentType !== 'quiz' && (

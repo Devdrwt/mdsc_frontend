@@ -16,6 +16,41 @@ export default function InstructorProfilePage() {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [identityDocument, setIdentityDocument] = useState<FileUpload | null>(null);
+  const getDocumentDisplayName = (doc: FileUpload | null) => {
+    if (!doc) return '';
+    const docAny = doc as any;
+    return (
+      doc.originalName ||
+      doc.filename ||
+      docAny.original_name ||
+      docAny.file_name ||
+      docAny.filename ||
+      'Document'
+    );
+  };
+
+  const getDocumentDisplayDate = (doc: FileUpload | null) => {
+    if (!doc) return '';
+    const docAny = doc as any;
+    const dateValue =
+      doc.createdAt ||
+      doc.updatedAt ||
+      docAny.created_at ||
+      docAny.updated_at ||
+      docAny.uploaded_at ||
+      '';
+    if (!dateValue) return '';
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime())
+      ? String(dateValue)
+      : parsed.toLocaleDateString();
+  };
+
+  const getDocumentUrl = (doc: FileUpload | null) => {
+    if (!doc) return '#';
+    const docAny = doc as any;
+    return doc.url || docAny.url || docAny.storage_path || '#';
+  };
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -209,25 +244,48 @@ export default function InstructorProfilePage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Pièce d'identité</h3>
                   {identityDocument ? (
                     <div className="border border-green-200 bg-green-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center space-x-3">
                           <CheckCircle className="h-6 w-6 text-green-600" />
                           <div>
-                            <p className="font-medium text-gray-900">{identityDocument.originalName}</p>
-                            <p className="text-sm text-gray-600">
-                              Uploadé le {new Date(identityDocument.createdAt).toLocaleDateString()}
+                            <p className="font-medium text-gray-900">
+                              {getDocumentDisplayName(identityDocument)}
                             </p>
+                            {getDocumentDisplayDate(identityDocument) && (
+                              <p className="text-sm text-gray-600">
+                                Uploadé le {getDocumentDisplayDate(identityDocument)}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <a
-                          href={identityDocument.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-mdsc-blue-primary hover:underline"
-                        >
-                          Voir
-                        </a>
+                        <div className="flex items-center gap-3">
+                          <a
+                            href={getDocumentUrl(identityDocument)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-mdsc-blue-primary hover:underline"
+                          >
+                            Voir
+                          </a>
+                          <input
+                            type="file"
+                            accept="application/pdf,image/jpeg,image/png"
+                            onChange={handleDocumentUpload}
+                            className="hidden"
+                            id="identity-document-reupload"
+                          />
+                          <label
+                            htmlFor="identity-document-reupload"
+                            className="inline-flex items-center px-4 py-2 bg-white text-mdsc-blue-primary border border-mdsc-blue-primary rounded-lg text-sm font-medium hover:bg-mdsc-blue-primary hover:text-white transition-colors cursor-pointer"
+                          >
+                            <Upload className="h-4 w-4 mr-2" />
+                            {uploadingDocument ? 'Upload...' : 'Remplacer'}
+                          </label>
+                        </div>
                       </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Formats acceptés : PDF, PNG, JPEG (Max 5 MB)
+                      </p>
                     </div>
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

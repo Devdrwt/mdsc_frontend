@@ -58,7 +58,10 @@ const getTotalRevenue = (overview?: AdminOverviewResponse) => {
   return totals.reduce(
     (acc, item) => {
       const amount = safeNumber(item?.total_amount ?? item?.amount);
-      const currency = item?.currency ?? item?.currency_code ?? acc.currency;
+      const currency =
+        (item as any)?.currency ??
+        (item as any)?.currency_code ??
+        acc.currency;
       return {
         amount: acc.amount + amount,
         currency,
@@ -343,7 +346,11 @@ export default function AdminStatisticsPanel() {
                         {payment.user?.name ?? payment.user?.email ?? 'Utilisateur inconnu'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {formatDate(payment.processed_at ?? payment.created_at)}
+                        {formatDate(
+                          payment.processed_at ??
+                            (payment as any)?.created_at ??
+                            (payment as any)?.timestamp
+                        )}
                       </p>
                     </div>
                   </div>

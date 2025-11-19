@@ -121,8 +121,9 @@ export default function CoursePlayer({
     if (!enrollmentId) return;
     
     const interval = setInterval(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement périodique de la progression (toutes les 15s)');
       await loadProgress();
-    }, 30000); // Recharger toutes les 30 secondes
+    }, 15000); // Recharger toutes les 15 secondes pour une meilleure synchronisation
     
     return () => clearInterval(interval);
   }, [enrollmentId]);
@@ -349,10 +350,27 @@ export default function CoursePlayer({
         }
       }
 
-      let courseProgressValueRaw =
-        typeof enrollmentInfo?.progress_percentage === 'number'
-          ? enrollmentInfo.progress_percentage
-          : Number(summary.progress_percentage || summary.progress || 0);
+      // Récupérer la progression depuis enrollmentInfo en priorité (peut être une chaîne ou un nombre)
+      // Puis depuis summary comme fallback
+      let courseProgressValueRaw = 0;
+      let hasEnrollmentProgress = false;
+      
+      if (enrollmentInfo?.progress_percentage !== null && enrollmentInfo?.progress_percentage !== undefined) {
+        // Convertir en nombre si c'est une chaîne (ex: "100.00" -> 100)
+        const enrollmentProgress = Number(enrollmentInfo.progress_percentage);
+        if (Number.isFinite(enrollmentProgress)) {
+          courseProgressValueRaw = enrollmentProgress;
+          hasEnrollmentProgress = true;
+        }
+      }
+      
+      // Si enrollmentInfo n'a pas de valeur valide, utiliser summary comme fallback
+      if (!hasEnrollmentProgress && (summary?.progress_percentage || summary?.progress)) {
+        const summaryProgress = Number(summary.progress_percentage || summary.progress);
+        if (Number.isFinite(summaryProgress)) {
+          courseProgressValueRaw = summaryProgress;
+        }
+      }
 
       console.log('[CoursePlayer] 📊 Progression depuis l\'API:', {
         courseProgressValueRaw,
@@ -606,9 +624,19 @@ export default function CoursePlayer({
     // Recharger la progression pour s'assurer qu'elle est synchronisée avec le backend
     // Cela garantit que la progression affichée dans le header est à jour
     if (enrollmentId) {
+      // Recharger immédiatement
+      loadProgress();
+      
+      // Recharger après plusieurs délais pour garantir la synchronisation
       setTimeout(async () => {
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après sélection de leçon (délai 300ms)');
         await loadProgress();
       }, 300);
+      
+      setTimeout(async () => {
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après sélection de leçon (délai 1s)');
+        await loadProgress();
+      }, 1000);
     }
   };
 
@@ -715,12 +743,24 @@ export default function CoursePlayer({
       // Recharger la progression immédiatement
       await loadProgress();
       
-      // Recharger à nouveau après un court délai pour s'assurer que le backend a mis à jour
+      // Recharger à nouveau après plusieurs délais pour s'assurer que le backend a mis à jour
       // Cela garantit que la progression affichée dans le header est synchronisée
       setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai)');
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai 500ms)');
         await loadProgress();
       }, 500);
+      
+      // Recharger après un délai plus long pour s'assurer que le backend a bien traité la mise à jour
+      setTimeout(async () => {
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai 2s)');
+        await loadProgress();
+      }, 2000);
+      
+      // Recharger une dernière fois après un délai encore plus long pour garantir la synchronisation
+      setTimeout(async () => {
+        console.log('[CoursePlayer] 🔄 Rechargement final de la progression après complétion de leçon (délai 5s)');
+        await loadProgress();
+      }, 5000);
     } catch (error) {
       console.error('Erreur lors de la complétion de la leçon:', error);
       setCompletedLessons(previousCompleted);
@@ -951,7 +991,7 @@ export default function CoursePlayer({
     setSelectedEvaluationId(null);
   };
 
-  const handleQuizComplete = (result: any) => {
+  const handleQuizComplete = async (result: any) => {
     // Si le quiz est réussi, ajouter le module aux quiz complétés
     if (result?.passed && selectedModuleId) {
       setCompletedModuleQuizzes((prev) => {
@@ -961,9 +1001,21 @@ export default function CoursePlayer({
       });
     }
     // Recharger la progression après complétion du quiz
-    loadProgress();
+    await loadProgress();
     // Recharger les quiz pour mettre à jour les statuts
-    loadCourseQuizzesAndEvaluation();
+    await loadCourseQuizzesAndEvaluation();
+    
+    // Recharger la progression après plusieurs délais pour s'assurer que le backend a mis à jour
+    setTimeout(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de quiz (délai 500ms)');
+      await loadProgress();
+    }, 500);
+    
+    setTimeout(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de quiz (délai 2s)');
+      await loadProgress();
+    }, 2000);
+    
     // Retourner aux leçons
     handleBackToLesson();
   };
@@ -1006,14 +1058,25 @@ export default function CoursePlayer({
     await loadProgress();
     console.log('[CoursePlayer] ✅ Progression rechargée');
     
-    // Attendre encore un peu et recharger une dernière fois pour s'assurer que tout est à jour
-    // Le backend a peut-être besoin d'un peu de temps pour mettre à jour la progression
+    // Recharger plusieurs fois avec des délais croissants pour s'assurer que le backend a bien mis à jour
     setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement final après délai...');
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion d\'évaluation (délai 500ms)');
+      await loadCourseQuizzesAndEvaluation();
+      await loadProgress();
+    }, 500);
+    
+    setTimeout(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion d\'évaluation (délai 1.5s)');
+      await loadCourseQuizzesAndEvaluation();
+      await loadProgress();
+    }, 1500);
+    
+    setTimeout(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement final de la progression après complétion d\'évaluation (délai 3s)');
       await loadCourseQuizzesAndEvaluation();
       await loadProgress();
       console.log('[CoursePlayer] ✅ Rechargement final terminé');
-    }, 1500);
+    }, 3000);
   };
 
   const handleConfirmProfileData = async () => {
