@@ -23,7 +23,7 @@ import {
 import Modal from '../../ui/Modal';
 import DataTable from '../shared/DataTable';
 import { adminService } from '../../../lib/services/adminService';
-import { courseService } from '../../../lib/services/courseService';
+import { CourseService } from '../../../lib/services/courseService';
 import toast from '../../../lib/utils/toast';
 
 interface Course {
@@ -42,6 +42,7 @@ interface Course {
   totalLessons: number;
   duration: string;
   price: number;
+  currency?: string;
   tags: string[];
   isPublic: boolean;
   hasCertificate: boolean;
@@ -92,7 +93,103 @@ const loadCourses = useCallback(async () => {
     setLoading(true);
 
     const response = await adminService.getAllCourses();
-    const coursesData: any[] = response.courses || [];
+    let coursesData: any[] = response.courses || [];
+
+    // Log de débogage pour vérifier les champs de prix et métriques
+    if (coursesData.length > 0 && process.env.NODE_ENV === 'development') {
+      console.log('[CourseModeration] 🔍 Exemple de données de cours (premier cours):', {
+        courseId: coursesData[0].id,
+        courseTitle: coursesData[0].title,
+        priceFields: {
+          price: coursesData[0].price,
+          price_amount: coursesData[0].price_amount,
+          pricing: coursesData[0].pricing,
+          course_price: coursesData[0].course_price,
+          pricing_info: coursesData[0].pricing_info,
+          allPriceKeys: Object.keys(coursesData[0]).filter(key => key.toLowerCase().includes('price') || key.toLowerCase().includes('pricing'))
+        },
+        metricsFields: {
+          students_enrolled: coursesData[0].students_enrolled,
+          enrollment_count: coursesData[0].enrollment_count,
+          studentsEnrolled: coursesData[0].studentsEnrolled,
+          average_rating: coursesData[0].average_rating,
+          rating: coursesData[0].rating,
+          averageRating: coursesData[0].averageRating,
+          total_lessons: coursesData[0].total_lessons,
+          lessons_count: coursesData[0].lessons_count,
+          totalLessons: coursesData[0].totalLessons,
+          allMetricsKeys: Object.keys(coursesData[0]).filter(key => 
+            key.toLowerCase().includes('enrollment') || 
+            key.toLowerCase().includes('student') || 
+            key.toLowerCase().includes('rating') || 
+            key.toLowerCase().includes('lesson')
+          )
+        },
+        allKeys: Object.keys(coursesData[0])
+      });
+    }
+
+    // Enrichir les données avec les détails complets si les métriques ou le prix manquent
+    // On fait des appels parallèles pour récupérer les détails manquants (limité à 10 cours à la fois pour éviter la surcharge)
+    const coursesToEnrich = coursesData.filter((course: any) => {
+      const needsEnrichment = (!course.price && course.price !== 0) || 
+                              (!course.enrollment_count && course.enrollment_count !== 0) || 
+                              (!course.average_rating && course.average_rating !== 0) || 
+                              (!course.total_lessons && course.total_lessons !== 0);
+      return needsEnrichment && course.id;
+    });
+
+    if (coursesToEnrich.length > 0) {
+      console.log(`[CourseModeration] 🔄 Enrichissement de ${coursesToEnrich.length} cours avec des données manquantes...`);
+      
+      // Limiter à 10 cours à la fois pour éviter la surcharge
+      const coursesToEnrichBatch = coursesToEnrich.slice(0, 10);
+      const enrichedCoursesMap = new Map();
+      
+      await Promise.all(
+        coursesToEnrichBatch.map(async (course: any) => {
+          try {
+            // Récupérer les détails complets du cours
+            const courseDetails = await CourseService.getCourseById(course.id);
+            const detailsAny = courseDetails as any;
+            
+            // Fusionner les données enrichies avec les données de base
+            enrichedCoursesMap.set(course.id, {
+              // Prix
+              price: course.price ?? detailsAny.price ?? detailsAny.price_amount ?? 0,
+              currency:
+                course.currency ??
+                detailsAny.currency ??
+                detailsAny.currency_code ??
+                detailsAny.price_currency ??
+                'FCFA',
+              // Métriques
+              enrollment_count: course.enrollment_count ?? detailsAny.enrollment_count ?? detailsAny.enrollmentCount ?? detailsAny.studentsEnrolled ?? 0,
+              average_rating: course.average_rating ?? detailsAny.average_rating ?? detailsAny.rating ?? detailsAny.averageRating ?? 0,
+              total_lessons: course.total_lessons ?? detailsAny.total_lessons ?? detailsAny.lessons_count ?? detailsAny.totalLessons ?? 
+                            (detailsAny.modules && Array.isArray(detailsAny.modules) 
+                              ? detailsAny.modules.reduce((sum: number, m: any) => sum + (m.lessons?.length || 0), 0)
+                              : 0),
+              // Durée
+              duration_minutes: course.duration_minutes ?? detailsAny.duration_minutes ?? detailsAny.duration ?? 0,
+            });
+          } catch (error) {
+            console.warn(`[CourseModeration] ⚠️ Impossible d'enrichir le cours ${course.id}:`, error);
+          }
+        })
+      );
+      
+      // Fusionner les données enrichies dans les cours
+      coursesData = coursesData.map((course: any) => {
+        const enriched = enrichedCoursesMap.get(course.id);
+        if (enriched) {
+          return { ...course, ...enriched };
+        }
+        return course;
+      });
+      
+      console.log(`[CourseModeration] ✅ ${enrichedCoursesMap.size} cours enrichis avec succès`);
+    }
 
     const apiCourses: Course[] = coursesData.map((course: any) => ({
       id: String(course.id || course.course_id || ''),
@@ -105,18 +202,69 @@ const loadCourses = useCallback(async () => {
           : course.instructor || 'Instructeur inconnu'),
       instructorEmail: course.instructor_email || course.instructorEmail || '',
       category: course.category_name || course.category || 'Non catégorisé',
-      level: toDisplayLevel(course.level || course.difficulty),
+      level: toDisplayLevel(course.level || course.course_type || course.difficulty),
       status: course.status || 'draft',
       createdAt: course.created_at || course.createdAt || new Date().toISOString(),
       updatedAt: course.updated_at || course.updatedAt || course.created_at || new Date().toISOString(),
-      studentsEnrolled: course.students_enrolled || course.enrollment_count || course.studentsEnrolled || 0,
-      averageRating: course.average_rating || course.rating || course.averageRating || 0,
-      totalLessons: course.total_lessons || course.lessons_count || course.totalLessons || 0,
+      studentsEnrolled: (() => {
+        // Vérifier toutes les variantes possibles du nombre d'étudiants inscrits
+        const enrolledValue = course.students_enrolled || 
+                             course.enrollment_count || 
+                             course.enrollments_count ||
+                             course.studentsEnrolled ||
+                             course.students_count ||
+                             (course.metrics && typeof course.metrics === 'object' ? course.metrics.enrollment_count : null) ||
+                             0;
+        const numEnrolled = typeof enrolledValue === 'number' ? enrolledValue : parseInt(String(enrolledValue)) || 0;
+        return numEnrolled >= 0 ? numEnrolled : 0;
+      })(),
+      averageRating: (() => {
+        // Vérifier toutes les variantes possibles de la note moyenne
+        const ratingValue = course.average_rating || 
+                           course.rating || 
+                           course.averageRating ||
+                           course.avg_rating ||
+                           (course.metrics && typeof course.metrics === 'object' ? course.metrics.average_rating : null) ||
+                           0;
+        const numRating = typeof ratingValue === 'number' ? ratingValue : parseFloat(String(ratingValue)) || 0;
+        return numRating >= 0 && numRating <= 5 ? numRating : 0;
+      })(),
+      totalLessons: (() => {
+        // Vérifier toutes les variantes possibles du nombre total de leçons
+        const lessonsValue = course.total_lessons || 
+                            course.lessons_count || 
+                            course.totalLessons ||
+                            course.lesson_count ||
+                            (course.metrics && typeof course.metrics === 'object' ? course.metrics.total_lessons : null) ||
+                            (course.modules && Array.isArray(course.modules) 
+                              ? course.modules.reduce((sum: number, m: any) => sum + (m.lessons?.length || 0), 0)
+                              : null) ||
+                            0;
+        const numLessons = typeof lessonsValue === 'number' ? lessonsValue : parseInt(String(lessonsValue)) || 0;
+        return numLessons >= 0 ? numLessons : 0;
+      })(),
       duration:
         course.duration || course.duration_minutes
           ? `${Math.round((course.duration_minutes || course.duration || 0) / 60)} heures`
           : 'Non spécifié',
-      price: course.price || course.price_amount || 0,
+      price: (() => {
+        // Vérifier toutes les variantes possibles du champ prix
+        const priceValue = course.price || 
+                          course.price_amount || 
+                          course.pricing || 
+                          course.course_price || 
+                          (course.pricing_info && typeof course.pricing_info === 'object' ? course.pricing_info.amount : null) ||
+                          0;
+        // S'assurer que c'est un nombre valide
+        const numPrice = typeof priceValue === 'number' ? priceValue : parseFloat(String(priceValue)) || 0;
+        return numPrice >= 0 ? numPrice : 0;
+      })(),
+      currency:
+        course.currency ||
+        course.currency_code ||
+        course.price_currency ||
+        (course.pricing_info && typeof course.pricing_info === 'object' ? course.pricing_info.currency : null) ||
+        'FCFA',
       tags: course.tags || course.tag_names || [],
       isPublic:
         course.is_public !== undefined ? course.is_public : course.isPublic !== undefined ? course.isPublic : true,
@@ -316,7 +464,7 @@ const handleSaveEdit = async () => {
       price: Number.isFinite(editForm.price) ? editForm.price : 0,
       isPublished: editForm.isPublished,
     };
-    await courseService.updateCourse(editCourse.id, payload);
+    await CourseService.updateCourse(editCourse.id, payload);
     toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès.');
     handleCloseEditModal();
     await loadCourses();
@@ -382,13 +530,15 @@ const handleSaveEdit = async () => {
       )
     },
     {
-      key: 'pricing',
+      key: 'price',
       label: 'Tarification',
       sortable: true,
       render: (value: any, course: Course) => (
         <div className="text-sm">
           <div className="font-medium text-gray-900">
-            {course.price === 0 ? 'Gratuit' : `${course.price.toLocaleString()} FCFA`}
+            {course.price === 0
+              ? 'Gratuit'
+              : `${Number(course.price || 0).toLocaleString('fr-FR')} ${course.currency || 'FCFA'}`}
           </div>
           <div className="text-xs text-gray-500">
             {course.isPublic ? 'Public' : 'Privé'}

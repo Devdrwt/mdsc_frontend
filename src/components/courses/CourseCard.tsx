@@ -123,6 +123,8 @@ export default function CourseCard({
       courseAny.difficulty_level ||
       course.level || 
       courseAny.level ||  // Peut être formaté (Débutant, Intermédiaire, Avancé)
+      courseAny.course_type ||
+      courseAny.courseType ||
       courseAny.level_name ||
       (course as any).difficulty ||
       '';
