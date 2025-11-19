@@ -456,34 +456,23 @@ export default function LessonContent({
             {/* Lecteur vidéo stylé avec protection */}
             <div 
               className="relative w-full aspect-video bg-black group"
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-              }}
-              onMouseDown={(e) => {
-                if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  return false;
-                }
+              style={{
+                // S'assurer que le conteneur ne bloque pas les interactions avec ses enfants
+                pointerEvents: 'auto'
               }}
             >
               <video
                 key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                 src={videoUrl}
                 controls
-                controlsList="nodownload noplaybackrate nofullscreen"
+                controlsList="nodownload noplaybackrate"
                 disablePictureInPicture
                 className="w-full h-full object-contain"
                 preload="metadata"
                 playsInline
                 style={{
-                  pointerEvents: 'auto'
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  return false;
+                  pointerEvents: 'auto',
+                  zIndex: 1
                 }}
                 onEnded={() => {
                   // Auto-mark as complete when video ends
@@ -511,23 +500,37 @@ export default function LessonContent({
                     video.currentTime = savedPosition;
                   }
                   
-                  // Désactiver le menu contextuel sur la vidéo
+                  // Protection minimale : ne bloquer que le menu contextuel sur la zone vidéo elle-même
+                  // Les contrôles vidéo natifs (barre de progression, boutons, etc.) sont dans une shadow DOM
+                  // et doivent fonctionner normalement sans aucune interférence
+                  // IMPORTANT: Ne jamais bloquer les événements de souris nécessaires pour le glissement
                   try {
                     const videoElement = e.currentTarget;
-                    videoElement.addEventListener('contextmenu', (ev) => {
-                      ev.preventDefault();
-                      return false;
-                    }, true);
                     
-                    // Empêcher les raccourcis clavier
-                    videoElement.addEventListener('keydown', (ev: KeyboardEvent) => {
-                      if ((ev.ctrlKey || ev.metaKey) && (ev.key === 's' || ev.key === 'S')) {
+                    // Ne bloquer le menu contextuel que si le clic est dans la zone supérieure de la vidéo
+                    // (où il n'y a normalement pas de contrôles - les contrôles sont en bas)
+                    // Cela permet aux contrôles (barre de progression, boutons) de fonctionner normalement
+                    videoElement.addEventListener('contextmenu', (ev) => {
+                      // Recalculer la position à chaque événement pour gérer le plein écran et le redimensionnement
+                      const rect = videoElement.getBoundingClientRect();
+                      const clickY = ev.clientY - rect.top;
+                      const videoHeight = rect.height;
+                      // Les contrôles sont généralement dans les 30% inférieurs de la vidéo
+                      // Si le clic est dans cette zone, c'est probablement sur les contrôles
+                      // On utilise 30% pour être sûr de ne jamais bloquer les contrôles
+                      const isInControlsArea = clickY > videoHeight * 0.70;
+                      
+                      // Ne bloquer QUE si le clic n'est PAS dans la zone des contrôles
+                      // Cela permet le glissement sur la barre de progression sans interférence
+                      // IMPORTANT: Ne jamais bloquer les événements mousedown/mousemove/mouseup nécessaires pour le glissement
+                      if (!isInControlsArea) {
                         ev.preventDefault();
                         return false;
                       }
-                    }, true);
+                      // Laisser passer pour tous les contrôles vidéo (barre de progression, boutons, etc.)
+                    }, { capture: false, passive: false });
                   } catch (err) {
-                    console.warn('Impossible de désactiver le menu contextuel sur la vidéo');
+                    console.warn('Impossible de configurer les protections vidéo');
                   }
                 }}
                 onError={(e) => {
@@ -565,14 +568,6 @@ export default function LessonContent({
               >
                 Votre navigateur ne supporte pas la lecture vidéo.
               </video>
-              
-              {/* Overlay de protection transparent */}
-              <div 
-                className="absolute inset-0 z-10 pointer-events-none"
-                style={{
-                  background: 'transparent'
-                }}
-              />
             </div>
             
             {/* Barre d'information en bas */}
