@@ -72,8 +72,15 @@ export default function LessonContent({
 
     // Protection globale contre le clic droit et autres interactions non désirées
     const handleContextMenu = (e: MouseEvent) => {
-      // Si on est dans la zone du PDF, empêcher le menu contextuel
+      // IMPORTANT: Ne jamais bloquer les événements sur les vidéos ou leurs contrôles
       const target = e.target as HTMLElement;
+      
+      // Exclure explicitement les vidéos et leurs contrôles
+      if (target.tagName === 'VIDEO' || target.closest('video')) {
+        return; // Laisser passer pour les vidéos
+      }
+      
+      // Si on est dans la zone du PDF, empêcher le menu contextuel
       const pdfContainer = document.querySelector('.pdf-viewer-container');
       if (pdfContainer && (pdfContainer.contains(target) || target.closest('iframe') || target === pdfContainer)) {
         e.preventDefault();
@@ -96,8 +103,15 @@ export default function LessonContent({
 
     const handleMouseDown = (e: MouseEvent) => {
       // Empêcher le clic droit globalement sur les PDF
+      // IMPORTANT: Ne jamais bloquer les événements sur les vidéos ou leurs contrôles
       if (e.button === 2 || e.which === 3) {
         const target = e.target as HTMLElement;
+        
+        // Exclure explicitement les vidéos et leurs contrôles
+        if (target.tagName === 'VIDEO' || target.closest('video')) {
+          return; // Laisser passer pour les vidéos
+        }
+        
         const pdfContainer = document.querySelector('.pdf-viewer-container');
         if (pdfContainer && (pdfContainer.contains(target) || target.closest('iframe') || target === pdfContainer)) {
           e.preventDefault();
@@ -110,8 +124,15 @@ export default function LessonContent({
 
     const handleMouseUp = (e: MouseEvent) => {
       // Empêcher aussi au relâchement du clic droit
+      // IMPORTANT: Ne jamais bloquer les événements sur les vidéos ou leurs contrôles
       if (e.button === 2 || e.which === 3) {
         const target = e.target as HTMLElement;
+        
+        // Exclure explicitement les vidéos et leurs contrôles
+        if (target.tagName === 'VIDEO' || target.closest('video')) {
+          return; // Laisser passer pour les vidéos
+        }
+        
         const pdfContainer = document.querySelector('.pdf-viewer-container');
         if (pdfContainer && (pdfContainer.contains(target) || target.closest('iframe') || target === pdfContainer)) {
           e.preventDefault();
@@ -124,8 +145,15 @@ export default function LessonContent({
 
     const handleAuxClick = (e: MouseEvent) => {
       // Empêcher UNIQUEMENT les clics droits (bouton 2), pas le bouton du milieu
+      // IMPORTANT: Ne jamais bloquer les événements sur les vidéos ou leurs contrôles
       if (e.button === 2 || e.which === 3) {
         const target = e.target as HTMLElement;
+        
+        // Exclure explicitement les vidéos et leurs contrôles
+        if (target.tagName === 'VIDEO' || target.closest('video')) {
+          return; // Laisser passer pour les vidéos
+        }
+        
         const pdfContainer = document.querySelector('.pdf-viewer-container');
         if (pdfContainer && (pdfContainer.contains(target) || target.closest('iframe') || target === pdfContainer)) {
           e.preventDefault();
@@ -454,26 +482,16 @@ export default function LessonContent({
             </div>
             
             {/* Lecteur vidéo stylé avec protection */}
-            <div 
-              className="relative w-full aspect-video bg-black group"
-              style={{
-                // S'assurer que le conteneur ne bloque pas les interactions avec ses enfants
-                pointerEvents: 'auto'
-              }}
-            >
+            <div className="relative w-full aspect-video bg-black group">
               <video
                 key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                 src={videoUrl}
                 controls
                 controlsList="nodownload noplaybackrate"
-                disablePictureInPicture
+                disablePictureInPicture={false}
                 className="w-full h-full object-contain"
                 preload="metadata"
                 playsInline
-                style={{
-                  pointerEvents: 'auto',
-                  zIndex: 1
-                }}
                 onEnded={() => {
                   // Auto-mark as complete when video ends
                   if (!isCompleted && contentType === 'video') {
@@ -500,38 +518,10 @@ export default function LessonContent({
                     video.currentTime = savedPosition;
                   }
                   
-                  // Protection minimale : ne bloquer que le menu contextuel sur la zone vidéo elle-même
-                  // Les contrôles vidéo natifs (barre de progression, boutons, etc.) sont dans une shadow DOM
-                  // et doivent fonctionner normalement sans aucune interférence
-                  // IMPORTANT: Ne jamais bloquer les événements de souris nécessaires pour le glissement
-                  try {
-                    const videoElement = e.currentTarget;
-                    
-                    // Ne bloquer le menu contextuel que si le clic est dans la zone supérieure de la vidéo
-                    // (où il n'y a normalement pas de contrôles - les contrôles sont en bas)
-                    // Cela permet aux contrôles (barre de progression, boutons) de fonctionner normalement
-                    videoElement.addEventListener('contextmenu', (ev: MouseEvent) => {
-                      // Recalculer la position à chaque événement pour gérer le plein écran et le redimensionnement
-                      const rect = videoElement.getBoundingClientRect();
-                      const clickY = ev.clientY - rect.top;
-                      const videoHeight = rect.height;
-                      // Les contrôles sont généralement dans les 30% inférieurs de la vidéo
-                      // Si le clic est dans cette zone, c'est probablement sur les contrôles
-                      // On utilise 30% pour être sûr de ne jamais bloquer les contrôles
-                      const isInControlsArea = clickY > videoHeight * 0.70;
-                      
-                      // Ne bloquer QUE si le clic n'est PAS dans la zone des contrôles
-                      // Cela permet le glissement sur la barre de progression sans interférence
-                      // IMPORTANT: Ne jamais bloquer les événements mousedown/mousemove/mouseup nécessaires pour le glissement
-                      if (!isInControlsArea) {
-                        ev.preventDefault();
-                        return false;
-                      }
-                      // Laisser passer pour tous les contrôles vidéo (barre de progression, boutons, etc.)
-                    }, { capture: false, passive: false });
-                  } catch (err) {
-                    console.warn('Impossible de configurer les protections vidéo');
-                  }
+                  // IMPORTANT: Ne pas ajouter de gestionnaires d'événements qui pourraient interférer
+                  // avec les contrôles vidéo natifs (barre de progression, boutons, etc.)
+                  // Les contrôles sont dans une shadow DOM et doivent fonctionner sans aucune interférence
+                  // Le menu contextuel est déjà géré par l'attribut onContextMenu sur l'élément video
                 }}
                 onError={(e) => {
                   const videoElement = e.currentTarget;
