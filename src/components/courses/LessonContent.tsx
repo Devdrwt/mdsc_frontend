@@ -510,7 +510,7 @@ export default function LessonContent({
                     // Ne bloquer le menu contextuel que si le clic est dans la zone supérieure de la vidéo
                     // (où il n'y a normalement pas de contrôles - les contrôles sont en bas)
                     // Cela permet aux contrôles (barre de progression, boutons) de fonctionner normalement
-                    videoElement.addEventListener('contextmenu', (ev) => {
+                    videoElement.addEventListener('contextmenu', (ev: MouseEvent) => {
                       // Recalculer la position à chaque événement pour gérer le plein écran et le redimensionnement
                       const rect = videoElement.getBoundingClientRect();
                       const clickY = ev.clientY - rect.top;
