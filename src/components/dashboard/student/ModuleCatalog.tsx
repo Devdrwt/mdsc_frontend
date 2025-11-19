@@ -21,6 +21,64 @@ type ExtendedCourse = ServiceCourse & {
   category?: string | { name?: string };
 };
 
+const resolveLevelInfo = (courseLike: any): { key: string; raw: string } => {
+  if (!courseLike) {
+    return { key: '', raw: '' };
+  }
+
+  const rawValue =
+    courseLike.level ??
+    courseLike.level_name ??
+    courseLike.levelName ??
+    courseLike.course_type ??
+    courseLike.courseType ??
+    courseLike.difficulty ??
+    courseLike.difficulty_level ??
+    courseLike.difficultyLevel ??
+    '';
+
+  if (!rawValue) {
+    return { key: '', raw: '' };
+  }
+
+  const normalized = String(rawValue).toLowerCase().trim();
+
+  if (['beginner', 'debutant', 'débutant'].includes(normalized)) {
+    return { key: 'beginner', raw: rawValue };
+  }
+
+  if (['intermediate', 'intermediaire', 'intermédiaire'].includes(normalized)) {
+    return { key: 'intermediate', raw: rawValue };
+  }
+
+  if (['advanced', 'avance', 'avancé'].includes(normalized)) {
+    return { key: 'advanced', raw: rawValue };
+  }
+
+  if (['expert'].includes(normalized)) {
+    return { key: 'expert', raw: rawValue };
+  }
+
+  return { key: normalized, raw: rawValue };
+};
+
+const formatLevelLabel = (levelKey: string, rawValue: string): string => {
+  switch (levelKey) {
+    case 'beginner':
+      return 'Débutant';
+    case 'intermediate':
+      return 'Intermédiaire';
+    case 'advanced':
+      return 'Avancé';
+    case 'expert':
+      return 'Expert';
+    default:
+      return rawValue
+        ? rawValue.toString().charAt(0).toUpperCase() + rawValue.toString().slice(1)
+        : 'Non précisé';
+  }
+};
+
 const toNumber = (value: any, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
@@ -77,14 +135,8 @@ const convertToDisplayCourse = (course: ExtendedCourse): DisplayCourse => {
   const durationInWeeks = Math.ceil((course.duration || 0) / 60 / 7);
   const durationLabel = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
 
-  const levelLabel =
-    course.level === 'beginner'
-      ? 'Débutant'
-      : course.level === 'intermediate'
-        ? 'Intermédiaire'
-        : course.level === 'advanced'
-          ? 'Avancé'
-          : (course.level as string) || 'Non précisé';
+  const { key: normalizedLevelKey, raw: rawLevelValue } = resolveLevelInfo(courseAny);
+  const levelLabel = formatLevelLabel(normalizedLevelKey, rawLevelValue);
 
   const instructorFirstName =
     courseAny.instructor_first_name ||
@@ -358,7 +410,10 @@ export default function ModuleCatalog() {
     }
 
     if (selectedLevel !== 'all') {
-      current = current.filter((course) => (course.level || '').toLowerCase() === selectedLevel);
+      current = current.filter((course) => {
+        const { key } = resolveLevelInfo(course);
+        return key === selectedLevel;
+      });
     }
 
     setFilteredCourses(current);

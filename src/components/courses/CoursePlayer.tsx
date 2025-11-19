@@ -115,6 +115,18 @@ export default function CoursePlayer({
     }
   }, [enrollmentId, course.id]);
 
+  // Recharger la progression périodiquement pour maintenir la synchronisation avec le backend
+  // Cela garantit que la progression affichée dans le header reste à jour
+  useEffect(() => {
+    if (!enrollmentId) return;
+    
+    const interval = setInterval(async () => {
+      await loadProgress();
+    }, 30000); // Recharger toutes les 30 secondes
+    
+    return () => clearInterval(interval);
+  }, [enrollmentId]);
+
   // Recalculer la progression quand l'évaluation finale ou ses tentatives changent
   // MAIS seulement si la progression actuelle n'est pas déjà à 100% depuis l'API
   useEffect(() => {
@@ -590,6 +602,14 @@ export default function CoursePlayer({
     
     // Mettre à jour l'URL
     router.replace(`/learn/${course.id}?module=${lessonModuleId || selectedModuleId}&lesson=${lesson.id}`);
+    
+    // Recharger la progression pour s'assurer qu'elle est synchronisée avec le backend
+    // Cela garantit que la progression affichée dans le header est à jour
+    if (enrollmentId) {
+      setTimeout(async () => {
+        await loadProgress();
+      }, 300);
+    }
   };
 
   const handleLessonComplete = async () => {
@@ -692,7 +712,15 @@ export default function CoursePlayer({
         setUnlockedLessons((prev) => new Set([...prev, result.unlockedLessonId!]));
       }
 
+      // Recharger la progression immédiatement
       await loadProgress();
+      
+      // Recharger à nouveau après un court délai pour s'assurer que le backend a mis à jour
+      // Cela garantit que la progression affichée dans le header est synchronisée
+      setTimeout(async () => {
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai)');
+        await loadProgress();
+      }, 500);
     } catch (error) {
       console.error('Erreur lors de la complétion de la leçon:', error);
       setCompletedLessons(previousCompleted);

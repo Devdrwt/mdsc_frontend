@@ -85,7 +85,12 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
   
   // Convertir le niveau pour CourseCard
   const courseAny = serviceCourse as any;
-  const difficultyRaw = courseAny.difficulty || serviceCourse.level || 'beginner';
+  const difficultyRaw =
+    courseAny.difficulty ||
+    courseAny.course_type ||
+    courseAny.courseType ||
+    serviceCourse.level ||
+    'beginner';
   const levelString = difficultyRaw === 'beginner' || difficultyRaw === 'debutant' ? 'Débutant' 
     : difficultyRaw === 'intermediate' || difficultyRaw === 'intermediaire' ? 'Intermédiaire' 
     : difficultyRaw === 'advanced' || difficultyRaw === 'avance' ? 'Avancé'
