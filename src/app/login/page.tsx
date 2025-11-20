@@ -1,41 +1,18 @@
 'use client';
 
 import LoginForm from '../../components/auth/LoginForm';
-import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  
-  const slides = [
-    {
-      title: 'Espace MOOC',
-      subtitle: 'Suivre des formations',
-      features: [
-        'Accès à tous les cours',
-        'Certifications reconnues',
-        'Assistant IA personnel',
-        'Suivi de progression'
-      ]
-    },
-    {
-      title: 'Studio MOOC',
-      subtitle: 'Créer et animer des formations',
-      features: [
-        'Création de cours',
-        'Gestion des participants',
-        'Support IA dédié',
-        'Évaluation et certification'
-      ]
-    }
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 5000); // Changer de slide toutes les 5 secondes
-
-    return () => clearInterval(interval);
-  }, [slides.length]);
+  const slide = {
+    title: 'Espace MOOC',
+    subtitle: 'Suivre des formations',
+    features: [
+      'Accès à tous les cours',
+      'Certifications reconnues',
+      'Assistant IA personnel',
+      'Suivi de progression'
+    ]
+  };
 
   return (
     <div className="min-h-screen flex relative">
@@ -53,64 +30,24 @@ export default function LoginPage() {
       {/* Colonne gauche - Image de fond avec texte */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
         <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000"
-        style={{
-            backgroundImage: currentSlide === 0 ? 'url(/Colleagues.png)' : 'url(/Woman.png)'
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(/Colleagues.png)'
           }}
         />
         {/* Overlay avec texte */}
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/70 to-cyan-900/70 z-10">
-          <div className="h-full flex flex-col justify-center items-center text-white p-12 relative overflow-hidden">
-            <div 
-              className="absolute inset-x-0 transition-all duration-700 ease-in-out"
-              style={{
-                transform: currentSlide === 0 ? 'translateX(0)' : 'translateX(-100%)',
-                opacity: currentSlide === 0 ? 1 : 0
-              }}
-            >
-              <h1 className="text-5xl font-bold mb-4 text-center">{slides[0].title}</h1>
-              <p className="text-2xl mb-8 text-center">{slides[0].subtitle}</p>
-              <ul className="space-y-4 text-lg text-center">
-                {slides[0].features.map((feature, index) => (
-                  <li key={`slide-0-${index}`} className="flex items-center justify-center">
-                    <span className="mr-3">•</span>
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div 
-              className="absolute inset-x-0 transition-all duration-700 ease-in-out"
-              style={{
-                transform: currentSlide === 1 ? 'translateX(0)' : 'translateX(100%)',
-                opacity: currentSlide === 1 ? 1 : 0
-              }}
-            >
-              <h1 className="text-5xl font-bold mb-4 text-center">{slides[1].title}</h1>
-              <p className="text-2xl mb-8 text-center">{slides[1].subtitle}</p>
-              <ul className="space-y-4 text-lg text-center">
-                {slides[1].features.map((feature, index) => (
-                  <li key={`slide-1-${index}`} className="flex items-center justify-center">
-                    <span className="mr-3">•</span>
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          
-          {/* Indicateurs de slide */}
-          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentSlide === index ? 'w-8 bg-white' : 'w-2 bg-white/50'
-                }`}
-                aria-label={`Aller au slide ${index + 1}`}
-              />
-            ))}
+          <div className="h-full flex flex-col justify-center items-center text-white p-12">
+            <h1 className="text-5xl font-bold mb-4 text-center">{slide.title}</h1>
+            <p className="text-2xl mb-8 text-center">{slide.subtitle}</p>
+            <ul className="space-y-4 text-lg text-center">
+              {slide.features.map((feature, index) => (
+                <li key={index} className="flex items-center justify-center">
+                  <span className="mr-3">•</span>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </div>
