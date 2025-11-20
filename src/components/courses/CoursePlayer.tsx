@@ -1155,9 +1155,16 @@ export default function CoursePlayer({
         courseTitle: course.title
       });
       
+      // Afficher aussi un toast de succès
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
+      );
     } catch (error: any) {
-      console.error('Erreur lors de la génération du certificat:', error);
-      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
+      console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+      toast.error('Erreur', errorMessage);
+      // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
     } finally {
       setRequestingCertificate(false);
     }
@@ -1822,6 +1829,7 @@ export default function CoursePlayer({
         onConfirm={handleConfirmProfileData}
         onUpdateProfile={handleUpdateProfile}
         courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
+        isGenerating={requestingCertificate}
       />
     </div>
     </>
