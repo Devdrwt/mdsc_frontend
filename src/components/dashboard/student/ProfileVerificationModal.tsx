@@ -11,6 +11,7 @@ interface ProfileVerificationModalProps {
   onConfirm: () => void;
   onUpdateProfile: () => void;
   courseId: string;
+  isGenerating?: boolean;
 }
 
 export default function ProfileVerificationModal({
@@ -19,6 +20,7 @@ export default function ProfileVerificationModal({
   onConfirm,
   onUpdateProfile,
   courseId,
+  isGenerating = false,
 }: ProfileVerificationModalProps) {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
@@ -178,23 +180,35 @@ export default function ProfileVerificationModal({
               <div className="flex items-center justify-end space-x-4">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  disabled={isGenerating}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Annuler
                 </button>
                 <button
                   onClick={onUpdateProfile}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                  disabled={isGenerating}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <XCircle className="h-5 w-5" />
                   <span>Non, mettre à jour</span>
                 </button>
                 <button
                   onClick={onConfirm}
-                  className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
+                  disabled={isGenerating || loading}
+                  className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle className="h-5 w-5" />
-                  <span>Oui, ces données sont exactes</span>
+                  {isGenerating ? (
+                    <>
+                      <Loader className="h-5 w-5 animate-spin" />
+                      <span>Génération en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5" />
+                      <span>Oui, ces données sont exactes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </>

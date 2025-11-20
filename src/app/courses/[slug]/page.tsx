@@ -28,7 +28,7 @@ import { CourseService, Course as ServiceCourse } from '../../../lib/services/co
 import { ModuleService } from '../../../lib/services/moduleService';
 import { EnrollmentService } from '../../../lib/services/enrollmentService';
 import { paymentService } from '../../../lib/services/paymentService';
-import { isAuthenticated } from '../../../lib/services/authService';
+import { useAuthStore } from '../../../lib/stores/authStore';
 import { Module } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
 import Button from '../../../components/ui/Button';
@@ -41,6 +41,8 @@ export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
+  const { user } = useAuthStore();
+  const isUserAuthenticated = !!user;
   
   const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -155,8 +157,8 @@ export default function CourseDetailPage() {
       return;
     }
     
-    // Vérifier si l'utilisateur est connecté
-    if (!isAuthenticated()) {
+    // Vérifier si l'utilisateur est connecté (utiliser useAuthStore pour une vérification fiable)
+    if (!isUserAuthenticated) {
       toast.error(
         'Connexion requise', 
         'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.'
@@ -225,7 +227,7 @@ export default function CourseDetailPage() {
       
       toast.error('Erreur d\'inscription', errorMessage);
     }
-  }, [course, courseAny, router, slug]);
+  }, [course, courseAny, router, slug, isUserAuthenticated]);
 
   const handleStartLearning = useCallback(() => {
     if (course) {
@@ -817,32 +819,15 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* Bouton d'inscription */}
-                <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
-                  {isEnrolled ? (
-                    <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
-                      <Play className="h-5 w-5 mr-2" />
-                      Continuer l'apprentissage
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="primary" 
-                      size="lg" 
-                      onClick={handleEnroll} 
-                      disabled={!enrollmentPossible}
-                      className={`bg-mdsc-blue-dark text-white hover:bg-mdsc-blue-primary font-bold text-lg px-8 py-4 shadow-2xl border-2 border-white/30 hover:border-white/50 transition-all transform hover:scale-105 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
-                    >
-                      <GraduationCap className="h-6 w-6 mr-2" />
-                      {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
-                    </Button>
-                  )}
-                  {price > 0 && (
+                {/* Prix affiché si le cours est payant */}
+                {price > 0 && (
+                  <div className="pt-4 border-t border-white/20">
                     <div className="text-right">
                       <p className="text-sm text-white/70">Prix</p>
                       <p className="text-3xl font-bold">{price.toLocaleString()} <span className="text-lg">{currency}</span></p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1295,7 +1280,11 @@ export default function CourseDetailPage() {
                         className={`w-full mb-4 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <GraduationCap className="h-5 w-5 mr-2" />
-                        {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
+                        {!isUserAuthenticated 
+                          ? 'Se connecter pour s\'inscrire'
+                          : enrollmentPossible 
+                            ? 'S\'inscrire maintenant' 
+                            : 'Inscriptions fermées'}
                       </Button>
                     </>
                   ) : (

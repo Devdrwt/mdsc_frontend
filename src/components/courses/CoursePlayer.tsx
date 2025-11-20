@@ -1090,17 +1090,26 @@ export default function CoursePlayer({
       // Utiliser generateForCourse pour créer le certificat après confirmation des données
       // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
       const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
-      await certificateService.generateForCourse(courseId);
+      console.log('[CoursePlayer] 🎓 Génération du certificat pour le cours:', courseId);
+      
+      const result = await certificateService.generateForCourse(courseId);
+      console.log('[CoursePlayer] ✅ Certificat généré avec succès:', result);
+      
       toast.success(
         'Certificat généré',
         'Votre certificat a été généré avec succès avec les données de votre profil.'
       );
       setShowProfileVerificationModal(false);
-      // Rediriger vers la page des certificats
-      window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+      
+      // Rediriger vers la page des certificats après un court délai
+      setTimeout(() => {
+        window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+      }, 1000);
     } catch (error: any) {
-      console.error('Erreur lors de la génération du certificat:', error);
-      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
+      console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+      toast.error('Erreur', errorMessage);
+      // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
     } finally {
       setRequestingCertificate(false);
     }
@@ -1710,6 +1719,7 @@ export default function CoursePlayer({
         onConfirm={handleConfirmProfileData}
         onUpdateProfile={handleUpdateProfile}
         courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
+        isGenerating={requestingCertificate}
       />
     </div>
     </>

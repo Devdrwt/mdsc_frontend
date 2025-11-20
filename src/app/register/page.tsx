@@ -2,18 +2,18 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
 
 const content = {
   image: '/Colleagues.png',
-  title: 'Plateforme MOOC',
-  subtitle: 'Formations et certifications',
+  title: 'Bienvenue à votre Espace de formation',
+  subtitle: 'Rejoignez notre communauté et développez vos compétences',
   features: [
-    'Accès à tous les cours',
-    'Certifications reconnues',
-    'Assistant IA personnel',
-    'Suivi de progression',
+    { text: 'Accès à tous les cours', icon: BookOpen },
+    { text: 'Certifications reconnues', icon: Award },
+    { text: 'Assistant IA personnel', icon: Sparkles },
+    { text: 'Suivi de progression détaillé', icon: TrendingUp }
   ],
 } as const;
 
@@ -22,46 +22,79 @@ function RegisterContent() {
   const message = searchParams.get('message');
 
   return (
-    <div className="min-h-screen flex relative">
+    <div className="min-h-screen flex relative overflow-hidden">
+      {/* Bouton retour accueil */}
       <a
         href="/"
-        className="absolute top-4 left-4 z-20 flex items-center text-gray-600 hover:text-gray-800 transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm"
+        className="absolute top-6 left-6 z-20 flex items-center text-gray-700 hover:text-gray-900 transition-all duration-200 bg-white/90 backdrop-blur-md px-5 py-2.5 rounded-xl shadow-md hover:shadow-lg border border-gray-200/50"
       >
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        Retour à l'accueil
+        <span className="font-medium">Retour à l'accueil</span>
       </a>
 
-      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 to-cyan-700">
+      {/* Colonne gauche - Image de fond avec texte */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-700 overflow-hidden">
+        {/* Motif décoratif animé */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-300 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 animate-pulse delay-1000"></div>
+        </div>
+        
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 transition-transform duration-700"
           style={{
             backgroundImage: `url(${content.image})`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-900/70 to-cyan-900/70 z-10">
-          <div className="h-full flex flex-col justify-center items-center text-white p-12">
-            <h1 className="text-5xl font-bold mb-4 text-center">{content.title}</h1>
-            <p className="text-2xl mb-8 text-center">{content.subtitle}</p>
-            <ul className="space-y-4 text-lg text-center">
-              {content.features.map((feature, index) => (
-                <li key={index} className="flex items-center justify-center">
-                  <span className="mr-3">•</span>
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
+        
+        {/* Overlay avec dégradé moderne */}
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-900/80 via-cyan-900/75 to-blue-900/80 z-10">
+          <div className="h-full flex flex-col justify-center items-center text-white px-12 py-12 relative">
+            <div className="max-w-lg text-center space-y-6">
+              <h1 className="text-5xl font-extrabold mb-2 leading-tight tracking-tight">
+                {content.title}
+              </h1>
+              <p className="text-xl text-cyan-100 font-medium mb-10">
+                {content.subtitle}
+              </p>
+              
+              <div className="space-y-4">
+                {content.features.map((feature, index) => {
+                  const Icon = feature.icon;
+                  return (
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-4 bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                        <Icon className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-lg font-medium flex-1 text-left">{feature.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center bg-white overflow-y-auto">
-        <div className="w-full max-w-2xl p-8">
+      {/* Colonne droite - Formulaire */}
+      <div className="flex-1 flex items-start justify-center bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-y-auto">
+        {/* Motif de fond subtil */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-teal-500 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-cyan-500 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="w-full max-w-2xl px-8 pt-16 pb-16 relative z-10">
           {message && (
-            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              <span>{message}</span>
+            <div className="mb-6 rounded-xl border-2 border-blue-200 bg-blue-50/90 backdrop-blur-sm p-4 text-sm text-blue-900 flex items-start gap-3 shadow-sm">
+              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-blue-600" />
+              <span className="font-medium">{message}</span>
             </div>
           )}
           <SimpleRegisterForm />
