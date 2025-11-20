@@ -247,7 +247,7 @@ export default function InstructorSettingsPage() {
     <AuthGuard requiredRole="instructor">
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-mdsc-blue-primary to-mdsc-gold text-white">
+          <div className="relative overflow-hidden rounded-2xl bg-mdsc-gold text-white">
             <div className="absolute inset-0 bg-black/10" />
             <div className="relative z-10 p-8">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">

@@ -4,17 +4,18 @@ import React from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import ChatIA from '../../../../components/dashboard/student/ChatIA';
-
+import { Cpu } from 'lucide-react';
 export default function ChatIAPage() {
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
         <div className="space-y-6">
           {/* En-tête */}
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
-            <h1 className="text-2xl font-bold mb-2">
-              Assistant IA Personnel 🤖
-            </h1>
+          <div className="bg-mdsc-blue-primary rounded-lg p-6 text-white">
+            <div className="flex items-center space-x-2 mb-2">
+        <Cpu className="h-8 w-8" />
+        <h1 className="text-3xl font-bold">Assistant IA Personnel</h1>
+      </div>
             <p className="text-purple-100">
               Votre compagnon d'apprentissage intelligent. Posez des questions, obtenez des résumés et des recommandations personnalisées.
             </p>

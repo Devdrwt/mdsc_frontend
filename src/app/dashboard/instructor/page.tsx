@@ -20,7 +20,7 @@ import {
   Users,
   TrendingUp,
   DollarSign,
-  MessageSquare,
+  MessageSquare,GraduationCap,
   Plus,
   BarChart3,
   Clock,
@@ -471,14 +471,18 @@ export default function InstructorDashboard() {
           )}
 
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-gold via-orange-500 to-mdsc-gold rounded-2xl p-8 text-white">
+          <div className="relative overflow-hidden bg-mdsc-gold rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">
-                    Bienvenue, {user?.firstName} ! 🎓
-                  </h1>
+                  <div className="flex items-center space-x-2 mb-2">
+ <GraduationCap className="h-8 w-8" />
+                    <h1 className="text-3xl font-bold">
+                      Bienvenue, {user?.firstName} !
+                    </h1>
+                  </div>
+                 
                   <p className="text-white/90 text-lg">
                     Gérez vos cours et accompagnez vos étudiants vers la réussite.
                   </p>

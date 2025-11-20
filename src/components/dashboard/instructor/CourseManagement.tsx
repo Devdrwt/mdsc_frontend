@@ -478,10 +478,14 @@ export default function CourseManagement() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-mdsc-gold rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Gestion des Cours 📚</h1>
+<div className="flex items-center space-x-2 mb-2">
+  <BookOpen className="h-7 w-7" />
+  <h1 className="text-2xl font-bold">Gestion des Cours</h1>
+</div>
+
             <p className="text-yellow-100">
               Créez, gérez et suivez vos cours d'apprentissage.
             </p>

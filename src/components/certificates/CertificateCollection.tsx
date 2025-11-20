@@ -67,14 +67,14 @@ export default function CertificateCollection({
   return (
     <div className={className}>
       {/* Header */}
-      <div className="bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg p-6 mb-6">
+      <div className="bg-mdsc-blue-primary text-white rounded-lg p-6 mb-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold flex items-center space-x-2 mb-2">
               {/* Icône plus professionnelle pour la section certificats */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17l-3-2-3 2 .75-3.5L7 11l3.5-.25L12 7l1.5 3.75L17 11l-2.25 2.5L15 17z" />
-                <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                <circle cx="11" cy="12" r="10" strokeWidth="1.5" />
               </svg>
               <span>Mes Certificats</span>
             </h2>

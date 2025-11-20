@@ -110,8 +110,8 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
       {/* En-tête */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Bot className="h-6 w-6 text-purple-600" />
+          <div className="p-2 bg-mdsc-blue-dark/20 rounded-lg">
+            <Bot className="h-6 w-6 text-mdsc-blue-primary" />
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Assistant IA</h3>
@@ -119,7 +119,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Sparkles className="h-4 w-4 text-purple-500" />
+          <Sparkles className="h-4 w-4 text-mdsc-blue-dark" />
           <span className="text-sm text-gray-500">GPT-3.5</span>
         </div>
       </div>
