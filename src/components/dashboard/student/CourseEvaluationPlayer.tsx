@@ -659,23 +659,23 @@ export default function CourseEvaluationPlayer({
             </>
           )}
 
-          <div className="mt-6 space-y-2">
-            <div className="flex items-center justify-center space-x-4">
-              <div>
-                <p className="text-sm text-gray-600">Score obtenu</p>
-                <p className={`text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
+          <div className="mt-4 sm:mt-6 space-y-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+              <div className="text-center sm:text-left">
+                <p className="text-xs sm:text-sm text-gray-600">Score obtenu</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
                   {result.percentage}%
                 </p>
               </div>
-              <div className="w-px h-12 bg-gray-300"></div>
-              <div>
-                <p className="text-sm text-gray-600">Score minimum</p>
-                <p className="text-2xl font-semibold text-gray-700">{evaluation.passing_score}%</p>
+              <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
+              <div className="text-center sm:text-left">
+                <p className="text-xs sm:text-sm text-gray-600">Score minimum</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-700">{evaluation.passing_score}%</p>
               </div>
-              <div className="w-px h-12 bg-gray-300"></div>
-              <div>
-                <p className="text-sm text-gray-600">Points</p>
-                <p className="text-2xl font-semibold text-gray-700">
+              <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
+              <div className="text-center sm:text-left">
+                <p className="text-xs sm:text-sm text-gray-600">Points</p>
+                <p className="text-xl sm:text-2xl font-semibold text-gray-700">
                   {result.score} / {result.total_points}
                 </p>
               </div>
@@ -683,7 +683,7 @@ export default function CourseEvaluationPlayer({
           </div>
         </div>
 
-        <div className="flex justify-end space-x-4">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
           {onCancel && (
             <button
               onClick={onCancel}
@@ -766,15 +766,15 @@ export default function CourseEvaluationPlayer({
   const hasStartedTimer = timerStarted && timeRemaining !== null && evaluation.duration_minutes;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 w-full">
       {/* Informations sur l'évaluation */}
-      <div className="bg-gradient-to-br from-[#3B7C8A]/10 to-[#3B7C8A]/5 border border-[#3B7C8A]/30 rounded-xl p-6 shadow-sm">
-        <div className="flex items-center space-x-2 mb-4">
-          <Info className="h-5 w-5 text-[#3B7C8A]" />
-          <h3 className="text-lg font-semibold text-gray-900">Informations sur l'évaluation</h3>
+      <div className="bg-gradient-to-br from-[#3B7C8A]/10 to-[#3B7C8A]/5 border border-[#3B7C8A]/30 rounded-xl p-4 sm:p-6 shadow-sm">
+        <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 text-[#3B7C8A] flex-shrink-0" />
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Informations sur l'évaluation</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
           <div className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-[#3B7C8A]/20">
             <FileText className="h-5 w-5 text-[#3B7C8A] mt-0.5 flex-shrink-0" />
             <div>
@@ -858,21 +858,21 @@ export default function CourseEvaluationPlayer({
       </div>
 
       {/* En-tête avec timer */}
-      <div className="bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">{evaluation.title}</h2>
+      <div className="bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] rounded-lg p-4 sm:p-6 text-white">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2 break-words">{evaluation.title}</h2>
             {evaluation.description && (
-              <p className="text-white/80 text-sm">{evaluation.description}</p>
+              <p className="text-white/80 text-xs sm:text-sm break-words">{evaluation.description}</p>
             )}
             <p className="text-white/80 text-xs mt-2">
               ⚠️ Évaluation finale - {evaluation.max_attempts - attemptsUsed} tentative(s) restante(s)
             </p>
           </div>
           {timeRemaining !== null && (
-            <div className="flex items-center space-x-2 bg-white/20 rounded-lg px-4 py-2">
-              <Clock className="h-5 w-5" />
-              <span className="font-mono text-lg font-bold">
+            <div className="flex items-center space-x-2 bg-white/20 rounded-lg px-3 sm:px-4 py-2 flex-shrink-0">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="font-mono text-base sm:text-lg font-bold">
                 {formatTime(timeRemaining)}
               </span>
             </div>
@@ -895,7 +895,7 @@ export default function CourseEvaluationPlayer({
       </div>
 
       {/* Question actuelle */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             {currentQuestion.question_text}

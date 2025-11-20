@@ -1167,16 +1167,16 @@ export default function LessonContent({
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 sm:space-y-6 ${className}`}>
       {/* Lesson Header */}
       <div className="bg-white">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start space-x-4 flex-1">
-            <div className="p-3 bg-mdsc-blue-primary/10 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
+            <div className="p-2 sm:p-3 bg-mdsc-blue-primary/10 rounded-lg flex-shrink-0">
               {getContentIcon()}
             </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{lesson.title}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{lesson.title}</h2>
               {lessonDescription && (
                 <p className="text-gray-600">{lessonDescription}</p>
               )}

@@ -67,18 +67,18 @@ export default function CertificateCollection({
   return (
     <div className={className}>
       {/* Header */}
-      <div className="bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg p-6 mb-6">
+      <div className="bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark text-white rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold flex items-center space-x-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center space-x-2 mb-2">
               {/* Icône plus professionnelle pour la section certificats */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17l-3-2-3 2 .75-3.5L7 11l3.5-.25L12 7l1.5 3.75L17 11l-2.25 2.5L15 17z" />
                 <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
               </svg>
-              <span>Mes Certificats</span>
+              <span className="truncate">Mes Certificats</span>
             </h2>
-            <p className="text-white/80">
+            <p className="text-sm sm:text-base text-white/80">
               {certificates.length} certificat{certificates.length > 1 ? 's' : ''} obtenu{certificates.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -86,22 +86,22 @@ export default function CertificateCollection({
       </div>
 
       {/* Search */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           <input
             type="text"
             placeholder="Rechercher un certificat..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
           />
         </div>
       </div>
 
       {/* Certificates Grid */}
       {filteredCertificates.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredCertificates.map((certificate) => (
             <CertificateCard
               key={certificate.id}
@@ -128,16 +128,16 @@ export default function CertificateCollection({
               Réussissez une évaluation finale pour générer automatiquement votre certificat,
               qui apparaîtra ici et pourra être téléchargé au format PDF.
             </p>
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
               <Link
                 href="/dashboard/student/evaluations"
-                className="inline-flex items-center justify-center rounded-lg bg-mdsc-blue-primary px-4 py-2.5 text-white text-sm font-medium shadow-sm hover:opacity-90 transition"
+                className="inline-flex items-center justify-center rounded-lg bg-mdsc-blue-primary px-3 py-2 sm:px-4 sm:py-2.5 text-white text-xs sm:text-sm font-medium shadow-sm hover:opacity-90 transition w-full sm:w-auto"
               >
                 Voir mes évaluations
               </Link>
               <Link
                 href="/courses"
-                className="inline-flex items-center justify-center rounded-lg bg-gray-100 px-4 py-2.5 text-gray-800 text-sm font-medium hover:bg-gray-200 transition"
+                className="inline-flex items-center justify-center rounded-lg bg-gray-100 px-3 py-2 sm:px-4 sm:py-2.5 text-gray-800 text-xs sm:text-sm font-medium hover:bg-gray-200 transition w-full sm:w-auto"
               >
                 Découvrir les formations
               </Link>
