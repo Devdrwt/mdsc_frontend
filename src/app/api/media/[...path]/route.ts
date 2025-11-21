@@ -112,7 +112,7 @@ export async function GET(
     // Valider les URLs alternatives
     const validAlternativeUrls = alternativeUrls.filter(validateUrl);
     
-    console.log('🖼️ [PROXY] Récupération de l\'image:', {
+    console.log('🖼️ [PROXY] Récupération du média:', {
       params: resolvedParams,
       pathArray,
       path,
@@ -124,11 +124,11 @@ export async function GET(
       apiBaseUrl,
     });
     
-    // Récupérer l'image depuis le backend
+    // Récupérer le média depuis le backend (image, vidéo, audio, document, etc.)
     let response = await fetch(mediaUrl, {
       method: 'GET',
       headers: {
-        'Accept': 'image/*,*/*',
+        'Accept': '*/*', // Accepter tous les types de médias (image, vidéo, audio, document, etc.)
       },
       // Désactiver le cache pour éviter les problèmes
       cache: 'no-store',
@@ -153,7 +153,7 @@ export async function GET(
           const altResponse = await fetch(urlToTry, {
             method: 'GET',
             headers: {
-              'Accept': 'image/*,*/*',
+              'Accept': '*/*', // Accepter tous les types de médias
             },
             cache: 'no-store',
           });
@@ -179,31 +179,32 @@ export async function GET(
         statusText: response.statusText,
         url: mediaUrl,
       });
-      return new NextResponse(`Image not found: ${mediaUrl}`, { status: 404 });
+      return new NextResponse(`Media not found: ${mediaUrl}`, { status: 404 });
     }
 
     // Récupérer le type de contenu et les données
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const imageBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const mediaBuffer = await response.arrayBuffer();
 
-    console.log('✅ [PROXY] Image récupérée avec succès:', {
+    console.log('✅ [PROXY] Média récupéré avec succès:', {
       contentType,
-      size: imageBuffer.byteLength,
+      size: mediaBuffer.byteLength,
       url: mediaUrl,
     });
 
-    // Retourner l'image avec les en-têtes appropriés
-    return new NextResponse(imageBuffer, {
+    // Retourner le média avec les en-têtes appropriés
+    return new NextResponse(mediaBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET',
+        'Accept-Ranges': 'bytes', // Important pour les vidéos (streaming)
       },
     });
   } catch (error: any) {
-    console.error('❌ [PROXY] Erreur lors du proxy de l\'image:', {
+    console.error('❌ [PROXY] Erreur lors du proxy du média:', {
       error: error.message,
       stack: error.stack,
     });
