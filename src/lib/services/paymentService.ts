@@ -2,12 +2,12 @@ import { apiRequest } from './api';
 
 export interface Payment {
   id: string;
-  temp_payment_id?: string; // Pour Kkiapay, ID temporaire avant création dans le webhook
+  temp_payment_id?: string; // Pour Kkiapay et Fedapay, ID temporaire avant création dans le webhook
   user_id?: string;
   course_id: string;
   amount: number;
   currency: string;
-  payment_method: 'card' | 'mobile_money' | 'kkiapay';
+  payment_method: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay';
   payment_provider?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
   provider_transaction_id?: string | null;
@@ -24,7 +24,7 @@ export interface Payment {
 
 export interface PaymentInitiation {
   courseId: string;
-  paymentMethod: 'card' | 'mobile_money' | 'kkiapay';
+  paymentMethod: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay';
   paymentProvider?: string;
   customerFullname?: string;
   customerEmail?: string;
@@ -55,10 +55,11 @@ export class PaymentService {
 
     const payload = response.data || {};
     
-    // Pour Kkiapay, extraire public_key et sandbox depuis metadata
+    // Pour Kkiapay et Fedapay, extraire public_key et environment depuis metadata
     let metadata = {};
     let publicKey = null;
     let sandbox = false;
+    let environment = 'sandbox';
     
     if (data.paymentMethod === 'kkiapay') {
       const rawPaymentData =
@@ -80,6 +81,30 @@ export class PaymentService {
       metadata = {
         public_key: publicKey,
         sandbox: sandbox,
+        ...rawMetadata,
+      };
+    } else if (data.paymentMethod === 'fedapay') {
+      const rawPaymentData =
+        typeof payload.payment_data === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(payload.payment_data);
+              } catch {
+                return payload.payment_data;
+              }
+            })()
+          : payload.payment_data;
+      
+      // Extraire public_key, environment et transaction_id depuis metadata
+      const rawMetadata = rawPaymentData?.raw || rawPaymentData || {};
+      publicKey = rawPaymentData?.public_key || rawMetadata.public_key || null;
+      environment = rawPaymentData?.environment || rawMetadata.environment || 'sandbox';
+      const transactionId = rawPaymentData?.transaction_id || rawMetadata.transaction_id || null;
+      
+      metadata = {
+        public_key: publicKey,
+        environment: environment,
+        transaction_id: transactionId,
         ...rawMetadata,
       };
     } else {
@@ -120,14 +145,14 @@ export class PaymentService {
       0
     );
 
-    // Pour Kkiapay, utiliser temp_payment_id au lieu de payment_id
-    const paymentId = data.paymentMethod === 'kkiapay' 
+    // Pour Kkiapay et Fedapay, utiliser temp_payment_id au lieu de payment_id
+    const paymentId = (data.paymentMethod === 'kkiapay' || data.paymentMethod === 'fedapay')
       ? (payload.temp_payment_id || payload.data?.temp_payment_id || '')
       : (payload.payment_id ?? payload.temp_payment_id ?? '');
 
     return {
       id: String(paymentId),
-      temp_payment_id: data.paymentMethod === 'kkiapay' ? String(paymentId) : undefined,
+      temp_payment_id: (data.paymentMethod === 'kkiapay' || data.paymentMethod === 'fedapay') ? String(paymentId) : undefined,
       user_id: String(payload.user_id ?? ''),
       course_id: data.courseId,
       amount,
@@ -137,7 +162,7 @@ export class PaymentService {
         'XOF',
       payment_method: data.paymentMethod,
       payment_provider: data.paymentProvider,
-      status: data.paymentMethod === 'kkiapay' ? 'pending' : 'processing',
+      status: (data.paymentMethod === 'kkiapay' || data.paymentMethod === 'fedapay') ? 'pending' : 'processing',
       provider_transaction_id:
         payload.provider_transaction_id ||
         null,

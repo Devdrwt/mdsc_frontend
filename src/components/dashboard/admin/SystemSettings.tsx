@@ -28,8 +28,23 @@ import {
   ExternalLink,
   Copy,
   CheckCircle2,
+  CreditCard,
+  Plus,
+  Edit,
+  Trash2,
+  Power,
+  PowerOff,
 } from 'lucide-react';
 import toast from '../../../lib/utils/toast';
+import {
+  getPaymentProviders,
+  createPaymentProvider,
+  updatePaymentProvider,
+  deletePaymentProvider,
+  togglePaymentProviderStatus,
+  PaymentProvider,
+  PaymentProviderFormData,
+} from '../../../lib/services/adminPaymentConfigService';
 
 interface SystemConfig {
   general: {
@@ -114,10 +129,24 @@ export default function SystemSettings() {
     }
   });
   
-  const [activeTab, setActiveTab] = useState<'general' | 'email' | 'security' | 'features' | 'integrations'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'email' | 'security' | 'features' | 'integrations' | 'payments'>('general');
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  
+  // États pour les providers de paiement
+  const [paymentProviders, setPaymentProviders] = useState<PaymentProvider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<PaymentProvider | null>(null);
+  const [providerForm, setProviderForm] = useState<PaymentProviderFormData>({
+    provider_name: 'kkiapay',
+    public_key: '',
+    secret_key: '',
+    private_key: '',
+    is_active: true,
+    is_sandbox: true,
+    base_url: '',
+  });
 
   const handleSave = async () => {
     setLoading(true);
@@ -162,8 +191,149 @@ export default function SystemSettings() {
     { id: 'email', label: 'Email', icon: Mail, color: 'from-purple-500 to-purple-600' },
     { id: 'security', label: 'Sécurité', icon: Shield, color: 'from-red-500 to-red-600' },
     { id: 'features', label: 'Fonctionnalités', icon: Zap, color: 'from-green-500 to-green-600' },
-    { id: 'integrations', label: 'Intégrations', icon: Server, color: 'from-orange-500 to-orange-600' }
+    { id: 'integrations', label: 'Intégrations', icon: Server, color: 'from-orange-500 to-orange-600' },
+    { id: 'payments', label: 'Paiements', icon: CreditCard, color: 'from-emerald-500 to-teal-600' }
   ];
+
+  // Charger les providers de paiement
+  useEffect(() => {
+    if (activeTab === 'payments') {
+      loadPaymentProviders();
+    }
+  }, [activeTab]);
+
+  const loadPaymentProviders = async () => {
+    setLoadingProviders(true);
+    try {
+      const providers = await getPaymentProviders();
+      setPaymentProviders(providers);
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des providers:', error);
+      toast.error('Erreur', 'Impossible de charger les providers de paiement');
+    } finally {
+      setLoadingProviders(false);
+    }
+  };
+
+  const handleSaveProvider = async () => {
+    if (!providerForm.public_key || !providerForm.secret_key) {
+      toast.error('Erreur', 'La clé publique et la clé secrète sont requises');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Ne pas envoyer base_url, elle sera générée automatiquement côté backend
+      const formData = {
+        ...providerForm,
+        base_url: undefined, // Ne pas envoyer, sera généré automatiquement
+      };
+      
+      if (editingProvider?.id) {
+        await updatePaymentProvider(editingProvider.id, formData);
+        toast.success('Succès', 'Provider mis à jour avec succès');
+      } else {
+        await createPaymentProvider(formData);
+        toast.success('Succès', 'Provider créé avec succès');
+      }
+      setEditingProvider(null);
+      setProviderForm({
+        provider_name: 'kkiapay',
+        public_key: '',
+        secret_key: '',
+        private_key: '',
+        is_active: true,
+        is_sandbox: true,
+        base_url: '',
+      });
+      await loadPaymentProviders();
+    } catch (error: any) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur', error.message || 'Impossible de sauvegarder le provider');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProvider = async (id: number) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce provider ?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await deletePaymentProvider(id);
+      toast.success('Succès', 'Provider supprimé avec succès');
+      await loadPaymentProviders();
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Erreur', 'Impossible de supprimer le provider');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleProviderStatus = async (id: number) => {
+    setLoading(true);
+    try {
+      await togglePaymentProviderStatus(id);
+      toast.success('Succès', 'Statut du provider mis à jour');
+      await loadPaymentProviders();
+    } catch (error: any) {
+      console.error('Erreur lors du changement de statut:', error);
+      toast.error('Erreur', 'Impossible de changer le statut du provider');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditProvider = async (provider: PaymentProvider) => {
+    setEditingProvider(provider);
+    setLoading(true);
+    try {
+      // Charger les clés complètes depuis le backend pour l'édition
+      const { getPaymentProvider } = await import('../../../lib/services/adminPaymentConfigService');
+      const fullProvider = await getPaymentProvider(provider.id!, true); // forEdit = true
+      
+      setProviderForm({
+        provider_name: fullProvider.provider_name,
+        public_key: fullProvider.public_key || '',
+        secret_key: fullProvider.secret_key || '',
+        private_key: fullProvider.private_key || '',
+        is_active: fullProvider.is_active,
+        is_sandbox: fullProvider.is_sandbox,
+        base_url: fullProvider.base_url || '',
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du chargement des clés complètes:', error);
+      toast.error('Erreur', 'Impossible de charger les clés complètes pour l\'édition');
+      // Fallback sur les données masquées si le chargement échoue
+      setProviderForm({
+        provider_name: provider.provider_name,
+        public_key: '',
+        secret_key: '',
+        private_key: '',
+        is_active: provider.is_active,
+        is_sandbox: provider.is_sandbox,
+        base_url: provider.base_url || '',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingProvider(null);
+    setProviderForm({
+      provider_name: 'kkiapay',
+      public_key: '',
+      secret_key: '',
+      private_key: '',
+      is_active: true,
+      is_sandbox: true,
+      base_url: '',
+    });
+  };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -782,6 +952,327 @@ export default function SystemSettings() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Onglet Paiements */}
+            {activeTab === 'payments' && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
+                    <CreditCard className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Configuration des Paiements</h3>
+                    <p className="text-sm text-gray-500">Gérez les providers de paiement (Kkiapay et Fedapay)</p>
+                  </div>
+                </div>
+
+                {loadingProviders ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-mdsc-blue-primary" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Liste des providers existants */}
+                    {paymentProviders.length > 0 && paymentProviders.map((provider) => (
+                      <div
+                        key={provider.id}
+                        className="border-2 border-gray-200 rounded-xl p-6 hover:border-emerald-300 transition-all duration-200"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${
+                              provider.is_active
+                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                                : 'bg-gray-300'
+                            }`}>
+                              <CreditCard className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-md font-bold text-gray-900 uppercase">
+                                  {provider.provider_name}
+                                </h4>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    provider.is_active
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {provider.is_active ? 'Actif' : 'Inactif'}
+                                </span>
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    provider.is_sandbox
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}
+                                >
+                                  {provider.is_sandbox ? 'Sandbox' : 'Live'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1 truncate max-w-xs" title={provider.public_key || 'Non configurée'}>
+                                Clé publique: <span className="font-mono text-xs">{provider.public_key || 'Non configurée'}</span>
+                              </p>
+                              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs" title={provider.secret_key || 'Non configurée'}>
+                                Clé secrète: <span className="font-mono text-xs">{provider.secret_key || 'Non configurée'}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleProviderStatus(provider.id!)}
+                              className={`p-2 rounded-lg transition-colors ${
+                                provider.is_active
+                                  ? 'text-red-600 hover:bg-red-50'
+                                  : 'text-green-600 hover:bg-green-50'
+                              }`}
+                              title={provider.is_active ? 'Désactiver' : 'Activer'}
+                            >
+                              {provider.is_active ? (
+                                <PowerOff className="h-5 w-5" />
+                              ) : (
+                                <Power className="h-5 w-5" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => startEditProvider(provider)}
+                              className="p-2 text-mdsc-blue-primary hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProvider(provider.id!)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Formulaire d'ajout/édition */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-md font-bold text-gray-900">
+                          {editingProvider ? 'Modifier le provider' : 'Ajouter un nouveau provider'}
+                        </h4>
+                        {editingProvider && (
+                          <button
+                            onClick={cancelEdit}
+                            className="text-sm text-gray-600 hover:text-gray-900"
+                          >
+                            Annuler
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Provider
+                          </label>
+                          <select
+                            value={providerForm.provider_name}
+                            onChange={(e) =>
+                              setProviderForm({
+                                ...providerForm,
+                                provider_name: e.target.value as 'kkiapay' | 'fedapay',
+                              })
+                            }
+                            disabled={!!editingProvider}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 disabled:bg-gray-100"
+                          >
+                            <option value="kkiapay">Kkiapay</option>
+                            <option value="fedapay">Fedapay</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Mode
+                          </label>
+                          <select
+                            value={providerForm.is_sandbox ? 'sandbox' : 'live'}
+                            onChange={(e) =>
+                              setProviderForm({
+                                ...providerForm,
+                                is_sandbox: e.target.value === 'sandbox',
+                              })
+                            }
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
+                          >
+                            <option value="sandbox">Sandbox (Test)</option>
+                            <option value="live">Live (Production)</option>
+                          </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Clé publique
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords[`public_${editingProvider?.id || 'new'}`] ? 'text' : 'password'}
+                              value={providerForm.public_key}
+                              onChange={(e) =>
+                                setProviderForm({ ...providerForm, public_key: e.target.value })
+                              }
+                              placeholder={editingProvider ? 'Laissez vide pour ne pas modifier' : 'Entrez la clé publique'}
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                togglePasswordVisibility(`public_${editingProvider?.id || 'new'}`)
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                            >
+                              {showPasswords[`public_${editingProvider?.id || 'new'}`] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Clé secrète
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords[`secret_${editingProvider?.id || 'new'}`] ? 'text' : 'password'}
+                              value={providerForm.secret_key}
+                              onChange={(e) =>
+                                setProviderForm({ ...providerForm, secret_key: e.target.value })
+                              }
+                              placeholder={editingProvider ? 'Laissez vide pour ne pas modifier' : 'Entrez la clé secrète'}
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10 font-mono text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                togglePasswordVisibility(`secret_${editingProvider?.id || 'new'}`)
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                            >
+                              {showPasswords[`secret_${editingProvider?.id || 'new'}`] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Clé privée (optionnelle)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPasswords[`private_${editingProvider?.id || 'new'}`] ? 'text' : 'password'}
+                              value={providerForm.private_key || ''}
+                              onChange={(e) =>
+                                setProviderForm({ ...providerForm, private_key: e.target.value })
+                              }
+                              placeholder={editingProvider ? 'Laissez vide pour ne pas modifier' : 'Entrez la clé privée (optionnel)'}
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10 font-mono text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                togglePasswordVisibility(`private_${editingProvider?.id || 'new'}`)
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-mdsc-blue-primary transition-colors"
+                            >
+                              {showPasswords[`private_${editingProvider?.id || 'new'}`] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            URL de base (générée automatiquement)
+                          </label>
+                          <input
+                            type="url"
+                            value={
+                              providerForm.provider_name === 'kkiapay'
+                                ? providerForm.is_sandbox
+                                  ? 'https://api-sandbox.kkiapay.me'
+                                  : 'https://api.kkiapay.me'
+                                : providerForm.provider_name === 'fedapay'
+                                ? providerForm.is_sandbox
+                                  ? 'https://sandbox-api.fedapay.com'
+                                  : 'https://api.fedapay.com'
+                                : ''
+                            }
+                            readOnly
+                            disabled
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Cette URL est générée automatiquement selon le provider et l'environnement sélectionnés.
+                          </p>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <div className="flex items-start p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                            <input
+                              type="checkbox"
+                              id="providerActive"
+                              checked={providerForm.is_active}
+                              onChange={(e) =>
+                                setProviderForm({ ...providerForm, is_active: e.target.checked })
+                              }
+                              className="mt-1 h-5 w-5 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                            />
+                            <div className="ml-3 flex-1">
+                              <label htmlFor="providerActive" className="block text-sm font-semibold text-gray-900">
+                                Activer ce provider
+                              </label>
+                              <p className="text-xs text-gray-600 mt-1">
+                                Les providers actifs seront disponibles pour les paiements.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex justify-end">
+                          <button
+                            onClick={handleSaveProvider}
+                            disabled={loading}
+                            className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          >
+                            {loading ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                                Sauvegarde...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4" />
+                                {editingProvider ? 'Mettre à jour' : 'Créer'}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

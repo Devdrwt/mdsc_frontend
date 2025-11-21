@@ -122,6 +122,29 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Script Fedapay Checkout.js SDK */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window === 'undefined') return;
+                var script = document.createElement('script');
+                script.src = 'https://cdn.fedapay.com/checkout.js?v=1.1.7';
+                script.async = true;
+                script.onload = function() {
+                  console.log('[Fedapay] ✅ SDK chargé avec succès');
+                  if (window.dispatchEvent && window.FedaPay) {
+                    window.dispatchEvent(new Event('fedapay-sdk-loaded'));
+                  }
+                };
+                script.onerror = function() {
+                  console.error('[Fedapay] ❌ Erreur lors du chargement du SDK');
+                };
+                document.head.appendChild(script);
+              })();
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
