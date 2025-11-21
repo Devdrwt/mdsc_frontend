@@ -373,9 +373,10 @@ export default function PaymentForm({
         customerEmail: email,
       });
       
+      // Structure selon la documentation Fedapay officielle
+      // Pas besoin de 'environment' - Fedapay détecte automatiquement via la clé publique
       const widgetInstance = initFedapayWidget('#fedapay-pay-btn', {
-        public_key: publicKey,
-        environment: fedapayEnvironment as 'live' | 'sandbox', // 'live' ou 'sandbox'
+        public_key: publicKey, // pk_live_* ou pk_sandbox_* - Fedapay détecte automatiquement
         transaction: {
           amount: amount,
           description: `Paiement formation - ${courseTitle}`,
@@ -442,7 +443,7 @@ export default function PaymentForm({
               console.error('[PaymentForm] ❌ Error finalizing Fedapay payment:', error);
               toast.warning('Paiement réussi', 'Le paiement a été traité, mais une erreur est survenue lors de l\'enregistrement. Veuillez contacter le support.');
             }
-          } else if (reason === fedapayConstants?.DIALOG_DISMISSED) {
+          } else if (reason === DIALOG_DISMISSED) {
             // Dialog fermé par l'utilisateur
             console.log('[PaymentForm] Fedapay dialog dismissed by user');
             setProcessing(false);
@@ -810,7 +811,9 @@ export default function PaymentForm({
                 // Pour Fedapay, initialiser le widget et l'ouvrir
                 await handlePayWithFedapay();
               } else {
-                selectedProvider && handlePayWithProvider(selectedProvider);
+                if (selectedProvider) {
+                  handlePayWithProvider(selectedProvider);
+                }
               }
             }}
             disabled={processing || !email || !selectedProvider || (selectedProvider.provider_name === 'kkiapay' && !isKkiapayReady) || (selectedProvider.provider_name === 'fedapay' && !isFedapayReady) || loadingProviders}

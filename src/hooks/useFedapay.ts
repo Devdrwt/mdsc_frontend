@@ -12,8 +12,8 @@ declare global {
 }
 
 export interface FedapayOptions {
-  public_key: string;
-  environment?: 'live' | 'sandbox';
+  public_key: string; // pk_live_* ou pk_sandbox_* - Fedapay détecte automatiquement l'environnement
+  // environment n'est pas nécessaire - Fedapay détecte via la clé publique
   transaction?: {
     amount?: number;
     description?: string;
@@ -127,14 +127,17 @@ export const useFedapay = () => {
     try {
       // Si un sélecteur est fourni, utiliser le format avec sélecteur
       if (typeof selectorOrOptions === 'string') {
-        const finalOptions = options || {};
+        const finalOptions: FedapayOptions = options || { public_key: '' };
+        // Fedapay détecte automatiquement l'environnement via la clé publique
+        const detectedEnv = finalOptions.public_key?.startsWith('pk_live_') ? 'live' : 
+                           finalOptions.public_key?.startsWith('pk_sandbox_') ? 'sandbox' : 'unknown';
+        
         console.log('[Fedapay] Initialisation du widget avec sélecteur:', {
           selector: selectorOrOptions,
           publicKeyPrefix: finalOptions.public_key?.substring(0, 20) + '...',
           publicKeySuffix: finalOptions.public_key ? '...' + finalOptions.public_key.substring(finalOptions.public_key.length - 10) : 'null',
           publicKeyLength: finalOptions.public_key?.length || 0,
-          environment: finalOptions.environment || 'sandbox',
-          environmentType: typeof finalOptions.environment,
+          detectedEnvironment: detectedEnv, // Détecté automatiquement via la clé
           amount: finalOptions.transaction?.amount,
         });
 
@@ -149,15 +152,33 @@ export const useFedapay = () => {
         // Utiliser init() si disponible
         if (hasInit) {
           console.log('[Fedapay] Utilisation de FedaPay.init()');
-          console.log('[Fedapay] Options complètes:', {
-            public_key: finalOptions.public_key?.substring(0, 20) + '...',
-            environment: finalOptions.environment,
+          // Préparer les options selon la documentation officielle (sans environment)
+          // Fedapay détecte automatiquement l'environnement via la clé publique
+          const fedapayInitOptions: {
+            public_key: string;
+            transaction?: FedapayOptions['transaction'];
+            customer?: FedapayOptions['customer'];
+            onComplete?: FedapayOptions['onComplete'];
+          } = {
+            public_key: finalOptions.public_key!,
             transaction: finalOptions.transaction,
-            customer: finalOptions.customer ? {
-              email: finalOptions.customer.email,
-              firstname: finalOptions.customer.firstname,
-              lastname: finalOptions.customer.lastname,
+            customer: finalOptions.customer,
+          };
+          
+          // Ajouter onComplete si présent
+          if (finalOptions.onComplete) {
+            fedapayInitOptions.onComplete = finalOptions.onComplete;
+          }
+          
+          console.log('[Fedapay] Options complètes (selon doc officielle):', {
+            public_key: fedapayInitOptions.public_key?.substring(0, 20) + '...',
+            transaction: fedapayInitOptions.transaction,
+            customer: fedapayInitOptions.customer ? {
+              email: fedapayInitOptions.customer.email,
+              firstname: fedapayInitOptions.customer.firstname,
+              lastname: fedapayInitOptions.customer.lastname,
             } : null,
+            hasOnComplete: !!fedapayInitOptions.onComplete,
           });
           
           try {
@@ -170,7 +191,8 @@ export const useFedapay = () => {
             console.log(`[Fedapay] ✅ Bouton ${selectorOrOptions} trouvé:`, buttonElement);
             
             // Initialiser le widget - il s'ouvrira automatiquement au clic sur le bouton
-            const fedapayWidget = window.FedaPay.init(selectorOrOptions, finalOptions);
+            // Utiliser les options sans 'environment' (selon la doc officielle)
+            const fedapayWidget = window.FedaPay.init(selectorOrOptions, fedapayInitOptions);
             console.log('[Fedapay] Widget initialisé:', { 
               widget: fedapayWidget, 
               widgetType: typeof fedapayWidget,
