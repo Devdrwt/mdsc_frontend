@@ -514,7 +514,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     const isOpen = openSubmenus.has(item.name);
     const active = isActive(item.href);
 
-    if (hasChildren && !sidebarCollapsed) {
+    if (hasChildren && (isMobile || !sidebarCollapsed)) {
       return (
         <div key={item.name}>
           <button
@@ -526,7 +526,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             }`}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />
-            <span className="ml-3">{item.name}</span>
+            <span className={isMobile ? 'ml-0' : 'ml-3'}>{item.name}</span>
             {item.badge && (
               <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
                 {item.badge}
@@ -537,11 +537,12 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             )}
           </button>
           {isOpen && item.children && (
-            <div className="ml-8 mt-1 space-y-1">
+            <div className={`${isMobile ? 'ml-4' : 'ml-8'} mt-1 space-y-1`}>
               {item.children.map((child) => (
                 <a
                   key={child.name}
                   href={child.href}
+                  onClick={() => isMobile && setSidebarOpen(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive(child.href)
                       ? `${colors.primary} text-white`
@@ -570,9 +571,9 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
         title={sidebarCollapsed && !isMobile ? item.name : undefined}
       >
         <item.icon className={`${isMobile ? 'mr-3' : ''} h-5 w-5 flex-shrink-0`} />
-        {!isMobile && !sidebarCollapsed && (
+        {(isMobile || !sidebarCollapsed) && (
           <>
-            <span className="ml-3">{item.name}</span>
+            <span className={isMobile ? 'ml-0' : 'ml-3'}>{item.name}</span>
             {item.badge && (
               <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
                 {item.badge}
@@ -594,7 +595,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       {/* Sidebar Mobile */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl z-50">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
               <Image 
@@ -613,7 +614,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
               <X className="h-6 w-6" />
             </button>
           </div>
-          <nav className="flex-1 px-4 py-4 space-y-2">
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
             {navigationItems.map((item) => renderNavItem(item, true))}
           </nav>
         </div>

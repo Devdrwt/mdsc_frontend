@@ -55,42 +55,42 @@ export default function CertificateViewer({
   return (
     <div className={`bg-white rounded-lg shadow-xl overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark text-white p-6 relative">
+      <div className="bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark text-white p-4 sm:p-6 relative">
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
             aria-label="Fermer"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         )}
         
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="p-3 bg-white/20 rounded-lg">
-            <Award className="h-8 w-8" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-3 sm:mb-4 pr-8 sm:pr-0">
+          <div className="p-2 sm:p-3 bg-white/20 rounded-lg">
+            <Award className="h-6 w-6 sm:h-8 sm:w-8" />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold">Certificat de Formation</h2>
-            <p className="text-white/90 mt-1">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold break-words">Certificat de Formation</h2>
+            <p className="text-sm sm:text-base text-white/90 mt-1 break-words">
               {certificate.course?.title || (certificate as any).course_title || '—'}
             </p>
           </div>
         </div>
 
         {certificate.verified && (
-          <div className="flex items-center space-x-2 text-mdsc-gold">
-            <CheckCircle className="h-5 w-5" />
+          <div className="flex items-center space-x-2 text-mdsc-gold text-sm sm:text-base">
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="font-medium">Certificat vérifié</span>
           </div>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-3 sm:p-4 md:p-6">
         {/* Certificate Preview plein largeur (forme réelle, non compressée) */}
-        <div className="mb-6 w-full">
-          <div className="w-full">
+        <div className="mb-3 sm:mb-4 md:mb-6 w-full overflow-x-auto -mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0">
+          <div className="w-full min-w-[280px] max-w-full">
             <CertificatePreview
               fullName={`${(certificate as any).first_name || (certificate as any).firstName || ''} ${(certificate as any).last_name || (certificate as any).lastName || ''}`.trim() || 'Étudiant(e)'}
               courseTitle={certificate.course?.title || (certificate as any).course_title || '—'}
@@ -102,18 +102,18 @@ export default function CertificateViewer({
         </div>
 
         {/* Certificate Details */}
-        <div className="space-y-4 mb-6">
+        <div className="space-y-2 sm:space-y-3 md:space-y-4 mb-3 sm:mb-4 md:mb-6">
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Code de vérification</h3>
-            <p className="font-mono text-lg font-bold text-gray-900">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Code de vérification</h3>
+            <p className="font-mono text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 break-all px-1">
               {(certificate.certificateCode || (certificate as any).certificate_code || '—').toUpperCase()}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 md:gap-4">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Date d'émission</h3>
-              <p className="text-gray-900">
+              <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Date d'émission</h3>
+              <p className="text-sm sm:text-base text-gray-900">
                 {new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now()).toLocaleDateString('fr-FR', {
                   day: 'numeric',
                   month: 'long',
@@ -124,8 +124,8 @@ export default function CertificateViewer({
             
             {certificate.expiresAt && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Date d'expiration</h3>
-                <p className="text-gray-900">
+                <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Date d'expiration</h3>
+                <p className="text-sm sm:text-base text-gray-900">
                   {new Date(certificate.expiresAt).toLocaleDateString('fr-FR', {
                     day: 'numeric',
                     month: 'long',
@@ -140,36 +140,36 @@ export default function CertificateViewer({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-4 border-t border-gray-200">
           {showDownload && (
           <Button
             variant="primary"
             onClick={handleDownload}
             disabled={loading}
-            className="flex-1"
+            className="flex-1 w-full sm:w-auto"
           >
-            <Download className="h-5 w-5 mr-2" />
-            {loading ? 'Téléchargement...' : 'Télécharger PDF'}
+            <Download className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+            <span className="text-sm sm:text-base">{loading ? 'Téléchargement...' : 'Télécharger PDF'}</span>
           </Button>
           )}
           {showPrint && (
             <Button
               variant="outline"
               onClick={handlePrint}
-              className="flex-1"
+              className="flex-1 w-full sm:w-auto"
             >
-              <QrCode className="h-5 w-5 mr-2" />
-              Imprimer
+              <QrCode className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="text-sm sm:text-base">Imprimer</span>
             </Button>
           )}
           {showVerifyOnline && (
             <Button
               variant="outline"
               onClick={handleVerify}
-              className="flex-1"
+              className="flex-1 w-full sm:w-auto"
             >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              Vérifier en ligne
+              <ExternalLink className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              <span className="text-sm sm:text-base">Vérifier en ligne</span>
             </Button>
           )}
         </div>

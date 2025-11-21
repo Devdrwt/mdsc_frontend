@@ -41,6 +41,7 @@ export default function LessonContent({
   const [pptxError, setPptxError] = useState(false);
   const [pptxData, setPptxData] = useState<ArrayBuffer | null>(null);
   const [isLoadingPptx, setIsLoadingPptx] = useState(false);
+  const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
 
   // Normalisation des champs provenant du backend (snake_case vs camelCase)
   const lessonAny = lesson as any;
@@ -66,6 +67,7 @@ export default function LessonContent({
     setIsCompleted(deriveCompletedStatus(lesson));
     setPdfLoadError(false); // Réinitialiser l'erreur PDF quand la leçon change
     setPptxError(false); // Réinitialiser l'erreur PPTX quand la leçon change
+    setVideoLoadError(null); // Réinitialiser l'erreur vidéo quand la leçon change
     setMediaFile(null); // Réinitialiser le mediaFile pour forcer la mise à jour
     setPptxData(null); // Réinitialiser les données PPTX
     setIsLoadingPptx(false);
@@ -562,7 +564,27 @@ export default function LessonContent({
             
             {/* Lecteur vidéo stylé avec protection */}
             <div className="relative w-full aspect-video bg-black group">
-              <video
+              {videoLoadError ? (
+                <div className="flex flex-col items-center justify-center h-full bg-gray-900 text-white p-6">
+                  <Video className="h-16 w-16 text-red-400 mb-4" />
+                  <p className="text-lg font-semibold mb-2">Erreur de chargement de la vidéo</p>
+                  <p className="text-sm text-gray-300 text-center mb-4">{videoLoadError}</p>
+                  <button
+                    onClick={() => {
+                      setVideoLoadError(null);
+                      // Forcer le rechargement de la vidéo en changeant la clé
+                      const videoElement = document.querySelector(`video[key="video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}"]`) as HTMLVideoElement;
+                      if (videoElement) {
+                        videoElement.load();
+                      }
+                    }}
+                    className="px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              ) : (
+                <video
                 key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                 src={videoUrl}
                 controls
@@ -605,6 +627,8 @@ export default function LessonContent({
                 onError={(e) => {
                   const videoElement = e.currentTarget;
                   const error = videoElement.error;
+                  let errorMessage = 'Erreur lors du chargement de la vidéo';
+                  
                   console.error('Erreur lors du chargement de la vidéo:', {
                     url: videoUrl,
                     errorCode: error?.code,
@@ -614,29 +638,39 @@ export default function LessonContent({
                     src: videoElement.src,
                   });
                   
-                  // Afficher un message d'erreur plus détaillé dans la console
+                  // Afficher un message d'erreur plus détaillé dans la console et dans l'UI
                   if (error) {
                     switch (error.code) {
                       case MediaError.MEDIA_ERR_ABORTED:
+                        errorMessage = 'Le chargement de la vidéo a été interrompu. Veuillez réessayer.';
                         console.error('Le chargement de la vidéo a été interrompu');
                         break;
                       case MediaError.MEDIA_ERR_NETWORK:
+                        errorMessage = 'Une erreur réseau a empêché le chargement de la vidéo. Vérifiez votre connexion internet.';
                         console.error('Une erreur réseau a empêché le chargement de la vidéo');
                         break;
                       case MediaError.MEDIA_ERR_DECODE:
+                        errorMessage = 'Le format de la vidéo n\'est pas supporté par votre navigateur.';
                         console.error('Le décodage de la vidéo a échoué');
                         break;
                       case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = 'Le format de la vidéo n\'est pas supporté ou l\'URL est invalide.';
                         console.error('Le format de la vidéo n\'est pas supporté ou l\'URL est invalide');
                         break;
                       default:
+                        errorMessage = 'Erreur inconnue lors du chargement de la vidéo.';
                         console.error('Erreur inconnue lors du chargement de la vidéo');
                     }
+                  } else {
+                    errorMessage = 'Impossible de charger la vidéo. Vérifiez que l\'URL est correcte et que le fichier existe.';
                   }
+                  
+                  setVideoLoadError(errorMessage);
                 }}
               >
                 Votre navigateur ne supporte pas la lecture vidéo.
               </video>
+              )}
             </div>
             
             {/* Barre d'information en bas */}
@@ -1246,16 +1280,16 @@ export default function LessonContent({
   };
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 sm:space-y-6 ${className}`}>
       {/* Lesson Header */}
       <div className="bg-white">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start space-x-4 flex-1">
-            <div className="p-3 bg-mdsc-blue-primary/10 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
+          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
+            <div className="p-2 sm:p-3 bg-mdsc-blue-primary/10 rounded-lg flex-shrink-0">
               {getContentIcon()}
             </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{lesson.title}</h2>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{lesson.title}</h2>
               {lessonDescription && (
                 <p className="text-gray-600">{lessonDescription}</p>
               )}

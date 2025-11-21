@@ -50,6 +50,28 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
+
+  // Vérifier l'état d'inscription
+  const checkEnrollmentStatus = useCallback(async () => {
+    if (!course || !isUserAuthenticated) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    try {
+      setCheckingEnrollment(true);
+      const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+      const enrollmentData = await CourseService.checkEnrollment(courseId);
+      setIsEnrolled(enrollmentData.is_enrolled || false);
+    } catch (err) {
+      console.error('Erreur lors de la vérification de l\'inscription:', err);
+      setIsEnrolled(false);
+    } finally {
+      setCheckingEnrollment(false);
+    }
+  }, [course, isUserAuthenticated]);
 
   useEffect(() => {
     if (slug) {
@@ -61,6 +83,38 @@ export default function CourseDetailPage() {
   useEffect(() => {
     setImageError(false);
   }, [course]);
+
+  // Vérifier l'inscription quand le cours est chargé et que l'utilisateur est connecté
+  useEffect(() => {
+    if (course && isUserAuthenticated) {
+      checkEnrollmentStatus();
+    } else if (!isUserAuthenticated) {
+      setIsEnrolled(false);
+    }
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
+
+  // Recharger l'état d'inscription quand la page devient visible (pour détecter les changements après désinscription)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    const handleFocus = () => {
+      if (course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
 
   const loadCourse = async () => {
     try {
@@ -199,6 +253,10 @@ export default function CourseDetailPage() {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
+      // Mettre à jour l'état d'inscription
+      if (checkEnrollmentStatus) {
+        await checkEnrollmentStatus();
+      }
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
       console.error('Erreur inscription:', err);
@@ -500,7 +558,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const isEnrolled = course.enrollment !== undefined;
+  // isEnrolled est maintenant un état géré par checkEnrollmentStatus
   
   // Extraire toutes les informations du cours
   const price = courseAny.price || course.price || 0;
