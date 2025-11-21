@@ -95,16 +95,14 @@ export class PaymentService {
             })()
           : payload.payment_data;
       
-      // Extraire public_key, environment et transaction_id depuis metadata
+      // Extraire public_key et environment depuis metadata (comme Kkiapay, pas de transaction_id)
       const rawMetadata = rawPaymentData?.raw || rawPaymentData || {};
-      publicKey = rawPaymentData?.public_key || rawMetadata.public_key || null;
-      environment = rawPaymentData?.environment || rawMetadata.environment || 'sandbox';
-      const transactionId = rawPaymentData?.transaction_id || rawMetadata.transaction_id || null;
+      publicKey = rawMetadata.public_key || rawPaymentData?.public_key || null;
+      environment = rawMetadata.environment || rawPaymentData?.environment || 'sandbox';
       
       metadata = {
         public_key: publicKey,
         environment: environment,
-        transaction_id: transactionId,
         ...rawMetadata,
       };
     } else {

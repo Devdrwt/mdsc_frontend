@@ -64,9 +64,10 @@ export default function PaymentForm({
         if (activeProviders.length > 0) {
           setSelectedProvider(activeProviders[0]);
         }
-      } catch (error) {
-        console.error('Erreur lors du chargement des providers:', error);
-        toast.error('Erreur', 'Impossible de charger les méthodes de paiement disponibles.');
+      } catch (error: any) {
+        console.error('[PaymentForm] ❌ Erreur lors du chargement des providers:', error);
+        const errorMessage = error?.message || 'Impossible de charger les providers de paiement.';
+        toast.error('Erreur', errorMessage);
       } finally {
         setLoadingProviders(false);
       }
@@ -310,14 +311,19 @@ export default function PaymentForm({
 
       console.log('[PaymentForm] Payment metadata stored', metadata);
 
-      // Extraire la clé publique et l'environnement depuis les métadonnées
-      const publicKey = paymentResponse.metadata?.public_key;
-      const environment = paymentResponse.metadata?.environment || 'sandbox';
-      const transactionId = paymentResponse.metadata?.transaction_id;
+      // Extraire la clé publique et l'environnement depuis les métadonnées (comme Kkiapay)
+      const rawPaymentData = paymentResponse.metadata?.raw || paymentResponse.metadata || {};
+      const publicKey = rawPaymentData.public_key || paymentResponse.metadata?.public_key;
+      const environment = rawPaymentData.environment || paymentResponse.metadata?.environment || 'sandbox';
 
       if (!publicKey) {
         throw new Error('Clé publique Fedapay manquante. Veuillez contacter le support.');
       }
+
+      // S'assurer que l'environnement est 'live' ou 'sandbox'
+      const fedapayEnvironment = (environment === 'live' || environment === 'sandbox') 
+        ? environment 
+        : 'sandbox';
 
       // Séparer le prénom et le nom pour Fedapay
       const nameParts = (fullname || 'Étudiant MdSC').split(' ');
@@ -326,17 +332,54 @@ export default function PaymentForm({
 
       console.log('[PaymentForm] Opening Fedapay widget', {
         amount,
-        publicKey: publicKey.substring(0, 10) + '...',
-        environment,
-        transactionId,
+        publicKeyPrefix: publicKey.substring(0, 20) + '...',
+        publicKeySuffix: '...' + publicKey.substring(publicKey.length - 10),
+        publicKeyLength: publicKey.length,
+        environment: fedapayEnvironment,
+        environmentType: typeof fedapayEnvironment,
+      });
+
+      // Vérifier que le bouton existe dans le DOM
+      const payButton = document.querySelector('#fedapay-pay-btn');
+      if (!payButton) {
+        console.error('[PaymentForm] ❌ Le bouton #fedapay-pay-btn n\'existe pas dans le DOM');
+        toast.error('Erreur', 'Le bouton de paiement n\'est pas disponible. Veuillez rafraîchir la page.');
+        setProcessing(false);
+        return;
+      }
+      console.log('[PaymentForm] ✅ Bouton #fedapay-pay-btn trouvé dans le DOM');
+
+      // Vérifier que le SDK Fedapay est chargé
+      if (!window.FedaPay || typeof window.FedaPay.init !== 'function') {
+        console.error('[PaymentForm] ❌ SDK Fedapay non chargé');
+        toast.error('Erreur', 'Le widget de paiement Fedapay n\'a pas pu être chargé. Veuillez rafraîchir la page.');
+        setProcessing(false);
+        return;
+      }
+      console.log('[PaymentForm] ✅ SDK Fedapay chargé:', {
+        hasFedaPay: !!window.FedaPay,
+        hasInit: typeof window.FedaPay?.init === 'function',
+        hasCheckout: typeof window.FedaPay?.checkout === 'function',
       });
 
       // Initialiser le widget Fedapay avec le sélecteur de bouton (format recommandé)
+      // IMPORTANT: Avec FedaPay.init('#button-id', options), le widget s'ouvre automatiquement au clic
+      console.log('[PaymentForm] 🔧 Initialisation du widget Fedapay...');
+      console.log('[PaymentForm] Options Fedapay:', {
+        publicKey: publicKey.substring(0, 20) + '...',
+        environment: fedapayEnvironment,
+        amount: amount,
+        currency: currency,
+        customerEmail: email,
+      });
+      
       const widgetInstance = initFedapayWidget('#fedapay-pay-btn', {
         public_key: publicKey,
+        environment: fedapayEnvironment as 'live' | 'sandbox', // 'live' ou 'sandbox'
         transaction: {
           amount: amount,
           description: `Paiement formation - ${courseTitle}`,
+          currency: currency,
         },
         customer: {
           email: email,
@@ -346,7 +389,13 @@ export default function PaymentForm({
         onComplete: async (reason: number, transaction: any) => {
           console.log('[PaymentForm] Fedapay onComplete callback', { reason, transaction });
           
-          if (reason === fedapayConstants?.CHECKOUT_COMPLETED) {
+          // Vérifier les constantes disponibles
+          const CHECKOUT_COMPLETED = fedapayConstants?.CHECKOUT_COMPLETED ?? window.FedaPay?.CHECKOUT_COMPLETED;
+          const DIALOG_DISMISSED = fedapayConstants?.DIALOG_DISMISSED ?? window.FedaPay?.DIALOG_DISMISSED;
+          
+          console.log('[PaymentForm] Fedapay constants:', { CHECKOUT_COMPLETED, DIALOG_DISMISSED, reason });
+          
+          if (reason === CHECKOUT_COMPLETED) {
             // Paiement réussi
             console.log('[PaymentForm] 🎉 Fedapay payment successful!', transaction);
             setProcessing(false);
@@ -361,7 +410,7 @@ export default function PaymentForm({
             try {
               // Appeler le backend pour finaliser le paiement et créer l'inscription
               const webhookPayload = {
-                transaction_id: transaction.id || transaction.transaction_id || transactionId,
+                transaction_id: transaction.id || transaction.transaction_id || null,
                 status: 'SUCCESS',
                 amount: amount,
                 currency: currency,
@@ -756,13 +805,10 @@ export default function PaymentForm({
           <button
             id={selectedProvider?.provider_name === 'fedapay' ? 'fedapay-pay-btn' : undefined}
             type="button"
-            onClick={() => {
+            onClick={async () => {
               if (selectedProvider?.provider_name === 'fedapay') {
-                // Pour Fedapay, le widget s'ouvre automatiquement via le sélecteur
-                // Mais on doit quand même initialiser si ce n'est pas déjà fait
-                if (!fedapayWidgetRef.current && selectedProvider) {
-                  handlePayWithProvider(selectedProvider);
-                }
+                // Pour Fedapay, initialiser le widget et l'ouvrir
+                await handlePayWithFedapay();
               } else {
                 selectedProvider && handlePayWithProvider(selectedProvider);
               }
