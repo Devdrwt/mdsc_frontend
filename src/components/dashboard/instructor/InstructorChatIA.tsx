@@ -145,7 +145,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
                 className={`p-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-gold text-white'
-                    : 'bg-orange-100 text-gray-900'
+                    : 'bg-orange-300/20 text-gray-900'
                 }`}
               >
                 {message.role === 'user' ? (
@@ -158,7 +158,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
                 className={`px-4 py-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-mdsc-gold text-white'
-                    : 'bg-orange-100 text-gray-900'
+                    : 'bg-orange-300/20 text-gray-900'
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -178,10 +178,10 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
         {isTyping && (
           <div className="flex justify-start">
             <div className="flex items-start space-x-2">
-              <div className="p-2 rounded-lg bg-orange-100">
+              <div className="p-2 rounded-lg bg-orange-300/20">
                 <Bot className="h-4 w-4 text-gray-600" />
               </div>
-              <div className="px-4 py-2 rounded-lg bg-orange-100">
+              <div className="px-4 py-2 rounded-lg bg-orange-300/20">
                 <div className="flex space-x-1">
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>

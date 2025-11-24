@@ -28,31 +28,25 @@ export default function Footer() {
 
   return (
     <footer className="bg-mdsc-blue-dark text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Logo et description */}
-          <div className="lg:col-span-1">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
+        {/* ↓↓↓ Réduction de l'espace des colonnes : gap-4 au lieu de gap-8 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          
+          {/* Logo & description */}
+          <div>
             <div className="mb-4">
-              <Logo size="sm" />
+              <img
+  src="/logo-mdsc.png"
+  alt="Logo MdSC"
+  className="h-14 w-auto object-contain"
+  loading="lazy"
+/>
+
             </div>
-            <p className="text-white text-sm leading-relaxed mb-4">
+            <p className="text-white text-sm leading-relaxed">
               La Maison de la Société Civile forme et accompagne les organisations 
               de la société civile pour renforcer leur crédibilité et leur innovation.
             </p>
-            <div className="space-y-2">
-              <div className="flex items-start space-x-2 text-sm text-white">
-                <MapPin className="h-4 w-4 text-mdsc-orange flex-shrink-0 mt-0.5" />
-                <span>Quartier Sikècodji Rue N°216, Carré 00350<br />U Boulevard des Armées<br />Direction Etoile Rouge, 2ème Rue à droite après le Carrefour Cossi<br />Boîte postale : 01 BP 414 Cotonou</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-white">
-                <Phone className="h-4 w-4 text-mdsc-orange" />
-                <span>(+229) 43 05 00 00</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-white">
-                <Mail className="h-4 w-4 text-mdsc-orange" />
-                <span>info@mdscbenin.org</span>
-              </div>
-            </div>
           </div>
 
           {/* Formation */}
@@ -105,27 +99,41 @@ export default function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* Nouvelle colonne ➤ Adresse (en dernière position) */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-white">Adresse</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start space-x-2">
+                <MapPin className="h-4 w-4 text-mdsc-orange flex-shrink-0 mt-0.5" />
+                <span>
+                  Quartier Sikècodji Rue N°216, Carré 00350 <br />
+                  U Boulevard des Armées <br />
+                  Direction Etoile Rouge, 2ème Rue à droite après le Carrefour Cossi <br />
+                  Boîte postale : 01 BP 414 Cotonou
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Phone className="h-4 w-4 text-mdsc-orange" />
+                <span>(+229) 43 05 00 00</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Mail className="h-4 w-4 text-mdsc-orange" />
+                <span>info@mdscbenin.org</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Ligne de séparation avec accent orange */}
+        {/* Ligne bas */}
         <div className="mt-8 pt-8 border-t border-gray-800">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-white text-sm">
               © {currentYear} Maison de la Société Civile. Tous droits réservés.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a
-                href="/privacy"
-                className="text-white hover:text-mdsc-orange text-sm transition-colors duration-200"
-              >
-                Politique de confidentialité
-              </a>
-              <a
-                href="/terms"
-                className="text-white hover:text-mdsc-orange text-sm transition-colors duration-200"
-              >
-                Conditions d'utilisation
-              </a>
+              <a href="/privacy" className="text-white hover:text-mdsc-orange text-sm">Politique de confidentialité</a>
+              <a href="/terms" className="text-white hover:text-mdsc-orange text-sm">Conditions d'utilisation</a>
             </div>
           </div>
         </div>

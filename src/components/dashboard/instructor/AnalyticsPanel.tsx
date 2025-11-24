@@ -189,10 +189,15 @@ export default function AnalyticsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-mdsc-gold rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Analytics & Rapports 📊</h1>
+
+<h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+  <BarChart3 className="w-6 h-6" />
+  Analytics & Rapports
+</h1>
+
             <p className="text-yellow-100">
               Analysez les performances de vos cours et le comportement de vos étudiants.
             </p>

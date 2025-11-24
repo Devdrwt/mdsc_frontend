@@ -284,8 +284,12 @@ export default function StudentManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Gestion des Étudiants 👥</h1>
+      <div className="bg-mdsc-gold rounded-lg p-6 text-white">
+        <div className="flex items-center space-x-2 mb-2 group">
+  <Users className="h-7 w-7 text-white/90 group-hover:text-white transition-colors duration-200" />
+  <h1 className="text-2xl font-bold">Gestion des Étudiants</h1>
+</div>
+
         <p className="text-yellow-100">
           Suivez la progression de vos étudiants et gérez leurs parcours d'apprentissage.
         </p>

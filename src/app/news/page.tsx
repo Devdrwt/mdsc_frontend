@@ -114,7 +114,7 @@ export default function NewsPage() {
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Actualités de la MdSC
           </h1>
@@ -125,7 +125,7 @@ export default function NewsPage() {
       </section>
 
       <main className="py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Colonne principale - Articles */}

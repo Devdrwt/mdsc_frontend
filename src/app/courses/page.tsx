@@ -396,8 +396,14 @@ export default function CoursesPage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16 "
+        // className="min-h-screen flex items-center relative overflow-hidden bg-cover bg-center"
+  style={{
+    backgroundImage: `url('/Hero.png')`
+  }}
+      
+      >
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             Catalogue de formations
           </h1>
@@ -407,8 +413,8 @@ export default function CoursesPage() {
         </div>
       </section>
 
-      <main className="py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-2">
 
           {/* Barre de recherche et filtres */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8 -mt-8 relative z-10">

@@ -695,7 +695,7 @@ export default function CourseDetailPage() {
       <main>
         {/* Hero Section avec image */}
         <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
             {/* Bouton retour au catalogue */}
             <div className="mb-6">
               <Button
@@ -849,7 +849,7 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Section principale avec contenu détaillé */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contenu principal */}
             <div className="lg:col-span-2 space-y-8">

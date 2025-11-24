@@ -284,12 +284,20 @@ export default function EvaluationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-blue-primary to-blue-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Mes Évaluations 📝</h1>
-        <p className="text-blue-100">
-          Suivez vos quiz, devoirs et examens et consultez vos résultats.
-        </p>
+<div className="bg-mdsc-blue-primary dark:from-mdsc-blue-dark dark:via-mdsc-blue-primary dark:to-mdsc-blue-dark text-white rounded-lg p-6 shadow-lg">
+  <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center space-x-2 mb-2">
+        <FileText className="h-8 w-8" />
+        <h1 className="text-3xl font-bold">Mes Évaluations</h1>
       </div>
+      <p className="text-white/90">
+        Suivez vos quiz, devoirs et examens et consultez vos résultats
+      </p>
+    </div>
+  </div>
+</div>
+
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
