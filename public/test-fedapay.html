@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test FedaPay</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test FedaPay Widget</h1>
+    
+    <div>
+        <h2>Clés de test :</h2>
+        <p><strong>Public Key:</strong> pk_live_vOih1H4lKIr2wmX14GH4H1k_</p>
+        <p><strong>Secret Key:</strong> sk_live_pmdRaielgy-XVLhmM04dm4pO</p>
+        <p><strong>Environnement:</strong> Live (Production)</p>
+    </div>
+
+    <div>
+        <h2>Actions :</h2>
+        <button id="test-checkout-btn">Tester avec checkout()</button>
+        <button id="test-init-btn">Tester avec init()</button>
+        <button id="check-api-btn">Vérifier l'API</button>
+    </div>
+
+    <div>
+        <h2>Logs :</h2>
+        <div id="logs" class="log"></div>
+    </div>
+
+    <!-- Script FedaPay -->
+    <script src="https://cdn.fedapay.com/checkout.js?v=1.1.7"></script>
+
+    <script>
+        const logs = document.getElementById('logs');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        // Vérifier l'API après chargement
+        function checkAPI() {
+            log('🔍 Vérification de l\'API FedaPay...', 'info');
+            
+            const checks = [
+                { name: 'window.FedaPay', value: window.FedaPay },
+                { name: 'window.fedapay', value: window.fedapay },
+                { name: 'window.FedaPayCheckout', value: window.FedaPayCheckout },
+                { name: 'window.FedaPayCheckoutJS', value: window.FedaPayCheckoutJS },
+            ];
+
+            let found = false;
+            checks.forEach(check => {
+                if (check.value) {
+                    found = true;
+                    log(`✅ ${check.name} existe`, 'success');
+                    log(`   Type: ${typeof check.value}`, 'info');
+                    log(`   Clés: ${Object.keys(check.value).join(', ')}`, 'info');
+                    
+                    if (typeof check.value.init === 'function') {
+                        log(`   ✅ init() disponible`, 'success');
+                    }
+                    if (typeof check.value.checkout === 'function') {
+                        log(`   ✅ checkout() disponible`, 'success');
+                    }
+                    if (check.value.CHECKOUT_COMPLETED !== undefined) {
+                        log(`   ✅ CHECKOUT_COMPLETED = ${check.value.CHECKOUT_COMPLETED}`, 'success');
+                    }
+                    if (check.value.DIALOG_DISMISSED !== undefined) {
+                        log(`   ✅ DIALOG_DISMISSED = ${check.value.DIALOG_DISMISSED}`, 'success');
+                    }
+                } else {
+                    log(`❌ ${check.name} n'existe pas`, 'error');
+                }
+            });
+
+            if (!found) {
+                log('❌ Aucune API FedaPay trouvée dans window', 'error');
+                log('Vérification de toutes les clés window contenant "feda" ou "pay"...', 'info');
+                const relevantKeys = Object.keys(window).filter(k => 
+                    k.toLowerCase().includes('feda') || k.toLowerCase().includes('pay')
+                );
+                if (relevantKeys.length > 0) {
+                    log(`Clés trouvées: ${relevantKeys.join(', ')}`, 'info');
+                } else {
+                    log('Aucune clé pertinente trouvée', 'error');
+                }
+            }
+
+            return found;
+        }
+
+        // Test avec checkout()
+        function testCheckout() {
+            log('🚀 Test avec checkout()...', 'info');
+            
+            const api = window.FedaPay || window.fedapay || window.FedaPayCheckout;
+            
+            if (!api || typeof api.checkout !== 'function') {
+                log('❌ checkout() non disponible', 'error');
+                return;
+            }
+
+            try {
+                api.checkout({
+                    public_key: 'pk_live_vOih1H4lKIr2wmX14GH4H1k_',
+                    transaction: {
+                        amount: 1000,
+                        description: 'Test de paiement',
+                        currency: 'XOF',
+                    },
+                    customer: {
+                        email: 'test@example.com',
+                        firstname: 'Test',
+                        lastname: 'User',
+                    },
+                    onComplete: function(reason, transaction) {
+                        log(`✅ onComplete appelé: reason=${reason}`, 'success');
+                        log(`Transaction: ${JSON.stringify(transaction, null, 2)}`, 'info');
+                    }
+                });
+                log('✅ checkout() appelé avec succès', 'success');
+            } catch (error) {
+                log(`❌ Erreur avec checkout(): ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Test avec init()
+        function testInit() {
+            log('🚀 Test avec init()...', 'info');
+            
+            const api = window.FedaPay || window.fedapay || window.FedaPayCheckout;
+            
+            if (!api || typeof api.init !== 'function') {
+                log('❌ init() non disponible', 'error');
+                return;
+            }
+
+            try {
+                const widget = api.init({
+                    public_key: 'pk_live_vOih1H4lKIr2wmX14GH4H1k_',
+                    transaction: {
+                        amount: 1000,
+                        description: 'Test de paiement',
+                        currency: 'XOF',
+                    },
+                    customer: {
+                        email: 'test@example.com',
+                        firstname: 'Test',
+                        lastname: 'User',
+                    },
+                    onComplete: function(reason, transaction) {
+                        log(`✅ onComplete appelé: reason=${reason}`, 'success');
+                        log(`Transaction: ${JSON.stringify(transaction, null, 2)}`, 'info');
+                    }
+                });
+                
+                log(`✅ init() appelé avec succès`, 'success');
+                log(`Widget retourné: ${JSON.stringify(widget, null, 2)}`, 'info');
+                
+                if (widget && typeof widget.open === 'function') {
+                    log('✅ widget.open() disponible, ouverture...', 'info');
+                    setTimeout(() => {
+                        try {
+                            widget.open();
+                            log('✅ widget.open() appelé', 'success');
+                        } catch (error) {
+                            log(`❌ Erreur avec widget.open(): ${error.message}`, 'error');
+                        }
+                    }, 500);
+                }
+            } catch (error) {
+                log(`❌ Erreur avec init(): ${error.message}`, 'error');
+                log(`Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        // Attendre le chargement du script
+        window.addEventListener('load', function() {
+            log('📄 Page chargée', 'info');
+            
+            // Vérifier immédiatement
+            setTimeout(() => {
+                checkAPI();
+            }, 500);
+            
+            // Vérifier à nouveau après 2 secondes
+            setTimeout(() => {
+                log('🔄 Vérification après 2 secondes...', 'info');
+                checkAPI();
+            }, 2000);
+        });
+
+        // Écouter les erreurs de chargement du script
+        document.querySelector('script[src*="checkout.js"]').addEventListener('error', function() {
+            log('❌ Erreur lors du chargement du script checkout.js', 'error');
+        });
+
+        // Écouter le chargement du script
+        document.querySelector('script[src*="checkout.js"]').addEventListener('load', function() {
+            log('✅ Script checkout.js chargé', 'success');
+            setTimeout(() => {
+                checkAPI();
+            }, 500);
+        });
+
+        // Boutons
+        document.getElementById('check-api-btn').addEventListener('click', checkAPI);
+        document.getElementById('test-checkout-btn').addEventListener('click', testCheckout);
+        document.getElementById('test-init-btn').addEventListener('click', testInit);
+    </script>
+</body>
+</html>
+

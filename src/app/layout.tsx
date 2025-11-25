@@ -128,19 +128,75 @@ export default function RootLayout({
             __html: `
               (function() {
                 if (typeof window === 'undefined') return;
+                
+                // Vérifier si le script est déjà chargé
+                if (document.querySelector('script[src*="checkout.js"]')) {
+                  console.log('[Fedapay] Script déjà présent, vérification de l\'API...');
+                  checkFedaPayAPI();
+                  return;
+                }
+                
                 var script = document.createElement('script');
                 script.src = 'https://cdn.fedapay.com/checkout.js?v=1.1.7';
                 script.async = true;
                 script.onload = function() {
-                  console.log('[Fedapay] ✅ SDK chargé avec succès');
-                  if (window.dispatchEvent && window.FedaPay) {
-                    window.dispatchEvent(new Event('fedapay-sdk-loaded'));
-                  }
+                  console.log('[Fedapay] ✅ Script checkout.js chargé');
+                  // Vérifier l'API après plusieurs tentatives
+                  checkFedaPayAPI();
                 };
                 script.onerror = function() {
-                  console.error('[Fedapay] ❌ Erreur lors du chargement du SDK');
+                  console.error('[Fedapay] ❌ Erreur lors du chargement du script checkout.js');
+                  if (window.dispatchEvent) {
+                    window.dispatchEvent(new Event('fedapay-sdk-error'));
+                  }
                 };
                 document.head.appendChild(script);
+                
+                // Fonction pour vérifier l'API FedaPay
+                function checkFedaPayAPI() {
+                  var attempts = 0;
+                  var maxAttempts = 50; // 5 secondes max (50 * 100ms)
+                  
+                  var checkInterval = setInterval(function() {
+                    attempts++;
+                    
+                    // Vérifier plusieurs noms possibles pour l'API
+                    var fedapayAPI = window.FedaPay || window.fedapay || window.FedaPayCheckout || window.FedaPayCheckoutJS;
+                    
+                    if (fedapayAPI) {
+                      console.log('[Fedapay] ✅ API détectée:', {
+                        hasFedaPay: !!window.FedaPay,
+                        hasfedapay: !!window.fedapay,
+                        hasFedaPayCheckout: !!window.FedaPayCheckout,
+                        hasFedaPayCheckoutJS: !!window.FedaPayCheckoutJS,
+                        apiType: typeof fedapayAPI,
+                        apiKeys: fedapayAPI ? Object.keys(fedapayAPI) : null,
+                        hasInit: typeof fedapayAPI.init === 'function',
+                        hasCheckout: typeof fedapayAPI.checkout === 'function',
+                      });
+                      
+                      // Normaliser l'API dans window.FedaPay si elle existe ailleurs
+                      if (!window.FedaPay && fedapayAPI) {
+                        window.FedaPay = fedapayAPI;
+                        console.log('[Fedapay] ✅ API normalisée dans window.FedaPay');
+                      }
+                      
+                      clearInterval(checkInterval);
+                      if (window.dispatchEvent) {
+                        window.dispatchEvent(new Event('fedapay-sdk-loaded'));
+                      }
+                    } else if (attempts >= maxAttempts) {
+                      console.error('[Fedapay] ❌ API non disponible après ' + maxAttempts + ' tentatives');
+                      console.error('[Fedapay] window keys:', Object.keys(window).filter(function(k) {
+                        return k.toLowerCase().includes('feda') || k.toLowerCase().includes('pay');
+                      }));
+                      clearInterval(checkInterval);
+                      if (window.dispatchEvent) {
+                        window.dispatchEvent(new Event('fedapay-sdk-error'));
+                      }
+                    }
+                  }, 100);
+                }
               })();
             `,
           }}

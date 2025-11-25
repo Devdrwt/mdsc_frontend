@@ -349,17 +349,58 @@ export default function PaymentForm({
       }
       console.log('[PaymentForm] ✅ Bouton #fedapay-pay-btn trouvé dans le DOM');
 
-      // Vérifier que le SDK Fedapay est chargé
-      if (!window.FedaPay || typeof window.FedaPay.init !== 'function') {
+      // Vérifier que le SDK Fedapay est chargé (vérifier plusieurs noms possibles)
+      const fedapayAPI = (window as any).FedaPay || (window as any).fedapay || (window as any).FedaPayCheckout || (window as any).FedaPayCheckoutJS;
+      
+      if (!fedapayAPI) {
         console.error('[PaymentForm] ❌ SDK Fedapay non chargé');
-        toast.error('Erreur', 'Le widget de paiement Fedapay n\'a pas pu être chargé. Veuillez rafraîchir la page.');
+        console.error('[PaymentForm] window keys:', Object.keys(window).filter(k => 
+          k.toLowerCase().includes('feda') || k.toLowerCase().includes('pay')
+        ));
+        
+        // Attendre un peu plus si le SDK n'est pas encore chargé
+        let attempts = 0;
+        const maxAttempts = 20; // 2 secondes
+        const checkSDK = setInterval(() => {
+          attempts++;
+          const api = (window as any).FedaPay || (window as any).fedapay || (window as any).FedaPayCheckout;
+          if (api) {
+            clearInterval(checkSDK);
+            console.log('[PaymentForm] ✅ SDK maintenant disponible, continuation...');
+            setTimeout(() => handlePayWithFedapay(), 100);
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkSDK);
+            toast.error('Erreur', 'Le widget de paiement FedaPay n\'a pas pu être chargé. Veuillez rafraîchir la page.');
+            setProcessing(false);
+          }
+        }, 100);
+        return;
+      }
+      
+      // Normaliser dans window.FedaPay si nécessaire
+      if (!(window as any).FedaPay && fedapayAPI) {
+        (window as any).FedaPay = fedapayAPI;
+      }
+      
+      const hasInit = typeof fedapayAPI.init === 'function';
+      const hasCheckout = typeof fedapayAPI.checkout === 'function';
+      
+      if (!hasInit && !hasCheckout) {
+        console.error('[PaymentForm] ❌ Aucune méthode disponible (init ou checkout)');
+        console.error('[PaymentForm] API disponible:', {
+          type: typeof fedapayAPI,
+          keys: Object.keys(fedapayAPI),
+        });
+        toast.error('Erreur', 'Le widget de paiement FedaPay n\'a pas pu être chargé. Veuillez rafraîchir la page.');
         setProcessing(false);
         return;
       }
       console.log('[PaymentForm] ✅ SDK Fedapay chargé:', {
-        hasFedaPay: !!window.FedaPay,
-        hasInit: typeof window.FedaPay?.init === 'function',
-        hasCheckout: typeof window.FedaPay?.checkout === 'function',
+        hasFedaPay: !!(window as any).FedaPay,
+        hasInit: hasInit,
+        hasCheckout: hasCheckout,
+        apiType: typeof fedapayAPI,
+        apiKeys: Object.keys(fedapayAPI),
       });
 
       // Initialiser le widget Fedapay avec le sélecteur de bouton (format recommandé)
@@ -375,7 +416,7 @@ export default function PaymentForm({
       
       // Structure selon la documentation Fedapay officielle
       // Pas besoin de 'environment' - Fedapay détecte automatiquement via la clé publique
-      const widgetInstance = initFedapayWidget('#fedapay-pay-btn', {
+      const fedapayOptions = {
         public_key: publicKey, // pk_live_* ou pk_sandbox_* - Fedapay détecte automatiquement
         transaction: {
           amount: amount,
@@ -454,17 +495,61 @@ export default function PaymentForm({
             setProcessing(false);
           }
         },
-      });
+      };
 
-      if (!widgetInstance) {
-        throw new Error('Impossible d\'initialiser le widget Fedapay. Veuillez réessayer.');
+      // Utiliser checkout() qui ouvre directement le widget (méthode la plus simple)
+      if (hasCheckout) {
+        console.log('[PaymentForm] 🚀 Utilisation de FedaPay.checkout() pour ouvrir directement le widget');
+        try {
+          fedapayAPI.checkout(fedapayOptions);
+          console.log('[PaymentForm] ✅ Widget Fedapay ouvert via checkout()');
+          // Le widget s'ouvre automatiquement avec checkout()
+          // Ne pas mettre setProcessing(false) car le widget gère son propre état
+          return;
+        } catch (error: any) {
+          console.error('[PaymentForm] ❌ Erreur avec checkout():', error);
+          toast.error('Erreur', `Erreur lors de l'ouverture du widget: ${error.message || 'Erreur inconnue'}`);
+          setProcessing(false);
+          return;
+        }
       }
 
-      fedapayWidgetRef.current = widgetInstance;
+      // Si checkout() n'est pas disponible, utiliser init()
+      if (hasInit) {
+        console.log('[PaymentForm] 🚀 Utilisation de FedaPay.init()');
+        try {
+          const widgetInstance = fedapayAPI.init(fedapayOptions);
+          console.log('[PaymentForm] ✅ Widget initialisé via init()');
+          
+          if (widgetInstance && typeof widgetInstance.open === 'function') {
+            // Ouvrir le widget immédiatement
+            setTimeout(() => {
+              try {
+                widgetInstance.open();
+                console.log('[PaymentForm] ✅ Widget Fedapay ouvert via open()');
+              } catch (error: any) {
+                console.error('[PaymentForm] ❌ Erreur lors de l\'ouverture:', error);
+                toast.error('Erreur', `Impossible d'ouvrir le widget: ${error.message || 'Erreur inconnue'}`);
+                setProcessing(false);
+              }
+            }, 300);
+          } else {
+            console.warn('[PaymentForm] ⚠️ Widget initialisé mais pas de méthode open()');
+            toast.info('Prêt', 'Le widget est initialisé. Le paiement devrait se déclencher automatiquement.');
+          }
+          
+          fedapayWidgetRef.current = widgetInstance;
+          return;
+        } catch (error: any) {
+          console.error('[PaymentForm] ❌ Erreur avec init():', error);
+          toast.error('Erreur', `Erreur lors de l'initialisation: ${error.message || 'Erreur inconnue'}`);
+          setProcessing(false);
+          return;
+        }
+      }
 
-      // Avec le format sélecteur, le widget s'ouvre automatiquement au clic sur le bouton
-      // Pas besoin d'appeler open() manuellement
-      toast.info('Prêt', 'Cliquez sur le bouton "Payer" pour ouvrir le widget Fedapay.');
+      // Si aucune méthode n'est disponible
+      throw new Error('Aucune méthode FedaPay disponible (ni checkout() ni init())');
     } catch (error: any) {
       console.error('[PaymentForm] Error initiating Fedapay payment:', error);
       setProcessing(false);
