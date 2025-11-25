@@ -30,7 +30,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Bonjour ${user?.firstName} ! 👋 Je suis votre assistant IA personnel. Je peux vous aider avec vos cours, répondre à vos questions, générer des résumés et vous recommander du contenu. Comment puis-je vous aider aujourd'hui ?`,
+      content: `Bonjour ${user?.firstName} ! 👋 Je suis votre assistant IA personnel de la Maison de la Société Civile (MdSC). Je peux vous aider avec vos formations MdSC, répondre à vos questions sur les cours, générer des résumés des modules et vous recommander du contenu pédagogique. Je suis spécialisé dans les sujets concernant MdSC et ses formations. Comment puis-je vous aider aujourd'hui ?`,
       timestamp: new Date(),
       context,
     };

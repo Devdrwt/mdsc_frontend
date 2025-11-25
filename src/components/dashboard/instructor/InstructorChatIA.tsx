@@ -30,7 +30,7 @@ export default function InstructorChatIA({ courseId, moduleId }: InstructorChatI
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Bonjour ${user?.firstName} ! 👨‍🏫 Je suis votre assistant IA pour formateurs. Je peux vous aider à créer du contenu pédagogique, analyser les performances de vos étudiants, suggérer des améliorations de cours et répondre à vos questions d'enseignement. Comment puis-je vous aider aujourd'hui ?`,
+      content: `Bonjour ${user?.firstName} ! 👨‍🏫 Je suis votre assistant IA pour formateurs de la Maison de la Société Civile (MdSC). Je peux vous aider à créer du contenu pédagogique pour vos formations MdSC, analyser les performances de vos étudiants, suggérer des améliorations de cours et répondre à vos questions d'enseignement sur la plateforme. Je suis spécialisé dans les sujets concernant MdSC et ses formations. Comment puis-je vous aider aujourd'hui ?`,
       timestamp: new Date(),
       context,
     };

@@ -86,12 +86,72 @@ export default function AnalyticsPanel() {
         const stats = dashboard?.stats ?? {};
         const studentStats = stats.students ?? {};
 
+        // Charger les statistiques de notation réelles pour tous les cours
+        let averageRating = safeNumber(stats.average_rating ?? stats.rating?.average);
+        
+        // Si on a des cours, calculer la note moyenne à partir des notes réelles
+        const coursesList = courses?.courses ?? [];
+        if (coursesList && coursesList.length > 0) {
+          try {
+            const { ratingService } = await import('../../../lib/services/ratingService');
+            const ratingPromises = coursesList
+              .filter((c: any) => c.id)
+              .map(async (course: any) => {
+                try {
+                  const ratingStats = await ratingService.getRatingStats(Number(course.id));
+                  return safeNumber(ratingStats.average_rating ?? 0);
+                } catch (err) {
+                  return 0;
+                }
+              });
+            
+            const ratings = await Promise.all(ratingPromises);
+            const validRatings = ratings.filter(r => r > 0);
+            if (validRatings.length > 0) {
+              averageRating = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
+            }
+          } catch (err) {
+            console.warn('Impossible de charger les notes réelles:', err);
+          }
+        }
+
         setMetrics({
           totalStudents: safeNumber(studentStats.total),
           totalCourses: safeNumber(stats.courses?.total),
           completionRate: safeNumber(studentStats.avg_completion_rate ?? studentStats.completion_rate),
-          averageRating: safeNumber(stats.average_rating ?? stats.rating?.average),
+          averageRating,
         });
+
+        // Charger les notes réelles pour les top courses
+        const topCoursesList = analytics?.top_courses ?? [];
+        const topCoursesWithRatings = await Promise.all(
+          topCoursesList.map(async (course: InstructorTopCourse) => {
+            let rating = safeNumber(
+              (course as any).rating ??
+                (course as any).average_rating ??
+                (course as any).averageRating ??
+                0
+            );
+
+            // Si pas de note, essayer de récupérer depuis l'API de notation
+            if (!rating && course.course_id) {
+              try {
+                const { ratingService } = await import('../../../lib/services/ratingService');
+                const ratingStats = await ratingService.getRatingStats(Number(course.course_id));
+                rating = safeNumber(ratingStats.average_rating ?? 0);
+              } catch (err) {
+                // Ignorer les erreurs
+              }
+            }
+
+            return {
+              ...course,
+              rating,
+            };
+          })
+        );
+
+        setTopCourses(topCoursesWithRatings);
 
         const trend = Array.isArray(analytics?.enrollment_trend)
           ? (analytics.enrollment_trend as InstructorEnrollmentsTrendPoint[])
@@ -307,6 +367,13 @@ export default function AnalyticsPanel() {
             <div className="space-y-4">
               {topCourses.map((course, index) => {
                 const completion = safeNumber(course.completion_rate);
+                const rating = safeNumber(
+                  (course as any).rating ??
+                    (course as any).average_rating ??
+                    (course as any).averageRating ??
+                    0
+                );
+
                 return (
                   <div
                     key={String(course.course_id ?? course.title ?? `course-${index}`)}
@@ -318,11 +385,7 @@ export default function AnalyticsPanel() {
                         <span>{safeNumber(course.enrollments)} inscriptions</span>
                         <span>{completion.toFixed(0)}% complétion</span>
                         <RatingStars
-                          value={safeNumber(
-                            (course as any).rating ??
-                              (course as any).average_rating ??
-                              (course as any).averageRating
-                          )}
+                          value={rating}
                           size="sm"
                           showValue
                           valueClassName="text-xs font-semibold text-gray-700"

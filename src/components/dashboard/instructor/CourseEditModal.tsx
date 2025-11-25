@@ -172,13 +172,23 @@ export default function CourseEditModal({
       return;
     }
 
+    // Valider et convertir duration_minutes en nombre entier positif
+    const durationMinutes = formData.duration_minutes;
+    let validDurationMinutes: number | undefined;
+    if (durationMinutes !== undefined && durationMinutes !== null && durationMinutes !== 0) {
+      const parsed = typeof durationMinutes === 'number' ? durationMinutes : parseInt(String(durationMinutes), 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        validDurationMinutes = Math.floor(parsed); // S'assurer que c'est un entier
+      }
+    }
+
     // Nettoyer les champs vides optionnels avant l'envoi
     const updateData: any = {
       title: trimmedTitle,
       description: formData.description.trim(),
       shortDescription: formData.shortDescription.trim(),
       difficulty: formData.difficulty,
-      duration_minutes: formData.duration_minutes || undefined,
+      duration_minutes: validDurationMinutes, // Utiliser la valeur validée
       price: formData.price || 0,
       currency: formData.currency,
       language: formData.language,
@@ -300,10 +310,18 @@ export default function CourseEditModal({
             </label>
             <input
               type="number"
-              value={formData.duration_minutes}
-              onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 0 })}
+              value={formData.duration_minutes || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                const parsed = value === '' ? 0 : parseInt(value, 10);
+                setFormData({ 
+                  ...formData, 
+                  duration_minutes: (Number.isFinite(parsed) && parsed >= 0) ? parsed : 0 
+                });
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-mdsc-blue-primary"
               min="0"
+              step="1"
             />
           </div>
 

@@ -27,7 +27,8 @@ import {
   Link as LinkIcon,
   X,
   Upload,
-  Loader
+  Loader,
+  Calendar
 } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { FileService } from '../../../lib/services/fileService';
@@ -346,6 +347,17 @@ export default function CourseManagement() {
     setCreating(true);
     try {
       // Nettoyer les champs vides optionnels avant l'envoi
+      // Valider et convertir duration_minutes en nombre entier positif
+      const durationMinutes = createFormData.duration_minutes;
+      let validDurationMinutes: number | undefined;
+      if (durationMinutes !== undefined && durationMinutes !== null && durationMinutes !== 0) {
+        const parsed = typeof durationMinutes === 'number' ? durationMinutes : parseInt(String(durationMinutes), 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          validDurationMinutes = Math.floor(parsed); // S'assurer que c'est un entier positif
+        }
+      }
+      // Si duration_minutes est 0, undefined ou invalide, on ne l'inclut pas dans les données
+
       const cleanedData: any = {
         ...createFormData,
         title: trimmedTitle,
@@ -358,6 +370,11 @@ export default function CourseManagement() {
         course_end_date: createFormData.course_type === 'live' ? createFormData.course_end_date : (createFormData.course_end_date || undefined),
         max_students: createFormData.course_type === 'live' ? createFormData.max_students : (createFormData.max_students || undefined),
       };
+      
+      // Ajouter duration_minutes uniquement si c'est un nombre entier positif
+      if (validDurationMinutes !== undefined && validDurationMinutes > 0) {
+        cleanedData.duration_minutes = validDurationMinutes;
+      }
       
       // Logger les données envoyées pour debug
       console.log('📤 Envoi des données du cours:', cleanedData);
@@ -923,8 +940,17 @@ export default function CourseManagement() {
                       </label>
                       <input
                         type="number"
-                        value={createFormData.duration_minutes}
-                        onChange={(e) => setCreateFormData({ ...createFormData, duration_minutes: parseInt(e.target.value) || 0 })}
+                        value={createFormData.duration_minutes || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const parsed = value === '' ? 0 : parseInt(value, 10);
+                          setCreateFormData({ 
+                            ...createFormData, 
+                            duration_minutes: (Number.isFinite(parsed) && parsed >= 0) ? parsed : 0 
+                          });
+                        }}
+                        min="0"
+                        step="1"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
                         placeholder="Ex: 480"
                       />

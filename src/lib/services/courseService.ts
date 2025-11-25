@@ -89,6 +89,8 @@ export interface CreateCourseData {
   enrollment_deadline?: string;
   course_start_date?: string;
   course_end_date?: string;
+  course_type?: 'live' | 'on_demand';
+  max_students?: number;
 }
 
 export interface UpdateCourseData {

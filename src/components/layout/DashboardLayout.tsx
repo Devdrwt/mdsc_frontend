@@ -30,6 +30,7 @@ import {
   Grid3x3,
   Loader2,
   AlertCircle,
+  Video,
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"
@@ -290,6 +291,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             children: [
               { name: "Gestion des Cours", href: `/dashboard/${userRole}/courses`, icon: BookOpen },
               { name: "Modules", href: `/dashboard/${userRole}/modules`, icon: BookOpen },
+              { name: "Sessions Live", href: `/dashboard/${userRole}/live-sessions`, icon: Video },
             ],
           },
           { name: "Mes Étudiants", href: `/dashboard/${userRole}/students`, icon: Users },
