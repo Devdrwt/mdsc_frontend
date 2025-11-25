@@ -612,9 +612,9 @@ export class CourseService {
     return response.data;
   }
 
-  // Supprimer une leçon
-  static async deleteLesson(lessonId: string): Promise<void> {
-    await apiRequest(`/lessons/${lessonId}`, {
+  // Supprimer une leçon (endpoint RESTful /courses/:courseId/lessons/:lessonId)
+  static async deleteLesson(courseId: string | number, lessonId: string | number): Promise<void> {
+    await apiRequest(`/courses/${courseId}/lessons/${lessonId}`, {
       method: 'DELETE',
     });
   }

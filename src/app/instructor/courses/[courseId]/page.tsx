@@ -252,7 +252,7 @@ export default function InstructorCourseDetailPage() {
             {activeTab === 'lessons' && (
               <div>
                 <LessonManagement 
-                  courseId={courseIdParam} 
+                  courseId={course?.id ? String(course.id) : courseIdParam} 
                   moduleId={selectedModuleForLesson ? String(selectedModuleForLesson) : undefined}
                   onLessonCreated={() => {
                     setSelectedModuleForLesson(null);

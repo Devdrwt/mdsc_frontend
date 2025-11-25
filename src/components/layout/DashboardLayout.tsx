@@ -42,6 +42,7 @@ import MessageService from "../../lib/services/messageService"
 interface DashboardLayoutProps {
   children: React.ReactNode
   userRole: "student" | "instructor" | "admin"
+  pageTitle?: string
 }
 
 interface NavigationItem {
@@ -52,7 +53,7 @@ interface NavigationItem {
   children?: NavigationItem[]
 }
 
-export default function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, userRole, pageTitle }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -664,7 +665,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             </button>
             <div className="ml-4 lg:ml-0">
               <h2 className="text-xl font-semibold text-gray-900">
-                {navigationItems.find((item) => isActive(item.href))?.name || "Tableau de bord"}
+                {pageTitle || navigationItems.find((item) => isActive(item.href))?.name || "Tableau de bord"}
               </h2>
             </div>
           </div>

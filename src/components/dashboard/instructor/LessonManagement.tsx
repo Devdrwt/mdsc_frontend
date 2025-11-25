@@ -276,7 +276,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
 
     setDeletingLesson(lessonToDelete);
     try {
-      await courseService.deleteLesson(lessonToDelete);
+      await courseService.deleteLesson(courseId, lessonToDelete);
       toast.success('Leçon supprimée', 'La leçon a été supprimée avec succès');
       await loadData();
       setShowDeleteModal(false);
