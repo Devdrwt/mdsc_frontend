@@ -86,7 +86,7 @@ export default function CertificatePreview({
                 CERTIFICAT
               </h1>
               <p className="mt-1 sm:mt-2 uppercase tracking-[0.1em] sm:tracking-[0.15em] lg:tracking-[0.22em] text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl font-semibold">
-                DE RECONNAISSANCE
+                D'APPLICATION
               </p>
             </div>
             <p className="mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base text-mdsc-blue-primary">Ce diplôme est décerné à :</p>

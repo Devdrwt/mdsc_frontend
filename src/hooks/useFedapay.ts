@@ -154,12 +154,7 @@ export const useFedapay = () => {
           console.log('[Fedapay] Utilisation de FedaPay.init()');
           // Préparer les options selon la documentation officielle (sans environment)
           // Fedapay détecte automatiquement l'environnement via la clé publique
-          const fedapayInitOptions: {
-            public_key: string;
-            transaction?: FedapayOptions['transaction'];
-            customer?: FedapayOptions['customer'];
-            onComplete?: FedapayOptions['onComplete'];
-          } = {
+          const fedapayInitOptions: Record<string, any> = {
             public_key: finalOptions.public_key!,
             transaction: finalOptions.transaction,
             customer: finalOptions.customer,

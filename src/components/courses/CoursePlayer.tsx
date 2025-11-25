@@ -1774,15 +1774,6 @@ export default function CoursePlayer({
               <p className="text-gray-600">
                 Choisissez un module dans la barre latérale pour voir les leçons disponibles
               </p>
-              {evaluationId && (
-                <button
-                  onClick={handleEvaluationClick}
-                  className="mt-4 px-6 py-3 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors flex items-center space-x-2 mx-auto"
-                >
-                  <GraduationCap className="h-5 w-5" />
-                  <span>Passer l'évaluation finale</span>
-                </button>
-              )}
             </div>
           </div>
         )}
