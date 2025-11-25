@@ -1199,7 +1199,6 @@ export default function CoursePlayer({
       if (!isRatingRequiredError(error)) {
         toast.error('Erreur', error.message || 'Impossible de générer le certificat');
       }
->>>>>>> develop
     } finally {
       setRequestingCertificate(false);
     }

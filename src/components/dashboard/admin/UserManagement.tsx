@@ -666,7 +666,8 @@ export default function UserManagement() {
   const allFilteredSelected = filteredUsers.length > 0 && selectionCount === filteredUsers.length;
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <>
+      <div className="space-y-6 animate-fade-in-up">
       {/* En-tête moderne avec gradient et ombre */}
       <div className="relative bg-gradient-to-br from-mdsc-blue-dark via-[#0C3C5C] to-[#1a4d6b] rounded-xl p-8 text-white shadow-2xl overflow-hidden">
         {/* Effet de brillance animé */}
@@ -871,7 +872,7 @@ export default function UserManagement() {
           pageSize={10}
         />
       )}
-    </div>
+      </div>
 
       <Modal
         isOpen={inviteModalOpen}
@@ -935,5 +936,6 @@ export default function UserManagement() {
           </div>
         </form>
       </Modal>
+    </>
   );
 }

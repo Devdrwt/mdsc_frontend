@@ -8,9 +8,9 @@ interface RatingStatsProps {
 }
 
 export default function RatingStats({ stats }: RatingStatsProps) {
-  const averageRating = parseFloat(stats.average_rating);
+  const averageRating = typeof stats.average_rating === 'number' ? stats.average_rating : parseFloat(String(stats.average_rating));
   const ratingCount = stats.rating_count;
-  const recommendationRate = parseFloat(stats.recommendation_rate);
+  const recommendationRate = typeof stats.recommendation_rate === 'number' ? stats.recommendation_rate : parseFloat(String(stats.recommendation_rate));
 
   // Calculer le pourcentage pour chaque note
   const getPercentage = (count: number) => {

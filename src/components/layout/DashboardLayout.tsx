@@ -552,7 +552,6 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             )}
           </button>
           {isOpen && item.children && (
-<<<<<<< HEAD
             <div className={`${isMobile ? 'ml-4' : 'ml-8'} mt-1 space-y-1`}>
               {item.children.map((child) => (
                 <a
@@ -569,7 +568,6 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
                   <span className="ml-3">{child.name}</span>
                 </a>
               ))}
-            </div>
             </div>
           )}
         </div>
