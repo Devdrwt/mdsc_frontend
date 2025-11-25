@@ -37,6 +37,7 @@ import Image from "next/image"
 import StudentService from "../../lib/services/studentService"
 import { useTheme } from "../../lib/context/ThemeContext"
 import NotificationService, { type NotificationEntry } from "../../lib/services/notificationService"
+import MessageService from "../../lib/services/messageService"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -68,6 +69,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const notificationButtonRef = useRef<HTMLButtonElement | null>(null)
   const notificationWrapperRef = useRef<HTMLDivElement | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   const isCourseModerationNotification = useCallback((notification: NotificationEntry) => {
     const type = notification.type?.toLowerCase() ?? ""
@@ -136,6 +138,16 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     }
   }, [userRole, isCourseModerationNotification])
 
+  const refreshUnreadMessages = useCallback(async () => {
+    try {
+      const stats = await MessageService.getMessageStats()
+      const unread = stats?.unread_count ?? stats?.received_count ?? 0
+      setUnreadMessagesCount(unread)
+    } catch (error) {
+      console.warn("Impossible de récupérer le nombre de messages non lus:", error)
+    }
+  }, [])
+
   const handleNotificationDropdownToggle = useCallback(() => {
     setNotificationDropdownOpen((prev) => !prev)
   }, [])
@@ -149,6 +161,12 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   useEffect(() => {
     refreshUnreadCount()
   }, [refreshUnreadCount])
+
+  useEffect(() => {
+    refreshUnreadMessages()
+    const interval = setInterval(refreshUnreadMessages, 60000)
+    return () => clearInterval(interval)
+  }, [refreshUnreadMessages])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -680,6 +698,11 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
               title="Messages"
             >
               <MessageSquare className="h-6 w-6" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 py-0.5 bg-red-500 text-white text-[10px] font-semibold rounded-full border-2 border-white flex items-center justify-center">
+                  {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                </span>
+              )}
             </button>
 
             {/* Notifications */}

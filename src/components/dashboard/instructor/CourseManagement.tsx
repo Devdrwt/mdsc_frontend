@@ -9,7 +9,6 @@ import {
   Eye, 
   Users, 
   BarChart3, 
-  Calendar,
   Filter,
   Search,
   MoreVertical,
@@ -40,6 +39,7 @@ import Modal from '../../ui/Modal';
 import CoursePreviewModal from './CoursePreviewModal';
 import CourseEditModal from './CourseEditModal';
 import CourseAnalyticsModal from './CourseAnalyticsModal';
+import RatingStars from '../../ui/RatingStars';
 
 interface CourseStats {
   totalStudents: number;
@@ -628,25 +628,22 @@ export default function CourseManagement() {
                           <Users className="h-4 w-4" />
                           <span>{course.totalStudents || 0} étudiants</span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Dernière activité: {new Date(course.updatedAt).toLocaleDateString()}</span>
-                        </div>
                       </div>
 
                       {/* Métriques du cours */}
-                      <div className="grid grid-cols-3 gap-4 max-w-md">
+                      <div className="grid grid-cols-2 gap-4 max-w-sm">
                         <div className="text-center">
                           <div className="text-lg font-bold text-gray-900">{stats.completionRate}%</div>
                           <div className="text-xs text-gray-500">Complétion</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{stats.averageRating.toFixed(1)}</div>
-                          <div className="text-xs text-gray-500">Note moyenne</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{course.progress}%</div>
-                          <div className="text-xs text-gray-500">Progression</div>
+                        <div className="text-center flex flex-col items-center">
+                          <RatingStars
+                            value={stats.averageRating}
+                            size="sm"
+                            showValue
+                            valueClassName="text-sm font-semibold text-gray-900"
+                          />
+                          <div className="text-xs text-gray-500 mt-1">Note moyenne</div>
                         </div>
                       </div>
                     </div>

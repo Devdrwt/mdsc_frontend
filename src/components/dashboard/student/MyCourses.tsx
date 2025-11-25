@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User, MessageCircle } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
@@ -316,6 +317,13 @@ export default function MyCourses() {
                           {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : 'Pas de date'}
                         </span>
                       </div>
+                      <Link
+                        href={`/courses/${course.id}/forum`}
+                        className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        <span>Forum</span>
+                      </Link>
                     </div>
                   </div>
                   

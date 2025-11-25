@@ -39,6 +39,7 @@ import {
   Bell,
   AlertTriangle,
 } from 'lucide-react';
+import RatingStars from '../../../components/ui/RatingStars';
 
 interface InstructorStats {
   totalCourses: number;
@@ -300,7 +301,11 @@ export default function InstructorDashboard() {
             status: course.status,
             students: toNumber(course.enrollments),
             completionRate: toNumber(course.completion_rate),
-            rating: toNumber(course.rating),
+            rating: toNumber(
+              course.rating ??
+              (course as any).average_rating ??
+              (course as any).averageRating
+            ),
             revenue: (course.revenue ?? []).reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
             views: toNumber(course.views),
           })));
@@ -557,8 +562,13 @@ export default function InstructorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Note Moyenne</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.averageRating.toFixed(1)}</p>
-                  <p className="text-xs text-yellow-600 mt-1 flex items-center">
+                  <RatingStars
+                    value={stats.averageRating}
+                    size="sm"
+                    showValue
+                    valueClassName="text-lg font-semibold text-gray-900"
+                  />
+                  <p className="text-xs text-yellow-600 mt-2 flex items-center">
                     <Eye className="h-3 w-3 mr-1" />
                     {stats.totalViews.toLocaleString()} vues
                   </p>
@@ -601,7 +611,12 @@ export default function InstructorDashboard() {
                       </div>
                       <div className="flex items-center justify-between text-sm text-gray-500">
                       <span>{course.students} étudiants</span>
-                        <span>{course.rating.toFixed(1)} ⭐</span>
+                        <RatingStars
+                          value={Number.isFinite(course.rating) ? course.rating : 0}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-700"
+                        />
                       <span>{course.views} vues</span>
                     </div>
                   </div>
@@ -625,9 +640,14 @@ export default function InstructorDashboard() {
               <div className="space-y-6">
                 {/* Note moyenne */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-gray-600">Note moyenne</span>
-                    <span className="text-sm font-bold text-gray-900">{stats.averageRating.toFixed(1)} / 5</span>
+                    <RatingStars
+                      value={stats.averageRating}
+                      size="sm"
+                      showValue
+                      valueClassName="text-sm font-semibold text-gray-900"
+                    />
                   </div>
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 

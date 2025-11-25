@@ -9,6 +9,7 @@ import {
   InstructorService,
   InstructorTopCourse,
 } from '../../../lib/services/instructorService';
+import RatingStars from '../../ui/RatingStars';
 
 interface KeyMetrics {
   totalStudents: number;
@@ -255,9 +256,16 @@ export default function AnalyticsPanel() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Note Moyenne</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {metrics.averageRating ? `${metrics.averageRating.toFixed(1)}/5` : '—'}
-              </p>
+              {metrics.averageRating ? (
+                <RatingStars
+                  value={metrics.averageRating}
+                  size="sm"
+                  showValue
+                  valueClassName="text-base font-semibold text-gray-900"
+                />
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">—</p>
+              )}
             </div>
           </div>
         </div>
@@ -309,7 +317,16 @@ export default function AnalyticsPanel() {
                       <div className="flex items-center flex-wrap gap-4 mt-1 text-xs text-gray-500">
                         <span>{safeNumber(course.enrollments)} inscriptions</span>
                         <span>{completion.toFixed(0)}% complétion</span>
-                        <span>{safeNumber(course.rating).toFixed(1)}/5 ⭐</span>
+                        <RatingStars
+                          value={safeNumber(
+                            (course as any).rating ??
+                              (course as any).average_rating ??
+                              (course as any).averageRating
+                          )}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-700"
+                        />
                       </div>
                     </div>
                     <div className="w-24 bg-gray-200 rounded-full h-2 ml-4">
@@ -399,7 +416,16 @@ export default function AnalyticsPanel() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {safeNumber(course.average_rating).toFixed(1)}/5
+                        <RatingStars
+                          value={safeNumber(
+                            (course as any).average_rating ??
+                              (course as any).averageRating ??
+                              (course as any).rating
+                          )}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-900"
+                        />
                       </td>
                     </tr>
                   );
