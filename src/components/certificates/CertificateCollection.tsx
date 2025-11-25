@@ -74,7 +74,7 @@ export default function CertificateCollection({
               {/* Icône plus professionnelle pour la section certificats */}
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17l-3-2-3 2 .75-3.5L7 11l3.5-.25L12 7l1.5 3.75L17 11l-2.25 2.5L15 17z" />
-                <circle cx="12" cy="12" r="9" strokeWidth="1.5" />
+                <circle cx="11" cy="12" r="10" strokeWidth="1.5" />
               </svg>
               <span className="truncate">Mes Certificats</span>
             </h2>

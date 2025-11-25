@@ -24,6 +24,7 @@ import {
 import DataTable from '../shared/DataTable';
 import AdminService, { AdminUserEntry } from '../../../lib/services/adminService';
 import { useNotification } from '../../../lib/hooks/useNotification';
+import Modal from '../../ui/Modal';
 
 interface User {
   id: string;
@@ -54,6 +55,11 @@ export default function UserManagement() {
   const [error, setError] = useState<string | null>(null);
   const [roleUpdating, setRoleUpdating] = useState<Record<string, boolean>>({});
   const [statusUpdating, setStatusUpdating] = useState<Record<string, boolean>>({});
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteEmails, setInviteEmails] = useState('');
+  const [inviteRole, setInviteRole] = useState<'student' | 'instructor' | 'admin'>('student');
+  const [inviteProcessing, setInviteProcessing] = useState(false);
+  const [inviteFormError, setInviteFormError] = useState<string | null>(null);
   const { error: notifyError, success: notifySuccess } = useNotification();
   const notifyErrorRef = useRef(notifyError);
   const notifySuccessRef = useRef(notifySuccess);
@@ -143,6 +149,7 @@ export default function UserManagement() {
       const normalized = response.users.map(normalizeUser);
       setUsers(normalized);
       setFilteredUsers(normalized);
+      setSelectedUsers([]);
     } catch (err) {
       console.error('Erreur lors du chargement des utilisateurs:', err);
       const message =
@@ -153,6 +160,7 @@ export default function UserManagement() {
       notifyErrorRef.current?.('Chargement des utilisateurs', message);
       setUsers([]);
       setFilteredUsers([]);
+      setSelectedUsers([]);
     } finally {
       setLoading(false);
     }
@@ -186,7 +194,135 @@ export default function UserManagement() {
     }
 
     setFilteredUsers(filtered);
+    setSelectedUsers((prev) =>
+      prev.filter((id) => filtered.some((user) => user.id === id))
+    );
   }, [users, searchTerm, filterRole, filterStatus]);
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    if (selectedUsers.length === filteredUsers.length) {
+      setSelectedUsers([]);
+      return;
+    }
+    setSelectedUsers(filteredUsers.map((user) => user.id));
+  };
+
+  const getUsersForActions = () => {
+    if (selectedUsers.length === 0) {
+      return filteredUsers;
+    }
+    return filteredUsers.filter((user) => selectedUsers.includes(user.id));
+  };
+
+  const exportUsersToCsv = (dataset: User[]) => {
+    const header = [
+      'Prénom',
+      'Nom',
+      'Nom complet',
+      'Email',
+      'Rôle',
+      'Statut',
+      'Cours inscrits',
+      'Cours terminés',
+      'Dernière connexion',
+    ];
+    const rows = dataset.map((user) => [
+      `"${user.firstName ?? ''}"`,
+      `"${user.lastName ?? ''}"`,
+      `"${user.name ?? ''}"`,
+      `"${user.email ?? ''}"`,
+      user.role,
+      user.status,
+      user.coursesEnrolled ?? 0,
+      user.coursesCompleted ?? 0,
+      `"${user.lastLogin ?? ''}"`,
+    ]);
+    const csvContent = [header, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mdsc-utilisateurs-${new Date().toISOString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportUsers = () => {
+    const dataset = getUsersForActions();
+    if (dataset.length === 0) {
+      notifyErrorRef.current?.(
+        'Export impossible',
+        'Aucun utilisateur disponible pour l’export.'
+      );
+      return;
+    }
+    exportUsersToCsv(dataset);
+    notifySuccessRef.current?.(
+      'Export CSV prêt',
+      `${dataset.length} utilisateur${dataset.length > 1 ? 's' : ''} exporté${dataset.length > 1 ? 's' : ''}.`
+    );
+  };
+
+  const handleInviteModalClose = () => {
+    setInviteModalOpen(false);
+    setInviteProcessing(false);
+    setInviteFormError(null);
+    setInviteEmails('');
+    setInviteRole('student');
+  };
+
+  const handleInviteSubmit = async (event?: React.FormEvent) => {
+    if (event) {
+      event.preventDefault();
+    }
+    const emails = inviteEmails
+      .split(/[\s,;]+/)
+      .map((email) => email.trim())
+      .filter(Boolean);
+
+    if (!emails.length) {
+      setInviteFormError('Veuillez saisir au moins une adresse e-mail.');
+      return;
+    }
+
+    const invalidEmail = emails.find(
+      (email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    );
+
+    if (invalidEmail) {
+      setInviteFormError(`Adresse e-mail invalide: ${invalidEmail}`);
+      return;
+    }
+
+    setInviteProcessing(true);
+    setInviteFormError(null);
+    try {
+      await AdminService.inviteUsers({
+        emails,
+        role: inviteRole,
+      });
+      notifySuccessRef.current?.(
+        'Invitations envoyées',
+        `${emails.length} contact${emails.length > 1 ? 's' : ''} invité${emails.length > 1 ? 's' : ''}.`
+      );
+      handleInviteModalClose();
+    } catch (error: any) {
+      const message =
+        error?.message ||
+        error?.response?.data?.message ||
+        "Impossible d'envoyer les invitations.";
+      setInviteFormError(message);
+      notifyErrorRef.current?.('Invitations', message);
+    } finally {
+      setInviteProcessing(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -257,8 +393,16 @@ export default function UserManagement() {
   };
 
   const handleBulkAction = (action: string) => {
-    console.log(`Action en masse ${action} sur ${selectedUsers.length} utilisateurs`);
-    // Implémenter les actions en masse
+    switch (action) {
+      case 'export':
+        handleExportUsers();
+        break;
+      case 'invite':
+        setInviteModalOpen(true);
+        break;
+      default:
+        console.log(`Action en masse ${action} sur ${selectedUsers.length} utilisateurs`);
+    }
   };
 
   const handleRoleToggle = async (user: User) => {
@@ -376,6 +520,19 @@ export default function UserManagement() {
   }
 
   const columns = [
+    {
+      key: 'select',
+      label: '',
+      render: (_value: unknown, user: User) => (
+        <input
+          type="checkbox"
+          className="h-4 w-4 text-mdsc-blue-dark border-gray-300 rounded focus:ring-mdsc-blue-dark"
+          checked={selectedUsers.includes(user.id)}
+          onChange={() => toggleUserSelection(user.id)}
+          aria-label={`Sélectionner ${user.email}`}
+        />
+      )
+    },
     {
       key: 'user',
       label: 'Utilisateur',
@@ -505,6 +662,9 @@ export default function UserManagement() {
     }
   ];
 
+  const selectionCount = selectedUsers.length;
+  const allFilteredSelected = filteredUsers.length > 0 && selectionCount === filteredUsers.length;
+
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* En-tête moderne avec gradient et ombre */}
@@ -549,6 +709,36 @@ export default function UserManagement() {
               </span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-blue-50/60 dark:bg-slate-800/70 border border-blue-200 dark:border-slate-700 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold text-blue-900 dark:text-slate-100">
+            {selectionCount > 0
+              ? `${selectionCount} utilisateur${selectionCount > 1 ? 's' : ''} sélectionné${selectionCount > 1 ? 's' : ''}`
+              : 'Aucun utilisateur sélectionné'}
+          </p>
+          <p className="text-xs text-blue-800/80 dark:text-slate-300">
+            Utilisez les cases pour cibler vos exports ou invitations.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={handleSelectAllFiltered}
+            disabled={filteredUsers.length === 0}
+            className="px-4 py-2 text-xs font-semibold rounded-lg border border-blue-300 text-blue-900 bg-white/70 hover:bg-white transition disabled:opacity-60"
+          >
+            {allFilteredSelected ? 'Tout désélectionner' : 'Sélectionner tous les résultats'}
+          </button>
+          {selectionCount > 0 && (
+            <button
+              onClick={() => setSelectedUsers([])}
+              className="px-4 py-2 text-xs font-semibold rounded-lg text-blue-900 hover:text-blue-700"
+            >
+              Effacer la sélection
+            </button>
+          )}
         </div>
       </div>
 
@@ -682,5 +872,68 @@ export default function UserManagement() {
         />
       )}
     </div>
+
+      <Modal
+        isOpen={inviteModalOpen}
+        onClose={handleInviteModalClose}
+        title="Inviter des utilisateurs"
+        size="md"
+      >
+        <form onSubmit={handleInviteSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Adresses e-mail
+            </label>
+            <textarea
+              value={inviteEmails}
+              onChange={(e) => setInviteEmails(e.target.value)}
+              rows={4}
+              placeholder="exemple1@domaine.com, exemple2@domaine.com"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-dark focus:ring-2 focus:ring-mdsc-blue-dark/20 transition"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Séparez les adresses par une virgule, un point-virgule ou un retour à la ligne.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+              Rôle attribué
+            </label>
+            <select
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as any)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-dark focus:ring-2 focus:ring-mdsc-blue-dark/20 transition"
+            >
+              <option value="student">Étudiant</option>
+              <option value="instructor">Formateur</option>
+              <option value="admin">Administrateur</option>
+            </select>
+          </div>
+
+          {inviteFormError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {inviteFormError}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={handleInviteModalClose}
+              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={inviteProcessing}
+              className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-mdsc-blue-dark to-mdsc-blue-primary text-white rounded-lg font-semibold text-sm shadow-lg hover:shadow-xl disabled:opacity-60"
+            >
+              {inviteProcessing ? 'Envoi...' : 'Envoyer les invitations'}
+            </button>
+          </div>
+        </form>
+      </Modal>
   );
 }

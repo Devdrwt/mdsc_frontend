@@ -238,7 +238,7 @@ export default function StudentSettingsPage() {
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
         <div className="space-y-8">
-          <div className="rounded-2xl bg-gradient-to-r from-mdsc-blue-primary to-emerald-500 p-8 text-white shadow-lg">
+          <div className="rounded-2xl bg-mdsc-blue-primary p-8 text-white shadow-lg">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-white/70">Espace étudiant</p>

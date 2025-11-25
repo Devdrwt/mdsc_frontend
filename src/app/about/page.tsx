@@ -105,8 +105,11 @@ export default function AboutPage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className=" py-16"
+      style={{
+    backgroundImage: `url('/Hero.png')`
+  }}>
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
             À propos de la Maison de la Société Civile
           </h1>

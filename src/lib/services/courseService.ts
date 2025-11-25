@@ -89,6 +89,8 @@ export interface CreateCourseData {
   enrollment_deadline?: string;
   course_start_date?: string;
   course_end_date?: string;
+  course_type?: 'live' | 'on_demand';
+  max_students?: number;
 }
 
 export interface UpdateCourseData {
@@ -652,9 +654,9 @@ export class CourseService {
     return response.data;
   }
 
-  // Supprimer une leçon
-  static async deleteLesson(lessonId: string): Promise<void> {
-    await apiRequest(`/lessons/${lessonId}`, {
+  // Supprimer une leçon (endpoint RESTful /courses/:courseId/lessons/:lessonId)
+  static async deleteLesson(courseId: string | number, lessonId: string | number): Promise<void> {
+    await apiRequest(`/courses/${courseId}/lessons/${lessonId}`, {
       method: 'DELETE',
     });
   }

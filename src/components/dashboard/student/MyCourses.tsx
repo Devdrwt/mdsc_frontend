@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User, MessageCircle } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
 import DataTable from '../shared/DataTable';
 import toast from '../../../lib/utils/toast';
+// import { BookOpen } from "heroicons-react" ;
 
 type StudentCourse = Course & {
   progressValue: number;
@@ -181,12 +183,15 @@ export default function MyCourses() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Mes Cours 📚</h1>
-        <p className="text-mdsc-gray-light">
-          Gérez vos cours, suivez votre progression et accédez à vos contenus d'apprentissage.
-        </p>
-      </div>
+      <div className="bg-mdsc-blue-primary rounded-lg p-6 text-white">
+  <div className="flex items-center space-x-2 mb-2">
+    <BookOpen className="h-7 w-7" />
+    <h1 className="text-2xl font-bold">Mes Cours</h1>
+  </div>
+  <p className="text-mdsc-gray-light">
+    Gérez vos cours, suivez votre progression et accédez à vos contenus d'apprentissage.
+  </p>
+</div>
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -312,6 +317,13 @@ export default function MyCourses() {
                           {course.createdAt ? new Date(course.createdAt).toLocaleDateString() : 'Pas de date'}
                         </span>
                       </div>
+                      <Link
+                        href={`/courses/${course.id}/forum`}
+                        className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        <span>Forum</span>
+                      </Link>
                     </div>
                   </div>
                   

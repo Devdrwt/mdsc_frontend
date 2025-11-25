@@ -8,7 +8,7 @@ import DomainManagement from '../../../../components/dashboard/admin/DomainManag
 export default function AdminDomainsPage() {
   return (
     <AuthGuard requiredRole="admin">
-      <DashboardLayout userRole="admin">
+      <DashboardLayout userRole="admin" pageTitle="Domaines">
         <DomainManagement />
       </DashboardLayout>
     </AuthGuard>

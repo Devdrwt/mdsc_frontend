@@ -110,7 +110,7 @@ export default function BadgesCertificatesPreview({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Award className="h-6 w-6 text-mdsc-blue-primary" />
+            <Award className="h-8 w-6 text-mdsc-blue-primary" />
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Mes Certificats</h3>
               <p className="text-sm text-gray-500">{certificateCount} certificat{certificateCount > 1 ? 's' : ''} obtenu{certificateCount > 1 ? 's' : ''}</p>

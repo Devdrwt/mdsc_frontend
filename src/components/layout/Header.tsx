@@ -106,9 +106,8 @@ export default function Header() {
   return (
     <>
     <header 
-      className={`fixed top-2 md:top-4 left-0 w-full z-50 transition-all duration-300 bg-transparent`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      className={`fixed top-2 md:top-4 left-0 z-50 w-full transition-all duration-300 bg-transparent`}>
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20">
         {/* Capsule container */}
         <div className="flex justify-between items-center h-20 md:h-24 bg-white/95 backdrop-blur rounded-[24px] md:rounded-[36px] shadow-md border border-gray-200 px-3 md:px-6">
           {/* Logo */}
@@ -299,9 +298,10 @@ export default function Header() {
       </div>
     </header>
     {needsSpacer && (
-      <div className="h-20 md:h-24" style={{
-        background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
-      }} />
+      <div className="h-20 md:h-24"
+      style={{
+    backgroundImage: `url('/Hero.png')`
+  }}  />
     )}
     </>
   );

@@ -1,7 +1,7 @@
-// Export all course components
-export { default as CourseCard } from './CourseCard';
-export { default as ModernCourseCard } from './ModernCourseCard';
-export { default as ModernCourseGrid } from './ModernCourseGrid';
-export { default as ModernCourseFilter } from './ModernCourseFilter';
-export { default as ModernCourseSearch } from './ModernCourseSearch';
-export { default as ModernCoursePagination } from './ModernCoursePagination';
+// Export des composants de notation
+export { default as RatingForm } from "./RatingForm";
+export { default as RatingDisplay } from "./RatingDisplay";
+export { default as RatingStats } from "./RatingStats";
+export { default as RatingModal } from "./RatingModal";
+export { default as RatingList } from "./RatingList";
+export { default as CourseRatings } from "./CourseRatings";

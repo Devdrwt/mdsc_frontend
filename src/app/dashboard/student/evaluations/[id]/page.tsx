@@ -403,9 +403,9 @@ export default function EvaluationSubmissionPage() {
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Header */}
-          <div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary text-white rounded-lg p-6 shadow-lg">
+          <div className="bg-mdsc-blue-primary text-white rounded-lg p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2">{evaluation.title}</h1>

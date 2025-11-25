@@ -22,7 +22,8 @@ import {
   Award,
   Info,
   ArrowLeft,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
@@ -36,13 +37,16 @@ import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR } from '../../../lib/utils/media';
 import CourseSchedule from '../../../components/courses/CourseSchedule';
+import { ratingService } from '../../../lib/services/ratingService';
+import type { CourseRatingStats } from '../../../types/rating';
+import RatingStars from '../../../components/ui/RatingStars';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
-  const { user } = useAuthStore();
-  const isUserAuthenticated = !!user;
+  const { isAuthenticated, user, token } = useAuthStore();
+  const isUserAuthenticated = isAuthenticated || !!user;
   
   const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -52,6 +56,15 @@ export default function CourseDetailPage() {
   const [imageError, setImageError] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [checkingEnrollment, setCheckingEnrollment] = useState(false);
+  const [ratingStats, setRatingStats] = useState<CourseRatingStats | null>(null);
+  const [ratingStatsLoading, setRatingStatsLoading] = useState(false);
+
+  const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
+  const numericCourseId = useMemo(() => {
+    if (!course) return null;
+    const id = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+    return Number.isFinite(id) ? id : null;
+  }, [course]);
 
   // Vérifier l'état d'inscription
   const checkEnrollmentStatus = useCallback(async () => {
@@ -115,6 +128,41 @@ export default function CourseDetailPage() {
       window.removeEventListener('focus', handleFocus);
     };
   }, [course, isUserAuthenticated, checkEnrollmentStatus]);
+
+  // Charger les statistiques de notation
+  useEffect(() => {
+    if (!numericCourseId) {
+      setRatingStats(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchRatingStats = async () => {
+      try {
+        setRatingStatsLoading(true);
+        const stats = await ratingService.getRatingStats(numericCourseId);
+        if (isMounted) {
+          setRatingStats(stats);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des statistiques de notation:', err);
+        if (isMounted) {
+          setRatingStats(null);
+        }
+      } finally {
+        if (isMounted) {
+          setRatingStatsLoading(false);
+        }
+      }
+    };
+
+    fetchRatingStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [numericCourseId]);
 
   const loadCourse = async () => {
     try {
@@ -182,10 +230,6 @@ export default function CourseDetailPage() {
     }
   };
 
-  // Tous les hooks doivent être appelés avant les retours conditionnels
-  // Utiliser useMemo pour éviter les redéfinitions
-  const courseAny = useMemo(() => course ? (course as any) : null, [course]);
-
   // Vérifier si l'inscription est possible
   const canEnroll = useCallback(() => {
     if (!course || !courseAny) return false;
@@ -211,8 +255,9 @@ export default function CourseDetailPage() {
       return;
     }
     
-    // Vérifier si l'utilisateur est connecté (utiliser useAuthStore pour une vérification fiable)
-    if (!isUserAuthenticated) {
+    // Vérifier si l'utilisateur est connecté
+    // Vérifier à la fois isAuthenticated, user et token pour être sûr
+    if (!isAuthenticated || !user || !token) {
       toast.error(
         'Connexion requise', 
         'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.'
@@ -443,6 +488,29 @@ export default function CourseDetailPage() {
       avatar,
     };
   }, [courseAny]);
+
+  const averageRatingValue = useMemo(() => {
+    const value =
+      ratingStats?.average_rating ??
+      (typeof course?.rating === 'number' ? course.rating : undefined) ??
+      courseAny?.metrics?.average_rating ??
+      courseAny?.average_rating ??
+      courseAny?.rating ??
+      0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [ratingStats, course, courseAny]);
+
+  const ratingCount = useMemo(() => {
+    if (typeof ratingStats?.rating_count === 'number') {
+      return ratingStats.rating_count;
+    }
+    const fallback =
+      courseAny?.rating_count ??
+      courseAny?.metrics?.rating_count ??
+      0;
+    return typeof fallback === 'number' && Number.isFinite(fallback) ? fallback : 0;
+  }, [ratingStats, courseAny]);
 
   // Fonction pour convertir les codes de langue en noms complets
   const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {
@@ -755,7 +823,7 @@ export default function CourseDetailPage() {
       <main>
         {/* Hero Section avec image */}
         <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
             {/* Bouton retour au catalogue */}
             <div className="mb-6">
               <Button
@@ -845,11 +913,23 @@ export default function CourseDetailPage() {
                       <p className="font-semibold">{courseAny.total_lessons || courseAny.metrics?.total_lessons || modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) || 0}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                  <div className="flex items-center space-x-3">
+                    <RatingStars
+                      value={averageRatingValue}
+                      size="sm"
+                    />
                     <div>
                       <p className="text-sm text-white/70">Note</p>
-                      <p className="font-semibold">{(course.rating || 0).toFixed(1)}</p>
+                      <p className="font-semibold text-white">
+                        {ratingStatsLoading && !ratingStats
+                          ? 'Chargement...'
+                          : `${averageRatingValue.toFixed(1)} / 5`}
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {ratingCount > 0
+                          ? `${ratingCount} avis`
+                          : 'Aucun avis pour le moment'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -877,22 +957,50 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* Prix affiché si le cours est payant */}
-                {price > 0 && (
-                  <div className="pt-4 border-t border-white/20">
+                {/* Bouton d'inscription */}
+                <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
+                  {isEnrolled ? (
+                    <>
+                      <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
+                        <Play className="h-5 w-5 mr-2" />
+                        Continuer l'apprentissage
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="lg" 
+                        onClick={() => router.push(`/courses/${slug}/forum`)}
+                        className="bg-white/10 text-white border-white/30 hover:bg-white/20 font-semibold shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Users className="h-5 w-5 mr-2" />
+                        Forum
+                      </Button>
+                    </>
+                  ) : (
+                    <Button 
+                      variant="primary" 
+                      size="lg" 
+                      onClick={handleEnroll} 
+                      disabled={!enrollmentPossible}
+                      className={`bg-mdsc-blue-dark text-white hover:bg-mdsc-blue-primary font-bold text-lg px-8 py-4 shadow-2xl border-2 border-white/30 hover:border-white/50 transition-all transform hover:scale-105 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
+                    >
+                      <GraduationCap className="h-6 w-6 mr-2" />
+                      {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
+                    </Button>
+                  )}
+                  {price > 0 && (
                     <div className="text-right">
                       <p className="text-sm text-white/70">Prix</p>
                       <p className="text-3xl font-bold">{price.toLocaleString()} <span className="text-lg">{currency}</span></p>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Section principale avec contenu détaillé */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contenu principal */}
             <div className="lg:col-span-2 space-y-8">
@@ -1346,15 +1454,26 @@ export default function CourseDetailPage() {
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={handleStartLearning}
-                      className="w-full mb-4"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Continuer l'apprentissage
-                    </Button>
+                    <>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={handleStartLearning}
+                        className="w-full mb-4"
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        Continuer l'apprentissage
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => router.push(`/courses/${slug}/forum`)}
+                        className="w-full mb-4 border-2 border-mdsc-blue-primary text-mdsc-blue-primary hover:bg-mdsc-blue-primary hover:text-white transition-all"
+                      >
+                        <MessageSquare className="h-5 w-5 mr-2" />
+                        Accéder au Forum
+                      </Button>
+                    </>
                   )}
 
                   <div className="space-y-3 pt-4 border-t border-gray-200">
@@ -1381,7 +1500,16 @@ export default function CourseDetailPage() {
                         <Star className="h-4 w-4 mr-2" />
                         Note
                       </span>
-                      <span className="font-medium">{(course.rating || 0).toFixed(1)} ⭐</span>
+                      <span className="font-medium flex items-center gap-1">
+                        {ratingStatsLoading && !ratingStats ? (
+                          '—'
+                        ) : (
+                          <>
+                            {averageRatingValue.toFixed(1)} / 5
+                            {ratingCount > 0 && <span className="text-xs text-gray-500">({ratingCount})</span>}
+                          </>
+                        )}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 flex items-center">

@@ -73,7 +73,7 @@ export default function Home() {
 
         {loading ? (
           <div className="section-mdsc bg-white">
-            <div className="max-w-7xl mx-auto text-center py-12">
+            <div className="max-w-full mx-auto text-center py-12 px-20">
               <p className="text-gray-600">Chargement des formations populaires...</p>
             </div>
           </div>

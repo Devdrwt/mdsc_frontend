@@ -9,6 +9,7 @@ import {
   InstructorService,
   InstructorTopCourse,
 } from '../../../lib/services/instructorService';
+import RatingStars from '../../ui/RatingStars';
 
 interface KeyMetrics {
   totalStudents: number;
@@ -85,12 +86,72 @@ export default function AnalyticsPanel() {
         const stats = dashboard?.stats ?? {};
         const studentStats = stats.students ?? {};
 
+        // Charger les statistiques de notation réelles pour tous les cours
+        let averageRating = safeNumber(stats.average_rating ?? stats.rating?.average);
+        
+        // Si on a des cours, calculer la note moyenne à partir des notes réelles
+        const coursesList = courses?.courses ?? [];
+        if (coursesList && coursesList.length > 0) {
+          try {
+            const { ratingService } = await import('../../../lib/services/ratingService');
+            const ratingPromises = coursesList
+              .filter((c: any) => c.id)
+              .map(async (course: any) => {
+                try {
+                  const ratingStats = await ratingService.getRatingStats(Number(course.id));
+                  return safeNumber(ratingStats.average_rating ?? 0);
+                } catch (err) {
+                  return 0;
+                }
+              });
+            
+            const ratings = await Promise.all(ratingPromises);
+            const validRatings = ratings.filter(r => r > 0);
+            if (validRatings.length > 0) {
+              averageRating = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
+            }
+          } catch (err) {
+            console.warn('Impossible de charger les notes réelles:', err);
+          }
+        }
+
         setMetrics({
           totalStudents: safeNumber(studentStats.total),
           totalCourses: safeNumber(stats.courses?.total),
           completionRate: safeNumber(studentStats.avg_completion_rate ?? studentStats.completion_rate),
-          averageRating: safeNumber(stats.average_rating ?? stats.rating?.average),
+          averageRating,
         });
+
+        // Charger les notes réelles pour les top courses
+        const topCoursesList = analytics?.top_courses ?? [];
+        const topCoursesWithRatings = await Promise.all(
+          topCoursesList.map(async (course: InstructorTopCourse) => {
+            let rating = safeNumber(
+              (course as any).rating ??
+                (course as any).average_rating ??
+                (course as any).averageRating ??
+                0
+            );
+
+            // Si pas de note, essayer de récupérer depuis l'API de notation
+            if (!rating && course.course_id) {
+              try {
+                const { ratingService } = await import('../../../lib/services/ratingService');
+                const ratingStats = await ratingService.getRatingStats(Number(course.course_id));
+                rating = safeNumber(ratingStats.average_rating ?? 0);
+              } catch (err) {
+                // Ignorer les erreurs
+              }
+            }
+
+            return {
+              ...course,
+              rating,
+            };
+          })
+        );
+
+        setTopCourses(topCoursesWithRatings);
 
         const trend = Array.isArray(analytics?.enrollment_trend)
           ? (analytics.enrollment_trend as InstructorEnrollmentsTrendPoint[])
@@ -189,10 +250,15 @@ export default function AnalyticsPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-mdsc-gold rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Analytics & Rapports 📊</h1>
+
+<h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+  <BarChart3 className="w-6 h-6" />
+  Analytics & Rapports
+</h1>
+
             <p className="text-yellow-100">
               Analysez les performances de vos cours et le comportement de vos étudiants.
             </p>
@@ -250,9 +316,16 @@ export default function AnalyticsPanel() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Note Moyenne</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {metrics.averageRating ? `${metrics.averageRating.toFixed(1)}/5` : '—'}
-              </p>
+              {metrics.averageRating ? (
+                <RatingStars
+                  value={metrics.averageRating}
+                  size="sm"
+                  showValue
+                  valueClassName="text-base font-semibold text-gray-900"
+                />
+              ) : (
+                <p className="text-2xl font-bold text-gray-900">—</p>
+              )}
             </div>
           </div>
         </div>
@@ -294,6 +367,13 @@ export default function AnalyticsPanel() {
             <div className="space-y-4">
               {topCourses.map((course, index) => {
                 const completion = safeNumber(course.completion_rate);
+                const rating = safeNumber(
+                  (course as any).rating ??
+                    (course as any).average_rating ??
+                    (course as any).averageRating ??
+                    0
+                );
+
                 return (
                   <div
                     key={String(course.course_id ?? course.title ?? `course-${index}`)}
@@ -304,7 +384,12 @@ export default function AnalyticsPanel() {
                       <div className="flex items-center flex-wrap gap-4 mt-1 text-xs text-gray-500">
                         <span>{safeNumber(course.enrollments)} inscriptions</span>
                         <span>{completion.toFixed(0)}% complétion</span>
-                        <span>{safeNumber(course.rating).toFixed(1)}/5 ⭐</span>
+                        <RatingStars
+                          value={rating}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-700"
+                        />
                       </div>
                     </div>
                     <div className="w-24 bg-gray-200 rounded-full h-2 ml-4">
@@ -394,7 +479,16 @@ export default function AnalyticsPanel() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {safeNumber(course.average_rating).toFixed(1)}/5
+                        <RatingStars
+                          value={safeNumber(
+                            (course as any).average_rating ??
+                              (course as any).averageRating ??
+                              (course as any).rating
+                          )}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-900"
+                        />
                       </td>
                     </tr>
                   );

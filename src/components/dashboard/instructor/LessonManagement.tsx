@@ -188,6 +188,13 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      toast.error('Champ requis', 'Le titre de la leçon est obligatoire');
+      return;
+    }
+    
     try {
       let finalContentUrl = formData.content_url;
       let finalMediaFileId = undefined;
@@ -232,11 +239,11 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
       }
 
       const payload: CreateLessonData | UpdateLessonData = {
-        title: formData.title,
-        description: formData.description,
+        title: trimmedTitle,
+        description: formData.description.trim(),
         content_type: formData.content_type as any,
         content_url: formData.content_type !== 'text' ? finalContentUrl : undefined,
-        content_text: formData.content_type === 'text' ? formData.content_text : undefined,
+        content_text: formData.content_type === 'text' ? formData.content_text.trim() : undefined,
         module_id: moduleId,
         media_file_id: finalMediaFileId,
         duration: formData.duration,
@@ -276,7 +283,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
 
     setDeletingLesson(lessonToDelete);
     try {
-      await courseService.deleteLesson(lessonToDelete);
+      await courseService.deleteLesson(courseId, lessonToDelete);
       toast.success('Leçon supprimée', 'La leçon a été supprimée avec succès');
       await loadData();
       setShowDeleteModal(false);

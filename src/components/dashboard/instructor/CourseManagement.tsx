@@ -9,7 +9,6 @@ import {
   Eye, 
   Users, 
   BarChart3, 
-  Calendar,
   Filter,
   Search,
   MoreVertical,
@@ -28,7 +27,8 @@ import {
   Link as LinkIcon,
   X,
   Upload,
-  Loader
+  Loader,
+  Calendar
 } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { FileService } from '../../../lib/services/fileService';
@@ -40,6 +40,7 @@ import Modal from '../../ui/Modal';
 import CoursePreviewModal from './CoursePreviewModal';
 import CourseEditModal from './CourseEditModal';
 import CourseAnalyticsModal from './CourseAnalyticsModal';
+import RatingStars from '../../ui/RatingStars';
 
 interface CourseStats {
   totalStudents: number;
@@ -325,7 +326,12 @@ export default function CourseManagement() {
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!createFormData.title || !createFormData.description || !createFormData.short_description) {
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = createFormData.title.trim();
+    const trimmedDescription = createFormData.description.trim();
+    const trimmedShortDescription = createFormData.short_description.trim();
+    
+    if (!trimmedTitle || !trimmedDescription || !trimmedShortDescription) {
       toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -341,8 +347,22 @@ export default function CourseManagement() {
     setCreating(true);
     try {
       // Nettoyer les champs vides optionnels avant l'envoi
+      // Valider et convertir duration_minutes en nombre entier positif
+      const durationMinutes = createFormData.duration_minutes;
+      let validDurationMinutes: number | undefined;
+      if (durationMinutes !== undefined && durationMinutes !== null && durationMinutes !== 0) {
+        const parsed = typeof durationMinutes === 'number' ? durationMinutes : parseInt(String(durationMinutes), 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          validDurationMinutes = Math.floor(parsed); // S'assurer que c'est un entier positif
+        }
+      }
+      // Si duration_minutes est 0, undefined ou invalide, on ne l'inclut pas dans les données
+
       const cleanedData: any = {
         ...createFormData,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        short_description: trimmedShortDescription,
         prerequisite_course_id: createFormData.prerequisite_course_id || undefined,
         // Pour les cours on_demand, les dates sont optionnelles
         enrollment_deadline: createFormData.course_type === 'live' ? createFormData.enrollment_deadline : (createFormData.enrollment_deadline || undefined),
@@ -350,6 +370,11 @@ export default function CourseManagement() {
         course_end_date: createFormData.course_type === 'live' ? createFormData.course_end_date : (createFormData.course_end_date || undefined),
         max_students: createFormData.course_type === 'live' ? createFormData.max_students : (createFormData.max_students || undefined),
       };
+      
+      // Ajouter duration_minutes uniquement si c'est un nombre entier positif
+      if (validDurationMinutes !== undefined && validDurationMinutes > 0) {
+        cleanedData.duration_minutes = validDurationMinutes;
+      }
       
       // Logger les données envoyées pour debug
       console.log('📤 Envoi des données du cours:', cleanedData);
@@ -478,10 +503,14 @@ export default function CourseManagement() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-mdsc-gold rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold mb-2">Gestion des Cours 📚</h1>
+<div className="flex items-center space-x-2 mb-2">
+  <BookOpen className="h-7 w-7" />
+  <h1 className="text-2xl font-bold">Gestion des Cours</h1>
+</div>
+
             <p className="text-yellow-100">
               Créez, gérez et suivez vos cours d'apprentissage.
             </p>
@@ -624,25 +653,22 @@ export default function CourseManagement() {
                           <Users className="h-4 w-4" />
                           <span>{course.totalStudents || 0} étudiants</span>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Dernière activité: {new Date(course.updatedAt).toLocaleDateString()}</span>
-                        </div>
                       </div>
 
                       {/* Métriques du cours */}
-                      <div className="grid grid-cols-3 gap-4 max-w-md">
+                      <div className="grid grid-cols-2 gap-4 max-w-sm">
                         <div className="text-center">
                           <div className="text-lg font-bold text-gray-900">{stats.completionRate}%</div>
                           <div className="text-xs text-gray-500">Complétion</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{stats.averageRating.toFixed(1)}</div>
-                          <div className="text-xs text-gray-500">Note moyenne</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{course.progress}%</div>
-                          <div className="text-xs text-gray-500">Progression</div>
+                        <div className="text-center flex flex-col items-center">
+                          <RatingStars
+                            value={stats.averageRating}
+                            size="sm"
+                            showValue
+                            valueClassName="text-sm font-semibold text-gray-900"
+                          />
+                          <div className="text-xs text-gray-500 mt-1">Note moyenne</div>
                         </div>
                       </div>
                     </div>
@@ -914,8 +940,17 @@ export default function CourseManagement() {
                       </label>
                       <input
                         type="number"
-                        value={createFormData.duration_minutes}
-                        onChange={(e) => setCreateFormData({ ...createFormData, duration_minutes: parseInt(e.target.value) || 0 })}
+                        value={createFormData.duration_minutes || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const parsed = value === '' ? 0 : parseInt(value, 10);
+                          setCreateFormData({ 
+                            ...createFormData, 
+                            duration_minutes: (Number.isFinite(parsed) && parsed >= 0) ? parsed : 0 
+                          });
+                        }}
+                        min="0"
+                        step="1"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
                         placeholder="Ex: 480"
                       />
