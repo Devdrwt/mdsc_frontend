@@ -122,9 +122,11 @@ export default function MessageComposer({
     
     // Utiliser l'email caché si disponible, sinon l'email saisi
     const finalEmail = hiddenReceiverEmail || receiverEmail;
+    const trimmedSubject = subject.trim();
+    const trimmedContent = content.trim();
     
-    if (!finalEmail || !subject || !content) {
-      toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs');
+    if (!finalEmail || !trimmedSubject || !trimmedContent) {
+      toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
 
@@ -140,8 +142,8 @@ export default function MessageComposer({
       await MessageService.sendMessage({
         recipient_email: finalEmail,
         recipient_id: selectedUser?.id,
-        subject,
-        content,
+        subject: trimmedSubject,
+        content: trimmedContent,
         message_type: 'direct',
       });
       toast.success('Message envoyé', 'Votre message a été envoyé avec succès');

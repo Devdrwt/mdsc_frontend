@@ -75,16 +75,30 @@ export default function SequenceManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = formData.title.trim();
+    const trimmedDescription = formData.description.trim();
+    
+    if (!trimmedTitle || !trimmedDescription) {
+      showError('Champs requis', 'Le titre et la description sont obligatoires');
+      return;
+    }
+    
     try {
       if (editingSequence) {
         await ProfessionalService.updateSequence(editingSequence.id, {
           ...formData,
+          title: trimmedTitle,
+          description: trimmedDescription,
           course_id: parseInt(formData.course_id),
         });
         showSuccess('Séquence mise à jour', 'La séquence a été mise à jour avec succès');
       } else {
         await ProfessionalService.createSequence({
           ...formData,
+          title: trimmedTitle,
+          description: trimmedDescription,
           course_id: parseInt(formData.course_id),
         });
         showSuccess('Séquence créée', 'La séquence a été créée avec succès');

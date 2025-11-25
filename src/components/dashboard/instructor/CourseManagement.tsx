@@ -325,7 +325,12 @@ export default function CourseManagement() {
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!createFormData.title || !createFormData.description || !createFormData.short_description) {
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = createFormData.title.trim();
+    const trimmedDescription = createFormData.description.trim();
+    const trimmedShortDescription = createFormData.short_description.trim();
+    
+    if (!trimmedTitle || !trimmedDescription || !trimmedShortDescription) {
       toast.warning('Formulaire incomplet', 'Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -343,6 +348,9 @@ export default function CourseManagement() {
       // Nettoyer les champs vides optionnels avant l'envoi
       const cleanedData: any = {
         ...createFormData,
+        title: trimmedTitle,
+        description: trimmedDescription,
+        short_description: trimmedShortDescription,
         prerequisite_course_id: createFormData.prerequisite_course_id || undefined,
         // Pour les cours on_demand, les dates sont optionnelles
         enrollment_deadline: createFormData.course_type === 'live' ? createFormData.enrollment_deadline : (createFormData.enrollment_deadline || undefined),

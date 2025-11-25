@@ -161,16 +161,27 @@ export default function ModuleManagement() {
       return;
     }
     
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      toast.error('Champ requis', 'Le titre du module est obligatoire');
+      return;
+    }
+    
     try {
       if (editingModule) {
         await moduleService.updateModule(editingModule.id, {
           ...formData,
+          title: trimmedTitle,
+          description: formData.description.trim(),
           order_index: editingModule.order_index || 0,
         });
         toast.success('Module mis à jour', 'Les modifications ont été enregistrées');
       } else {
         await moduleService.createModule(Number(selectedCourseId), {
           ...formData,
+          title: trimmedTitle,
+          description: formData.description.trim(),
           order_index: modules.length,
         });
         toast.success('Module créé', 'Le module a été créé avec succès');

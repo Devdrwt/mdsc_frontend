@@ -25,6 +25,18 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedName = formData.name.trim();
+    const trimmedEmail = formData.email.trim();
+    const trimmedSubject = formData.subject.trim();
+    const trimmedMessage = formData.message.trim();
+    
+    if (!trimmedName || !trimmedEmail || !trimmedSubject || !trimmedMessage) {
+      alert('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {

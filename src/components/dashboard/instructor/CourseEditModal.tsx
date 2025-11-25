@@ -165,11 +165,18 @@ export default function CourseEditModal({
     e.preventDefault();
     if (!course) return;
 
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      toast.error('Champ requis', 'Le titre du cours est obligatoire');
+      return;
+    }
+
     // Nettoyer les champs vides optionnels avant l'envoi
     const updateData: any = {
-      title: formData.title,
-      description: formData.description,
-      shortDescription: formData.shortDescription,
+      title: trimmedTitle,
+      description: formData.description.trim(),
+      shortDescription: formData.shortDescription.trim(),
       difficulty: formData.difficulty,
       duration_minutes: formData.duration_minutes || undefined,
       price: formData.price || 0,
