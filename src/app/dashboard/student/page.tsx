@@ -564,6 +564,9 @@ export default function StudentDashboard() {
                 evaluation_passed: { icon: CheckCircle, color: 'text-green-500', title: 'Évaluation réussie' },
                 evaluation_failed: { icon: XCircle, color: 'text-red-500', title: 'Évaluation échouée' },
                 course_progress: { icon: TrendingUp, color: 'text-blue-500', title: 'Progression enregistrée' },
+                payment_failed: { icon: XCircle, color: 'text-red-500', title: 'Paiement échoué' },
+                payment_cancelled: { icon: XCircle, color: 'text-orange-500', title: 'Paiement annulé' },
+                payment_pending: { icon: Clock, color: 'text-yellow-500', title: 'Paiement en cours' },
               };
               const config = iconMap[entry.type] ?? {
                 icon: Play,
