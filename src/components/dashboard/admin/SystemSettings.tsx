@@ -146,7 +146,9 @@ export default function SystemSettings() {
     is_active: true,
     is_sandbox: true,
     base_url: '',
+    metadata: null,
   });
+  const [platformMoneyInput, setPlatformMoneyInput] = useState('');
 
   const handleSave = async () => {
     setLoading(true);
@@ -181,9 +183,57 @@ export default function SystemSettings() {
     }));
   };
 
+  const resetMetadataFields = () => {
+    setPlatformMoneyInput('');
+  };
+
+  const getFrontendBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  };
+
+  const getGobipayRedirectUrls = () => {
+    const base = getFrontendBaseUrl();
+    const dashboard = `${base}/dashboard/student/courses`;
+    const personalSpace = `${base}/dashboard/student`;
+    return {
+      success: `${personalSpace}?payment=success`,
+      failed: `${dashboard}?payment=failed`,
+      cancelled: `${dashboard}?payment=cancelled`,
+      default: `${dashboard}`,
+    };
+  };
+
+  const handleProviderSelectChange = (value: 'kkiapay' | 'fedapay' | 'gobipay') => {
+    setProviderForm((prev) => ({
+      ...prev,
+      provider_name: value,
+      base_url: value === 'gobipay' ? (prev.base_url || 'https://api-pay.gobiworld.com/api') : '',
+    }));
+    if (value !== 'gobipay') {
+      resetMetadataFields();
+    }
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Copié', `${label} copié dans le presse-papiers`);
+  };
+
+  const getAutomaticBaseUrl = () => {
+    if (providerForm.provider_name === 'kkiapay') {
+      return providerForm.is_sandbox
+        ? 'https://api-sandbox.kkiapay.me'
+        : 'https://api.kkiapay.me';
+    }
+    if (providerForm.provider_name === 'fedapay') {
+      return providerForm.is_sandbox
+        ? 'https://sandbox-api.fedapay.com'
+        : 'https://api.fedapay.com';
+    }
+    return providerForm.base_url || 'https://api-pay.gobiworld.com/api';
   };
 
   const tabs = [
@@ -220,13 +270,35 @@ export default function SystemSettings() {
       toast.error('Erreur', 'La clé publique et la clé secrète sont requises');
       return;
     }
+    const isGobipay = providerForm.provider_name === 'gobipay';
+    if (isGobipay && !providerForm.base_url?.trim()) {
+      toast.error('Erreur', 'L’URL de base Gobipay est obligatoire');
+      return;
+    }
 
     setLoading(true);
     try {
+      const normalizedPlatformMoney = platformMoneyInput
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const metadataPayload: Record<string, any> = {};
+      if (normalizedPlatformMoney.length) {
+        metadataPayload.platform_money_list = normalizedPlatformMoney;
+      }
+      if (isGobipay) {
+        metadataPayload.redirect_urls = getGobipayRedirectUrls();
+      }
+      const finalMetadata = Object.keys(metadataPayload).length ? metadataPayload : null;
+
       // Ne pas envoyer base_url, elle sera générée automatiquement côté backend
       const formData = {
         ...providerForm,
-        base_url: undefined, // Ne pas envoyer, sera généré automatiquement
+        base_url:
+          providerForm.provider_name === 'gobipay'
+            ? (providerForm.base_url?.trim() || 'https://api-pay.gobiworld.com/api')
+            : undefined,
+        metadata: finalMetadata,
       };
       
       if (editingProvider?.id) {
@@ -245,7 +317,9 @@ export default function SystemSettings() {
         is_active: true,
         is_sandbox: true,
         base_url: '',
+        metadata: null,
       });
+      resetMetadataFields();
       await loadPaymentProviders();
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -303,7 +377,13 @@ export default function SystemSettings() {
         is_active: fullProvider.is_active,
         is_sandbox: fullProvider.is_sandbox,
         base_url: fullProvider.base_url || '',
+        metadata: fullProvider.metadata || null,
       });
+      const metadata = fullProvider.metadata || {};
+      const platformList = Array.isArray(metadata.platform_money_list)
+        ? metadata.platform_money_list.join(', ')
+        : '';
+      setPlatformMoneyInput(platformList);
     } catch (error: any) {
       console.error('Erreur lors du chargement des clés complètes:', error);
       toast.error('Erreur', 'Impossible de charger les clés complètes pour l\'édition');
@@ -316,7 +396,9 @@ export default function SystemSettings() {
         is_active: provider.is_active,
         is_sandbox: provider.is_sandbox,
         base_url: provider.base_url || '',
+        metadata: null,
       });
+      resetMetadataFields();
     } finally {
       setLoading(false);
     }
@@ -332,7 +414,9 @@ export default function SystemSettings() {
       is_active: true,
       is_sandbox: true,
       base_url: '',
+      metadata: null,
     });
+    resetMetadataFields();
   };
 
   return (
@@ -964,7 +1048,7 @@ export default function SystemSettings() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">Configuration des Paiements</h3>
-                    <p className="text-sm text-gray-500">Gérez les providers de paiement (Kkiapay et Fedapay)</p>
+                    <p className="text-sm text-gray-500">Gérez les providers de paiement (Kkiapay, Fedapay, Gobipay)</p>
                   </div>
                 </div>
 
@@ -975,18 +1059,27 @@ export default function SystemSettings() {
                 ) : (
                   <div className="space-y-6">
                     {/* Liste des providers existants */}
-                    {paymentProviders.length > 0 && paymentProviders.map((provider) => (
+                    {paymentProviders.length > 0 && paymentProviders.map((provider) => {
+                      const isKkiapayProvider = provider.provider_name === 'kkiapay';
+                      const isFedapayProvider = provider.provider_name === 'fedapay';
+                      const isGobipayProvider = provider.provider_name === 'gobipay';
+                      const badgeGradient = provider.is_active
+                        ? isKkiapayProvider
+                          ? 'bg-gradient-to-br from-[#3B7C8A] to-[#2d5f6a]'
+                          : isFedapayProvider
+                          ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                          : isGobipayProvider
+                          ? 'bg-gradient-to-br from-sky-500 to-blue-600'
+                          : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+                        : 'bg-gray-300';
+                      return (
                       <div
                         key={provider.id}
                         className="border-2 border-gray-200 rounded-xl p-6 hover:border-emerald-300 transition-all duration-200"
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${
-                              provider.is_active
-                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600'
-                                : 'bg-gray-300'
-                            }`}>
+                            <div className={`p-2 rounded-lg ${badgeGradient}`}>
                               <CreditCard className="h-5 w-5 text-white" />
                             </div>
                             <div>
@@ -1019,6 +1112,11 @@ export default function SystemSettings() {
                               <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs" title={provider.secret_key || 'Non configurée'}>
                                 Clé secrète: <span className="font-mono text-xs">{provider.secret_key || 'Non configurée'}</span>
                               </p>
+                              {isGobipayProvider && provider.base_url && (
+                                <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs" title={provider.base_url}>
+                                  Base URL: <span className="font-mono text-xs">{provider.base_url}</span>
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1054,7 +1152,8 @@ export default function SystemSettings() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Formulaire d'ajout/édition */}
                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-6">
@@ -1080,16 +1179,14 @@ export default function SystemSettings() {
                           <select
                             value={providerForm.provider_name}
                             onChange={(e) =>
-                              setProviderForm({
-                                ...providerForm,
-                                provider_name: e.target.value as 'kkiapay' | 'fedapay',
-                              })
+                              handleProviderSelectChange(e.target.value as 'kkiapay' | 'fedapay' | 'gobipay')
                             }
                             disabled={!!editingProvider}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 disabled:bg-gray-100"
                           >
                             <option value="kkiapay">Kkiapay</option>
                             <option value="fedapay">Fedapay</option>
+                            <option value="gobipay">Gobipay</option>
                           </select>
                         </div>
 
@@ -1204,29 +1301,56 @@ export default function SystemSettings() {
 
                         <div className="md:col-span-2">
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            URL de base (générée automatiquement)
+                            URL de base {providerForm.provider_name === 'gobipay' ? '(obligatoire)' : '(générée automatiquement)'}
                           </label>
-                          <input
-                            type="url"
-                            value={
-                              providerForm.provider_name === 'kkiapay'
-                                ? providerForm.is_sandbox
-                                  ? 'https://api-sandbox.kkiapay.me'
-                                  : 'https://api.kkiapay.me'
-                                : providerForm.provider_name === 'fedapay'
-                                ? providerForm.is_sandbox
-                                  ? 'https://sandbox-api.fedapay.com'
-                                  : 'https://api.fedapay.com'
-                                : ''
-                            }
-                            readOnly
-                            disabled
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
-                          />
+                          {providerForm.provider_name === 'gobipay' ? (
+                            <input
+                              type="url"
+                              value={providerForm.base_url || ''}
+                              onChange={(e) =>
+                                setProviderForm({
+                                  ...providerForm,
+                                  base_url: e.target.value,
+                                })
+                              }
+                              placeholder="https://api-pay.gobiworld.com/api"
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
+                            />
+                          ) : (
+                            <input
+                              type="url"
+                              value={getAutomaticBaseUrl()}
+                              readOnly
+                              disabled
+                              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+                            />
+                          )}
                           <p className="text-xs text-gray-500 mt-1">
-                            Cette URL est générée automatiquement selon le provider et l'environnement sélectionnés.
+                            {providerForm.provider_name === 'gobipay'
+                              ? 'Entrez l’URL de l’API Gobipay fournie par l’équipe technique.'
+                              : "Cette URL est générée automatiquement selon le provider et l'environnement sélectionnés."}
                           </p>
                         </div>
+
+                        {providerForm.provider_name === 'gobipay' && (
+                          <div className="md:col-span-2 space-y-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Plateformes Mobile Money autorisées
+                              </label>
+                              <input
+                                type="text"
+                                value={platformMoneyInput}
+                                onChange={(e) => setPlatformMoneyInput(e.target.value)}
+                                placeholder="Ex: MTN_BEN_XOF, MOOV_BEN_XOF"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Séparez chaque portefeuille par une virgule. Par défaut : MTN_BEN_XOF.
+                              </p>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="md:col-span-2">
                           <div className="flex items-start p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">

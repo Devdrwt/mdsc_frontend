@@ -2,7 +2,7 @@ import { apiRequest } from './api';
 
 export interface PaymentProvider {
   id: number;
-  provider_name: 'kkiapay' | 'fedapay';
+  provider_name: 'kkiapay' | 'fedapay' | 'gobipay';
   is_sandbox: boolean;
   public_key?: string | null; // Clé publique pour initialiser le widget
 }

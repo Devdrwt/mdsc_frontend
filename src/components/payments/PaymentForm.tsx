@@ -51,6 +51,38 @@ export default function PaymentForm({
   // Essayer plusieurs façons de récupérer l'email
   const email = user?.email || (user as any)?.email || '';
   const phone = (user as any)?.phone || user?.phone || '';
+  const [customerPhoneInput, setCustomerPhoneInput] = useState<string>(phone || '');
+
+  useEffect(() => {
+    setCustomerPhoneInput(phone || '');
+  }, [phone]);
+
+  const normalizeGobipayPhone = (input: string): string => {
+    if (!input) return '';
+    let value = input.replace(/[^0-9+]/g, '');
+    // Convert leading 00 to +
+    if (value.startsWith('00')) {
+      value = `+${value.slice(2)}`;
+    }
+    // Remove +
+    if (value.startsWith('+')) {
+      value = value.slice(1);
+    }
+    // Remove leading country code duplicates
+    if (value.startsWith('00229')) {
+      value = value.slice(4);
+    }
+    if (value.startsWith('229') && value.length > 11) {
+      value = value.slice(0, 11);
+    }
+    if (value.length === 8) {
+      value = `229${value}`;
+    }
+    if (value.startsWith('229') && value.length === 11) {
+      return value;
+    }
+    return value.length >= 8 ? value : '';
+  };
 
   // Charger les providers actifs au montage
   useEffect(() => {
@@ -236,8 +268,68 @@ export default function PaymentForm({
       await handlePayWithKkiapay();
     } else if (provider.provider_name === 'fedapay') {
       await handlePayWithFedapay();
+    } else if (provider.provider_name === 'gobipay') {
+      await handlePayWithGobipay();
     } else {
       toast.error('Erreur', 'Provider non supporté');
+    }
+  };
+  const handlePayWithGobipay = async () => {
+    if (!email) {
+      toast.warning('Email requis', 'Votre profil doit contenir une adresse email pour effectuer un paiement.');
+      return;
+    }
+
+    const trimmedPhone = customerPhoneInput.trim();
+    if (!trimmedPhone) {
+      toast.error('Téléphone requis', 'Veuillez renseigner votre numéro Mobile Money pour continuer avec Gobipay.');
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      console.log('[PaymentForm] Initiating Gobipay payment', {
+        courseId,
+        amount,
+        currency,
+        fullname,
+        email,
+        phone: trimmedPhone,
+      });
+
+      const paymentData: PaymentInitiation = {
+        courseId,
+        paymentMethod: 'gobipay',
+        paymentProvider: 'gobipay',
+        customerFullname: fullname || 'Étudiant MdSC',
+        customerEmail: email,
+        customerPhone: trimmedPhone,
+      };
+
+      const paymentResponse = await paymentService.initiatePayment(paymentData);
+      setPayment(paymentResponse);
+
+      const redirectUrl =
+        paymentResponse.redirect_url ||
+        (paymentResponse.metadata as any)?.redirect_url ||
+        (paymentResponse.metadata as any)?.instructions?.redirect_url;
+
+      if (redirectUrl) {
+        console.log('[PaymentForm] 🔗 Redirection vers Gobipay', redirectUrl);
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      toast.info(
+        'Instructions envoyées',
+        'Suivez les étapes affichées par Gobipay pour finaliser votre paiement.'
+      );
+      setProcessing(false);
+    } catch (error: any) {
+      console.error('[PaymentForm] Error initiating Gobipay payment:', error);
+      setProcessing(false);
+      toast.error('Erreur', error.message || "Impossible d'initier le paiement Gobipay");
     }
   };
 
@@ -301,15 +393,30 @@ export default function PaymentForm({
       setPayment(paymentResponse);
 
       // Stocker les métadonnées pour le webhook
+      const userId = user?.id || (user as any)?.userId || (user as any)?.user_id;
+      if (!userId) {
+        console.error('[PaymentForm] ❌ User ID not found in user object:', user);
+        throw new Error('Impossible de récupérer votre identifiant utilisateur. Veuillez vous reconnecter.');
+      }
+      
+      if (!courseId) {
+        console.error('[PaymentForm] ❌ Course ID not found');
+        throw new Error('Identifiant du cours manquant. Veuillez réessayer.');
+      }
+
       const metadata = {
         temp_payment_id: paymentResponse.id || paymentResponse.temp_payment_id,
-        user_id: user?.id || (user as any)?.userId,
+        user_id: userId,
         course_id: courseId,
       };
       setPaymentMetadata(metadata);
       paymentMetadataRef.current = metadata;
 
-      console.log('[PaymentForm] Payment metadata stored', metadata);
+      console.log('[PaymentForm] ✅ Payment metadata stored', {
+        ...metadata,
+        user_id_type: typeof metadata.user_id,
+        course_id_type: typeof metadata.course_id,
+      });
 
       // Extraire la clé publique et l'environnement depuis les métadonnées (comme Kkiapay)
       const rawPaymentData = paymentResponse.metadata?.raw || paymentResponse.metadata || {};
@@ -429,15 +536,148 @@ export default function PaymentForm({
           lastname: lastname,
         },
         onComplete: async (reason: number, transaction: any) => {
-          console.log('[PaymentForm] Fedapay onComplete callback', { reason, transaction });
+          console.log('========================================');
+          console.log('[PaymentForm] 🔔🔔🔔 FEDAPAY onComplete CALLBACK 🔔🔔🔔');
+          console.log('========================================');
+          console.log('[PaymentForm] 📋 REASON:', {
+            value: reason,
+            type: typeof reason,
+            stringified: String(reason),
+            isNumber: typeof reason === 'number',
+            isString: typeof reason === 'string',
+          });
+          console.log('[PaymentForm] 📦 TRANSACTION OBJECT (FULL):', JSON.stringify(transaction, null, 2));
+          console.log('[PaymentForm] 📦 TRANSACTION OBJECT (STRUCTURE):', {
+            keys: transaction ? Object.keys(transaction) : 'null',
+            hasId: !!transaction?.id,
+            hasTransactionId: !!transaction?.transaction_id,
+            hasTransaction: !!transaction?.transaction,
+            hasStatus: !!transaction?.status,
+            hasState: !!transaction?.state,
+            status: transaction?.status,
+            state: transaction?.state,
+            transactionStatus: transaction?.transaction?.status,
+            transactionState: transaction?.transaction?.state,
+            amount: transaction?.amount,
+            currency: transaction?.currency,
+            fullTransaction: transaction,
+          });
+          console.log('========================================');
           
-          // Vérifier les constantes disponibles
+          // Vérifier les constantes disponibles (peuvent être des strings ou des nombres)
           const CHECKOUT_COMPLETED = fedapayConstants?.CHECKOUT_COMPLETED ?? window.FedaPay?.CHECKOUT_COMPLETED;
           const DIALOG_DISMISSED = fedapayConstants?.DIALOG_DISMISSED ?? window.FedaPay?.DIALOG_DISMISSED;
           
-          console.log('[PaymentForm] Fedapay constants:', { CHECKOUT_COMPLETED, DIALOG_DISMISSED, reason });
+          // Normaliser reason - peut être un objet, un nombre, ou une string
+          let reasonValue = reason;
+          let reasonObject = null;
+          if (typeof reason === 'object' && reason !== null) {
+            reasonObject = reason;
+            // Si reason est un objet, essayer d'extraire une valeur
+            reasonValue = reason.value || reason.reason || reason.status || reason.code || reason.message || reason.type || String(reason);
+            console.log('[PaymentForm] ⚠️ Reason is an object, analyzing...');
+            console.log('[PaymentForm] 📦 Reason object keys:', Object.keys(reason));
+            console.log('[PaymentForm] 📦 Reason object full:', JSON.stringify(reason, null, 2));
+            console.log('[PaymentForm] 📦 Reason object extracted value:', reasonValue);
+          }
           
-          if (reason === CHECKOUT_COMPLETED) {
+          // Convertir en string pour comparaison
+          const reasonString = String(reasonValue).toUpperCase();
+          const completedString = String(CHECKOUT_COMPLETED || '').toUpperCase();
+          const dismissedString = String(DIALOG_DISMISSED || '').toUpperCase();
+          
+          // Vérifier aussi dans l'objet reason si c'est un objet
+          let reasonStatusFromObject = null;
+          if (reasonObject) {
+            reasonStatusFromObject = reasonObject.status || reasonObject.state || reasonObject.type || reasonObject.code;
+            if (reasonStatusFromObject) {
+              console.log('[PaymentForm] 📦 Found status in reason object:', reasonStatusFromObject);
+            }
+          }
+          
+          console.log('[PaymentForm] Fedapay constants and reason:', { 
+            CHECKOUT_COMPLETED, 
+            DIALOG_DISMISSED,
+            reasonRaw: reason,
+            reasonObject,
+            reasonValue,
+            reasonString,
+            reasonStatusFromObject,
+            completedString,
+            dismissedString,
+            reasonMatchesCompleted: reasonString.includes(completedString) || reasonString.includes('COMPLETE') || reasonString.includes('SUCCESS') || reasonString.includes('APPROVED'),
+            reasonMatchesDismissed: reasonString.includes(dismissedString) || reasonString.includes('DISMISS') || reasonString.includes('CANCEL'),
+          });
+          
+          // Extraire le statut de la transaction (peut être dans transaction.status, transaction.state, ou reason lui-même)
+          const transactionStatus = transaction?.status || 
+                                   transaction?.state || 
+                                   transaction?.transaction?.status || 
+                                   transaction?.transaction?.state ||
+                                   reasonStatusFromObject ||
+                                   (reasonObject?.status) ||
+                                   (reasonObject?.state) ||
+                                   (reasonObject?.type) ||
+                                   reasonString ||
+                                   'unknown';
+          
+          const normalizedStatus = String(transactionStatus).toLowerCase();
+          const isApproved = normalizedStatus === 'approved' || 
+                            normalizedStatus === 'completed' || 
+                            normalizedStatus === 'success' ||
+                            normalizedStatus === 'transferred' ||
+                            normalizedStatus.includes('complete') ||
+                            normalizedStatus.includes('success') ||
+                            normalizedStatus.includes('approved');
+          const isDeclined = normalizedStatus === 'declined' || 
+                            normalizedStatus === 'failed' || 
+                            normalizedStatus === 'error' ||
+                            normalizedStatus === 'cancelled' ||
+                            normalizedStatus === 'canceled' ||
+                            normalizedStatus.includes('fail') ||
+                            normalizedStatus.includes('error') ||
+                            normalizedStatus.includes('cancel') ||
+                            normalizedStatus.includes('decline');
+          const isPending = normalizedStatus === 'pending' || 
+                           normalizedStatus === 'processing' ||
+                           normalizedStatus.includes('pending') ||
+                           normalizedStatus.includes('processing');
+          
+          console.log('[PaymentForm] Transaction status analysis:', {
+            rawStatus: transactionStatus,
+            normalizedStatus,
+            isApproved,
+            isDeclined,
+            isPending,
+            reasonStatusFromObject,
+          });
+          
+          // Vérifier si le paiement est réussi
+          // Si reason contient "COMPLETE" ou "SUCCESS", ou si le statut est approuvé
+          // OU si transaction existe et a un statut approuvé
+          const isPaymentSuccess = reasonString.includes('COMPLETE') || 
+                                  reasonString.includes('SUCCESS') ||
+                                  reasonString.includes('APPROVED') ||
+                                  (reasonStatusFromObject && String(reasonStatusFromObject).toLowerCase().includes('approved')) ||
+                                  (reasonStatusFromObject && String(reasonStatusFromObject).toLowerCase().includes('complete')) ||
+                                  (transaction && isApproved) ||
+                                  (isApproved && !reasonString.includes('DISMISS') && !reasonString.includes('CANCEL') && !reasonString.includes('FAIL'));
+          
+          // Vérifier si c'est une annulation
+          const isPaymentCancelled = reasonString.includes('DISMISS') || 
+                                    reasonString.includes('CANCEL') ||
+                                    (reasonStatusFromObject && String(reasonStatusFromObject).toLowerCase().includes('cancel')) ||
+                                    (isDeclined && !isApproved && !reasonString.includes('COMPLETE') && !reasonString.includes('SUCCESS'));
+          
+          console.log('[PaymentForm] Payment decision:', {
+            isPaymentSuccess,
+            isPaymentCancelled,
+            isDeclined,
+            reasonString,
+            normalizedStatus,
+          });
+          
+          if (isPaymentSuccess) {
             // Paiement réussi
             console.log('[PaymentForm] 🎉 Fedapay payment successful!', transaction);
             setProcessing(false);
@@ -450,49 +690,333 @@ export default function PaymentForm({
             }
 
             try {
+              // Vérifier que les métadonnées sont complètes
+              if (!currentMetadata.user_id || !currentMetadata.course_id) {
+                console.error('[PaymentForm] ❌ Metadata incomplete:', currentMetadata);
+                toast.error('Erreur', 'Les informations de paiement sont incomplètes. Veuillez contacter le support.');
+                return;
+              }
+
+              // Déterminer le statut à envoyer au backend
+              // Si la transaction a un statut "approved", utiliser SUCCESS, sinon utiliser le statut normalisé
+              const backendStatus = isApproved ? 'SUCCESS' : 
+                                   normalizedStatus === 'pending' ? 'PENDING' :
+                                   normalizedStatus === 'processing' ? 'PROCESSING' :
+                                   'SUCCESS'; // Par défaut, considérer comme succès si reason === CHECKOUT_COMPLETED
+              
               // Appeler le backend pour finaliser le paiement et créer l'inscription
+              // Extraire transaction_id de manière sécurisée
+              let extractedTransactionId = null;
+              if (transaction) {
+                extractedTransactionId = transaction.id || 
+                                        transaction.transaction_id || 
+                                        transaction.transaction?.id ||
+                                        transaction.transaction?.transaction_id ||
+                                        null;
+              }
+              // Si transaction est undefined, essayer depuis reason si c'est un objet
+              if (!extractedTransactionId && reasonObject) {
+                extractedTransactionId = reasonObject.id || 
+                                       reasonObject.transaction_id || 
+                                       reasonObject.transactionId ||
+                                       null;
+              }
+              
+              // Extraire amount de manière sécurisée
+              let extractedAmount = amount;
+              if (transaction) {
+                extractedAmount = transaction.amount || 
+                                transaction.transaction?.amount || 
+                                amount;
+              }
+              if (extractedAmount === amount && reasonObject) {
+                extractedAmount = reasonObject.amount || amount;
+              }
+              
+              // Extraire currency de manière sécurisée
+              let extractedCurrency = currency;
+              if (transaction) {
+                extractedCurrency = transaction.currency || 
+                                   transaction.transaction?.currency || 
+                                   currency;
+              }
+              if (extractedCurrency === currency && reasonObject) {
+                extractedCurrency = reasonObject.currency || currency;
+              }
+              
               const webhookPayload = {
-                transaction_id: transaction.id || transaction.transaction_id || null,
-                status: 'SUCCESS',
-                amount: amount,
-                currency: currency,
-                metadata: currentMetadata,
-                ...transaction,
+                transaction_id: extractedTransactionId,
+                status: backendStatus,
+                amount: extractedAmount,
+                currency: extractedCurrency,
+                metadata: {
+                  user_id: currentMetadata.user_id,
+                  course_id: currentMetadata.course_id,
+                  temp_payment_id: currentMetadata.temp_payment_id,
+                },
+                // Inclure les données complètes de la transaction pour le débogage
+                transaction_data: transaction || reasonObject || null,
               };
 
-              console.log('[PaymentForm] 🚀 Finalizing Fedapay payment with backend');
+              console.log('========================================');
+              console.log('[PaymentForm] 🚀 ENVOI AU BACKEND');
+              console.log('========================================');
+              console.log('[PaymentForm] 📤 PAYLOAD COMPLET:', JSON.stringify(webhookPayload, null, 2));
+              console.log('[PaymentForm] 📤 PAYLOAD STRUCTURE:', {
+                transaction_id: webhookPayload.transaction_id,
+                status: webhookPayload.status,
+                amount: webhookPayload.amount,
+                currency: webhookPayload.currency,
+                metadata: webhookPayload.metadata,
+                hasTransactionData: !!webhookPayload.transaction_data,
+              });
+              console.log('========================================');
 
               const apiRequest = (await import('../../lib/services/api')).apiRequest;
-              const finalizeResponse = await apiRequest('/payments/finalize-fedapay', {
-                method: 'POST',
-                body: JSON.stringify(webhookPayload),
-              });
+              let finalizeResponse;
+              try {
+                console.log('[PaymentForm] 📡 Appel API vers /payments/finalize-fedapay...');
+                finalizeResponse = await apiRequest('/payments/finalize-fedapay', {
+                  method: 'POST',
+                  body: JSON.stringify(webhookPayload),
+                });
+                console.log('========================================');
+                console.log('[PaymentForm] ✅ RÉPONSE BACKEND REÇUE');
+                console.log('========================================');
+                console.log('[PaymentForm] 📥 RESPONSE COMPLETE:', JSON.stringify(finalizeResponse, null, 2));
+                console.log('[PaymentForm] 📥 RESPONSE STRUCTURE:', {
+                  success: finalizeResponse?.success,
+                  message: finalizeResponse?.message,
+                  error: finalizeResponse?.error,
+                  data: finalizeResponse?.data,
+                  fullResponse: finalizeResponse,
+                });
+                console.log('========================================');
+              } catch (apiError: any) {
+                console.log('========================================');
+                console.log('[PaymentForm] ❌ ERREUR API');
+                console.log('========================================');
+                console.error('[PaymentForm] ❌ API Error (full):', apiError);
+                console.error('[PaymentForm] ❌ API Error (structure):', {
+                  message: apiError.message,
+                  response: apiError.response,
+                  data: apiError.data,
+                  status: apiError.status,
+                  statusText: apiError.statusText,
+                  stack: apiError.stack,
+                });
+                // Si c'est une erreur HTTP, essayer d'extraire le message
+                if (apiError.response || apiError.data) {
+                  const errorData = apiError.response?.data || apiError.data;
+                  console.error('[PaymentForm] ❌ Error Data:', JSON.stringify(errorData, null, 2));
+                  throw new Error(errorData?.message || errorData?.error || apiError.message || 'Erreur lors de la communication avec le serveur');
+                }
+                throw apiError;
+              }
 
-              console.log('[PaymentForm] ✅ Fedapay payment finalized successfully:', finalizeResponse);
-
-              if (finalizeResponse.success !== false) {
+              if (finalizeResponse && finalizeResponse.success !== false) {
+                const courseId = currentMetadata.course_id || finalizeResponse.data?.course_id;
                 toast.success('Paiement réussi', 'Votre paiement a été traité avec succès !');
                 
-                // Rediriger vers le dashboard après un court délai
+                // Rediriger vers le dashboard avec le course_id après un court délai
                 setTimeout(() => {
-                  router.push('/dashboard/student/courses');
-                }, 2000);
+                  if (courseId) {
+                    router.push(`/dashboard/student/courses?payment=success&course_id=${courseId}`);
+                  } else {
+                    router.push('/dashboard/student/courses?payment=success');
+                  }
+                }, 1500);
               } else {
-                throw new Error(finalizeResponse.error || finalizeResponse.message || 'Erreur lors de l\'enregistrement');
+                const errorMessage = finalizeResponse?.error || finalizeResponse?.message || 'Erreur lors de l\'enregistrement';
+                console.error('[PaymentForm] ❌ Backend returned error:', finalizeResponse);
+                throw new Error(errorMessage);
               }
             } catch (error: any) {
               console.error('[PaymentForm] ❌ Error finalizing Fedapay payment:', error);
-              toast.warning('Paiement réussi', 'Le paiement a été traité, mais une erreur est survenue lors de l\'enregistrement. Veuillez contacter le support.');
+              const errorMessage = error.message || 'Une erreur est survenue lors de l\'enregistrement';
+              toast.error('Erreur', `Le paiement a été traité, mais ${errorMessage}. Veuillez contacter le support si le problème persiste.`);
+              // Rediriger quand même vers la page des cours
+              setTimeout(() => {
+                router.push('/dashboard/student/courses?payment=success');
+              }, 2000);
             }
-          } else if (reason === DIALOG_DISMISSED) {
-            // Dialog fermé par l'utilisateur
-            console.log('[PaymentForm] Fedapay dialog dismissed by user');
+          } else if (isPaymentCancelled || isDeclined) {
+            // Dialog fermé par l'utilisateur OU paiement refusé/échoué
+            const isUserCancelled = reasonString.includes('DISMISS') || reasonString.includes('CANCEL');
+            const isPaymentDeclined = isDeclined && !isUserCancelled;
+            
+            console.log('[PaymentForm] Fedapay payment ended (cancelled/declined)', {
+              reason,
+              reasonString,
+              isUserCancelled,
+              isPaymentDeclined,
+              transactionStatus: normalizedStatus,
+            });
+            
             setProcessing(false);
-            toast.info('Paiement annulé', 'Le paiement a été annulé.');
+            
+            const currentMetadata = paymentMetadataRef.current;
+            if (currentMetadata) {
+              // Enregistrer l'annulation ou l'échec côté backend
+              try {
+                const finalStatus = isPaymentDeclined ? 'FAILED' : 'CANCELLED';
+                const errorMessage = isPaymentDeclined 
+                  ? `Paiement refusé/échoué (statut: ${transactionStatus})`
+                  : 'Paiement annulé par l\'utilisateur';
+                
+                // Extraire les données de manière sécurisée
+                let extractedTransactionId = null;
+                let extractedAmount = amount;
+                let extractedCurrency = currency;
+                
+                if (transaction) {
+                  extractedTransactionId = transaction.id || 
+                                          transaction.transaction_id || 
+                                          transaction.transaction?.id ||
+                                          null;
+                  extractedAmount = transaction.amount || 
+                                   transaction.transaction?.amount || 
+                                   amount;
+                  extractedCurrency = transaction.currency || 
+                                     transaction.transaction?.currency || 
+                                     currency;
+                }
+                
+                // Si transaction est undefined, essayer depuis reason si c'est un objet
+                if (!extractedTransactionId && reasonObject) {
+                  extractedTransactionId = reasonObject.id || 
+                                         reasonObject.transaction_id || 
+                                         reasonObject.transactionId ||
+                                         null;
+                }
+                if (extractedAmount === amount && reasonObject) {
+                  extractedAmount = reasonObject.amount || amount;
+                }
+                if (extractedCurrency === currency && reasonObject) {
+                  extractedCurrency = reasonObject.currency || currency;
+                }
+                
+                const webhookPayload = {
+                  transaction_id: extractedTransactionId,
+                  status: finalStatus,
+                  amount: extractedAmount,
+                  currency: extractedCurrency,
+                  error_message: errorMessage,
+                  metadata: currentMetadata,
+                  transaction_data: transaction || reasonObject || null,
+                };
+
+                console.log('[PaymentForm] 📤 Sending payment status to backend', {
+                  status: finalStatus,
+                  transactionStatus,
+                  errorMessage,
+                });
+
+                const apiRequest = (await import('../../lib/services/api')).apiRequest;
+                await apiRequest('/payments/finalize-fedapay', {
+                  method: 'POST',
+                  body: JSON.stringify(webhookPayload),
+                });
+                
+                console.log('[PaymentForm] ✅ Payment status sent to backend');
+              } catch (error: any) {
+                console.error('[PaymentForm] ❌ Error recording payment status:', error);
+              }
+            }
+            
+            if (isPaymentDeclined) {
+              toast.error('Paiement échoué', 'Le paiement a été refusé ou a échoué. Veuillez réessayer.');
+              setTimeout(() => {
+                router.push('/dashboard/student/courses?payment=failed');
+              }, 1500);
+            } else {
+              toast.info('Paiement annulé', 'Le paiement a été annulé.');
+              setTimeout(() => {
+                router.push('/dashboard/student/courses?payment=cancelled');
+              }, 1500);
+            }
           } else {
-            // Autre raison
-            console.warn('[PaymentForm] Fedapay payment ended with reason:', reason);
+            // Autre raison inconnue - traiter comme échec par défaut
+            console.warn('[PaymentForm] ⚠️ Fedapay payment ended with unknown reason:', {
+              reason,
+              reasonValue,
+              reasonString,
+              transactionStatus: normalizedStatus,
+              transaction: transaction,
+              CHECKOUT_COMPLETED,
+              DIALOG_DISMISSED,
+            });
             setProcessing(false);
+            
+            const currentMetadata = paymentMetadataRef.current;
+            if (currentMetadata) {
+              // Enregistrer l'échec côté backend
+              try {
+                // Essayer d'extraire transaction_id depuis reason si c'est un objet
+                let extractedTransactionId = null;
+                if (typeof reason === 'object' && reason !== null) {
+                  extractedTransactionId = reason.id || reason.transaction_id || reason.transactionId;
+                }
+                
+                // Extraire les données de manière sécurisée
+                let finalTransactionId = null;
+                let finalAmount = amount;
+                let finalCurrency = currency;
+                
+                if (transaction) {
+                  finalTransactionId = transaction.id || 
+                                     transaction.transaction_id || 
+                                     transaction.transaction?.id ||
+                                     null;
+                  finalAmount = transaction.amount || 
+                               transaction.transaction?.amount || 
+                               amount;
+                  finalCurrency = transaction.currency || 
+                                 transaction.transaction?.currency || 
+                                 currency;
+                }
+                
+                // Si transaction est undefined, essayer depuis reason si c'est un objet
+                if (!finalTransactionId && reasonObject) {
+                  finalTransactionId = reasonObject.id || 
+                                     reasonObject.transaction_id || 
+                                     reasonObject.transactionId ||
+                                     extractedTransactionId ||
+                                     null;
+                }
+                if (finalAmount === amount && reasonObject) {
+                  finalAmount = reasonObject.amount || amount;
+                }
+                if (finalCurrency === currency && reasonObject) {
+                  finalCurrency = reasonObject.currency || currency;
+                }
+                
+                const webhookPayload = {
+                  transaction_id: finalTransactionId,
+                  status: 'FAILED',
+                  amount: finalAmount,
+                  currency: finalCurrency,
+                  error_message: `Paiement terminé avec raison inconnue: ${JSON.stringify(reason)} (statut transaction: ${transactionStatus})`,
+                  metadata: currentMetadata,
+                  transaction_data: transaction || reasonObject || null,
+                };
+
+                console.log('[PaymentForm] 📤 Sending unknown reason failure to backend:', webhookPayload);
+
+                const apiRequest = (await import('../../lib/services/api')).apiRequest;
+                await apiRequest('/payments/finalize-fedapay', {
+                  method: 'POST',
+                  body: JSON.stringify(webhookPayload),
+                });
+              } catch (error: any) {
+                console.error('[PaymentForm] ❌ Error recording failure:', error);
+              }
+            }
+            
+            toast.error('Paiement échoué', 'Le paiement n\'a pas pu être traité. Veuillez réessayer.');
+            setTimeout(() => {
+              router.push('/dashboard/student/courses?payment=failed');
+            }, 1500);
           }
         },
       };
@@ -840,11 +1364,34 @@ export default function PaymentForm({
                   <span className="font-semibold text-purple-700">Cliquez sur "Payer"</span> pour être redirigé vers Fedapay.
                   Vous pourrez y finaliser votre transaction en toute sécurité.
                 </>
+              ) : selectedProvider.provider_name === 'gobipay' ? (
+                <>
+                  <span className="font-semibold text-blue-700">Indiquez votre numéro Mobile Money</span> puis validez.
+                  Vous serez redirigé vers l’interface Gobipay pour confirmer la transaction.
+                </>
               ) : (
                 <>
                   <span className="font-semibold text-gray-700">Cliquez sur "Payer"</span> pour continuer avec votre méthode de paiement sélectionnée.
                 </>
               )}
+            </p>
+          </div>
+        )}
+
+        {selectedProvider?.provider_name === 'gobipay' && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-2">
+            <label className="text-sm font-semibold text-blue-900">
+              Numéro Mobile Money
+            </label>
+            <input
+              type="tel"
+              value={customerPhoneInput}
+              onChange={(e) => setCustomerPhoneInput(e.target.value)}
+              placeholder="Ex: 0102030405"
+              className="w-full px-4 py-2.5 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+            />
+            <p className="text-xs text-blue-800">
+              Ce numéro doit correspondre à celui qui validera le paiement (MTN, Moov, etc.).
             </p>
           </div>
         )}
@@ -893,15 +1440,24 @@ export default function PaymentForm({
             type="button"
             onClick={async () => {
               if (selectedProvider?.provider_name === 'fedapay') {
-                // Pour Fedapay, initialiser le widget et l'ouvrir
                 await handlePayWithFedapay();
+              } else if (selectedProvider?.provider_name === 'gobipay') {
+                await handlePayWithGobipay();
               } else {
                 if (selectedProvider) {
                   handlePayWithProvider(selectedProvider);
                 }
               }
             }}
-            disabled={processing || !email || !selectedProvider || (selectedProvider.provider_name === 'kkiapay' && !isKkiapayReady) || (selectedProvider.provider_name === 'fedapay' && !isFedapayReady) || loadingProviders}
+            disabled={
+              processing ||
+              !email ||
+              !selectedProvider ||
+              (selectedProvider.provider_name === 'kkiapay' && !isKkiapayReady) ||
+              (selectedProvider.provider_name === 'fedapay' && !isFedapayReady) ||
+              (selectedProvider.provider_name === 'gobipay' && !customerPhoneInput.trim()) ||
+              loadingProviders
+            }
             className={`px-8 py-3.5 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 transform hover:scale-[1.02] active:scale-[0.98] ${
               selectedProvider?.provider_name === 'kkiapay'
                 ? 'bg-gradient-to-r from-[#3B7C8A] to-[#2d5f6a] hover:from-[#2d5f6a] hover:to-[#1f4a52] disabled:hover:from-[#3B7C8A] disabled:hover:to-[#2d5f6a]'

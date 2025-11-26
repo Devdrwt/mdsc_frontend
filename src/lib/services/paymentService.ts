@@ -7,7 +7,7 @@ export interface Payment {
   course_id: string;
   amount: number;
   currency: string;
-  payment_method: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay';
+  payment_method: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay' | 'gobipay';
   payment_provider?: string;
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
   provider_transaction_id?: string | null;
@@ -24,7 +24,7 @@ export interface Payment {
 
 export interface PaymentInitiation {
   courseId: string;
-  paymentMethod: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay';
+  paymentMethod: 'card' | 'mobile_money' | 'kkiapay' | 'fedapay' | 'gobipay';
   paymentProvider?: string;
   customerFullname?: string;
   customerEmail?: string;

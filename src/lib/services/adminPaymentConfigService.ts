@@ -2,27 +2,35 @@ import { apiGet, apiPost, apiPut, apiDelete, apiPatch } from './api';
 
 export interface PaymentProvider {
   id?: number;
-  provider_name: 'kkiapay' | 'fedapay';
+  provider_name: 'kkiapay' | 'fedapay' | 'gobipay';
   public_key: string; // Masquée dans la réponse
   secret_key: string; // Masquée dans la réponse
   private_key?: string | null; // Masquée dans la réponse
   is_active: boolean;
   is_sandbox: boolean;
   base_url?: string | null;
-  metadata?: any;
+  metadata?: {
+    platform_money_list?: string[];
+    redirect_urls?: Record<string, string>;
+    [key: string]: any;
+  } | null;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface PaymentProviderFormData {
-  provider_name: 'kkiapay' | 'fedapay';
+  provider_name: 'kkiapay' | 'fedapay' | 'gobipay';
   public_key: string;
   secret_key: string;
   private_key?: string;
   is_active: boolean;
   is_sandbox: boolean;
   base_url?: string;
-  metadata?: any;
+  metadata?: {
+    platform_money_list?: string[];
+    redirect_urls?: Record<string, string>;
+    [key: string]: any;
+  } | null;
 }
 
 /**
