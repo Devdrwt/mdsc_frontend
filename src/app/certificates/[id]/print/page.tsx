@@ -52,16 +52,21 @@ export default function CertificatePrintPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-600">Chargement du certificat…</div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
+          <div className="text-sm sm:text-base text-gray-600">Chargement du certificat…</div>
+        </div>
       </div>
     );
   }
 
   if (error || !certificate) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-600">{error || 'Certificat introuvable'}</div>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-red-600 text-sm sm:text-base">{error || 'Certificat introuvable'}</div>
+        </div>
       </div>
     );
   }
@@ -82,46 +87,77 @@ export default function CertificatePrintPage() {
     '';
 
   return (
-    <div className="min-h-screen bg-white print:bg-white">
+    <div className="min-h-screen bg-gray-100 print:bg-white">
       <style>{`
-        @page { size: A4 landscape; margin: 0; }
-        html, body {
-          width: 297mm;
-          height: 210mm;
-          margin: 0;
-          padding: 0;
+        @page { 
+          size: A4 landscape; 
+          margin: 0; 
         }
         @media print {
-          html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .no-break { page-break-inside: avoid; break-inside: avoid; }
+          html, body { 
+            width: 297mm;
+            height: 210mm;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+          }
+          .no-break { 
+            page-break-inside: avoid; 
+            break-inside: avoid; 
+          }
+          .print-container {
+            width: 297mm !important;
+            height: 210mm !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #ffffff !important;
+          }
+          .print-inner {
+            width: 286mm !important;
+            height: 200mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+        }
+        @media screen {
+          .print-container {
+            max-width: 100%;
+            width: 100%;
+            min-height: 100vh;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          @media (min-width: 640px) {
+            .print-container {
+              padding: 1rem;
+            }
+          }
+          .print-inner {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            overflow-x: auto;
+          }
+          @media (min-width: 768px) {
+            .print-inner {
+              max-width: 1200px;
+            }
+          }
         }
       `}</style>
       {/* Surface A4 paysage en mm pour garantir 1 seule page */}
-      <div
-        className="no-break"
-        style={{
-          width: '297mm',
-          height: '210mm',
-          margin: '0 auto',
-          padding: '0',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#ffffff',
-        }}
-      >
+      <div className="no-break print-container">
         {/* Légère réduction interne pour éviter toute coupe */}
-        <div
-          style={{
-            width: '286mm',
-            height: '200mm',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <div className="print-inner">
           <CertificatePreview
             fullName={fullName}
             courseTitle={courseTitle}

@@ -504,9 +504,64 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
     }
   }
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + "/")
-  }
+  // Fonction pour vérifier si un enfant est actif (plus précise)
+  // Prend en compte le fait qu'un enfant peut avoir un href qui est un préfixe d'un autre enfant
+  const isChildActive = (childHref: string, allChildren?: Array<{ href: string }>) => {
+    // Si on a la liste de tous les enfants, trouver d'abord le meilleur match (le plus long qui correspond)
+    if (allChildren && allChildren.length > 0) {
+      // Trier les enfants par longueur de href (du plus long au plus court)
+      const sortedChildren = [...allChildren].sort((a, b) => b.href.length - a.href.length);
+      
+      // Trouver le premier enfant qui correspond (le plus long/specific)
+      for (const otherChild of sortedChildren) {
+        // Vérification exacte
+        if (pathname === otherChild.href) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+        // Vérification si le pathname commence par l'href de l'autre enfant + '/'
+        if (pathname.startsWith(otherChild.href + '/')) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+      }
+    }
+    
+    // Si aucun enfant ne correspond avec la logique ci-dessus, vérifier l'enfant actuel
+    // Vérification exacte
+    if (pathname === childHref) {
+      return true;
+    }
+    
+    // Vérification si le pathname commence par childHref + '/'
+    if (pathname.startsWith(childHref + '/')) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const isActive = (href: string, item?: NavigationItem) => {
+    // Pour les routes exactes, vérifier l'égalité exacte
+    if (pathname === href) {
+      return true;
+    }
+    
+    // Pour les routes avec sous-routes, vérifier que c'est bien une sous-route
+    if (pathname.startsWith(href + '/')) {
+      // Si l'item a des enfants, le parent est actif si un enfant est actif OU si on est sur une sous-route
+      // Cela permet au parent d'être actif même quand un enfant est actif
+      if (item?.children && item.children.length > 0) {
+        // Le parent est actif si un enfant est actif (car on est dans la section du parent)
+        const hasActiveChild = item.children.some(child => isChildActive(child.href, item.children));
+        // Le parent est actif si un enfant est actif OU si on est sur une sous-route du parent
+        return hasActiveChild || true; // Toujours actif si on est dans une sous-route du parent
+      }
+      return true;
+    }
+    
+    return false;
+  };
 
   const toggleSubmenu = (itemName: string) => {
     setOpenSubmenus((prev) => {
@@ -520,18 +575,12 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
     })
   }
 
-  const renderNavItem = (item: NavigationItem, isMobile = false) => {
-    const hasChildren = item.children && item.children.length > 0
+  const renderNavItem = (item: NavigationItem, isMobile: boolean = false) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isOpen = openSubmenus.has(item.name);
+    const active = isActive(item.href, item);
 
-    // Vérifie si l'item parent est actif (exact match)
-    const active = pathname === item.href
-
-    // Vérifie si un enfant est actif
-    const childActive = hasChildren ? item.children.some((child) => pathname === child.href) : false
-
-    const isOpen = openSubmenus.has(item.name)
-
-    if (hasChildren && !sidebarCollapsed) {
+    if (hasChildren && (isMobile || !sidebarCollapsed)) {
       return (
         <div key={item.name}>
           <button
@@ -543,7 +592,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             }`}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />
-            <span className="ml-3">{item.name}</span>
+            <span className={isMobile ? 'ml-0' : 'ml-3'}>{item.name}</span>
             {item.badge && (
               <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">{item.badge}</span>
             )}
@@ -552,21 +601,26 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             )}
           </button>
           {isOpen && item.children && (
-            <div className="ml-8 mt-1 space-y-1">
+            <div className={`${isMobile ? 'ml-4' : 'ml-8'} mt-1 space-y-1`}>
               {item.children.map((child) => {
-                const childIsActive = pathname === child.href
+                // Vérifier si cet enfant est actif (en passant tous les enfants pour comparaison)
+                const childActive = isChildActive(child.href, item.children);
+                
                 return (
-                  <a
-                    key={child.name}
-                    href={child.href}
-                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      childIsActive ? `${colors.primary} text-white` : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    <child.icon className="h-4 w-4 flex-shrink-0" />
-                    <span className="ml-3">{child.name}</span>
-                  </a>
-                )
+                <a
+                  key={child.name}
+                  href={child.href}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    childActive
+                      ? `${colors.primary} text-white`
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <child.icon className="h-4 w-4 flex-shrink-0" />
+                  <span className="ml-3">{child.name}</span>
+                </a>
+                );
               })}
             </div>
           )}
@@ -583,8 +637,17 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
         }`}
         title={sidebarCollapsed && !isMobile ? item.name : undefined}
       >
-        <item.icon className={`${isMobile ? "mr-3" : ""} h-5 w-5 flex-shrink-0`} />
-        {!isMobile && !sidebarCollapsed && <span className="ml-3">{item.name}</span>}
+        <item.icon className={`${isMobile ? 'mr-3' : ''} h-5 w-5 flex-shrink-0`} />
+        {(isMobile || !sidebarCollapsed) && (
+          <>
+            <span className={isMobile ? 'ml-0' : 'ml-3'}>{item.name}</span>
+            {item.badge && (
+              <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {item.badge}
+              </span>
+            )}
+          </>
+        )}
         {sidebarCollapsed && !isMobile && item.badge && (
           <span className="absolute ml-3 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{item.badge}</span>
         )}
@@ -597,7 +660,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
       {/* Sidebar Mobile */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? "block" : "hidden"}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
+        <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl z-50">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center cursor-pointer" onClick={() => router.push("/")}>
               <Image
@@ -613,7 +676,9 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               <X className="h-6 w-6" />
             </button>
           </div>
-          <nav className="flex-1 px-4 py-4 space-y-2">{navigationItems.map((item) => renderNavItem(item, true))}</nav>
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+            {navigationItems.map((item) => renderNavItem(item, true))}
+          </nav>
         </div>
       </div>
 
@@ -667,7 +732,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             </button>
             <div className="ml-4 lg:ml-0">
               <h2 className="text-xl font-semibold text-gray-900">
-                {pageTitle || navigationItems.find((item) => isActive(item.href))?.name || "Tableau de bord"}
+                {pageTitle || navigationItems.find(item => isActive(item.href, item))?.name || 'Tableau de bord'}
               </h2>
             </div>
           </div>

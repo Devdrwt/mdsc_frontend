@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users, X, Menu } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
 import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
@@ -70,6 +70,7 @@ export default function CoursePlayer({
   const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -327,13 +328,22 @@ export default function CoursePlayer({
       const enrollmentInfo: any = progressPayload?.enrollment;
 
       progressRows.forEach((row) => {
-        const lessonId = Number(row.lesson_id || row.lessonId);
+        const lessonId = Number(row.lesson_id || row.lessonId || row.id);
         if (Number.isNaN(lessonId)) {
           return;
         }
-        if (row.status === 'completed') {
+        // Vérifier le statut dans progress.status (format backend) ou directement row.status (format alternatif)
+        const status = row.progress?.status || row.status;
+        if (status === 'completed') {
           completedSet.add(lessonId);
           unlockedSet.add(lessonId);
+          console.log(`[CoursePlayer] ✅ Leçon ${lessonId} marquée comme complétée (status: ${status})`);
+        } else {
+          console.log(`[CoursePlayer] ⚠️ Leçon ${lessonId} non complétée (status: ${status || 'undefined'})`, {
+            hasProgress: !!row.progress,
+            progressStatus: row.progress?.status,
+            rowStatus: row.status
+          });
         }
       });
 
@@ -621,6 +631,9 @@ export default function CoursePlayer({
     
     // Mettre à jour la leçon sélectionnée (cela désélectionnera automatiquement l'ancienne)
     setSelectedLessonId(lesson.id);
+    
+    // Fermer la sidebar sur mobile après sélection d'une leçon
+    setSidebarOpen(false);
     
     // Mettre à jour l'URL
     router.replace(`/learn/${course.id}?module=${lessonModuleId || selectedModuleId}&lesson=${lesson.id}`);
@@ -1139,6 +1152,7 @@ export default function CoursePlayer({
 
     setRequestingCertificate(true);
     try {
+<<<<<<< HEAD
       const shouldRateFirst = await needsRatingBeforeCertificate();
       if (shouldRateFirst) {
         setPendingCertificateAfterRating(true);
@@ -1186,6 +1200,73 @@ export default function CoursePlayer({
       if (!isRatingRequiredError(error)) {
         toast.error('Erreur', error.message || 'Impossible de générer le certificat');
       }
+=======
+      // Utiliser generateForCourse pour créer le certificat après confirmation des données
+      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
+      const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
+      const result = await certificateService.generateForCourse(courseId);
+      
+      // Récupérer les détails du certificat généré
+      let certificate = null;
+      if (result?.certificateId) {
+        try {
+          certificate = await certificateService.getById(result.certificateId);
+        } catch (certError) {
+          console.warn('Impossible de récupérer les détails du certificat:', certError);
+        }
+      }
+      
+      // Si on n'a pas réussi à récupérer le certificat, essayer de le récupérer via le courseId
+      if (!certificate) {
+        try {
+          const certificates = await certificateService.getMyCertificates();
+          certificate = certificates.find(cert => 
+            cert.course_id === Number(courseId) || cert.courseId === Number(courseId)
+          ) || null;
+        } catch (certError) {
+          console.warn('Impossible de récupérer le certificat via getMyCertificates:', certError);
+        }
+      }
+      
+      // Fermer le modal de vérification
+      setShowProfileVerificationModal(false);
+      
+      // Préparer les données pour le modal de célébration
+      const fullName = user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName)
+        ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
+        : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)');
+      
+      const certificateCode = certificate?.certificate_code || certificate?.certificateCode || '';
+      const issuedAt = certificate?.issued_at || certificate?.issuedAt 
+        ? new Date(certificate.issued_at || certificate.issuedAt)
+        : new Date();
+      
+      // Afficher le modal de célébration avec confettis
+      setGeneratedCertificate({
+        ...certificate,
+        certificate_code: certificateCode,
+        issued_at: issuedAt.toISOString()
+      });
+      setShowCertificateModal(true);
+      
+      console.log('[CoursePlayer] ✅ Certificat généré et modal de célébration affiché:', {
+        certificateId: result?.certificateId,
+        certificateCode,
+        fullName,
+        courseTitle: course.title
+      });
+      
+      // Afficher aussi un toast de succès
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
+      );
+    } catch (error: any) {
+      console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+      toast.error('Erreur', errorMessage);
+      // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
+>>>>>>> origin/faille0
     } finally {
       setRequestingCertificate(false);
     }
@@ -1356,10 +1437,35 @@ export default function CoursePlayer({
       )}
 
       <div className={`flex flex-col lg:flex-row h-screen ${className}`}>
+      {/* Overlay pour mobile quand sidebar est ouverte */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
       {/* Sidebar - Modules et Leçons */}
-      <aside className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-gray-200 overflow-y-auto flex-shrink-0 h-full">
-        <div className="p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
-          <h2 className="text-xl font-bold mb-2">{course.title}</h2>
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50 lg:z-auto
+        w-80 lg:w-80 bg-white border-r border-gray-200 
+        overflow-y-auto flex-shrink-0 h-full
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        {/* Bouton fermer sur mobile */}
+        <div className="lg:hidden flex justify-end p-2 border-b border-gray-200 bg-mdsc-blue-primary">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-md text-white/80 hover:bg-white/20 transition-colors"
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-4 sm:p-6 border-b border-gray-200 bg-mdsc-blue-primary text-white">
+          <h2 className="text-lg sm:text-xl font-bold mb-2 break-words">{course.title}</h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <div className="flex items-center space-x-1">
               <BookOpen className="h-4 w-4" />
@@ -1388,7 +1494,18 @@ export default function CoursePlayer({
           </div>
         </div>
 
-        <div className="p-4 space-y-2">
+        {/* Bouton fermer sur mobile */}
+        <div className="lg:hidden flex justify-end p-2 border-b border-gray-200">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-3 sm:p-4 space-y-2">
           {course.modules?.map((module, moduleIndex) => {
             const moduleProgress = getModuleProgress(module);
             const isExpanded = selectedModuleId === module.id;
@@ -1614,28 +1731,41 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col">
-        <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-4 py-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 order-1">
-              <Link href="/" className="inline-flex items-center justify-center mb-2 sm:mb-0">
+<<<<<<< HEAD
+      <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full lg:w-auto">
+        <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Bouton menu mobile */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+                aria-label="Ouvrir le menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              
+              <Link href="/" className="inline-flex items-center justify-center flex-shrink-0">
                 <Image
                   src="/mdsc-logo.png"
                   alt="Maison de la Société Civile"
-                  width={160}
-                  height={48}
-                  className="h-10 w-auto object-contain"
+                  width={120}
+                  height={36}
+                  className="h-8 sm:h-10 w-auto object-contain"
                   priority
                 />
               </Link>
+              
               <Link
                 href="/dashboard/student/courses"
-                className="inline-flex items-center text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
+                className="hidden sm:inline-flex items-center text-xs sm:text-sm font-medium text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour à mes cours
+                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden md:inline">Retour à mes cours</span>
+                <span className="md:hidden">Retour</span>
               </Link>
             </div>
+<<<<<<< HEAD
             {course.id && (
               <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center">
                 <Link
@@ -1650,12 +1780,19 @@ export default function CoursePlayer({
             <div className="order-2 lg:order-3 flex items-center text-xs sm:text-sm text-gray-600 justify-end">
               <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
               <span className="ml-1">complété</span>
+=======
+            <div className="flex items-center justify-between sm:justify-end text-xs sm:text-sm text-gray-600">
+              <div className="flex items-center">
+                <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
+                <span className="ml-1 hidden sm:inline">complété</span>
+              </div>
+>>>>>>> origin/faille0
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto w-full">
         {viewMode === 'quiz' && selectedQuizId ? (
-          <div className="px-4 py-6 sm:px-8 sm:py-8">
+          <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 w-full">
             <div className="mb-6">
               <button
                 onClick={handleBackToLesson}
@@ -1674,7 +1811,7 @@ export default function CoursePlayer({
             />
           </div>
         ) : viewMode === 'evaluation' && selectedEvaluationId ? (
-          <div className="px-4 py-6 sm:px-8 sm:py-8">
+          <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 w-full">
             <div className="mb-6">
               <button
                 onClick={handleBackToLesson}
@@ -1757,15 +1894,6 @@ export default function CoursePlayer({
               <p className="text-gray-600">
                 Choisissez un module dans la barre latérale pour voir les leçons disponibles
               </p>
-              {evaluationId && (
-                <button
-                  onClick={handleEvaluationClick}
-                  className="mt-4 px-6 py-3 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors flex items-center space-x-2 mx-auto"
-                >
-                  <GraduationCap className="h-5 w-5" />
-                  <span>Passer l'évaluation finale</span>
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -1782,8 +1910,14 @@ export default function CoursePlayer({
         isOpen={showCertificateModal}
         onClose={() => {
           setShowCertificateModal(false);
-          // Retour aux leçons après célébration
-          handleBackToLesson();
+          // Rediriger vers la page des certificats après fermeture du modal
+          if (course.id) {
+            const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
+            window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
+          } else {
+            // Retour aux leçons si pas de courseId
+            handleBackToLesson();
+          }
         }}
         fullName={
           (user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
@@ -1806,6 +1940,7 @@ export default function CoursePlayer({
         onConfirm={handleConfirmProfileData}
         onUpdateProfile={handleUpdateProfile}
         courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
+        isGenerating={requestingCertificate}
       />
 
       {/* Modal de notation (requis avant certificat) */}

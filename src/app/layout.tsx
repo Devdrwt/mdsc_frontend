@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import "./globals.css";
 import ClientProviders from "../components/providers/ClientProviders";
+import FedapayScriptLoader from "../components/providers/FedapayScriptLoader";
 
 const playfairDisplay = localFont({
   variable: "--font-playfair",
@@ -165,6 +166,7 @@ export default function RootLayout({
         className={`${playfairDisplay.variable} ${openSans.variable} antialiased`}
         suppressHydrationWarning
       >
+        <FedapayScriptLoader />
         <ClientProviders>
           {children}
         </ClientProviders>

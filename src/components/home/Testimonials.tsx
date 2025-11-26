@@ -13,26 +13,29 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     id: '1',
-    quote: "Les formations MdSC m'ont permis d'acquérir des compétences essentielles en management. Je recommande vivement cette plateforme !",
-    author: "MK Marie Kouassi",
-    title: "Directrice d'ONG",
-    avatar: "MK",
+    quote:
+      "Les formations MdSC m'ont permis d'acquérir des compétences essentielles en management. Je recommande vivement cette plateforme !",
+    author: 'CC Christelle Cakpa',
+    title: 'Formatrice certifiée',
+    avatar: 'CC',
     rating: 5,
   },
   {
     id: '2',
-    quote: "Une plateforme excellente avec des cours de qualité. Les certificats sont reconnus et valorisent vraiment mon CV.",
-    author: "JB Jean-Paul Bamba",
-    title: "Chef de Projet",
-    avatar: "JB",
+    quote:
+      'Une plateforme excellente avec des cours de qualité. Les certificats ont renforcé la confiance de mes apprenants.',
+    author: 'CC Christelle Cakpa',
+    title: 'Formatrice certifiée',
+    avatar: 'CC',
     rating: 5,
   },
   {
     id: '3',
-    quote: "Interface intuitive, contenu riche et accompagnement de qualité. C'est un outil indispensable pour la société civile.",
-    author: "FD Fatou Diallo",
-    title: "Formatrice",
-    avatar: "FD",
+    quote:
+      "Interface intuitive, contenu riche et accompagnement de qualité. C'est un outil indispensable pour la société civile.",
+    author: 'CC Christelle Cakpa',
+    title: 'Formatrice certifiée',
+    avatar: 'CC',
     rating: 5,
   },
 ];

@@ -44,7 +44,8 @@ export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
-  const { isAuthenticated, user, token } = useAuthStore();
+  const { user } = useAuthStore();
+  const isUserAuthenticated = !!user;
   
   const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -54,6 +55,8 @@ export default function CourseDetailPage() {
   const [imageError, setImageError] = useState(false);
   const [ratingStats, setRatingStats] = useState<CourseRatingStats | null>(null);
   const [ratingStatsLoading, setRatingStatsLoading] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
 
   const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
   const numericCourseId = useMemo(() => {
@@ -61,6 +64,26 @@ export default function CourseDetailPage() {
     const id = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
     return Number.isFinite(id) ? id : null;
   }, [course]);
+
+  // Vérifier l'état d'inscription
+  const checkEnrollmentStatus = useCallback(async () => {
+    if (!course || !isUserAuthenticated) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    try {
+      setCheckingEnrollment(true);
+      const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+      const enrollmentData = await CourseService.checkEnrollment(courseId);
+      setIsEnrolled(enrollmentData.is_enrolled || false);
+    } catch (err) {
+      console.error('Erreur lors de la vérification de l\'inscription:', err);
+      setIsEnrolled(false);
+    } finally {
+      setCheckingEnrollment(false);
+    }
+  }, [course, isUserAuthenticated]);
 
   useEffect(() => {
     if (slug) {
@@ -106,6 +129,38 @@ export default function CourseDetailPage() {
       isMounted = false;
     };
   }, [numericCourseId]);
+
+  // Vérifier l'inscription quand le cours est chargé et que l'utilisateur est connecté
+  useEffect(() => {
+    if (course && isUserAuthenticated) {
+      checkEnrollmentStatus();
+    } else if (!isUserAuthenticated) {
+      setIsEnrolled(false);
+    }
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
+
+  // Recharger l'état d'inscription quand la page devient visible (pour détecter les changements après désinscription)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    const handleFocus = () => {
+      if (course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
 
   const loadCourse = async () => {
     try {
@@ -198,9 +253,8 @@ export default function CourseDetailPage() {
       return;
     }
     
-    // Vérifier si l'utilisateur est connecté
-    // Vérifier à la fois isAuthenticated, user et token pour être sûr
-    if (!isAuthenticated || !user || !token) {
+    // Vérifier si l'utilisateur est connecté (utiliser useAuthStore pour une vérification fiable)
+    if (!isUserAuthenticated) {
       toast.error(
         'Connexion requise', 
         'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.'
@@ -241,6 +295,10 @@ export default function CourseDetailPage() {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
+      // Mettre à jour l'état d'inscription
+      if (checkEnrollmentStatus) {
+        await checkEnrollmentStatus();
+      }
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
       console.error('Erreur inscription:', err);
@@ -269,7 +327,7 @@ export default function CourseDetailPage() {
       
       toast.error('Erreur d\'inscription', errorMessage);
     }
-  }, [course, courseAny, router, slug]);
+  }, [course, courseAny, router, slug, isUserAuthenticated]);
 
   const handleStartLearning = useCallback(() => {
     if (course) {
@@ -565,7 +623,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const isEnrolled = course.enrollment !== undefined;
+  // isEnrolled est maintenant un état géré par checkEnrollmentStatus
   
   // Extraire toutes les informations du cours
   const price = courseAny.price || course.price || 0;
@@ -911,7 +969,6 @@ export default function CourseDetailPage() {
                         className="bg-white/10 text-white border-white/30 hover:bg-white/20 font-semibold shadow-lg hover:shadow-xl transition-all"
                       >
                         <Users className="h-5 w-5 mr-2" />
-                        <Users className="h-5 w-5 mr-2" />
                         Forum
                       </Button>
                     </>
@@ -927,13 +984,16 @@ export default function CourseDetailPage() {
                       {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
                     </Button>
                   )}
-                  {price > 0 && (
+                </div>
+                {/* Prix affiché si le cours est payant */}
+                {price > 0 && (
+                  <div className="pt-4 border-t border-white/20">
                     <div className="text-right">
                       <p className="text-sm text-white/70">Prix</p>
                       <p className="text-3xl font-bold">{price.toLocaleString()} <span className="text-lg">{currency}</span></p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1386,7 +1446,11 @@ export default function CourseDetailPage() {
                         className={`w-full mb-4 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <GraduationCap className="h-5 w-5 mr-2" />
-                        {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
+                        {!isUserAuthenticated 
+                          ? 'Se connecter pour s\'inscrire'
+                          : enrollmentPossible 
+                            ? 'S\'inscrire maintenant' 
+                            : 'Inscriptions fermées'}
                       </Button>
                     </>
                   ) : (

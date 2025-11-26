@@ -1,14 +1,78 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import CertificateCollection from '../../../../components/certificates/CertificateCollection';
 import { Loader } from 'lucide-react';
+import { certificateService } from '../../../../lib/services/certificateService';
+import toast from '../../../../lib/utils/toast';
 
 function CertificatesContent() {
+  const searchParams = useSearchParams();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const requestCertificate = searchParams.get('requestCertificate');
+  const courseId = searchParams.get('courseId');
+
+  useEffect(() => {
+    // Si requestCertificate=true et courseId est présent, générer automatiquement le certificat
+    if (requestCertificate === 'true' && courseId) {
+      generateCertificate();
+    }
+  }, [requestCertificate, courseId]);
+
+  const generateCertificate = async () => {
+    if (!courseId || isGenerating) return;
+
+    setIsGenerating(true);
+    try {
+      console.log('[CertificatesPage] 🎓 Génération automatique du certificat pour le cours:', courseId);
+      const result = await certificateService.generateForCourse(courseId);
+      console.log('[CertificatesPage] ✅ Certificat généré avec succès:', result);
+      
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données mises à jour de votre profil.'
+      );
+      
+      // Retirer les paramètres de l'URL pour éviter de régénérer
+      const url = new URL(window.location.href);
+      url.searchParams.delete('requestCertificate');
+      url.searchParams.delete('courseId');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Recharger la page après un court délai pour afficher le nouveau certificat
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      console.error('[CertificatesPage] ❌ Erreur lors de la génération automatique du certificat:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez réessayer.';
+      toast.error('Erreur', errorMessage);
+      
+      // Retirer les paramètres même en cas d'erreur pour éviter de réessayer indéfiniment
+      const url = new URL(window.location.href);
+      url.searchParams.delete('requestCertificate');
+      url.searchParams.delete('courseId');
+      window.history.replaceState({}, '', url.toString());
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {isGenerating && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <Loader className="h-5 w-5 text-blue-600 animate-spin" />
+            <p className="text-sm text-blue-900">
+              Génération de votre certificat en cours...
+            </p>
+          </div>
+        </div>
+      )}
       {/* Liste des certificats de l'utilisateur */}
       <CertificateCollection />
     </div>

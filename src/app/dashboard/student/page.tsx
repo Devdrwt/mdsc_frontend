@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
 import { useAuthStore } from '../../../lib/stores/authStore';
@@ -164,10 +165,122 @@ const normalizeCourses = (rawCourses: any[]): NormalizedCourse[] => {
 };
 
 export default function StudentDashboard() {
+  const searchParams = useSearchParams();
   const authStore = useAuthStore();
   const user = authStore.user;
   const authLoading = authStore.isLoading ?? false;
   const hasHydrated = authStore.hasHydrated ?? false;
+
+  // Gérer les redirections GobiPay après paiement
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentUrl = window.location.href;
+    
+    // Gérer les URLs malformées comme payment=success/?transaction_slug=...
+    // Extraire manuellement les paramètres depuis l'URL
+    let payment: string | null = null;
+    let transactionSlug: string | null = null;
+    let orderSlug: string | null = null;
+    let status: string | null = null;
+
+    // Méthode 1: Essayer avec useSearchParams (méthode normale)
+    const paymentFromSearch = searchParams.get('payment');
+    const transactionSlugFromSearch = searchParams.get('transaction_slug');
+    const orderSlugFromSearch = searchParams.get('order_slug');
+    const statusFromSearch = searchParams.get('status');
+
+    if (paymentFromSearch && paymentFromSearch !== 'success/?transaction_slug') {
+      // URL normale
+      payment = paymentFromSearch;
+      transactionSlug = transactionSlugFromSearch;
+      orderSlug = orderSlugFromSearch;
+      status = statusFromSearch;
+    } else {
+      // URL malformée - parser manuellement
+      const urlMatch = currentUrl.match(/[?&]payment=([^&]*)/);
+      if (urlMatch) {
+        const paymentValue = urlMatch[1];
+        // Si payment contient "success" même avec d'autres caractères après
+        if (paymentValue.includes('success')) {
+          payment = 'success';
+        } else {
+          payment = paymentValue;
+        }
+      }
+
+      // Extraire transaction_slug
+      const transactionMatch = currentUrl.match(/[?&]transaction_slug=([^&]*)/);
+      if (transactionMatch) {
+        transactionSlug = decodeURIComponent(transactionMatch[1]);
+      }
+
+      // Extraire order_slug
+      const orderMatch = currentUrl.match(/[?&]order_slug=([^&]*)/);
+      if (orderMatch) {
+        orderSlug = decodeURIComponent(orderMatch[1]);
+      }
+
+      // Extraire status
+      const statusMatch = currentUrl.match(/[?&]status=([^&]*)/);
+      if (statusMatch) {
+        status = decodeURIComponent(statusMatch[1]);
+      }
+    }
+
+    console.log('[GobiPay] 🔍 Vérification des paramètres de paiement', {
+      payment,
+      transactionSlug,
+      orderSlug,
+      status,
+      currentUrl,
+      paymentFromSearch,
+    });
+
+    // Si GobiPay redirige avec payment=success ET qu'on a transaction_slug ou order_slug (première redirection depuis GobiPay)
+    if ((payment === 'success' || (payment && payment.includes('success'))) && (transactionSlug || orderSlug)) {
+      // Vérifier si on a déjà traité ce paiement (éviter les boucles)
+      const processedKey = `gobipay_processed_${transactionSlug || orderSlug}`;
+      if (sessionStorage.getItem(processedKey)) {
+        console.log('[GobiPay] ⚠️ Paiement déjà traité, redirection vers /dashboard/student/courses');
+        // Rediriger vers la page des cours
+        window.location.href = '/dashboard/student/courses?payment=success';
+        return;
+      }
+
+      // Marquer comme traité
+      sessionStorage.setItem(processedKey, 'true');
+
+      const params = new URLSearchParams({
+        payment: 'success',
+        ...(transactionSlug && { transaction_slug: transactionSlug }),
+        ...(orderSlug && { order_slug: orderSlug }),
+        ...(status && { status: status }),
+      });
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const apiUrl = `${backendUrl}/api/payments/auto-finalize-gobipay?${params.toString()}`;
+      
+      console.log('[GobiPay] ✅ Détection de payment=success avec transaction_slug/order_slug sur /dashboard/student, redirection vers l\'API...', apiUrl);
+      
+      // Rediriger vers l'API qui va finaliser le paiement, créer l'enrollment et rediriger vers /dashboard/student/courses
+      window.location.href = apiUrl;
+    } else if (payment === 'success' && !transactionSlug && !orderSlug) {
+      // Si payment=success mais pas de transaction_slug/order_slug, rediriger vers la page des cours
+      console.log('[GobiPay] ✅ payment=success sans transaction_slug/order_slug, redirection vers /dashboard/student/courses');
+      window.location.href = '/dashboard/student/courses?payment=success';
+    } else if (payment === 'failed' || payment === 'cancelled' || (payment && (payment.includes('failed') || payment.includes('cancelled')))) {
+      // Nettoyer l'URL pour les échecs/annulations
+      const errorStatus = payment?.includes('failed') ? 'failed' : 'cancelled';
+      console.log(`[GobiPay] ⚠️ Paiement ${errorStatus}, redirection vers /dashboard/student/courses`);
+      // Rediriger vers la page des cours avec le statut
+      window.location.href = `/dashboard/student/courses?payment=${errorStatus}`;
+    } else if (payment === 'error') {
+      // Rediriger vers la page des cours sans paramètres d'erreur
+      console.log('[GobiPay] ⚠️ Erreur de paiement, redirection vers /dashboard/student/courses');
+      window.location.href = '/dashboard/student/courses';
+    }
+  }, [searchParams]);
   const [courses, setCourses] = useState<NormalizedCourse[]>([]);
   const courseCards = useMemo<CourseProgressCard[]>(() => {
     return courses.map((course) => ({
@@ -451,6 +564,9 @@ export default function StudentDashboard() {
                 evaluation_passed: { icon: CheckCircle, color: 'text-green-500', title: 'Évaluation réussie' },
                 evaluation_failed: { icon: XCircle, color: 'text-red-500', title: 'Évaluation échouée' },
                 course_progress: { icon: TrendingUp, color: 'text-blue-500', title: 'Progression enregistrée' },
+                payment_failed: { icon: XCircle, color: 'text-red-500', title: 'Paiement échoué' },
+                payment_cancelled: { icon: XCircle, color: 'text-orange-500', title: 'Paiement annulé' },
+                payment_pending: { icon: Clock, color: 'text-yellow-500', title: 'Paiement en cours' },
               };
               const config = iconMap[entry.type] ?? {
                 icon: Play,

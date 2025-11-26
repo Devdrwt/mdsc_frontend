@@ -100,8 +100,12 @@ export const useKkiapay = () => {
       
       console.log('[Kkiapay] Ouverture du widget avec options:', {
         amount: normalizedOptions.amount,
-        key: normalizedOptions.key?.substring(0, 10) + '...', // Masquer la clé complète
+        keyPrefix: normalizedOptions.key?.substring(0, 20) + '...',
+        keySuffix: normalizedOptions.key ? '...' + normalizedOptions.key.substring(normalizedOptions.key.length - 10) : 'null',
+        keyLength: normalizedOptions.key?.length || 0,
         sandbox: normalizedOptions.sandbox,
+        sandboxType: typeof normalizedOptions.sandbox,
+        environment: normalizedOptions.sandbox === 'true' || normalizedOptions.sandbox === true ? 'SANDBOX' : 'PRODUCTION',
       });
       
       window.openKkiapayWidget(normalizedOptions);

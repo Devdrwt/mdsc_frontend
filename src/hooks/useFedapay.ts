@@ -1,0 +1,316 @@
+import { useEffect, useState } from 'react';
+
+declare global {
+  interface Window {
+    FedaPay?: {
+      init: (selectorOrOptions: string | FedapayOptions, options?: FedapayOptions) => FedapayWidget;
+      checkout?: (options: { public_key: string; transaction: any }) => void;
+      CHECKOUT_COMPLETED?: number;
+      DIALOG_DISMISSED?: number;
+    };
+  }
+}
+
+export interface FedapayOptions {
+  public_key: string; // pk_live_* ou pk_sandbox_* - Fedapay détecte automatiquement l'environnement
+  // environment n'est pas nécessaire - Fedapay détecte via la clé publique
+  transaction?: {
+    amount?: number;
+    description?: string;
+    currency?: string;
+    id?: number;
+    custom_metadata?: Record<string, any>;
+  };
+  customer?: {
+    email?: string;
+    firstname?: string;
+    lastname?: string;
+    phone_number?: {
+      number?: string;
+      country?: string;
+    };
+  };
+  onComplete?: (reason: number, transaction: any) => void;
+  container?: string;
+  locale?: string;
+}
+
+export interface FedapayWidget {
+  open: () => void;
+  close?: () => void;
+}
+
+export const useFedapay = () => {
+  const [isReady, setIsReady] = useState(false);
+  const [widget, setWidget] = useState<FedapayWidget | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Vérifier si le SDK est déjà disponible (chargé globalement)
+    // Vérifier plusieurs noms possibles pour l'API
+    const checkSDK = () => {
+      const fedapayAPI = (window as any).FedaPay || (window as any).fedapay || (window as any).FedaPayCheckout || (window as any).FedaPayCheckoutJS;
+      
+      if (fedapayAPI) {
+        // Normaliser dans window.FedaPay si nécessaire
+        if (!(window as any).FedaPay && fedapayAPI) {
+          (window as any).FedaPay = fedapayAPI;
+        }
+        
+        const hasInit = typeof fedapayAPI.init === 'function';
+        const hasCheckout = typeof fedapayAPI.checkout === 'function';
+        
+        if (hasInit || hasCheckout) {
+          console.log('[useFedapay] ✅ SDK détecté', {
+            hasInit,
+            hasCheckout,
+            apiKeys: Object.keys(fedapayAPI),
+          });
+          setIsReady(true);
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Vérifier immédiatement
+    if (checkSDK()) {
+      return;
+    }
+
+    console.log('[useFedapay] ⏳ Attente du chargement du SDK...');
+
+    // Écouter l'événement personnalisé de chargement
+    const handleSDKLoaded = () => {
+      console.log('[useFedapay] 📢 Événement fedapay-sdk-loaded reçu');
+      if (checkSDK()) {
+        window.removeEventListener('fedapay-sdk-loaded', handleSDKLoaded);
+      }
+    };
+    window.addEventListener('fedapay-sdk-loaded', handleSDKLoaded);
+
+    // Si pas encore disponible, attendre un peu et réessayer
+    const interval = setInterval(() => {
+      if (checkSDK()) {
+        clearInterval(interval);
+        window.removeEventListener('fedapay-sdk-loaded', handleSDKLoaded);
+      }
+    }, 100);
+
+    // Nettoyer après 15 secondes max
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      window.removeEventListener('fedapay-sdk-loaded', handleSDKLoaded);
+      if (!window.FedaPay) {
+        console.error('[useFedapay] ❌ SDK non disponible après 15 secondes');
+        console.error('[useFedapay] Vérifiez que le script est bien chargé dans layout.tsx');
+        // Forcer isReady à true après 15 secondes pour permettre quand même l'utilisation
+        setIsReady(true);
+      }
+    }, 15000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+      window.removeEventListener('fedapay-sdk-loaded', handleSDKLoaded);
+    };
+  }, []);
+
+  const initWidget = (selectorOrOptions: string | FedapayOptions, options?: FedapayOptions): FedapayWidget | null => {
+    // Vérifier que le SDK est chargé (vérifier plusieurs noms possibles)
+    const fedapayAPI = (window as any).FedaPay || (window as any).fedapay || (window as any).FedaPayCheckout || (window as any).FedaPayCheckoutJS;
+    
+    if (!fedapayAPI) {
+      console.error('[Fedapay] SDK non chargé. Veuillez patienter...');
+      console.error('[Fedapay] window keys:', Object.keys(window).filter(k => 
+        k.toLowerCase().includes('feda') || k.toLowerCase().includes('pay')
+      ));
+      return null;
+    }
+    
+    // Normaliser dans window.FedaPay si nécessaire
+    if (!(window as any).FedaPay && fedapayAPI) {
+      (window as any).FedaPay = fedapayAPI;
+    }
+
+    // Vérifier les méthodes disponibles
+    const hasInit = typeof fedapayAPI.init === 'function';
+    const hasCheckout = typeof fedapayAPI.checkout === 'function';
+    
+    console.log('[Fedapay] Méthodes disponibles:', { 
+      hasInit, 
+      hasCheckout, 
+      FedaPayKeys: Object.keys(fedapayAPI),
+      FedaPayType: typeof fedapayAPI,
+    });
+
+    if (!hasInit && !hasCheckout) {
+      console.error('[Fedapay] Aucune méthode disponible (init ou checkout)');
+      return null;
+    }
+
+    try {
+      // Si un sélecteur est fourni, utiliser le format avec sélecteur
+      if (typeof selectorOrOptions === 'string') {
+        const finalOptions: FedapayOptions = options || { public_key: '' };
+        // Fedapay détecte automatiquement l'environnement via la clé publique
+        const detectedEnv = finalOptions.public_key?.startsWith('pk_live_') ? 'live' : 
+                           finalOptions.public_key?.startsWith('pk_sandbox_') ? 'sandbox' : 'unknown';
+        
+        console.log('[Fedapay] Initialisation du widget avec sélecteur:', {
+          selector: selectorOrOptions,
+          publicKeyPrefix: finalOptions.public_key?.substring(0, 20) + '...',
+          publicKeySuffix: finalOptions.public_key ? '...' + finalOptions.public_key.substring(finalOptions.public_key.length - 10) : 'null',
+          publicKeyLength: finalOptions.public_key?.length || 0,
+          detectedEnvironment: detectedEnv, // Détecté automatiquement via la clé
+          amount: finalOptions.transaction?.amount,
+        });
+
+        // Vérifier que le bouton existe dans le DOM
+        const button = document.querySelector(selectorOrOptions);
+        if (!button) {
+          console.error(`[Fedapay] ❌ Le bouton ${selectorOrOptions} n'existe pas dans le DOM`);
+          return null;
+        }
+        console.log(`[Fedapay] ✅ Le bouton ${selectorOrOptions} existe dans le DOM`);
+
+        // Utiliser init() si disponible
+        if (hasInit) {
+          console.log('[Fedapay] Utilisation de FedaPay.init()');
+          // Préparer les options selon la documentation officielle (sans environment)
+          // Fedapay détecte automatiquement l'environnement via la clé publique
+          const fedapayInitOptions: Record<string, any> = {
+            public_key: finalOptions.public_key!,
+            transaction: finalOptions.transaction,
+            customer: finalOptions.customer,
+          };
+          
+          // Ajouter onComplete si présent
+          if (finalOptions.onComplete) {
+            fedapayInitOptions.onComplete = finalOptions.onComplete;
+          }
+          
+          console.log('[Fedapay] Options complètes (selon doc officielle):', {
+            public_key: fedapayInitOptions.public_key?.substring(0, 20) + '...',
+            transaction: fedapayInitOptions.transaction,
+            customer: fedapayInitOptions.customer ? {
+              email: fedapayInitOptions.customer.email,
+              firstname: fedapayInitOptions.customer.firstname,
+              lastname: fedapayInitOptions.customer.lastname,
+            } : null,
+            hasOnComplete: !!fedapayInitOptions.onComplete,
+          });
+          
+          try {
+            // Vérifier que le bouton existe avant d'initialiser
+            const buttonElement = document.querySelector(selectorOrOptions);
+            if (!buttonElement) {
+              console.error(`[Fedapay] ❌ Le bouton ${selectorOrOptions} n'existe pas dans le DOM`);
+              return null;
+            }
+            console.log(`[Fedapay] ✅ Bouton ${selectorOrOptions} trouvé:`, buttonElement);
+            
+            // Initialiser le widget - il s'ouvrira automatiquement au clic sur le bouton
+            // Utiliser les options sans 'environment' (selon la doc officielle)
+            const fedapayWidget = fedapayAPI.init(selectorOrOptions, fedapayInitOptions);
+            console.log('[Fedapay] Widget initialisé:', { 
+              widget: fedapayWidget, 
+              widgetType: typeof fedapayWidget,
+              isArray: Array.isArray(fedapayWidget),
+              hasOpen: typeof fedapayWidget?.open === 'function',
+              widgetKeys: fedapayWidget ? Object.keys(fedapayWidget) : null,
+            });
+            
+            // Si c'est un tableau (comme dans les logs), prendre le premier élément
+            const actualWidget = Array.isArray(fedapayWidget) ? fedapayWidget[0] : fedapayWidget;
+            console.log('[Fedapay] Widget réel:', { 
+              actualWidget,
+              hasOpen: typeof actualWidget?.open === 'function',
+            });
+            
+            // Le widget est maintenant attaché au bouton et s'ouvrira automatiquement au clic
+            console.log('[Fedapay] ✅ Widget attaché au bouton. Il s\'ouvrira automatiquement au clic.');
+            
+            // Vérifier que le bouton a bien l'événement de clic attaché
+            const button = document.querySelector(selectorOrOptions) as HTMLElement;
+            if (button) {
+              console.log('[Fedapay] ✅ Bouton trouvé, prêt pour le clic');
+              // Tester si le widget s'ouvre en simulant un clic (optionnel, pour debug)
+              // button.click(); // Décommenter pour tester automatiquement
+            }
+            
+            setWidget(actualWidget || fedapayWidget);
+            return actualWidget || fedapayWidget;
+          } catch (error) {
+            console.error('[Fedapay] ❌ Erreur lors de l\'appel à init():', error);
+            console.error('[Fedapay] Stack:', error instanceof Error ? error.stack : 'N/A');
+            throw error;
+          }
+        } else if (hasCheckout) {
+          // Utiliser checkout() si init() n'est pas disponible
+          console.log('[Fedapay] Utilisation de FedaPay.checkout()');
+          fedapayAPI.checkout({
+            public_key: finalOptions.public_key!,
+            transaction: finalOptions.transaction,
+            customer: finalOptions.customer,
+            onComplete: finalOptions.onComplete,
+          });
+          const mockWidget = { open: () => {} };
+          setWidget(mockWidget);
+          return mockWidget;
+        }
+      } else {
+        // Format sans sélecteur (ancien format)
+        const finalOptions = selectorOrOptions;
+        console.log('[Fedapay] Initialisation du widget avec options:', {
+          publicKeyPrefix: finalOptions.public_key?.substring(0, 20) + '...',
+          publicKeySuffix: finalOptions.public_key ? '...' + finalOptions.public_key.substring(finalOptions.public_key.length - 10) : 'null',
+          publicKeyLength: finalOptions.public_key?.length || 0,
+          environment: finalOptions.environment || 'sandbox',
+          environmentType: typeof finalOptions.environment,
+          amount: finalOptions.transaction?.amount,
+        });
+
+        const fedapayWidget = fedapayAPI.init(finalOptions);
+        setWidget(fedapayWidget);
+        return fedapayWidget;
+      }
+    } catch (error) {
+      console.error('[Fedapay] Erreur lors de l\'initialisation du widget:', error);
+      return null;
+    }
+  };
+
+  const openWidget = (widgetInstance: FedapayWidget) => {
+    if (!widgetInstance || typeof widgetInstance.open !== 'function') {
+      console.error('[Fedapay] Widget non valide. Veuillez initialiser le widget d\'abord.');
+      return false;
+    }
+
+    try {
+      console.log('[Fedapay] Ouverture du widget...');
+      widgetInstance.open();
+      return true;
+    } catch (error) {
+      console.error('[Fedapay] Erreur lors de l\'ouverture du widget:', error);
+      return false;
+    }
+  };
+
+  const fedapayAPI = typeof window !== 'undefined' ? 
+    ((window as any).FedaPay || (window as any).fedapay || (window as any).FedaPayCheckout || (window as any).FedaPayCheckoutJS) : 
+    null;
+  
+  return {
+    isReady: isReady || !!(fedapayAPI && (typeof fedapayAPI.init === 'function' || typeof fedapayAPI.checkout === 'function')),
+    initWidget,
+    openWidget,
+    widget,
+    constants: fedapayAPI ? {
+      CHECKOUT_COMPLETED: fedapayAPI.CHECKOUT_COMPLETED,
+      DIALOG_DISMISSED: fedapayAPI.DIALOG_DISMISSED,
+    } : null,
+  };
+};
+
