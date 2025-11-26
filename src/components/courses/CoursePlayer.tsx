@@ -1152,7 +1152,6 @@ export default function CoursePlayer({
 
     setRequestingCertificate(true);
     try {
-<<<<<<< HEAD
       const shouldRateFirst = await needsRatingBeforeCertificate();
       if (shouldRateFirst) {
         setPendingCertificateAfterRating(true);
@@ -1165,42 +1164,6 @@ export default function CoursePlayer({
         return;
       }
 
-      await attemptCertificateGeneration();
-    } catch (error: any) {
-      console.error('Erreur lors de la génération du certificat:', error);
-
-      if (isRatingRequiredError(error) && enrollmentId) {
-        console.log('✅ [CoursePlayer] requires_rating détecté, affichage du modal');
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Vous devez noter ce cours avant d\'obtenir votre certificat'
-        );
-      } else {
-        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
-      }
-    } finally {
-      setRequestingCertificate(false);
-    }
-  };
-
-  const handleCertificateGenerationAfterRating = async () => {
-    if (!pendingCertificateAfterRating) {
-      return;
-    }
-
-    try {
-      setRequestingCertificate(true);
-      await attemptCertificateGeneration();
-      setPendingCertificateAfterRating(false);
-    } catch (error: any) {
-      console.error('[CoursePlayer] Erreur après notation lors de la génération du certificat:', error);
-      if (!isRatingRequiredError(error)) {
-        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
-      }
-=======
       // Utiliser generateForCourse pour créer le certificat après confirmation des données
       // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
       const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
@@ -1263,10 +1226,21 @@ export default function CoursePlayer({
       );
     } catch (error: any) {
       console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
-      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
-      toast.error('Erreur', errorMessage);
+      
+      if (isRatingRequiredError(error) && enrollmentId) {
+        console.log('✅ [CoursePlayer] requires_rating détecté, affichage du modal');
+        setPendingCertificateAfterRating(true);
+        setShowProfileVerificationModal(false);
+        setShowRatingModal(true);
+        toast.info(
+          'Notation requise',
+          'Vous devez noter ce cours avant d\'obtenir votre certificat'
+        );
+      } else {
+        const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+        toast.error('Erreur', errorMessage);
+      }
       // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
->>>>>>> origin/faille0
     } finally {
       setRequestingCertificate(false);
     }
@@ -1731,7 +1705,6 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-<<<<<<< HEAD
       <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full lg:w-auto">
         <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
@@ -1765,7 +1738,6 @@ export default function CoursePlayer({
                 <span className="md:hidden">Retour</span>
               </Link>
             </div>
-<<<<<<< HEAD
             {course.id && (
               <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center">
                 <Link
@@ -1777,16 +1749,11 @@ export default function CoursePlayer({
                 </Link>
               </div>
             )}
-            <div className="order-2 lg:order-3 flex items-center text-xs sm:text-sm text-gray-600 justify-end">
-              <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
-              <span className="ml-1">complété</span>
-=======
             <div className="flex items-center justify-between sm:justify-end text-xs sm:text-sm text-gray-600">
               <div className="flex items-center">
                 <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
                 <span className="ml-1 hidden sm:inline">complété</span>
               </div>
->>>>>>> origin/faille0
             </div>
           </div>
         </div>

@@ -243,51 +243,51 @@ export default function InstructorProfilePage() {
                 <div className="pb-6 border-b border-gray-200">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Pièce d'identité</h3>
                   {identityDocument ? (
-                    <div className="border border-green-200 bg-green-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center space-x-3">
-                          <CheckCircle className="h-6 w-6 text-green-600" />
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {getDocumentDisplayName(identityDocument)}
-                            </p>
-                            {getDocumentDisplayDate(identityDocument) && (
-                              <p className="text-sm text-gray-600">
-                                Uploadé le {getDocumentDisplayDate(identityDocument)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <a
-                            href={getDocumentUrl(identityDocument)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-mdsc-blue-primary hover:underline"
-                          >
-                            Voir
-                          </a>
-                          <input
-                            type="file"
-                            accept="application/pdf,image/jpeg,image/png"
-                            onChange={handleDocumentUpload}
-                            className="hidden"
-                            id="identity-document-reupload"
-                          />
-                          <label
-                            htmlFor="identity-document-reupload"
-                            className="inline-flex items-center px-4 py-2 bg-white text-mdsc-blue-primary border border-mdsc-blue-primary rounded-lg text-sm font-medium hover:bg-mdsc-blue-primary hover:text-white transition-colors cursor-pointer"
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            {uploadingDocument ? 'Upload...' : 'Remplacer'}
-                          </label>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Formats acceptés : PDF, PNG, JPEG (Max 5 MB)
-                      </p>
-                    </div>
-                  ) : (
+  <div className="border border-green-200 dark:border-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+    <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center space-x-3">
+        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+        <div>
+          <p className="font-medium text-black-900 dark:text-gray-50">
+            {getDocumentDisplayName(identityDocument)}
+          </p>
+          {getDocumentDisplayDate(identityDocument) && (
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Uploadé le {getDocumentDisplayDate(identityDocument)}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <a
+          href={getDocumentUrl(identityDocument)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-mdsc-blue-primary dark:text-blue-400 hover:underline"
+        >
+          Voir
+        </a>
+        <input
+          type="file"
+          accept="application/pdf,image/jpeg,image/png"
+          onChange={handleDocumentUpload}
+          className="hidden"
+          id="identity-document-reupload"
+        />
+        <label
+          htmlFor="identity-document-reupload"
+          className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 text-mdsc-blue-primary dark:text-blue-400 border border-mdsc-blue-primary dark:border-blue-500 rounded-lg text-sm font-medium hover:bg-mdsc-blue-primary hover:text-white dark:hover:bg-blue-600 transition-colors cursor-pointer"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {uploadingDocument ? 'Upload...' : 'Remplacer'}
+        </label>
+      </div>
+    </div>
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+      Formats acceptés : PDF, PNG, JPEG (Max 5 MB)
+    </p>
+  </div>
+)  : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-600 mb-4">Aucun document d'identité uploadé</p>
