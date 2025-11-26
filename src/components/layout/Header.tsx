@@ -133,7 +133,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-2">
             <button 
               onClick={handleThemeToggle}
-              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group"
+              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-500/50 dark:hover:bg-gray-500/50 group"
               aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
               title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
             >
@@ -155,7 +155,7 @@ export default function Header() {
                 </a>
                 <a 
                   href={`/dashboard/${user.role}/profile`}
-                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-gray-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
                   title="Mon profil"
                 >
                   <User className="h-4 w-4 inline mr-2" />

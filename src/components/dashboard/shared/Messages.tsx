@@ -241,49 +241,52 @@ export default function Messages({ courseId }: MessagesProps) {
   {filteredMessages.map((msg) => {
     const person = getPerson(msg);
     return (
-      <div
-        key={msg.id}
-        onClick={() => handleOpenMessage(msg)}
-        className={`
-          p-4 border-b border-gray-200 dark:border-gray-700
-          cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50
-          transition-colors
-          ${!msg.is_read && activeTab === 'inbox' ? 'bg-blue-50 dark:bg-blue-900/30' : ''}
-          ${selectedMessage?.id === msg.id ? 'bg-mdsc-blue-50 dark:bg-mdsc-blue-900/30 border-l-4 border-mdsc-blue-primary' : ''}
-        `}
-      >
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            {!msg.is_read && activeTab === 'inbox' && (
-              <div className="w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full flex-shrink-0" />
-            )}
-            {msg.is_read && activeTab === 'inbox' && (
-              <MailOpen className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            )}
-            {activeTab === 'sent' && (
-              <Send className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
-            )}
-            {renderAvatar(person)}
-            <span className="font-medium text-gray-900 dark:text-gray-50 truncate">
-              {formatPerson(person)}
-            </span>
-          </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-            {new Date(msg.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-          </span>
-        </div>
-        <p className="font-medium text-gray-900 dark:text-gray-50 mb-1 truncate">
-          {msg.subject || '(Sans objet)'}
-        </p>
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-          {msg.content || ''}
-        </p>
-        {msg.message_type && msg.message_type !== 'direct' && (
-          <span className="inline-block mt-2 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-            {msg.message_type === 'broadcast' ? 'Diffusion' : msg.message_type}
-          </span>
-        )}
-      </div>
+<div
+  key={msg.id}
+  onClick={() => handleOpenMessage(msg)}
+  className={`
+    p-4 border-b border-gray-200
+    cursor-pointer hover:bg-gray-100
+    transition-colors
+    ${!msg.is_read && activeTab === 'inbox' ? 'bg-blue-50' : 'bg-white'}
+    ${selectedMessage?.id === msg.id ? 'bg-gray-100 border-l-4 border-mdsc-blue-primary' : ''}
+    text-gray-900
+  `}
+>
+  {/* Contenu du message */}
+  <div className="flex items-start justify-between mb-2">
+    <div className="flex items-center gap-2 flex-1 min-w-0">
+      {!msg.is_read && activeTab === 'inbox' && (
+        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
+      )}
+      {msg.is_read && activeTab === 'inbox' && (
+        <MailOpen className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      )}
+      {activeTab === 'sent' && (
+        <Send className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      )}
+      {renderAvatar(person)}
+      <span className="font-medium text-gray-900 truncate">
+        {formatPerson(person)}
+      </span>
+    </div>
+    <span className="text-xs text-gray-500 flex-shrink-0">
+      {new Date(msg.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+    </span>
+  </div>
+  <p className="font-medium text-gray-900 mb-1 truncate">
+    {msg.subject || '(Sans objet)'}
+  </p>
+  <p className="text-sm text-gray-700 line-clamp-2">
+    {msg.content || ''}
+  </p>
+  {msg.message_type && msg.message_type !== 'direct' && (
+    <span className="inline-block mt-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+      {msg.message_type === 'broadcast' ? 'Diffusion' : msg.message_type}
+    </span>
+  )}
+</div>
+
     );
   })}
 </div>

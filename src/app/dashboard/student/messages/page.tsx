@@ -341,24 +341,42 @@ export default function StudentMessagesPage() {
                     {renderState()}
                     {!loading && !error && messages.length > 0 && (
                       messages.map((message) => (
-                        <button
-                          key={message.id}
-                          onClick={() => handleSelectMessage(message)}
-                          className={`w-full text-left px-4 py-3 flex flex-col space-y-1 transition ${
-                            selectedMessage?.id === message.id ? 'bg-white' : 'hover:bg-white'
-                          } ${!message.is_read && activeTab === 'inbox' ? 'border-l-4 border-mdsc-blue-primary bg-blue-50/70' : ''}`}
-                        >
-              <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm text-gray-900">
-                              {activeTab === 'sent' 
-                                ? (message.recipient?.name || message.recipient?.email || 'Destinataire inconnu')
-                                : (message.sender?.name || message.sender?.email || 'Expéditeur inconnu')}
-                            </span>
-                            <span className="text-xs text-gray-400">{formatDateTime(message.created_at)}</span>
-                          </div>
-                          <span className="text-sm text-gray-700 line-clamp-1">{message.subject || '(Sans objet)'}</span>
-                          <span className="text-xs text-gray-500 line-clamp-1">{message.content}</span>
-                        </button>
+<button
+  key={message.id}
+  onClick={() => handleSelectMessage(message)}
+  className={`w-full text-left px-4 py-3 flex flex-col space-y-1 transition
+    ${
+      selectedMessage?.id === message.id
+        ? 'bg-gray-100' // Fond gris clair pour le message sélectionné
+        : 'hover:bg-gray-100' // Fond blanc par défaut, gris clair au survol
+    }
+    ${
+      !message.is_read && activeTab === 'inbox'
+        ? 'border-l-4 border-mdsc-blue-primary bg-blue-50' // Fond bleu très clair pour les messages non lus
+        : 'bg-white' // Fond blanc pour les messages lus
+    }
+    text-gray-900 // Texte en noir pour tous les éléments
+  `}
+>
+  {/* Contenu du bouton */}
+  <div className="flex items-center justify-between">
+    <span className="font-medium text-sm text-gray-900">
+      {activeTab === 'sent'
+        ? (message.recipient?.name || message.recipient?.email || 'Destinataire inconnu')
+        : (message.sender?.name || message.sender?.email || 'Expéditeur inconnu')}
+    </span>
+    <span className="text-xs text-gray-600">
+      {formatDateTime(message.created_at)}
+    </span>
+  </div>
+  <span className="text-sm text-gray-900 line-clamp-1">
+    {message.subject || '(Sans objet)'}
+  </span>
+  <span className="text-xs text-gray-600 line-clamp-1">
+    {message.content}
+  </span>
+</button>
+
                       ))
                     )}
                   </div>

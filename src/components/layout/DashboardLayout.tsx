@@ -723,13 +723,13 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
               </button>
 
 {notificationDropdownOpen && (
-  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
       <div>
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+        <p className="text-sm font-semibold text-gray-900">
           Notifications
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-gray-500">
           {unreadCount > 0
             ? `${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
             : "Toutes lues"}
@@ -737,25 +737,25 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
       </div>
       <button
         onClick={handleMarkAllNotificationsRead}
-        className="text-xs font-medium text-mdsc-blue-primary dark:text-blue-400 hover:underline disabled:text-gray-400"
+        className="text-xs font-medium text-mdsc-blue-primary hover:underline disabled:text-gray-400"
         disabled={unreadCount === 0}
       >
         Tout marquer lu
       </button>
     </div>
-    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+    <div className="max-h-80 overflow-y-auto divide-y divide-gray-200">
       {notificationsLoading ? (
         <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-mdsc-blue-primary dark:text-blue-400" />
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Chargement…</span>
+          <Loader2 className="h-5 w-5 animate-spin text-mdsc-blue-primary" />
+          <span className="ml-2 text-sm text-gray-500">Chargement…</span>
         </div>
       ) : notificationsError ? (
-        <div className="flex items-center space-x-2 px-4 py-4 text-sm text-red-500 dark:text-red-400">
+        <div className="flex items-center space-x-2 px-4 py-4 text-sm text-red-500">
           <AlertCircle className="h-4 w-4" />
           <span>{notificationsError}</span>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="px-4 py-6 text-center text-sm text-gray-500">
           Aucune notification
         </div>
       ) : (
@@ -763,40 +763,40 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           <button
             key={notification.id}
             onClick={() => handleNotificationClick(notification)}
-            className={`w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-              notification.is_read ? "bg-white dark:bg-gray-800" : "bg-blue-50 dark:bg-blue-900/30"
+            className={`w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors ${
+              notification.is_read ? "bg-white" : "bg-blue-50"
             }`}
           >
             <div className="flex items-start">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
+                <p className="text-sm font-semibold text-gray-900 truncate">
                   {notification.title || "Notification"}
                 </p>
                 {notification.message && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
+                  <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
                     {notification.message}
                   </p>
                 )}
                 {notification.metadata?.course_title && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Cours : {notification.metadata.course_title}
                   </p>
                 )}
                 {isCertificateNotification(notification) && (
                   <div className="mt-2 space-y-2">
-                    <div className="flex items-center text-xs font-semibold text-purple-500 dark:text-purple-400">
+                    <div className="flex items-center text-xs font-semibold text-purple-600">
                       <Award className="h-3.5 w-3.5 mr-1" />
                       <span>Certificat obtenu 🎉</span>
                     </div>
                     {notification.metadata?.certificate_title && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-gray-600">
                         {notification.metadata.certificate_title}
                       </p>
                     )}
                     <button
                       onClick={(event) => {
-                        event.stopPropagation()
-                        handleNotificationClick(notification)
+                        event.stopPropagation();
+                        handleNotificationClick(notification);
                       }}
                       className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                     >
@@ -804,7 +804,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                     </button>
                   </div>
                 )}
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
+                <p className="text-[11px] text-gray-400 mt-2">
                   {new Date(notification.created_at).toLocaleString("fr-FR", {
                     day: "2-digit",
                     month: "short",
@@ -814,26 +814,27 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                 </p>
               </div>
               {!notification.is_read && (
-                <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary dark:bg-blue-400 flex-shrink-0"></span>
+                <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary flex-shrink-0"></span>
               )}
             </div>
           </button>
         ))
       )}
     </div>
-    <div className="px-4 py-2 text-center border-t border-gray-100 dark:border-gray-700">
+    <div className="px-4 py-2 text-center border-t border-gray-200">
       <button
         onClick={() => {
-          setNotificationDropdownOpen(false)
-          router.push(`/dashboard/${userRole}/notifications`)
+          setNotificationDropdownOpen(false);
+          router.push(`/dashboard/${userRole}/notifications`);
         }}
-        className="text-sm font-medium text-mdsc-blue-primary dark:text-blue-400 hover:underline"
+        className="text-sm font-medium text-mdsc-blue-primary hover:underline"
       >
         Voir toutes les notifications
       </button>
     </div>
   </div>
-)}</div>
+)}
+</div>
 
 
             {/* User Menu */}
