@@ -531,29 +531,20 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   };
   
   const isActive = (href: string, item?: NavigationItem) => {
-    // Si l'item a des enfants, vérifier d'abord si un enfant est actif
-    // Si un enfant est actif, le parent ne doit pas être actif
-    if (item?.children && item.children.length > 0) {
-      const hasActiveChild = item.children.some(child => isChildActive(child.href, item.children));
-      if (hasActiveChild) {
-        // Si un enfant est actif, le parent n'est actif que si on est exactement sur sa route
-        return pathname === href;
-      }
-    }
-    
     // Pour les routes exactes, vérifier l'égalité exacte
     if (pathname === href) {
       return true;
     }
     
     // Pour les routes avec sous-routes, vérifier que c'est bien une sous-route
-    // MAIS seulement si l'item n'a pas d'enfants, ou si aucun enfant n'est actif
     if (pathname.startsWith(href + '/')) {
-      // Si l'item a des enfants, vérifier qu'aucun enfant ne correspond
+      // Si l'item a des enfants, le parent est actif si un enfant est actif OU si on est sur une sous-route
+      // Cela permet au parent d'être actif même quand un enfant est actif
       if (item?.children && item.children.length > 0) {
-        // Si un enfant correspond, le parent ne doit pas être actif
-        const childMatches = item.children.some(child => isChildActive(child.href, item.children));
-        return !childMatches;
+        // Le parent est actif si un enfant est actif (car on est dans la section du parent)
+        const hasActiveChild = item.children.some(child => isChildActive(child.href, item.children));
+        // Le parent est actif si un enfant est actif OU si on est sur une sous-route du parent
+        return hasActiveChild || true; // Toujours actif si on est dans une sous-route du parent
       }
       return true;
     }
