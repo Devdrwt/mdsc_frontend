@@ -174,7 +174,7 @@ export default function Header() {
               <>
                 <a 
                   href="/login" 
-                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-gray-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
                 >
                   Connexion
                 </a>
@@ -220,7 +220,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#D79A49] hover:bg-orange-200 rounded-lg transition-all duration-200 font-medium"
+                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#D79A49] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
                 style={{ 
                   animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
                 }}
