@@ -493,8 +493,72 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
     }
   };
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
+  // Fonction pour vérifier si un enfant est actif (plus précise)
+  // Prend en compte le fait qu'un enfant peut avoir un href qui est un préfixe d'un autre enfant
+  const isChildActive = (childHref: string, allChildren?: Array<{ href: string }>) => {
+    // Si on a la liste de tous les enfants, trouver d'abord le meilleur match (le plus long qui correspond)
+    if (allChildren && allChildren.length > 0) {
+      // Trier les enfants par longueur de href (du plus long au plus court)
+      const sortedChildren = [...allChildren].sort((a, b) => b.href.length - a.href.length);
+      
+      // Trouver le premier enfant qui correspond (le plus long/specific)
+      for (const otherChild of sortedChildren) {
+        // Vérification exacte
+        if (pathname === otherChild.href) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+        // Vérification si le pathname commence par l'href de l'autre enfant + '/'
+        if (pathname.startsWith(otherChild.href + '/')) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+      }
+    }
+    
+    // Si aucun enfant ne correspond avec la logique ci-dessus, vérifier l'enfant actuel
+    // Vérification exacte
+    if (pathname === childHref) {
+      return true;
+    }
+    
+    // Vérification si le pathname commence par childHref + '/'
+    if (pathname.startsWith(childHref + '/')) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const isActive = (href: string, item?: NavigationItem) => {
+    // Si l'item a des enfants, vérifier d'abord si un enfant est actif
+    // Si un enfant est actif, le parent ne doit pas être actif
+    if (item?.children && item.children.length > 0) {
+      const hasActiveChild = item.children.some(child => isChildActive(child.href, item.children));
+      if (hasActiveChild) {
+        // Si un enfant est actif, le parent n'est actif que si on est exactement sur sa route
+        return pathname === href;
+      }
+    }
+    
+    // Pour les routes exactes, vérifier l'égalité exacte
+    if (pathname === href) {
+      return true;
+    }
+    
+    // Pour les routes avec sous-routes, vérifier que c'est bien une sous-route
+    // MAIS seulement si l'item n'a pas d'enfants, ou si aucun enfant n'est actif
+    if (pathname.startsWith(href + '/')) {
+      // Si l'item a des enfants, vérifier qu'aucun enfant ne correspond
+      if (item?.children && item.children.length > 0) {
+        // Si un enfant correspond, le parent ne doit pas être actif
+        const childMatches = item.children.some(child => isChildActive(child.href, item.children));
+        return !childMatches;
+      }
+      return true;
+    }
+    
+    return false;
   };
 
   const toggleSubmenu = (itemName: string) => {
@@ -512,7 +576,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
   const renderNavItem = (item: NavigationItem, isMobile: boolean = false) => {
     const hasChildren = item.children && item.children.length > 0;
     const isOpen = openSubmenus.has(item.name);
-    const active = isActive(item.href);
+    const active = isActive(item.href, item);
 
     if (hasChildren && (isMobile || !sidebarCollapsed)) {
       return (
@@ -538,13 +602,17 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           </button>
           {isOpen && item.children && (
             <div className={`${isMobile ? 'ml-4' : 'ml-8'} mt-1 space-y-1`}>
-              {item.children.map((child) => (
+              {item.children.map((child) => {
+                // Vérifier si cet enfant est actif (en passant tous les enfants pour comparaison)
+                const childActive = isChildActive(child.href, item.children);
+                
+                return (
                 <a
                   key={child.name}
                   href={child.href}
                   onClick={() => isMobile && setSidebarOpen(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive(child.href)
+                    childActive
                       ? `${colors.primary} text-white`
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
@@ -552,7 +620,8 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                   <child.icon className="h-4 w-4 flex-shrink-0" />
                   <span className="ml-3">{child.name}</span>
                 </a>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -670,7 +739,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
             </button>
             <div className="ml-4 lg:ml-0">
               <h2 className="text-xl font-semibold text-gray-900">
-                {navigationItems.find(item => isActive(item.href))?.name || 'Tableau de bord'}
+                {navigationItems.find(item => isActive(item.href, item))?.name || 'Tableau de bord'}
               </h2>
             </div>
           </div>
