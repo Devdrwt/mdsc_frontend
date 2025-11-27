@@ -3,16 +3,16 @@
 /* Charte graphique Maison de la Société Civile */
 :root {
   /* Couleurs principales MdSC - Charte graphique officielle */
-  --mdsc-blue-primary: #3B7C8A;  /* Bleu principal (fond de section) */
+  --mdsc-blue-primary: #006095;  /* Bleu principal (fond de section) */
   --mdsc-blue-dark: #0C3C5C;     /* Bleu foncé (boutons et textes) */
-  --mdsc-gold: #D79A49;          /* Jaune doré (bouton et cadre de l'image) */
+  --mdsc-gold: #F4A53A;          /* Jaune doré (bouton et cadre de l'image) */
   --mdsc-white: #FFFFFF;         /* Blanc (texte et fond du header) */
   --mdsc-gray-light: #EAEAEA;    /* Gris clair (texte secondaire) */
   
   /* Couleurs pour niveaux de cours */
-  --mdsc-green: #3B7C8A;        /* Bleu principal pour niveau débutant */
+  --mdsc-green: #006095;        /* Bleu principal pour niveau débutant */
   --mdsc-red: #0C3C5C;          /* Bleu foncé pour niveau avancé */
-  --mdsc-orange: #D79A49;       /* Jaune doré pour niveau intermédiaire */
+  --mdsc-orange: #F4A53A;       /* Jaune doré pour niveau intermédiaire */
   
   /* Couleurs système */
   --background: var(--mdsc-white);
@@ -34,14 +34,14 @@
 }
 
 @theme {
-  --color-mdsc-blue-primary: #3B7C8A;
+  --color-mdsc-blue-primary: #006095;
   --color-mdsc-blue-dark: #0C3C5C;
-  --color-mdsc-gold: #D79A49;
+  --color-mdsc-gold: #F4A53A;
   --color-mdsc-white: #FFFFFF;
   --color-mdsc-gray-light: #EAEAEA;
-  --color-mdsc-green: #3B7C8A;
+  --color-mdsc-green: #006095;
   --color-mdsc-red: #0C3C5C;
-  --color-mdsc-orange: #D79A49;
+  --color-mdsc-orange: #F4A53A;
   
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -321,7 +321,7 @@ select:focus {
 }
 
 .text-mdsc-blue-primary {
-  color: #3B7C8A;
+  color: #006095;
 }
 
 .text-mdsc-blue-dark {
@@ -329,7 +329,7 @@ select:focus {
 }
 
 .text-mdsc-gold {
-  color: #D79A49;
+  color: #F4A53A;
 }
 
 .text-mdsc-white {
@@ -345,7 +345,7 @@ select:focus {
   }
 
 .bg-mdsc-blue-primary {
-  background-color: #3B7C8A;
+  background-color: #006095;
 }
 
 .bg-mdsc-blue-dark {
@@ -353,7 +353,7 @@ select:focus {
 }
 
 .bg-mdsc-gold {
-  background-color: #D79A49;
+  background-color: #F4A53A;
 }
 
 .bg-mdsc-white {
@@ -365,7 +365,7 @@ select:focus {
 }
 
 .border-mdsc-blue-primary {
-  border-color: #3B7C8A;
+  border-color: #006095;
 }
 
 .border-mdsc-blue-dark {
@@ -373,12 +373,12 @@ select:focus {
 }
 
 .border-mdsc-gold {
-  border-color: #D79A49;
+  border-color: #F4A53A;
 }
 
 /* Classes pour niveaux de cours */
 .text-mdsc-green {
-  color: #3B7C8A;
+  color: #006095;
 }
 
 .text-mdsc-red {
@@ -386,7 +386,7 @@ select:focus {
 }
 
 .bg-mdsc-green {
-  background-color: #3B7C8A;
+  background-color: #006095;
 }
 
 .bg-mdsc-red {
@@ -501,7 +501,7 @@ select:focus {
 
 .mdsc-accent-line {
   height: 0.25rem;
-  background-color: #D79A49;
+  background-color: #F4A53A;
   border-radius: 9999px;
 }
 

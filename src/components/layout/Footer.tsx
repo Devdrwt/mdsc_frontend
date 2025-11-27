@@ -27,7 +27,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-mdsc-blue-dark text-white">
+    <footer className="bg-mdsc-blue-primary text-white">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
         {/* ↓↓↓ Réduction de l'espace des colonnes : gap-4 au lieu de gap-8 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

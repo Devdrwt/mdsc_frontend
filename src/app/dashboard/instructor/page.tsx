@@ -472,7 +472,7 @@ export default function InstructorDashboard() {
 
           {/* En-tête de bienvenue moderne */}
           <div className="relative overflow-hidden bg-mdsc-gold rounded-2xl p-8 text-white">
-            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="absolute inset-0 "></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>

@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 
 export default function CallToAction() {
   return (
-    <section className="section-mdsc bg-mdsc-blue-primary">
+    <section className="section-mdsc bg-mdsc-blue-dark ">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl text-display text-mdsc-white mb-6" style={{color: 'white'}}>
           Prêt à commencer votre parcours d'apprentissage ?

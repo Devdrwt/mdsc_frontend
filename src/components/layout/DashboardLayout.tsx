@@ -30,6 +30,7 @@ import {
   Grid3x3,
   Loader2,
   AlertCircle,
+  Mail
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"
@@ -701,7 +702,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
               aria-label="Messages"
               title="Messages"
             >
-              <MessageSquare className="h-6 w-6" />
+              <Mail className="h-6 w-6" />
             </button>
 
             {/* Notifications */}
