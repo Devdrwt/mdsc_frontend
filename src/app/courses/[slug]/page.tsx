@@ -864,7 +864,7 @@ export default function CourseDetailPage() {
       
       <main>
         {/* Hero Section avec image */}
-        <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white">
+        <div className="bg-mdsc-blue-primary text-white">
           <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
             {/* Bouton retour au catalogue */}
             <div className="mb-6">

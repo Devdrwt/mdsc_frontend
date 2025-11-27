@@ -31,6 +31,7 @@ import {
   Loader2,
   AlertCircle,
   Video,
+  Mail,
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"

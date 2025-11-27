@@ -248,12 +248,11 @@ export default function Messages({ courseId }: MessagesProps) {
     p-4 border-b border-gray-200
     cursor-pointer hover:bg-gray-100
     transition-colors
-    ${!msg.is_read && activeTab === 'inbox' ? 'bg-blue-50' : 'bg-white'}
+    ${!msg.is_read && activeTab === 'inbox' ? 'bg-gray-900/30' : 'bg-white'}
     ${selectedMessage?.id === msg.id ? 'bg-gray-100 border-l-4 border-mdsc-blue-primary' : ''}
     text-gray-900
   `}
 >
-  {/* Contenu du message */}
   <div className="flex items-start justify-between mb-2">
     <div className="flex items-center gap-2 flex-1 min-w-0">
       {!msg.is_read && activeTab === 'inbox' && (
@@ -286,6 +285,8 @@ export default function Messages({ courseId }: MessagesProps) {
     </span>
   )}
 </div>
+
+
 
     );
   })}
