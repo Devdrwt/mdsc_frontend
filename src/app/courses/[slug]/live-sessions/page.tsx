@@ -6,15 +6,14 @@ import { ArrowLeft, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import LiveSessionList from '../../../../components/live/LiveSessionList';
 import { useAuthStore } from '../../../../lib/stores/authStore';
-import { courseService } from '../../../../lib/services/courseService';
-import { Course } from '../../../../types/course';
+import { courseService, Course as ServiceCourse } from '../../../../lib/services/courseService';
 import { Loader2 } from 'lucide-react';
 
 export default function CourseLiveSessionsPage() {
   const params = useParams();
   const slug = params.slug as string;
   const { user } = useAuthStore();
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,7 +35,8 @@ export default function CourseLiveSessionsPage() {
   const getUserRole = (): 'student' | 'instructor' | 'admin' => {
     if (!user) return 'student';
     if (user.role === 'admin') return 'admin';
-    if (course && course.instructor_id === user.id) return 'instructor';
+    const courseAny = course as any;
+    if (course && (courseAny.instructor_id === user.id || courseAny.instructor?.id === user.id)) return 'instructor';
     return 'student';
   };
 
@@ -88,7 +88,7 @@ export default function CourseLiveSessionsPage() {
 
       {/* Liste des sessions */}
       <LiveSessionList
-        courseId={course.id}
+        courseId={typeof course.id === 'number' ? course.id : parseInt(String(course.id), 10)}
         userRole={getUserRole()}
       />
     </div>

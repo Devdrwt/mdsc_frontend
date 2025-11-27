@@ -8,19 +8,48 @@ export class ScheduleService {
    * @returns Planning du cours avec tous les items (leçons, quiz, milestones)
    */
   static async getCourseSchedule(courseId: number): Promise<CourseSchedule> {
-    const response = await apiRequest<CourseSchedule>(
+    const candidateEndpoints = [
+      `/student/courses/${courseId}/schedule`,
       `/student/schedule/${courseId}`,
-      {
-        method: 'GET',
-      }
-    );
+      `/courses/${courseId}/schedule`,
+    ];
 
-    if (!response.success || !response.data) {
-      throw new Error('Erreur lors de la récupération du planning');
+    let lastError: any = null;
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        const response = await apiRequest<CourseSchedule>(endpoint, { method: 'GET' });
+
+        if (response.success && response.data) {
+          return response.data;
+        }
+      } catch (error: any) {
+        lastError = error;
+
+        // Si l'endpoint n'existe pas (404), essayer le suivant
+        if (error?.status === 404) {
+          continue;
+        }
+
+        throw error;
+      }
     }
 
-    // response.data est de type CourseSchedule selon le type générique
-    return response.data;
+    // Si toutes les routes sont introuvables, retourner un planning vide pour éviter le crash
+    if (lastError?.status === 404 || !lastError) {
+      console.warn(
+        `[scheduleService] Aucun endpoint de planning disponible pour le cours ${courseId}.`,
+        lastError?.message || 'Route non trouvée'
+      );
+
+      return {
+        enrollment_id: 0,
+        course_id: courseId,
+        schedule: [],
+      };
+    }
+
+    throw lastError;
   }
 
   /**

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
@@ -164,7 +164,7 @@ const normalizeCourses = (rawCourses: any[]): NormalizedCourse[] => {
   });
 };
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
   const searchParams = useSearchParams();
   const authStore = useAuthStore();
   const user = authStore.user;
@@ -1089,5 +1089,17 @@ export default function StudentDashboard() {
         </div>
       </DashboardLayout>
     </AuthGuard>
+  );
+}
+
+export default function StudentDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <StudentDashboardContent />
+    </Suspense>
   );
 }

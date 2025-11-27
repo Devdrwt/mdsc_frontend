@@ -89,14 +89,15 @@ export default function LiveSessionForm({
 
   useEffect(() => {
     if (session) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         title: session.title,
         description: session.description || '',
         scheduled_start_at: new Date(session.scheduled_start_at).toISOString().slice(0, 16),
         scheduled_end_at: new Date(session.scheduled_end_at).toISOString().slice(0, 16),
         max_participants: session.max_participants,
         is_recording_enabled: session.is_recording_enabled,
-      });
+      }));
     }
   }, [session]);
 

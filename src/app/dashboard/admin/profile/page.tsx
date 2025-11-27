@@ -129,7 +129,7 @@ function AdminProfileContent() {
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <div className="relative w-32 h-32">
             <img
-              src={avatarUrl || user?.avatar || '/images/avatar-placeholder.png'}
+              src={avatarUrl || (user as any)?.avatar || '/images/avatar-placeholder.png'}
               alt="Avatar administrateur"
               className="w-32 h-32 rounded-full object-cover border border-gray-200 shadow"
             />

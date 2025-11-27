@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { CourseService } from '../../../lib/services/courseService';
 import CoursePlayer from '../../../components/courses/CoursePlayer';
 import { Course } from '../../../types/course';
@@ -11,6 +11,7 @@ export default function LearnCoursePage() {
   const { theme } = useTheme(); // Utiliser useTheme comme dans DashboardLayout
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const courseId = params?.courseId as string;
   const moduleId = searchParams?.get('module') || undefined;
   const lessonId = searchParams?.get('lesson') || undefined;
@@ -132,6 +133,44 @@ export default function LearnCoursePage() {
         </div>
       </div>
     );
+  }
+
+  // Pour les cours live, vérifier si le cours a démarré
+  const courseAny = course as any;
+  const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+  
+  useEffect(() => {
+    if (course && isLiveCourse) {
+      const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+      if (courseStartDate) {
+        const startDate = new Date(courseStartDate);
+        const now = new Date();
+        
+        // Si le cours n'a pas encore démarré, rediriger vers la salle d'attente
+        if (now < startDate) {
+          router.push(`/learn/${courseId}/waiting-room`);
+        }
+      }
+    }
+  }, [course, isLiveCourse, courseId, router, courseAny]);
+  
+  // Si le cours est live et n'a pas démarré, afficher un loader pendant la redirection
+  if (course && isLiveCourse) {
+    const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+    if (courseStartDate) {
+      const startDate = new Date(courseStartDate);
+      const now = new Date();
+      if (now < startDate) {
+        return (
+          <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Redirection vers la salle d'attente...</p>
+            </div>
+          </div>
+        );
+      }
+    }
   }
 
   return (

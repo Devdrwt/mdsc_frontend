@@ -586,9 +586,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
           <button
             onClick={() => toggleSubmenu(item.name)}
             className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              active ? ` text-gray-700` : childActive
-              // ? `${colors.primary} text-white` // Optionnel si tu veux colorer le parent quand un enfant est actif
-              // : 'text-gray-700 hover:bg-gray-100'
+              active ? `${colors.primary} text-white` : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />

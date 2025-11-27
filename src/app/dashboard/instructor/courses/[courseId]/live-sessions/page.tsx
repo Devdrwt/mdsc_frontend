@@ -4,10 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import LiveSessionManager from '../../../../../components/live/LiveSessionManager';
-import { courseService } from '../../../../../lib/services/courseService';
-import { Course } from '../../../../../types/course';
-import { useAuthStore } from '../../../../../lib/stores/authStore';
+import LiveSessionManager from '../../../../../../components/live/LiveSessionManager';
+import { courseService, Course as ServiceCourse } from '../../../../../../lib/services/courseService';
+import { useAuthStore } from '../../../../../../lib/stores/authStore';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -16,7 +15,7 @@ export default function InstructorLiveSessionsPage() {
   const router = useRouter();
   const courseId = parseInt(params.courseId as string);
   const { user } = useAuthStore();
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,9 +29,10 @@ export default function InstructorLiveSessionsPage() {
   const loadCourse = async () => {
     try {
       setLoading(true);
-      const courseData = await courseService.getCourse(courseId);
+      const courseData = await courseService.getCourseById(courseId);
       // Vérifier que l'utilisateur est l'instructeur
-      if (courseData.instructor_id !== user?.id) {
+      const courseAny = courseData as any;
+      if (courseAny.instructor_id !== user?.id && courseAny.instructor?.id !== user?.id) {
         router.push('/dashboard');
         return;
       }

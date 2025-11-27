@@ -15,6 +15,7 @@ import LessonEditor from '../../../../components/instructor/LessonEditor';
 import LessonManagement from '../../../../components/dashboard/instructor/LessonManagement';
 import EvaluationBuilder from '../../../../components/dashboard/instructor/EvaluationBuilder';
 import ModuleQuizBuilder from '../../../../components/dashboard/instructor/ModuleQuizBuilder';
+import LiveCourseWorkflow from '../../../../components/dashboard/instructor/LiveCourseWorkflow';
 import { evaluationService } from '../../../../lib/services/evaluationService';
 import { quizService } from '../../../../lib/services/quizService';
 import { Settings, Save, Globe, DollarSign, Calendar, Users, Lock, Eye, EyeOff, Loader as LoaderIcon, FileText, Send, CheckCircle2, AlertCircle, XCircle, Award } from 'lucide-react';
@@ -130,28 +131,39 @@ export default function InstructorCourseDetailPage() {
     router.replace(`/instructor/courses/${courseIdParam}?${params.toString()}`, { scroll: false });
   };
 
+  // Vérifier si c'est un cours en live
+  const isLiveCourse = useMemo(() => {
+    const courseAny = course as any;
+    return courseAny?.course_type === 'live' || 
+           courseAny?.courseType === 'live' ||
+           courseAny?.is_live === true ||
+           courseAny?.isLive === true;
+  }, [course]);
+
   const content = (
     <DashboardLayout userRole="instructor">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">{course?.title || 'Cours'}</h1>
-          <div className="flex items-center gap-2">
-            {tabKeys.map(tab => (
-              <button
-                key={tab}
-                className={`px-3 py-2 rounded-lg text-sm border transition-colors flex items-center space-x-2 ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
-                onClick={() => changeTab(tab)}
-              >
-                {tab === 'evaluations' && <FileText className="h-4 w-4" />}
-                <span>
-                  {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : tab === 'evaluations' ? 'Évaluations' : 'Paramètres'}
-                </span>
-                {tab === 'evaluations' && !evaluation && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">⚠️</span>
-                )}
-              </button>
-            ))}
-          </div>
+          {!isLiveCourse && (
+            <div className="flex items-center gap-2">
+              {tabKeys.map(tab => (
+                <button
+                  key={tab}
+                  className={`px-3 py-2 rounded-lg text-sm border transition-colors flex items-center space-x-2 ${activeTab === tab ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                  onClick={() => changeTab(tab)}
+                >
+                  {tab === 'evaluations' && <FileText className="h-4 w-4" />}
+                  <span>
+                    {tab === 'modules' ? 'Modules' : tab === 'lessons' ? 'Leçons' : tab === 'medias' ? 'Médias' : tab === 'evaluations' ? 'Évaluations' : 'Paramètres'}
+                  </span>
+                  {tab === 'evaluations' && !evaluation && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">⚠️</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {loading && (<div className="bg-white rounded-lg border p-6 text-gray-700">Chargement...</div>)}
@@ -159,6 +171,29 @@ export default function InstructorCourseDetailPage() {
 
         {!loading && !error && (
           <div className="space-y-6">
+            {/* Afficher le workflow guidé pour les cours en live */}
+            {isLiveCourse && (
+              <LiveCourseWorkflow
+                courseId={courseIdParam}
+                course={course}
+                courseStatus={courseStatus}
+                onComplete={async () => {
+                  // Recharger le cours pour mettre à jour le statut
+                  try {
+                    const updated = await courseService.getCourseById(courseIdParam);
+                    setCourse(updated);
+                    const courseAny = updated as any;
+                    setCourseStatus(courseAny.status || 'pending_approval');
+                  } catch (err) {
+                    console.error('Erreur lors du rechargement du cours:', err);
+                  }
+                }}
+              />
+            )}
+
+            {/* Interface normale pour les cours à la demande */}
+            {!isLiveCourse && (
+              <>
             {activeTab === 'modules' && (
               <div className="space-y-6">
                 <ModuleList
@@ -701,6 +736,8 @@ export default function InstructorCourseDetailPage() {
                   </div>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         )}

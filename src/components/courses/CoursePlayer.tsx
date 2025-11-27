@@ -1152,18 +1152,7 @@ export default function CoursePlayer({
 
     setRequestingCertificate(true);
     try {
-      const shouldRateFirst = await needsRatingBeforeCertificate();
-      if (shouldRateFirst) {
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Merci de noter ce cours avant de générer votre certificat.'
-        );
-        return;
-      }
-
+      // La notation est maintenant optionnelle, on peut générer le certificat directement
       // Utiliser generateForCourse pour créer le certificat après confirmation des données
       // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
       const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
@@ -1227,19 +1216,9 @@ export default function CoursePlayer({
     } catch (error: any) {
       console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
       
-      if (isRatingRequiredError(error) && enrollmentId) {
-        console.log('✅ [CoursePlayer] requires_rating détecté, affichage du modal');
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Vous devez noter ce cours avant d\'obtenir votre certificat'
-        );
-      } else {
-        const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
-        toast.error('Erreur', errorMessage);
-      }
+      // La notation est maintenant optionnelle, on affiche simplement l'erreur
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+      toast.error('Erreur', errorMessage);
       // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
     } finally {
       setRequestingCertificate(false);
@@ -1922,7 +1901,10 @@ export default function CoursePlayer({
           }}
           onSuccess={async () => {
             setShowRatingModal(false);
-            await handleCertificateGenerationAfterRating();
+            if (pendingCertificateAfterRating) {
+              setPendingCertificateAfterRating(false);
+              await handleConfirmProfileData();
+            }
           }}
         />
       )}

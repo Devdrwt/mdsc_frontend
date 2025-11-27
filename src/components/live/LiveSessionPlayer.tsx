@@ -50,8 +50,23 @@ export default function LiveSessionPlayer({
         return;
       }
 
-      // Joindre automatiquement si la session est live ou à venir
-      if (sessionData.status === 'live' || sessionData.status === 'scheduled') {
+      // Si la session est programmée et n'a pas encore démarré, rediriger vers la salle d'attente
+      if (sessionData.status === 'scheduled') {
+        const scheduledStart = new Date(sessionData.scheduled_start_at);
+        const now = new Date();
+        
+        if (now < scheduledStart) {
+          // Rediriger vers la salle d'attente du cours
+          const courseId = sessionData.course_id || sessionData.course?.id;
+          if (courseId) {
+            router.push(`/learn/${courseId}/waiting-room`);
+            return;
+          }
+        }
+      }
+
+      // Joindre automatiquement si la session est live
+      if (sessionData.status === 'live') {
         await joinSession();
       }
     } catch (err: any) {
@@ -155,29 +170,27 @@ export default function LiveSessionPlayer({
     );
   }
 
-  // Si la session n'est pas encore rejointe, afficher un écran d'attente
-  if (!joined && (session.status === 'scheduled' || session.status === 'live')) {
+  // Si la session est programmée et n'a pas encore démarré, rediriger vers la salle d'attente
+  if (session.status === 'scheduled') {
+    const scheduledStart = new Date(session.scheduled_start_at);
+    const now = new Date();
+    
+    if (now < scheduledStart) {
+      const courseId = session.course_id || session.course?.id;
+      if (courseId) {
+        router.push(`/learn/${courseId}/waiting-room`);
+        return null;
+      }
+    }
+  }
+
+  // Si la session n'est pas encore rejointe mais est live, afficher un écran d'attente
+  if (!joined && session.status === 'live') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-6">
         <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold mb-4">{session.title}</h2>
           <p className="text-gray-400 mb-6">{session.description}</p>
-          <div className="space-y-2 mb-8">
-            <p className="text-sm text-gray-500">
-              Date: {new Date(session.scheduled_start_at).toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
-            {session.status === 'scheduled' && (
-              <p className="text-yellow-400 text-sm">
-                ⏰ La session commencera bientôt
-              </p>
-            )}
-          </div>
           <button
             onClick={joinSession}
             className="px-6 py-3 bg-gradient-to-r from-[#F4A53A] to-[#F5B04A] text-white rounded-lg hover:from-[#E0942A] hover:to-[#F4A53A] transition-all duration-300 shadow-md hover:shadow-lg font-semibold"

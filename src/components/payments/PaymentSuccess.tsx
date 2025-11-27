@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle, ArrowRight, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { isDemoMode } from '../../lib/services/paymentService';
+import { CourseService } from '../../lib/services/courseService';
+import { addToCalendar } from '../../lib/utils/calendar';
+import toast from '../../lib/utils/toast';
 
 interface PaymentSuccessProps {
   paymentId: string;
@@ -23,6 +26,45 @@ export default function PaymentSuccess({
   const router = useRouter();
   const demoMode = isDemoMode();
   const isDemoPayment = paymentId.startsWith('demo_');
+  const [calendarAdded, setCalendarAdded] = useState(false);
+
+  useEffect(() => {
+    // Ajouter au calendrier si c'est un cours live
+    const addToCalendarIfLive = async () => {
+      try {
+        const course = await CourseService.getCourseById(courseId);
+        const courseAny = course as any;
+        const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+        
+        if (isLiveCourse && !calendarAdded) {
+          const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+          const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+          
+          if (courseStartDate) {
+            const startDate = new Date(courseStartDate);
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+            
+            addToCalendar({
+              title: courseTitle,
+              description: course.description || course.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${window.location.origin}/learn/${courseId}`,
+            });
+            
+            setCalendarAdded(true);
+            toast.success('Ajouté au calendrier', 'Le cours a été ajouté à votre calendrier');
+          }
+        }
+      } catch (error) {
+        console.error('Erreur ajout calendrier:', error);
+        // Ne pas bloquer l'affichage si l'ajout au calendrier échoue
+      }
+    };
+
+    addToCalendarIfLive();
+  }, [courseId, courseTitle, calendarAdded]);
 
   return (
     <div className="max-w-2xl mx-auto">

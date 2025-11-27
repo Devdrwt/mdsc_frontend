@@ -192,6 +192,42 @@ export class ProgressService {
       return [];
     }
   }
+
+  /**
+   * Marquer un cours entier comme terminé
+   */
+  static async markCourseCompleted(
+    enrollmentId: number,
+    courseId: number
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await apiRequest(
+        `/progress/enrollment/${enrollmentId}/course/${courseId}/complete`,
+        {
+          method: 'POST',
+        }
+      );
+      return {
+        success: true,
+        message: response.data?.message || 'Cours marqué comme terminé avec succès',
+      };
+    } catch (error: any) {
+      console.error('Erreur lors du marquage du cours comme terminé:', error);
+      if (error?.status === 403) {
+        return {
+          success: false,
+          message: 'Vous n\'avez pas l\'autorisation de marquer ce cours comme terminé',
+        };
+      }
+      if (error?.status === 400) {
+        return {
+          success: false,
+          message: error?.message || 'Impossible de marquer le cours comme terminé. Vérifiez que toutes les conditions sont remplies.',
+        };
+      }
+      throw error;
+    }
+  }
 }
 
 export const progressService = ProgressService;

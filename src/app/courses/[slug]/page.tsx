@@ -22,7 +22,8 @@ import {
   Award,
   Info,
   ArrowLeft,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
@@ -294,11 +295,55 @@ export default function CourseDetailPage() {
     try {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
+      
+      // Si c'est un cours live, ajouter au calendrier
+      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+        
+        if (courseStartDate) {
+          try {
+            const { addToCalendar } = await import('../../../lib/utils/calendar');
+            const startDate = new Date(courseStartDate);
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Par défaut 2h après le début
+            
+            addToCalendar({
+              title: course.title || 'Cours en live',
+              description: course.description || course.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${window.location.origin}/learn/${course.id}`,
+            });
+            
+            toast.success('Ajouté au calendrier', 'Le cours a été ajouté à votre calendrier');
+          } catch (calendarError) {
+            console.error('Erreur ajout calendrier:', calendarError);
+            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
+          }
+        }
+      }
+      
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
       // Mettre à jour l'état d'inscription
       if (checkEnrollmentStatus) {
         await checkEnrollmentStatus();
       }
+      
+      // Pour les cours live, rediriger vers la salle d'attente si le cours n'a pas encore démarré
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        if (courseStartDate) {
+          const startDate = new Date(courseStartDate);
+          const now = new Date();
+          if (now < startDate) {
+            router.push(`/learn/${course.id}/waiting-room`);
+            return;
+          }
+        }
+      }
+      
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
       console.error('Erreur inscription:', err);
@@ -956,7 +1001,7 @@ export default function CourseDetailPage() {
 
                 {/* Bouton d'inscription */}
                 <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
-                  {isEnrolled ? (
+                  {isEnrolled && (
                     <>
                       <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
                         <Play className="h-5 w-5 mr-2" />
@@ -972,17 +1017,6 @@ export default function CourseDetailPage() {
                         Forum
                       </Button>
                     </>
-                  ) : (
-                    <Button 
-                      variant="primary" 
-                      size="lg" 
-                      onClick={handleEnroll} 
-                      disabled={!enrollmentPossible}
-                      className={`bg-mdsc-blue-dark text-white hover:bg-mdsc-blue-primary font-bold text-lg px-8 py-4 shadow-2xl border-2 border-white/30 hover:border-white/50 transition-all transform hover:scale-105 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
-                    >
-                      <GraduationCap className="h-6 w-6 mr-2" />
-                      {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
-                    </Button>
                   )}
                 </div>
                 {/* Prix affiché si le cours est payant */}

@@ -112,6 +112,37 @@ function NewPaymentContent() {
 
     try {
       await EnrollmentService.enrollInCourse(Number(course.id), { paymentId: paymentIdValue });
+      
+      // Si c'est un cours live, ajouter au calendrier
+      const courseAny = course as any;
+      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+        
+        if (courseStartDate) {
+          try {
+            const { addToCalendar } = await import('../../../lib/utils/calendar');
+            const startDate = new Date(courseStartDate);
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+            
+            addToCalendar({
+              title: course.title || 'Cours en live',
+              description: course.description || course.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${window.location.origin}/learn/${course.id}`,
+            });
+            
+            toast.success('Ajouté au calendrier', 'Le cours a été ajouté à votre calendrier');
+          } catch (calendarError) {
+            console.error('Erreur ajout calendrier:', calendarError);
+            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
+          }
+        }
+      }
+      
       toast.success(messages.successTitle, messages.successMessage);
     } catch (error: any) {
       console.error("Erreur lors de la création de l'inscription:", error);

@@ -40,11 +40,7 @@ export default function LiveSessionDetailPage() {
 
   const canJoin = () => {
     if (!session) return false;
-    return (
-      (session.status === 'live' || session.status === 'scheduled') &&
-      session.status !== 'cancelled' &&
-      session.status !== 'ended'
-    );
+    return session.status === 'live' || session.status === 'scheduled';
   };
 
   const handleJoin = () => {
