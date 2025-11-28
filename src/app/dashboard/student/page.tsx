@@ -557,7 +557,7 @@ export default function StudentDashboard() {
                 quiz_passed: { icon: Star, color: 'text-yellow-500', title: 'Quiz réussi' },
                 quiz_failed: { icon: XCircle, color: 'text-red-500', title: 'Quiz échoué' },
                 badge_earned: { icon: Trophy, color: 'text-orange-500', title: 'Badge obtenu' },
-                certificate_issued: { icon: Award, color: 'text-purple-500', title: 'Certificat obtenu' },
+                certificate_issued: { icon: Award, color: 'text-purple-500', title: 'Attestation obtenue' },
                 message_received: { icon: MessageSquare, color: 'text-cyan-500', title: 'Message reçu' },
                 message_sent: { icon: Send, color: 'text-[#3B7C8A]', title: 'Message envoyé' },
                 evaluation_submitted: { icon: FileText, color: 'text-blue-500', title: 'Évaluation soumise' },
@@ -742,7 +742,7 @@ export default function StudentDashboard() {
                   <p className="text-sm font-medium text-gray-600 mb-1">Terminés</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.completedCourses}</p>
                   <p className="text-xs text-green-600 mt-1">
-                    {stats.totalCertificates} certificats obtenus
+                    {stats.totalCertificates} attestations obtenues
                   </p>
                 </div>
                 <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
@@ -846,7 +846,7 @@ export default function StudentDashboard() {
                       {course.certificateAvailable && (
                         <span className="text-green-600 font-medium flex items-center space-x-1">
                           <CheckCircle className="h-3 w-3" />
-                          <span>Certificat disponible</span>
+                          <span>Attestation disponible</span>
                         </span>
                       )}
                       </div>
@@ -1058,9 +1058,9 @@ export default function StudentDashboard() {
                 <div className="flex items-center space-x-2">
                   <Award className="h-6 w-6 text-mdsc-blue-primary" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Mes certificats</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Mes attestations</h3>
                     <p className="text-sm text-gray-500">
-                      {certificates.length} certificat{certificates.length > 1 ? 's' : ''} obtenu{certificates.length > 1 ? 's' : ''}
+                      {certificates.length} attestation{certificates.length > 1 ? 's' : ''} obtenue{certificates.length > 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
@@ -1080,8 +1080,8 @@ export default function StudentDashboard() {
               {!certificatesError && certificates.length === 0 && (
                 <div className="text-center py-8">
                   <Award className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-2">Aucun certificat obtenu</p>
-                  <p className="text-sm text-gray-400">Terminez un cours pour générer votre premier certificat.</p>
+                  <p className="text-gray-500 mb-2">Aucune attestation obtenue</p>
+                  <p className="text-sm text-gray-400">Terminez un cours pour générer votre première attestation.</p>
                 </div>
               )}
             </div>

@@ -265,7 +265,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
           },
           { name: 'Progression', href: `/dashboard/${userRole}/progress`, icon: BarChart3 },
           { name: 'Évaluations', href: `/dashboard/${userRole}/evaluations`, icon: FileText },
-          { name: 'Certificats', href: `/dashboard/${userRole}/certificates`, icon: Award },
+          { name: 'ATTESTATIONS', href: `/dashboard/${userRole}/certificates`, icon: Award },
           { name: 'Gamification', href: `/dashboard/${userRole}/gamification`, icon: Trophy },
           { name: 'Assistant IA', href: `/dashboard/${userRole}/chat-ai`, icon: Brain },
           { name: 'Calendrier', href: `/dashboard/${userRole}/calendar`, icon: Calendar },
@@ -846,7 +846,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                                 <div className="mt-2 space-y-2">
                                   <div className="flex items-center text-xs font-semibold text-purple-600">
                                     <Award className="h-3.5 w-3.5 mr-1" />
-                                    <span>Certificat obtenu 🎉</span>
+                                    <span>ATTESTATION obtenue 🎉</span>
                                   </div>
                                   {notification.metadata?.certificate_title && (
                                     <p className="text-xs text-gray-600">
@@ -860,7 +860,7 @@ export default function DashboardLayout({ children, userRole }: DashboardLayoutP
                                     }}
                                     className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                                   >
-                                    Voir mon certificat
+                                    Voir mon attestation
                                   </button>
                                 </div>
                               )}

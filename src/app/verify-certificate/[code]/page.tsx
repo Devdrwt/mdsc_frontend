@@ -25,7 +25,7 @@ export default function VerifyCertificatePage() {
     } else {
       setLoading(false);
       setValid(false);
-      setError('Aucun code de vérification fourni. Veuillez saisir un code de certificat valide.');
+      setError('Aucun code de vérification fourni. Veuillez saisir un code d\'attestation valide.');
     }
   }, [code]);
 
@@ -41,9 +41,9 @@ export default function VerifyCertificatePage() {
         setValid(false);
         // Message professionnel: code introuvable vs autres cas
         if ((result as any)?.notFound) {
-          setError('Certificat non trouvé. Veuillez vérifier le code de vérification.');
+          setError('Attestation non trouvée. Veuillez vérifier le code de vérification.');
         } else {
-          setError(result.message || 'Certificat invalide ou expiré. Le code fourni ne correspond à aucun certificat valide.');
+          setError(result.message || 'Attestation invalide ou expirée. Le code fourni ne correspond à aucune attestation valide.');
         }
       }
     } catch (err: any) {
@@ -61,7 +61,7 @@ export default function VerifyCertificatePage() {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 xl:py-12">
         <div className="text-center mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 px-2">
-            Vérification de Certificat
+            Vérification d'Attestation
           </h1>
           <p className="text-xs sm:text-sm md:text-base text-gray-600 break-all px-2">
             Code de vérification: <span className="font-mono font-semibold text-xs sm:text-sm md:text-base">{code.toUpperCase()}</span>
@@ -78,9 +78,9 @@ export default function VerifyCertificatePage() {
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
               <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
               <div className="flex-1 min-w-0">
-                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-green-900">Certificat Valide</h2>
+                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-green-900">Attestation Valide</h2>
                 <p className="text-xs sm:text-sm md:text-base text-green-700 mt-1 break-words">
-                  Ce certificat a été vérifié et est authentique.
+                  Cette attestation a été vérifiée et est authentique.
                 </p>
               </div>
             </div>
@@ -101,9 +101,9 @@ export default function VerifyCertificatePage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
               <XCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-red-600 flex-shrink-0 mt-0.5 sm:mt-0" />
               <div className="flex-1 min-w-0">
-                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-red-900">Certificat Invalide</h2>
+                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-red-900">Attestation Invalide</h2>
                 <p className="text-xs sm:text-sm md:text-base text-red-700 mt-1 break-words">
-                  {error || 'Ce certificat n\'a pas pu être vérifié. Il peut être invalide, expiré ou avoir été révoqué.'}
+                  {error || 'Cette attestation n\'a pas pu être vérifiée. Elle peut être invalide, expirée ou avoir été révoquée.'}
                 </p>
               </div>
             </div>

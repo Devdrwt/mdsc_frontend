@@ -29,7 +29,7 @@ export default function CertificateCard({
     e?.stopPropagation();
     const code = (certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
     if (!code) {
-      console.error('Code de certificat manquant');
+      console.error('Code d\'attestation manquant');
       return;
     }
     const verifyUrl = `/verify-certificate/${encodeURIComponent(code)}`;
@@ -45,7 +45,7 @@ export default function CertificateCard({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 break-words">
-              {certificate.course?.title || 'Certificat de formation'}
+              {certificate.course?.title || 'Attestation de formation'}
             </h3>
             {certificate.course && (
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
