@@ -8,7 +8,7 @@ interface CertificateCelebrateModalProps {
   onClose: () => void;
   fullName: string;
   courseTitle: string;
-  code?: string;
+  code?: string; // Code d'affichage et de vérification (certificate_number) - format MDSC-XXXXXX-BJ
   issuedAt?: Date;
   location?: string;
 }
@@ -18,7 +18,7 @@ export default function CertificateCelebrateModal({
   onClose,
   fullName,
   courseTitle,
-  code,
+  code, // Code d'affichage et de vérification (certificate_number)
   issuedAt,
   location = 'Cotonou, Bénin',
 }: CertificateCelebrateModalProps) {

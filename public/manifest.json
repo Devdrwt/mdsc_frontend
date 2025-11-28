@@ -1,0 +1,87 @@
+{
+  "name": "Maison de la Société Civile - Plateforme MOOC",
+  "short_name": "MdSC MOOC",
+  "description": "Plateforme d'apprentissage en ligne pour renforcer les capacités des organisations de la société civile. Cours, certifications et accompagnement pour la crédibilité et l'innovation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Capture d'écran de la plateforme MOOC"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Capture d'écran mobile de la plateforme MOOC"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mes Cours",
+      "short_name": "Cours",
+      "description": "Accéder à mes cours",
+      "url": "/dashboard/student",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Certificats",
+      "short_name": "Certificats",
+      "description": "Voir mes certificats",
+      "url": "/dashboard/student/certificates",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "prefer_related_applications": false
+}
+

@@ -41,7 +41,9 @@ export default function CertificateCollection({
   const filteredCertificates = Array.isArray(certificates) ? certificates.filter((cert) => {
     const matchesSearch = searchTerm === '' || 
       cert.course?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.certificateCode.toLowerCase().includes(searchTerm.toLowerCase());
+      (cert as any).certificate_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cert as any).certificateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cert.certificateCode?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const now = new Date();
     let matchesFilter = true;

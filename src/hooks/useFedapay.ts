@@ -267,8 +267,8 @@ export const useFedapay = () => {
           publicKeyPrefix: finalOptions.public_key?.substring(0, 20) + '...',
           publicKeySuffix: finalOptions.public_key ? '...' + finalOptions.public_key.substring(finalOptions.public_key.length - 10) : 'null',
           publicKeyLength: finalOptions.public_key?.length || 0,
-          environment: finalOptions.environment || 'sandbox',
-          environmentType: typeof finalOptions.environment,
+          environment: (finalOptions as any).environment || 'sandbox',
+          environmentType: typeof (finalOptions as any).environment,
           amount: finalOptions.transaction?.amount,
         });
 

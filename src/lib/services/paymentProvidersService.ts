@@ -20,7 +20,7 @@ export async function getActivePaymentProviders(): Promise<PaymentProvider[]> {
     
     console.log('[PaymentProviders] ✅ Réponse reçue:', {
       success: response.success,
-      dataLength: response.data?.length || 0,
+      dataLength: Array.isArray(response.data) ? response.data.length : 0,
     });
     
     if (response.success && response.data) {

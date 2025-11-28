@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import ClientProviders from "../components/providers/ClientProviders";
 import FedapayScriptLoader from "../components/providers/FedapayScriptLoader";
+import { PWAInstallPrompt, PWAUpdatePrompt } from "../components/pwa";
 
 const playfairDisplay = localFont({
   variable: "--font-playfair",
@@ -42,10 +43,23 @@ const openSans = localFont({
 export const metadata: Metadata = {
   title: "Maison de la Société Civile - Plateforme MOOC",
   description: "Plateforme d'apprentissage en ligne pour renforcer les capacités des organisations de la société civile. Cours, certifications et accompagnement pour la crédibilité et l'innovation.",
+  manifest: "/manifest.json",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#1e40af" },
+    { media: "(prefers-color-scheme: dark)", color: "#1e40af" },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MdSC MOOC",
+  },
   icons: {
-    icon: '/mdsc-logo1.png',
-    shortcut: '/mdsc-logo1.png',
-    apple: '/mdsc-logo1.png',
+    icon: [
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/icon-192x192.png',
+    apple: '/apple-touch-icon.png',
   },
   keywords: ["formation", "OSC", "société civile", "apprentissage", "certification", "Côte d'Ivoire"],
   authors: [{ name: "Maison de la Société Civile" }],
@@ -100,6 +114,17 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Meta tags PWA */}
+        <meta name="application-name" content="MdSC MOOC" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MdSC MOOC" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+        <meta name="msapplication-TileColor" content="#1e40af" />
+        <meta name="msapplication-tap-highlight" content="no" />
+        
         {/* Script Kkiapay SDK */}
         <script
           dangerouslySetInnerHTML={{
@@ -169,6 +194,8 @@ export default function RootLayout({
         <FedapayScriptLoader />
         <ClientProviders>
           {children}
+          <PWAInstallPrompt />
+          <PWAUpdatePrompt />
         </ClientProviders>
       </body>
     </html>

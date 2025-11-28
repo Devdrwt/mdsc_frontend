@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import MyCourses from '../../../../components/dashboard/student/MyCourses';
 
-export default function CoursesPage() {
+function CoursesContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -134,10 +134,20 @@ export default function CoursesPage() {
     }
   }, [searchParams]);
 
+  return <MyCourses />;
+}
+
+export default function CoursesPage() {
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
-        <MyCourses />
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
+          </div>
+        }>
+          <CoursesContent />
+        </Suspense>
       </DashboardLayout>
     </AuthGuard>
   );

@@ -27,12 +27,13 @@ export default function CertificateCard({
   const handleVerify = (e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
-    const code = (certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
-    if (!code) {
-      console.error('Code d\'attestation manquant');
+    // Utiliser certificate_number (format MDSC-XXXXXX-BJ) pour la vérification
+    const verificationCode = ((certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificateCode || '').toUpperCase();
+    if (!verificationCode) {
+      console.error('Code de vérification manquant');
       return;
     }
-    const verifyUrl = `/verify-certificate/${encodeURIComponent(code)}`;
+    const verifyUrl = `/verify-certificate/${encodeURIComponent(verificationCode)}`;
     window.open(verifyUrl, '_blank');
   };
 
@@ -91,7 +92,7 @@ export default function CertificateCard({
         <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
           <p className="text-[10px] sm:text-xs text-gray-500 mb-1">Code de vérification</p>
           <p className="font-mono text-xs sm:text-sm font-medium text-gray-900 break-all">
-            {certificate.certificateCode}
+            {(certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificateCode || '—'}
           </p>
         </div>
       </div>

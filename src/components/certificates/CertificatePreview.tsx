@@ -7,7 +7,7 @@ interface CertificatePreviewProps {
   courseTitle: string;
   location: string;
   issuedAt: Date;
-  code?: string;
+  code?: string; // Code d'affichage et de vérification (certificate_number) - format MDSC-XXXXXX-BJ
 }
 
 // Génère un code d'attestation au format MDSC-########-BJ
@@ -21,23 +21,26 @@ export default function CertificatePreview({
   courseTitle,
   location,
   issuedAt,
-  code,
+  code, // Code d'affichage et de vérification (certificate_number) - format MDSC-XXXXXX-BJ
 }: CertificatePreviewProps) {
-  const certificateCode = useMemo(() => {
+  // Code d'affichage et de vérification : format MDSC-XXXXXX-BJ
+  const displayCode = useMemo(() => {
     const generated = code || generateCertificateCode();
     return generated.toUpperCase();
   }, [code]);
 
-  // URL du QR réel (service public, scannable). On encode une URL de vérification si disponible.
+  // URL du QR réel (service public, scannable). Utilise certificate_number pour la vérification
   const qrUrl = useMemo(() => {
+    // Utiliser certificate_number (format MDSC-XXXXXX-BJ) pour la vérification
+    const codeForQR = displayCode;
     const baseVerify =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/verify-certificate/${encodeURIComponent(certificateCode)}`
-        : `https://mdsc.local/verify-certificate/${encodeURIComponent(certificateCode)}`;
+        ? `${window.location.origin}/verify-certificate/${encodeURIComponent(codeForQR)}`
+        : `https://mdsc.local/verify-certificate/${encodeURIComponent(codeForQR)}`;
     const data = encodeURIComponent(baseVerify);
     // Taille calibrée pour s'approcher du rendu de la maquette
-    return `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=0&data=${data}`;
-  }, [certificateCode]);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=0&data=${data}`;
+  }, [displayCode]);
 
   return (
     <div
@@ -136,7 +139,7 @@ export default function CertificatePreview({
               />
             </div>
           </div>
-          <p className="mt-1 sm:mt-2 mb-0 text-center font-mono text-[10px] sm:text-xs text-gray-600 break-all px-2">{certificateCode}</p>
+          <p className="mt-1 sm:mt-2 mb-0 text-center font-mono text-[10px] sm:text-xs text-gray-600 break-all px-2">{displayCode}</p>
 
           {/* Sceau (image) en bas à droite, hors flux */}
           <img

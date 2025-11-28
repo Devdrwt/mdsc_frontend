@@ -51,6 +51,7 @@ export class CertificateService {
           userId: Number(cert.user_id || cert.userId),
           courseId: Number(cert.course_id || cert.courseId),
           certificateCode: cert.certificate_code || cert.certificateCode,
+          certificateNumber: cert.certificate_number || cert.certificateNumber,
           pdfUrl: cert.pdf_url || cert.pdfUrl,
           qrCodeUrl: cert.qr_code_url || cert.qrCodeUrl,
           issuedAt: cert.issued_at || cert.issuedAt,

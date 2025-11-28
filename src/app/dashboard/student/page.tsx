@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../lib/middleware/auth';
@@ -164,7 +164,7 @@ const normalizeCourses = (rawCourses: any[]): NormalizedCourse[] => {
   });
 };
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
   const searchParams = useSearchParams();
   const authStore = useAuthStore();
   const user = authStore.user;
@@ -680,20 +680,14 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <AuthGuard requiredRole="student">
-        <DashboardLayout userRole="student">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
-          </div>
-        </DashboardLayout>
-      </AuthGuard>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
+      </div>
     );
   }
 
   return (
-    <AuthGuard requiredRole="student">
-      <DashboardLayout userRole="student">
-        <div className="space-y-8">
+    <div className="space-y-8">
           {/* En-tête de bienvenue moderne */}
           <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -1087,6 +1081,20 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
+  );
+}
+
+export default function StudentDashboard() {
+  return (
+    <AuthGuard requiredRole="student">
+      <DashboardLayout userRole="student">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
+          </div>
+        }>
+          <StudentDashboardContent />
+        </Suspense>
       </DashboardLayout>
     </AuthGuard>
   );
