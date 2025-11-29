@@ -5,6 +5,8 @@ import "./globals.css";
 import ClientProviders from "../components/providers/ClientProviders";
 import FedapayScriptLoader from "../components/providers/FedapayScriptLoader";
 import { PWAInstallPrompt, PWAUpdatePrompt } from "../components/pwa";
+import ServiceWorkerRegistration from "../components/pwa/ServiceWorkerRegistration";
+import CookieConsent from "../components/CookieConsent";
 
 const playfairDisplay = localFont({
   variable: "--font-playfair",
@@ -55,11 +57,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/apple-touch.png', sizes: '512x512', type: 'image/png' },
       { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/icon-192x192.png',
-    apple: '/apple-touch-icon.png',
+    shortcut: '/apple-touch.png',
+    apple: '/apple-touch.png',
   },
   keywords: ["formation", "OSC", "société civile", "apprentissage", "certification", "Côte d'Ivoire"],
   authors: [{ name: "Maison de la Société Civile" }],
@@ -114,6 +117,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Favicon */}
+        <link rel="icon" type="image/png" sizes="512x512" href="/apple-touch.png" />
+        <link rel="shortcut icon" type="image/png" href="/apple-touch.png" />
+        <link rel="apple-touch-icon" href="/apple-touch.png" />
+        
         {/* Meta tags PWA */}
         <meta name="application-name" content="MdSC MOOC" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -192,10 +200,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <FedapayScriptLoader />
+        <ServiceWorkerRegistration />
         <ClientProviders>
           {children}
           <PWAInstallPrompt />
           <PWAUpdatePrompt />
+          <CookieConsent />
         </ClientProviders>
       </body>
     </html>
