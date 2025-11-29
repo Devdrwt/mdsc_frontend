@@ -27,10 +27,18 @@ export default function LiveSessionPlayer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
+  const [shouldRedirect, setShouldRedirect] = useState<{ type: 'waiting-room' | null; courseId?: number }>({ type: null });
 
   useEffect(() => {
     loadSession();
   }, [sessionId]);
+
+  // Gérer les redirections dans un useEffect séparé pour éviter l'erreur React
+  useEffect(() => {
+    if (shouldRedirect.type === 'waiting-room' && shouldRedirect.courseId) {
+      router.push(`/learn/${shouldRedirect.courseId}/waiting-room`);
+    }
+  }, [shouldRedirect, router]);
 
   const loadSession = async () => {
     try {
@@ -56,10 +64,10 @@ export default function LiveSessionPlayer({
         const now = new Date();
         
         if (now < scheduledStart) {
-          // Rediriger vers la salle d'attente du cours
+          // Définir la redirection (sera gérée par useEffect)
           const courseId = sessionData.course_id || sessionData.course?.id;
           if (courseId) {
-            router.push(`/learn/${courseId}/waiting-room`);
+            setShouldRedirect({ type: 'waiting-room', courseId });
             return;
           }
         }
@@ -67,7 +75,17 @@ export default function LiveSessionPlayer({
 
       // Joindre automatiquement si la session est live
       if (sessionData.status === 'live') {
-        await joinSession();
+        // Vérifier le rôle avant de joindre
+        const role = sessionData.instructor_id === user?.id ? 'instructor' : 'participant';
+        
+        // Pour les étudiants, rediriger directement vers Jitsi (pas besoin de joinSession)
+        if (role === 'participant') {
+          // Les étudiants sont redirigés directement vers Jitsi dans joinSession
+          await joinSession();
+        } else {
+          // Pour l'instructeur, utiliser le composant React (appeler joinSession mais ne pas rediriger)
+          await joinSession();
+        }
       }
     } catch (err: any) {
       console.error('Erreur chargement session:', err);
@@ -80,12 +98,118 @@ export default function LiveSessionPlayer({
   const joinSession = async () => {
     try {
       // Rejoindre la session via l'API
-      await liveSessionService.joinSession(sessionId);
+      const joinResponse = await liveSessionService.joinSession(sessionId);
       setJoined(true);
+      
+      // Si c'est un étudiant (participant) et que la session est live, rediriger directement vers Jitsi
+      // Utiliser session ou sessionData pour déterminer le rôle
+      const currentSession = session || (await liveSessionService.getSession(sessionId));
+      const role = currentSession.instructor_id === user?.id ? 'instructor' : 'participant';
+      
+      // IMPORTANT : Seulement pour les étudiants (participants), rediriger directement vers Jitsi
+      // Les instructeurs utilisent le composant React JitsiMeetPlayer
+      if (role === 'participant' && currentSession.status === 'live') {
+        // Construire l'URL Jitsi à partir de la réponse ou des données de session
+        let jitsiUrl = joinResponse?.jitsi_join_url;
+        
+        // Si l'URL n'est pas dans la réponse, la construire à partir des données de session
+        if (!jitsiUrl && currentSession) {
+          const jitsiDomain = currentSession.jitsi_server_url
+            ? (() => {
+                try {
+                  return new URL(currentSession.jitsi_server_url).hostname;
+                } catch {
+                  return currentSession.jitsi_server_url.replace('https://', '').replace('http://', '').split('/')[0];
+                }
+              })()
+            : 'meet.jit.si';
+          
+          const urlParams = new URLSearchParams();
+          
+          // Ajouter le mot de passe si disponible
+          if (joinResponse?.jitsi_room_password || currentSession.jitsi_room_password) {
+            urlParams.append('pwd', joinResponse?.jitsi_room_password || currentSession.jitsi_room_password || '');
+          }
+          
+          // Ajouter le nom d'utilisateur si disponible
+          if (user) {
+            urlParams.append('userInfo.displayName', `${user.firstName} ${user.lastName}`.trim());
+          }
+          
+          const queryString = urlParams.toString();
+          jitsiUrl = `https://${jitsiDomain}/${currentSession.jitsi_room_name}${queryString ? `?${queryString}` : ''}`;
+        }
+        
+        // Rediriger directement vers l'URL Jitsi (ÉTUDIANTS UNIQUEMENT)
+        if (jitsiUrl) {
+          console.log('🔗 [ÉTUDIANT] Redirection directe vers Jitsi Meet:', jitsiUrl);
+          toast.success('Redirection', 'Redirection vers la session Jitsi Meet...');
+          // Utiliser window.location.href pour une redirection complète (nouvelle page)
+          window.location.href = jitsiUrl;
+          return;
+        }
+      }
+      
+      // Pour les instructeurs, ne pas rediriger - ils utilisent le composant React
+      if (role === 'instructor') {
+        console.log('👨‍🏫 [INSTRUCTEUR] Utilisation du composant React JitsiMeetPlayer');
+      }
     } catch (err: any) {
       console.error('Erreur rejoindre session:', err);
-      toast.error('Erreur', 'Impossible de rejoindre la session');
-      setError('Impossible de rejoindre la session');
+      
+      const errorMessage = err?.message || err?.toString() || '';
+      const isParticipationError = errorMessage.includes('Participation non trouvée') || 
+                                   errorMessage.includes('participation') ||
+                                   err?.status === 404;
+      
+      if (isParticipationError) {
+        // Si l'erreur est liée à la participation, essayer quand même de construire l'URL Jitsi
+        // et rediriger directement
+        console.warn('⚠️ Participation non trouvée, mais redirection vers Jitsi autorisée');
+        
+        if (session && session.status === 'live') {
+          const role = session.instructor_id === user?.id ? 'instructor' : 'participant';
+          if (role === 'participant') {
+            // Construire l'URL Jitsi directement
+            const jitsiDomain = session.jitsi_server_url
+              ? (() => {
+                  try {
+                    return new URL(session.jitsi_server_url).hostname;
+                  } catch {
+                    return session.jitsi_server_url.replace('https://', '').replace('http://', '').split('/')[0];
+                  }
+                })()
+              : 'meet.jit.si';
+            
+            const urlParams = new URLSearchParams();
+            
+            // Ajouter le mot de passe si disponible
+            if (session.jitsi_room_password) {
+              urlParams.append('pwd', session.jitsi_room_password);
+            }
+            
+            // Ajouter le nom d'utilisateur si disponible
+            if (user) {
+              urlParams.append('userInfo.displayName', `${user.firstName} ${user.lastName}`.trim());
+            }
+            
+            const queryString = urlParams.toString();
+            const jitsiUrl = `https://${jitsiDomain}/${session.jitsi_room_name}${queryString ? `?${queryString}` : ''}`;
+            
+            console.log('🔗 Redirection vers Jitsi Meet (sans participation):', jitsiUrl);
+            toast.warning('Avertissement', 'Redirection vers Jitsi Meet...');
+            window.location.href = jitsiUrl;
+            return;
+          }
+        }
+        
+        toast.warning('Avertissement', 'Participation non enregistrée, mais vous pouvez rejoindre la session');
+        setJoined(true); // Permettre l'accès quand même
+      } else {
+        // Pour les autres erreurs, afficher un message d'erreur
+        toast.error('Erreur', 'Impossible de rejoindre la session');
+        setError('Impossible de rejoindre la session');
+      }
     }
   };
 
@@ -94,21 +218,35 @@ export default function LiveSessionPlayer({
       if (session) {
         await liveSessionService.leaveSession(session.id);
       }
-      // Rediriger vers la page du cours ou la liste des sessions
+    } catch (err: any) {
+      console.error('Erreur quitter session:', err);
+      
+      // Si l'erreur est "Participation non trouvée", c'est non-bloquant
+      // L'utilisateur peut quitter même sans participation enregistrée
+      const errorMessage = err?.message || err?.toString() || '';
+      const isParticipationError = errorMessage.includes('Participation non trouvée') || 
+                                   errorMessage.includes('participation') ||
+                                   err?.status === 404;
+      
+      if (!isParticipationError) {
+        // Pour les autres erreurs, afficher un avertissement mais continuer
+        console.warn('Erreur lors de la sortie de session, mais redirection effectuée:', err);
+      }
+      // Dans tous les cas, rediriger l'utilisateur
+    } finally {
+      // Rediriger vers la page du cours ou la liste des sessions (toujours, même en cas d'erreur)
       if (courseSlug) {
         router.push(`/courses/${courseSlug}/live-sessions`);
       } else if (courseId) {
         router.push(`/courses/${courseId}/live-sessions`);
       } else {
-        router.push('/dashboard/student/live-sessions');
-      }
-    } catch (err: any) {
-      console.error('Erreur quitter session:', err);
-      // Rediriger quand même
-      if (courseSlug) {
-        router.push(`/courses/${courseSlug}/live-sessions`);
-      } else {
-        router.push('/dashboard/student/live-sessions');
+        // Déterminer si c'est un instructeur ou un étudiant pour la redirection
+        const role = session?.instructor_id === user?.id ? 'instructor' : 'student';
+        if (role === 'instructor') {
+          router.push('/dashboard/instructor/live-sessions');
+        } else {
+          router.push('/dashboard/student/live-sessions');
+        }
       }
     }
   };
@@ -171,16 +309,23 @@ export default function LiveSessionPlayer({
   }
 
   // Si la session est programmée et n'a pas encore démarré, rediriger vers la salle d'attente
+  // Cette redirection est gérée dans useEffect pour éviter l'erreur React
   if (session.status === 'scheduled') {
     const scheduledStart = new Date(session.scheduled_start_at);
     const now = new Date();
     
     if (now < scheduledStart) {
       const courseId = session.course_id || session.course?.id;
-      if (courseId) {
-        router.push(`/learn/${courseId}/waiting-room`);
-        return null;
+      if (courseId && shouldRedirect.type !== 'waiting-room') {
+        setShouldRedirect({ type: 'waiting-room', courseId });
       }
+      // Afficher un loader pendant la redirection
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
+          <Loader2 className="h-12 w-12 animate-spin mb-4" />
+          <p className="text-lg">Redirection vers la salle d'attente...</p>
+        </div>
+      );
     }
   }
 

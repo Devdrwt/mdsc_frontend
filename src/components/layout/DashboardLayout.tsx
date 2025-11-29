@@ -16,7 +16,6 @@ import {
   Search,
   User,
   Trophy,
-  MessageSquare,
   FileText,
   Calendar,
   Award,
@@ -786,7 +785,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               aria-label="Messages"
               title="Messages"
             >
-              <MessageSquare className="h-6 w-6" />
+              <Mail className="h-6 w-6" />
               {unreadMessagesCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 py-0.5 bg-red-500 text-white text-[10px] font-semibold rounded-full border-2 border-white flex items-center justify-center">
                   {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}

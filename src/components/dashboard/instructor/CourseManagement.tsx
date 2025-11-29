@@ -461,20 +461,58 @@ export default function CourseManagement() {
     };
   };
 
+  const [courseToDeleteData, setCourseToDeleteData] = useState<Course | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleDeleteClick = (courseId: number) => {
-    setCourseToDelete(courseId);
-    setShowDeleteModal(true);
+    const course = courses.find(c => parseInt(c.id) === courseId);
+    if (course) {
+      setCourseToDelete(courseId);
+      setCourseToDeleteData(course);
+      setShowDeleteModal(true);
+    }
+  };
+
+  // Vérifier si un cours est publié
+  const isCoursePublished = (course: Course | null): boolean => {
+    if (!course) return false;
+    const isPublishedValue = course.is_published ?? course.isPublished ?? false;
+    if (typeof isPublishedValue === 'boolean') return isPublishedValue;
+    if (typeof isPublishedValue === 'number') return isPublishedValue === 1;
+    if (typeof isPublishedValue === 'string') {
+      return isPublishedValue === 'true' || isPublishedValue === '1' || isPublishedValue.toLowerCase() === 'published';
+    }
+    // Vérifier aussi le statut
+    const status = (course as any).status;
+    if (status) {
+      return status === 'published' || status === 'approved';
+    }
+    return false;
   };
 
   const handleDeleteCourse = async () => {
-    if (!courseToDelete) return;
+    if (!courseToDelete || !courseToDeleteData) return;
 
+    const isPublished = isCoursePublished(courseToDeleteData);
+
+    setIsDeleting(true);
     try {
-      await courseService.deleteCourse(courseToDelete.toString());
-      toast.success('Cours supprimé', 'Le cours a été supprimé avec succès');
-      // Mettre à jour la liste locale
-      setCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
-      setFilteredCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
+      if (isPublished) {
+        // Cours publié : envoyer une demande de suppression à l'admin
+        await courseService.requestCourseDeletion(courseToDelete.toString());
+        toast.success(
+          'Demande envoyée',
+          'Votre demande de suppression a été envoyée à l\'administrateur. Vous serez notifié une fois la décision prise.'
+        );
+      } else {
+        // Cours brouillon : supprimer directement
+        await courseService.deleteCourse(courseToDelete.toString());
+        toast.success('Cours supprimé', 'Le cours a été supprimé avec succès');
+        // Mettre à jour la liste locale
+        setCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
+        setFilteredCourses(prev => prev.filter(course => course.id !== courseToDelete.toString()));
+      }
+      
       // Recharger les cours depuis l'API
       if (user) {
         const list = await courseService.getInstructorCourses(user.id.toString(), { status: filterStatus, page, limit });
@@ -486,9 +524,12 @@ export default function CourseManagement() {
       await loadGlobalStats();
       setShowDeleteModal(false);
       setCourseToDelete(null);
+      setCourseToDeleteData(null);
     } catch (error: any) {
       console.error('Erreur lors de la suppression du cours:', error);
       toast.error('Erreur', error.message || 'Impossible de supprimer le cours. Veuillez réessayer.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1083,123 +1124,23 @@ export default function CourseManagement() {
                 </div>
 
                 <div className="space-y-4">
-                  {/* Type de cours */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Type de cours <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={createFormData.course_type}
-                      onChange={(e) => setCreateFormData({ ...createFormData, course_type: e.target.value as 'live' | 'on_demand' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                    >
-                      <option value="on_demand">Cours à la demande (On-demand)</option>
-                      <option value="live">Cours en Live (en direct)</option>
-                    </select>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {createFormData.course_type === 'live' 
-                        ? '⚠️ Les dates et le nombre maximum d\'étudiants sont obligatoires pour les cours en Live'
-                        : 'Les dates sont optionnelles pour les cours à la demande'
-                      }
+                  {/* Type de cours fixé à "à la demande" */}
+                  <input
+                    type="hidden"
+                    value="on_demand"
+                    onChange={() => {}}
+                  />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Type de cours :</strong> Cours à la demande (On-demand)
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Les cours à la demande sont accessibles en permanence, sans dates spécifiques
                     </p>
                   </div>
-
-                  {/* Nombre maximum d'étudiants (conditionnel pour Live) */}
-                  {createFormData.course_type === 'live' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nombre maximum d'étudiants <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={createFormData.max_students}
-                        onChange={(e) => setCreateFormData({ ...createFormData, max_students: parseInt(e.target.value) || 0 })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        placeholder="Ex: 50"
-                        required
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Section: Dates et prérequis */}
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-                <div className="flex items-center space-x-2 mb-6 pb-3 border-b border-gray-200">
-                  <Calendar className="h-5 w-5 text-mdsc-gold" />
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Dates et prérequis
-                    {createFormData.course_type === 'live' && <span className="text-red-500 ml-1">*</span>}
-                  </h3>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Cours prérequis */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cours prérequis
-                    </label>
-                    <select
-                      value={createFormData.prerequisite_course_id}
-                      onChange={(e) => setCreateFormData({ ...createFormData, prerequisite_course_id: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                    >
-                      <option value="">Aucun cours prérequis</option>
-                      {availableCourses.map((course) => (
-                        <option key={course.id} value={course.id}>
-                          {course.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Dates conditionnelles */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date limite d'inscription
-                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={createFormData.enrollment_deadline}
-                        onChange={(e) => setCreateFormData({ ...createFormData, enrollment_deadline: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        required={createFormData.course_type === 'live'}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date de début du cours
-                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={createFormData.course_start_date}
-                        onChange={(e) => setCreateFormData({ ...createFormData, course_start_date: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        required={createFormData.course_type === 'live'}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date de fin du cours
-                        {createFormData.course_type === 'live' && <span className="text-red-500"> *</span>}
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={createFormData.course_end_date}
-                        onChange={(e) => setCreateFormData({ ...createFormData, course_end_date: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                        required={createFormData.course_type === 'live'}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Boutons d'action - en bas de la modal */}
@@ -1246,24 +1187,57 @@ export default function CourseManagement() {
         onClose={() => {
           setShowDeleteModal(false);
           setCourseToDelete(null);
+          setCourseToDeleteData(null);
         }}
-        title="Confirmer la suppression"
-        size="sm"
+        title={courseToDeleteData && isCoursePublished(courseToDeleteData) ? "Demander la suppression" : "Confirmer la suppression"}
+        size="md"
       >
         <div className="py-4">
           <div className="flex items-start space-x-4">
             <div className="flex-shrink-0">
-              <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                courseToDeleteData && isCoursePublished(courseToDeleteData) 
+                  ? 'bg-orange-100' 
+                  : 'bg-red-100'
+              }`}>
+                <AlertTriangle className={`h-6 w-6 ${
+                  courseToDeleteData && isCoursePublished(courseToDeleteData) 
+                    ? 'text-orange-600' 
+                    : 'text-red-600'
+                }`} />
               </div>
             </div>
             <div className="flex-1">
-              <p className="text-gray-700 mb-4">
-                Êtes-vous sûr de vouloir supprimer ce cours ? Cette action est irréversible.
-              </p>
-              <p className="text-sm text-gray-500">
-                Toutes les données associées à ce cours (leçons, quiz, inscriptions, etc.) seront également supprimées.
-              </p>
+              {courseToDeleteData && isCoursePublished(courseToDeleteData) ? (
+                <>
+                  <p className="text-gray-700 mb-3 font-medium">
+                    Ce cours est publié. Pour le supprimer, vous devez envoyer une demande à l'administrateur.
+                  </p>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+                    <p className="text-sm text-orange-800">
+                      <strong>Note :</strong> L'administrateur examinera votre demande et vous notifiera de la décision. 
+                      Le cours restera visible jusqu'à ce que l'administrateur approuve la suppression.
+                    </p>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Cours : <strong>"{courseToDeleteData.title}"</strong>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-700 mb-4">
+                    Êtes-vous sûr de vouloir supprimer ce cours ? Cette action est irréversible.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Toutes les données associées à ce cours (leçons, quiz, inscriptions, etc.) seront également supprimées.
+                  </p>
+                  {courseToDeleteData && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Cours : <strong>"{courseToDeleteData.title}"</strong>
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           </div>
           
@@ -1272,16 +1246,28 @@ export default function CourseManagement() {
               onClick={() => {
                 setShowDeleteModal(false);
                 setCourseToDelete(null);
+                setCourseToDeleteData(null);
               }}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              disabled={isDeleting}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
             >
               Annuler
             </button>
             <button
               onClick={handleDeleteCourse}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              disabled={isDeleting}
+              className={`px-4 py-2 text-white rounded-lg transition-colors font-medium disabled:opacity-50 ${
+                courseToDeleteData && isCoursePublished(courseToDeleteData)
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
             >
-              Supprimer
+              {isDeleting 
+                ? 'Traitement...' 
+                : courseToDeleteData && isCoursePublished(courseToDeleteData)
+                  ? 'Envoyer la demande'
+                  : 'Supprimer'
+              }
             </button>
           </div>
         </div>

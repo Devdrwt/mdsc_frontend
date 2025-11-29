@@ -100,6 +100,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <head>
+        {/* Permissions Policy pour Jitsi Meet (microphone, caméra, haut-parleur, partage d'écran) */}
+        <meta
+          httpEquiv="Permissions-Policy"
+          content="speaker-selection=(self), microphone=(self), camera=(self), display-capture=(self), autoplay=(self), fullscreen=(self)"
+        />
         {/* Script Kkiapay SDK */}
         <script
           dangerouslySetInnerHTML={{

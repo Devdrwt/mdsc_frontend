@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users, X, Menu } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users, X, Menu, Star } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
 import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
@@ -1718,13 +1718,27 @@ export default function CoursePlayer({
               </Link>
             </div>
             {course.id && (
-              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center">
+              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center gap-2 sm:gap-3">
+                {/* Bouton Noter le cours */}
+                {enrollmentId && (
+                  <button
+                    onClick={() => setShowRatingModal(true)}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold shadow-md transition-colors gap-2"
+                    title="Noter ce cours"
+                  >
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="hidden sm:inline">Noter le cours</span>
+                    <span className="sm:hidden">Noter</span>
+                  </button>
+                )}
+                {/* Bouton Forum */}
                 <Link
                   href={`/courses/${typeof course.id === 'number' ? course.id : course.id}/forum`}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-mdsc-blue-primary text-white text-sm font-semibold shadow-md hover:bg-mdsc-blue-dark transition-colors gap-2"
                 >
                   <Users className="h-4 w-4" />
-                  Forum
+                  <span className="hidden sm:inline">Forum</span>
+                  <span className="sm:hidden">Forum</span>
                 </Link>
               </div>
             )}

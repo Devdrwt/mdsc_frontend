@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CourseService } from '../../../../lib/services/courseService';
 import { mediaService } from '../../../../lib/services/mediaService';
+import { LiveSessionService } from '../../../../lib/services/liveSessionService';
 import { Course } from '../../../../types/course';
 import { MediaFile } from '../../../../types/course';
+import { LiveSession } from '../../../../types/liveSession';
 import { Loader2, FileText, Download, Clock, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -22,6 +24,7 @@ export default function WaitingRoomPage() {
   
   const [course, setCourse] = useState<Course | null>(null);
   const [supportFiles, setSupportFiles] = useState<MediaFile[]>([]);
+  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +57,19 @@ export default function WaitingRoomPage() {
         console.warn('Impossible de charger les fichiers de support:', mediaError);
         setSupportFiles([]);
       }
+      
+      // Charger les sessions live du cours après avoir chargé le cours
+      const courseAny = courseData as any;
+      const courseIdNum = courseAny.id || courseAny.course_id || parseInt(courseId, 10);
+      if (courseIdNum) {
+        try {
+          const sessionsResponse = await LiveSessionService.getCourseSessions(courseIdNum);
+          setLiveSessions(sessionsResponse.data || []);
+        } catch (sessionError) {
+          console.warn('Impossible de charger les sessions live:', sessionError);
+          setLiveSessions([]);
+        }
+      }
     } catch (err: any) {
       console.error('Erreur chargement cours:', err);
       setError(err.message || 'Impossible de charger le cours');
@@ -74,15 +90,60 @@ export default function WaitingRoomPage() {
     return now >= startDate;
   };
 
+  const checkIfLiveSessionStarted = async (): Promise<LiveSession | null> => {
+    try {
+      if (!course) return null;
+      
+      const courseAny = course as any;
+      const courseIdNum = courseAny.id || courseAny.course_id || parseInt(courseId, 10);
+      if (!courseIdNum) return null;
+      
+      // Récupérer les sessions live du cours (recharger pour avoir les dernières données)
+      const sessionsResponse = await LiveSessionService.getCourseSessions(courseIdNum);
+      const sessions = sessionsResponse.data || [];
+      
+      // Mettre à jour le state avec les dernières sessions
+      setLiveSessions(sessions);
+      
+      // Chercher une session avec le statut "live"
+      const liveSession = sessions.find(
+        (session: LiveSession) => 
+          session.status === 'live' || 
+          (session as any).session_status === 'live'
+      );
+      
+      return liveSession || null;
+    } catch (error) {
+      console.warn('Erreur lors de la vérification des sessions live:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    // Vérifier périodiquement si le cours a démarré
-    if (course && !checkIfSessionStarted()) {
-      const interval = setInterval(() => {
+    // Vérifier périodiquement si le cours a démarré ou si une session live a démarré
+    if (course) {
+      const interval = setInterval(async () => {
+        // Vérifier d'abord si une session live a démarré (priorité)
+        const liveSession = await checkIfLiveSessionStarted();
+        if (liveSession) {
+          // Afficher un message avant la redirection
+          toast.success('Session live démarrée', 'Redirection vers la session en cours...');
+          
+          // Rediriger vers la session live
+          const courseAny = course as any;
+          const courseSlug = courseAny.slug || `course-${courseAny.id || courseAny.course_id || courseId}`;
+          
+          // Utiliser replace pour éviter de revenir à la salle d'attente avec le bouton retour
+          router.replace(`/courses/${courseSlug}/live-sessions/${liveSession.id}/join`);
+          return;
+        }
+        
+        // Sinon, vérifier si le cours a démarré (date de début)
         if (checkIfSessionStarted()) {
           // Rediriger vers la page du cours
           router.push(`/learn/${courseId}`);
         }
-      }, 10000); // Vérifier toutes les 10 secondes pour une meilleure réactivité
+      }, 5000); // Vérifier toutes les 5 secondes pour une meilleure réactivité
       
       return () => clearInterval(interval);
     }

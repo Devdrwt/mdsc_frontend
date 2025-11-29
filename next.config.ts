@@ -54,6 +54,21 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Permissions Policy pour les sessions live Jitsi
+        // Permet l'accès aux médias (microphone, caméra, haut-parleur, partage d'écran)
+        source: '/courses/:path*/live-sessions/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'speaker-selection=(self), microphone=(self), camera=(self), display-capture=(self), autoplay=(self), fullscreen=(self)',
+          },
+          {
+            key: 'Feature-Policy',
+            value: 'microphone *; camera *; speaker *',
+          },
+        ],
+      },
     ];
   },
   

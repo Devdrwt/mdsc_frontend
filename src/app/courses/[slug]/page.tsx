@@ -317,7 +317,7 @@ export default function CourseDetailPage() {
               url: `${window.location.origin}/learn/${course.id}`,
             });
             
-            toast.success('Ajouté au calendrier', 'Le cours a été ajouté à votre calendrier');
+            toast.success('Inscription réussie', 'Vous êtes inscrit au cours. L\'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.');
           } catch (calendarError) {
             console.error('Erreur ajout calendrier:', calendarError);
             // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
@@ -999,26 +999,6 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* Bouton d'inscription */}
-                <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
-                  {isEnrolled && (
-                    <>
-                      <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
-                        <Play className="h-5 w-5 mr-2" />
-                        Continuer l'apprentissage
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        onClick={() => router.push(`/courses/${slug}/forum`)}
-                        className="bg-white/10 text-white border-white/30 hover:bg-white/20 font-semibold shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Users className="h-5 w-5 mr-2" />
-                        Forum
-                      </Button>
-                    </>
-                  )}
-                </div>
                 {/* Prix affiché si le cours est payant */}
                 {price > 0 && (
                   <div className="pt-4 border-t border-white/20">

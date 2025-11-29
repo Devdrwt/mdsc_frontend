@@ -135,7 +135,7 @@ function NewPaymentContent() {
               url: `${window.location.origin}/learn/${course.id}`,
             });
             
-            toast.success('Ajouté au calendrier', 'Le cours a été ajouté à votre calendrier');
+            toast.success('Inscription réussie', 'Vous êtes inscrit au cours. L\'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.');
           } catch (calendarError) {
             console.error('Erreur ajout calendrier:', calendarError);
             // Ne pas bloquer l'inscription si l'ajout au calendrier échoue

@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Modal from '../../ui/Modal';
+import ConfirmModal from '../../ui/ConfirmModal';
 import DataTable from '../shared/DataTable';
 import { adminService } from '../../../lib/services/adminService';
 import { CourseService } from '../../../lib/services/courseService';
@@ -88,6 +89,8 @@ const [editForm, setEditForm] = useState({
 const [editLoading, setEditLoading] = useState(false);
 const [editSaving, setEditSaving] = useState(false);
 const [bulkProcessing, setBulkProcessing] = useState(false);
+const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+const [isDeleting, setIsDeleting] = useState(false);
 
 const loadCourses = useCallback(async () => {
   try {
@@ -574,6 +577,31 @@ const handleSaveEdit = async () => {
   }
 };
 
+const handleDeleteCourse = (course: Course) => {
+  setCourseToDelete(course);
+};
+
+const confirmDeleteCourse = async () => {
+  if (!courseToDelete) return;
+
+  setIsDeleting(true);
+  try {
+    await CourseService.deleteCourse(courseToDelete.id);
+    toast.success('Cours supprimé', 'Le cours a été supprimé définitivement.');
+    setCourseToDelete(null);
+    await loadCourses();
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression du cours:', error);
+    toast.error('Erreur', error.message || 'Impossible de supprimer le cours.');
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
+const cancelDeleteCourse = () => {
+  setCourseToDelete(null);
+};
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -703,6 +731,13 @@ const handleSaveEdit = async () => {
             title="Modifier"
           >
             <Edit className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => handleDeleteCourse(course)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+            title="Supprimer définitivement"
+          >
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       )
@@ -1162,6 +1197,66 @@ const handleSaveEdit = async () => {
               </div>
             </form>
           )}
+        </Modal>
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {courseToDelete && (
+        <Modal
+          isOpen={courseToDelete !== null}
+          onClose={cancelDeleteCourse}
+          title="Supprimer définitivement le cours"
+          size="md"
+        >
+          <div className="py-4">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 mb-3">
+                    Êtes-vous sûr de vouloir supprimer définitivement le cours <strong>"{courseToDelete.title}"</strong> ?
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-red-800 mb-2">⚠️ Cette action est irréversible et supprimera :</p>
+                    <ul className="text-sm text-red-700 space-y-1.5 list-disc list-inside">
+                      <li>Le cours et toutes ses informations</li>
+                      <li>Toutes les leçons et modules associés</li>
+                      <li>Toutes les inscriptions des étudiants</li>
+                      <li>Toutes les progressions et statistiques</li>
+                      <li>Les certificats délivrés pour ce cours</li>
+                      <li>Les évaluations et quiz associés</li>
+                      <li>Les fichiers multimédias (vidéos, documents, etc.)</li>
+                      <li>Les commentaires et avis sur le cours</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-3">
+                    Cette suppression sera effective <strong>partout dans le système</strong> et ne pourra pas être annulée.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={cancelDeleteCourse}
+                disabled={isDeleting}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDeleteCourse}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
+              >
+                {isDeleting ? 'Suppression...' : 'Oui, supprimer définitivement'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

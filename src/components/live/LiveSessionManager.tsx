@@ -1,26 +1,48 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Plus, Edit, Trash2, Play, Square, Loader2 } from 'lucide-react';
 import { LiveSession, CreateLiveSessionData, UpdateLiveSessionData } from '../../types/liveSession';
 import { liveSessionService } from '../../lib/services/liveSessionService';
 import LiveSessionList from './LiveSessionList';
 import LiveSessionForm from './LiveSessionForm';
 import toast from '../../lib/utils/toast';
+import ConfirmModal from '../ui/ConfirmModal';
+import { CourseService } from '../../lib/services/courseService';
 
 interface LiveSessionManagerProps {
   courseId: number;
 }
 
 export default function LiveSessionManager({ courseId }: LiveSessionManagerProps) {
+  const router = useRouter();
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingSession, setEditingSession] = useState<LiveSession | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [courseSlug, setCourseSlug] = useState<string | null>(null);
 
   useEffect(() => {
     loadSessions();
+    loadCourseSlug();
   }, [courseId]);
+
+  const loadCourseSlug = async () => {
+    try {
+      const course = await CourseService.getCourseById(courseId.toString());
+      const courseAny = course as any;
+      const slug = courseAny.slug || courseAny.slug_name;
+      if (slug) {
+        setCourseSlug(slug);
+      }
+    } catch (err) {
+      console.warn('Impossible de charger le slug du cours:', err);
+      // On utilisera courseId comme fallback
+    }
+  };
 
   const loadSessions = async () => {
     try {
@@ -61,25 +83,41 @@ export default function LiveSessionManager({ courseId }: LiveSessionManagerProps
     }
   };
 
-  const handleDelete = async (sessionId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) {
-      return;
-    }
+  const handleDelete = (sessionId: number) => {
+    setSessionToDelete(sessionId);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+    
+    setIsDeleting(true);
     try {
-      await liveSessionService.deleteSession(sessionId);
+      await liveSessionService.deleteSession(sessionToDelete);
       await loadSessions();
       toast.success('Succès', 'Session supprimée avec succès');
+      setSessionToDelete(null);
     } catch (err: any) {
       console.error('Erreur suppression session:', err);
       toast.error('Erreur', 'Impossible de supprimer la session');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setSessionToDelete(null);
   };
 
   const handleStart = async (sessionId: number) => {
     try {
-      await liveSessionService.startSession(sessionId);
+      const response = await liveSessionService.startSession(sessionId);
       await loadSessions();
       toast.success('Succès', 'Session démarrée');
+      
+      // Rediriger automatiquement l'instructeur vers Jitsi
+      // Utiliser le slug du cours si disponible, sinon utiliser courseId
+      const slug = courseSlug || `course-${courseId}`;
+      router.push(`/courses/${slug}/live-sessions/${sessionId}/join`);
     } catch (err: any) {
       console.error('Erreur démarrage session:', err);
       toast.error('Erreur', 'Impossible de démarrer la session');
@@ -246,6 +284,19 @@ export default function LiveSessionManager({ courseId }: LiveSessionManagerProps
           )}
         </div>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={sessionToDelete !== null}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Supprimer la session"
+        message="Êtes-vous sûr de vouloir supprimer cette session ?"
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }
