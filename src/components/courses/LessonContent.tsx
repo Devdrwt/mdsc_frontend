@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader } from 'lucide-react';
+import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader, AlertCircle } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
@@ -105,7 +105,6 @@ export default function LessonContent({
     setIsCompleted(deriveCompletedStatus(lesson));
     setPdfLoadError(false); // Réinitialiser l'erreur PDF quand la leçon change
     setPptxError(false); // Réinitialiser l'erreur PPTX quand la leçon change
-    setVideoLoadError(null); // Réinitialiser l'erreur vidéo quand la leçon change
     setMediaFile(null); // Réinitialiser le mediaFile pour forcer la mise à jour
     setPptxData(null); // Réinitialiser les données PPTX
     setIsLoadingPptx(false);
@@ -1008,7 +1007,7 @@ export default function LessonContent({
                   touchAction: 'none',
                   WebkitTouchCallout: 'none',
                   KhtmlUserSelect: 'none',
-                  // @ts-ignore - Propriétés webkit non standard
+                  // @ts-expect-error - Propriétés webkit non standard
                   WebkitUserDrag: 'none'
                 }}
                 onContextMenu={(e) => {
@@ -1204,13 +1203,13 @@ export default function LessonContent({
                             if (doc.body) {
                               doc.body.style.userSelect = 'none';
                               doc.body.style.webkitUserSelect = 'none';
-                              // @ts-ignore - Propriétés non standard
+                              // @ts-expect-error - Propriétés non standard
                               doc.body.style.mozUserSelect = 'none';
-                              // @ts-ignore - Propriétés non standard
+                              // @ts-expect-error - Propriétés non standard
                               doc.body.style.msUserSelect = 'none';
-                              // @ts-ignore - Propriétés webkit non standard
+                              // @ts-expect-error - Propriétés webkit non standard
                               doc.body.style.webkitTouchCallout = 'none';
-                              // @ts-ignore - Propriétés webkit non standard
+                              // @ts-expect-error - Propriétés webkit non standard
                               doc.body.style.webkitUserDrag = 'none';
                               // Empêcher le menu contextuel via CSS
                               doc.body.setAttribute('oncontextmenu', 'return false;');
@@ -1281,7 +1280,7 @@ export default function LessonContent({
                     touchAction: 'none',
                     WebkitTouchCallout: 'none',
                     KhtmlUserSelect: 'none',
-                    // @ts-ignore - Propriétés webkit non standard
+                    // @ts-expect-error - Propriétés webkit non standard
                     WebkitUserDrag: 'none'
                   }}
                   onContextMenu={(e) => {

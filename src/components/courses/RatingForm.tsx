@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Star, Send, Loader2 } from "lucide-react";
 import { ratingService } from "../../lib/services/ratingService";
 import toast from "../../lib/utils/toast";

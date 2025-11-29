@@ -1600,7 +1600,7 @@ export default function AdminDashboard() {
               </form>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-slate-300 mb-6">
-                  Formulaire masqué. Cliquez sur « Afficher le formulaire » pour créer un nouvel événement.
+                  Formulaire masqué. Cliquez sur "Afficher le formulaire" pour créer un nouvel événement.
                 </p>
               )}
               {eventsLoading ? (
@@ -2096,7 +2096,7 @@ export default function AdminDashboard() {
               </form>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-slate-300 mb-6">
-                  Formulaire masqué pour alléger la page. Cliquez sur « Afficher le formulaire » pour créer une notification.
+                  Formulaire masqué pour alléger la page. Cliquez sur "Afficher le formulaire" pour créer une notification.
                 </p>
               )}
 

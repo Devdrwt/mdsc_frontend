@@ -95,7 +95,6 @@ export default function CourseEvaluationPlayer({
         handleAutoSubmit();
       }, 100);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluation, timerStarted, timeRemaining, submitting, result]);
 
   // Timer pour le temps restant - calculé à partir du startTime réel (comme la page d'évaluation)

@@ -66,13 +66,6 @@ export default function CourseDetailPage() {
     return Number.isFinite(id) ? id : null;
   }, [course]);
 
-  const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
-  const numericCourseId = useMemo(() => {
-    if (!course) return null;
-    const id = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
-    return Number.isFinite(id) ? id : null;
-  }, [course]);
-
   // Vérifier l'état d'inscription
   const checkEnrollmentStatus = useCallback(async () => {
     if (!course || !isUserAuthenticated) {
@@ -317,7 +310,7 @@ export default function CourseDetailPage() {
             
             addToCalendar({
               title: course.title || 'Cours en live',
-              description: course.description || course.short_description || '',
+              description: course.description || course.shortDescription || '',
               startDate,
               endDate,
               location: 'En ligne',
@@ -1013,8 +1006,8 @@ export default function CourseDetailPage() {
                       <p className="text-sm text-white/70">Prix</p>
                       <p className="text-3xl font-bold">{price.toLocaleString()} <span className="text-lg">{currency}</span></p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

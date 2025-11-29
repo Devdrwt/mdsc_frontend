@@ -432,7 +432,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
   }, [pathname])
 
   // Synchroniser les changements de thème avec le backend
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (userRole !== "student") {

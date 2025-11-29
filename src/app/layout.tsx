@@ -160,7 +160,7 @@ export default function RootLayout({
                     root.setAttribute('lang', storedLanguage);
                   }
                 } catch (error) {
-                  console.warn('Préférences d\'affichage indisponibles avant l\'initialisation.', error);
+                  console.warn("Préférences d'affichage indisponibles avant l'initialisation.", error);
                 }
               })();
             `,
