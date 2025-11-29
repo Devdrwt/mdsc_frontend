@@ -9,7 +9,7 @@ export default function Footer() {
     formation: [
       { name: 'Catalogue des cours', href: '/courses' },
       { name: 'Formations en ligne', href: '/online-training' },
-      { name: 'Certifications', href: '/certifications' },
+      { name: 'Attestations', href: '/certifications' },
       { name: 'Classes virtuelles', href: '/virtual-classes' },
     ],
     organisation: [

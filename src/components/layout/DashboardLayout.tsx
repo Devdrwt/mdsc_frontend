@@ -34,7 +34,6 @@ import {
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"
-import Image from "next/image"
 import StudentService from "../../lib/services/studentService"
 import { useTheme } from "../../lib/context/ThemeContext"
 import NotificationService, { type NotificationEntry } from "../../lib/services/notificationService"
@@ -273,7 +272,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
         },
           { name: "Progression", href: `/dashboard/${userRole}/progress`, icon: BarChart3 },
           { name: "Évaluations", href: `/dashboard/${userRole}/evaluations`, icon: FileText },
-          { name: "Certificats", href: `/dashboard/${userRole}/certificates`, icon: Award },
+          { name: "Attestations", href: `/dashboard/${userRole}/certificates`, icon: Award },
           { name: "Gamification", href: `/dashboard/${userRole}/gamification`, icon: Trophy },
           { name: "Assistant IA", href: `/dashboard/${userRole}/chat-ai`, icon: Brain },
           { name: "Calendrier", href: `/dashboard/${userRole}/calendar`, icon: Calendar },
@@ -662,13 +661,11 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl z-50">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center cursor-pointer" onClick={() => router.push("/")}>
-              <Image
-                src={theme === "dark" ? "/logo-mdsc.png" : sidebarCollapsed ? "/logo-mdsc-1.png" : "/mdsc-logo1.png"}
+              <img
+                src="/mdsc-logo1.png"
                 alt="MdSC Logo"
-                width={sidebarCollapsed ? 50 : 100}
-                height={sidebarCollapsed ? 50 : 80}
-                style={{ height: "auto", width: "100%", maxWidth: sidebarCollapsed ? "50px" : "120px" }}
-                priority
+                className="h-auto w-full"
+                style={{ maxWidth: "120px", height: "auto" }}
               />
             </div>
             <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -688,36 +685,21 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex h-20 items-center justify-between px-4">
             <div className="flex items-center w-full cursor-pointer" onClick={() => router.push("/")}>
-              
-              
-              {/* <Image
-  src={theme === "dark" ? "/logo-mdsc.png" : sidebarCollapsed ? "/logo-mdsc-1.png" : "/mdsc-logo1.png"}
-  alt="MdSC Logo"
-  width={sidebarCollapsed ? 50 : 140}
-  height={sidebarCollapsed ? 50 : 100}
-  style={{ height: "auto", width: "100%", maxWidth: sidebarCollapsed ? "50px" : "140px" }}
-  priority
-/> */}
-
-
- <Image
-            src={
-              sidebarCollapsed
-                ? theme === "light"
-                  ? "/logo-mdsc-1.png"
-                  : "/logo-mdsc-1.png"
-                : theme === "dark"
-                  ? "/logo-mdsc.png"
-                  : "/mdsc-logo1.png"
-            }
-            alt="MdSC Logo"
-            width={sidebarCollapsed ? 50 : 140}
-            height={sidebarCollapsed ? 50 : 100}
-            style={{ height: "auto", width: "100%", maxWidth: sidebarCollapsed ? "50px" : "140px" }}
-            priority
-          />
-
-
+              {sidebarCollapsed ? (
+                <img
+                  src="/logo-mdsc-1.png"
+                  alt="MdSC Logo"
+                  className="h-auto w-full"
+                  style={{ maxWidth: "50px", height: "auto" }}
+                />
+              ) : (
+                <img
+                  src="/mdsc-logo1.png"
+                  alt="MdSC Logo"
+                  className="h-auto w-full"
+                  style={{ maxWidth: "140px", height: "auto" }}
+                />
+              )}
             </div>
             {!sidebarCollapsed && (
               <button
@@ -894,12 +876,64 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
                     </button>
                   </div>
                 )}
+                <p className="text-[11px] text-gray-400 mt-2">
+                  {new Date(notification.created_at).toLocaleString("fr-FR", {
+                    day: "2-digit",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              {!notification.is_read && (
+                <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary flex-shrink-0"></span>
+              )}
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+    <div className="px-4 py-2 text-center border-t border-gray-200">
+      <button
+        onClick={() => {
+          setNotificationDropdownOpen(false);
+          router.push(`/dashboard/${userRole}/notifications`);
+        }}
+        className="text-sm font-medium text-mdsc-blue-primary hover:underline"
+      >
+        Voir toutes les notifications
+      </button>
+    </div>
+  </div>
+)}
+            </div>
+
+            {/* User Menu */}
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
+              >
+                <div className="h-8 w-8 bg-mdsc-blue-primary rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-white" />
+                </div>
+                <span className="hidden md:block">
+                  {user?.firstName} {user?.lastName}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                  <a
+                    href={`/dashboard/${userRole}/profile`}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <User className="h-4 w-4 mr-3" />
                     Mon Profil
                   </a>
                   <a
-                    href="/settings"
+                    href={`/dashboard/${userRole}/settings`}
                     className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                   >
                     <Settings className="h-4 w-4 mr-3" />

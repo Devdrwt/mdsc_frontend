@@ -56,14 +56,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-<<<<<<< HEAD
       // Headers pour les ressources PWA (accessibles publiquement)
       {
         source: '/manifest.json',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            value: 'public, max-age=0, must-revalidate',
           },
           {
             key: 'Access-Control-Allow-Origin',
@@ -94,7 +93,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/apple-touch-icon.png',
+        source: '/apple-touch.png',
         headers: [
           {
             key: 'Cache-Control',
@@ -103,12 +102,23 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: '/icon-:size.png',
+        source: '/icon-192x192.png',
         headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
-=======
+          },
+        ],
+      },
+      {
+        source: '/icon-512x512.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
       {
         // Permissions Policy pour les sessions live Jitsi
         // Permet l'accès aux médias (microphone, caméra, haut-parleur, partage d'écran)
@@ -121,7 +131,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Feature-Policy',
             value: 'microphone *; camera *; speaker *',
->>>>>>> develop
           },
         ],
       },

@@ -687,9 +687,7 @@ function StudentDashboardContent() {
   }
 
   return (
-    <AuthGuard requiredRole="student">
-      <DashboardLayout userRole="student">
-        <div className="space-y-8">
+    <div className="space-y-8">
           {/* En-tête de bienvenue moderne */}
           <div className="relative overflow-hidden bg-mdsc-blue-primary rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -1083,8 +1081,6 @@ function StudentDashboardContent() {
             </div>
           </div>
         </div>
-      </DashboardLayout>
-    </AuthGuard>
   );
 }
 
