@@ -121,6 +121,34 @@ export class ForumService {
       method: "POST",
     });
   }
+
+  static async pinTopic(topicId: number): Promise<ForumTopic> {
+    const response = await apiRequest(`/topics/${topicId}/pin`, {
+      method: "POST",
+    });
+    return response.data;
+  }
+
+  static async unpinTopic(topicId: number): Promise<ForumTopic> {
+    const response = await apiRequest(`/topics/${topicId}/unpin`, {
+      method: "POST",
+    });
+    return response.data;
+  }
+
+  static async lockTopic(topicId: number): Promise<ForumTopic> {
+    const response = await apiRequest(`/topics/${topicId}/lock`, {
+      method: "POST",
+    });
+    return response.data;
+  }
+
+  static async unlockTopic(topicId: number): Promise<ForumTopic> {
+    const response = await apiRequest(`/topics/${topicId}/unlock`, {
+      method: "POST",
+    });
+    return response.data;
+  }
 }
 
 export const forumService = ForumService;

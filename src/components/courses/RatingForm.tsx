@@ -64,7 +64,7 @@ export default function RatingForm({
       {/* Note en étoiles */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Note globale <span className="text-red-500">*</span>
+          Note globale <span className="text-gray-500 text-xs">(requise si vous souhaitez noter le cours)</span>
         </label>
         <div className="flex items-center space-x-2">
           {[1, 2, 3, 4, 5].map((star) => (

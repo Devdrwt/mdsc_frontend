@@ -9,7 +9,7 @@ interface ConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title?: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   confirmButtonClass?: string;
@@ -42,9 +42,15 @@ export default function ConfirmModal({
             </div>
           </div>
           <div className="flex-1">
-            <p className="text-gray-700">
-              {message}
-            </p>
+            {typeof message === 'string' ? (
+              <p className="text-gray-700">
+                {message}
+              </p>
+            ) : (
+              <div className="text-gray-700">
+                {message}
+              </div>
+            )}
           </div>
         </div>
         

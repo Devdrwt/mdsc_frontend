@@ -442,7 +442,41 @@ export default function ModuleCatalog() {
 
     try {
       await EnrollmentService.enrollInCourse(numericId)
-      toast.success("Inscription réussie", "Vous êtes maintenant inscrit à ce cours")
+      
+      // Si c'est un cours live, ajouter au calendrier
+      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live'
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate
+        
+        if (courseStartDate) {
+          try {
+            const { addToCalendar } = await import('../../../lib/utils/calendar')
+            const startDate = new Date(courseStartDate)
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // Par défaut 2h après le début
+            
+            addToCalendar({
+              title: displayCourse.title || 'Cours en live',
+              description: displayCourse.description || courseAny.description || courseAny.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${typeof window !== 'undefined' ? window.location.origin : ''}/learn/${displayCourse.id}`,
+            })
+            
+            toast.success("Inscription réussie", "Vous êtes maintenant inscrit à ce cours. L'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.")
+          } catch (calendarError) {
+            console.error('Erreur ajout calendrier:', calendarError)
+            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
+            toast.success("Inscription réussie", "Vous êtes maintenant inscrit à ce cours")
+          }
+        } else {
+          toast.success("Inscription réussie", "Vous êtes maintenant inscrit à ce cours")
+        }
+      } else {
+        toast.success("Inscription réussie", "Vous êtes maintenant inscrit à ce cours")
+      }
+      
       setEnrolledCourseIds((prev) => {
         const next = new Set(prev)
         next.add(numericId)

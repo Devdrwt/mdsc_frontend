@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, X, Menu, Users } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users, X, Menu, Star } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
 import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
@@ -68,9 +68,9 @@ export default function CoursePlayer({
   const { user } = useAuthStore();
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -1152,53 +1152,74 @@ export default function CoursePlayer({
 
     setRequestingCertificate(true);
     try {
-      const shouldRateFirst = await needsRatingBeforeCertificate();
-      if (shouldRateFirst) {
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Merci de noter ce cours avant de générer votre certificat.'
-        );
-        return;
+      // La notation est maintenant optionnelle, on peut générer le certificat directement
+      // Utiliser generateForCourse pour créer le certificat après confirmation des données
+      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
+      const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
+      const result = await certificateService.generateForCourse(courseId);
+      
+      // Récupérer les détails du certificat généré
+      let certificate = null;
+      if (result?.certificateId) {
+        try {
+          certificate = await certificateService.getById(result.certificateId);
+        } catch (certError) {
+          console.warn('Impossible de récupérer les détails du certificat:', certError);
+        }
       }
-
-      await attemptCertificateGeneration();
+      
+      // Si on n'a pas réussi à récupérer le certificat, essayer de le récupérer via le courseId
+      if (!certificate) {
+        try {
+          const certificates = await certificateService.getMyCertificates();
+          certificate = certificates.find(cert => 
+            cert.course_id === Number(courseId) || cert.courseId === Number(courseId)
+          ) || null;
+        } catch (certError) {
+          console.warn('Impossible de récupérer le certificat via getMyCertificates:', certError);
+        }
+      }
+      
+      // Fermer le modal de vérification
+      setShowProfileVerificationModal(false);
+      
+      // Préparer les données pour le modal de célébration
+      const fullName = user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName)
+        ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
+        : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)');
+      
+      const certificateCode = certificate?.certificate_code || certificate?.certificateCode || '';
+      const issuedAt = certificate?.issued_at || certificate?.issuedAt 
+        ? new Date(certificate.issued_at || certificate.issuedAt)
+        : new Date();
+      
+      // Afficher le modal de célébration avec confettis
+      setGeneratedCertificate({
+        ...certificate,
+        certificate_code: certificateCode,
+        issued_at: issuedAt.toISOString()
+      });
+      setShowCertificateModal(true);
+      
+      console.log('[CoursePlayer] ✅ Certificat généré et modal de célébration affiché:', {
+        certificateId: result?.certificateId,
+        certificateCode,
+        fullName,
+        courseTitle: course.title
+      });
+      
+      // Afficher aussi un toast de succès
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès avec les données de votre profil.'
+      );
     } catch (error: any) {
-      console.error('Erreur lors de la génération du certificat:', error);
-
-      if (isRatingRequiredError(error) && enrollmentId) {
-        console.log('✅ [CoursePlayer] requires_rating détecté, affichage du modal');
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Vous devez noter ce cours avant d\'obtenir votre certificat'
-        );
-      } else {
-        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
-      }
-    } finally {
-      setRequestingCertificate(false);
-    }
-  };
-
-  const handleCertificateGenerationAfterRating = async () => {
-    if (!pendingCertificateAfterRating) {
-      return;
-    }
-
-    try {
-      setRequestingCertificate(true);
-      await attemptCertificateGeneration();
-      setPendingCertificateAfterRating(false);
-    } catch (error: any) {
-      console.error('[CoursePlayer] Erreur après notation lors de la génération du certificat:', error);
-      if (!isRatingRequiredError(error)) {
-        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
-      }
+      console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
+      
+      // La notation est maintenant optionnelle, on affiche simplement l'erreur
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
+      toast.error('Erreur', errorMessage);
+      // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
     } finally {
       setRequestingCertificate(false);
     }
@@ -1676,7 +1697,7 @@ export default function CoursePlayer({
                 <Menu className="h-5 w-5" />
               </button>
               
-              <Link href="/" className="inline-flex items-center justify-center flex-shrink-0 mb-2 sm:mb-0">
+              <Link href="/" className="inline-flex items-center justify-center flex-shrink-0">
                 <Image
                   src="/mdsc-logo.png"
                   alt="Maison de la Société Civile"
@@ -1697,19 +1718,35 @@ export default function CoursePlayer({
               </Link>
             </div>
             {course.id && (
-              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center">
+              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center gap-2 sm:gap-3">
+                {/* Bouton Noter le cours */}
+                {enrollmentId && (
+                  <button
+                    onClick={() => setShowRatingModal(true)}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold shadow-md transition-colors gap-2"
+                    title="Noter ce cours"
+                  >
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="hidden sm:inline">Noter le cours</span>
+                    <span className="sm:hidden">Noter</span>
+                  </button>
+                )}
+                {/* Bouton Forum */}
                 <Link
                   href={`/courses/${typeof course.id === 'number' ? course.id : course.id}/forum`}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-mdsc-blue-primary text-white text-sm font-semibold shadow-md hover:bg-mdsc-blue-dark transition-colors gap-2"
                 >
                   <Users className="h-4 w-4" />
-                  Forum
+                  <span className="hidden sm:inline">Forum</span>
+                  <span className="sm:hidden">Forum</span>
                 </Link>
               </div>
             )}
-            <div className="order-2 lg:order-3 flex items-center text-xs sm:text-sm text-gray-600 justify-end">
-              <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
-              <span className="ml-1">complété</span>
+            <div className="flex items-center justify-between sm:justify-end text-xs sm:text-sm text-gray-600">
+              <div className="flex items-center">
+                <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
+                <span className="ml-1 hidden sm:inline">complété</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1817,15 +1854,6 @@ export default function CoursePlayer({
               <p className="text-gray-600">
                 Choisissez un module dans la barre latérale pour voir les leçons disponibles
               </p>
-              {evaluationId && (
-                <button
-                  onClick={handleEvaluationClick}
-                  className="mt-4 px-6 py-3 bg-[#3B7C8A] text-white rounded-lg hover:bg-[#2d5f6a] transition-colors flex items-center space-x-2 mx-auto"
-                >
-                  <GraduationCap className="h-5 w-5" />
-                  <span>Passer l'évaluation finale</span>
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -1887,7 +1915,10 @@ export default function CoursePlayer({
           }}
           onSuccess={async () => {
             setShowRatingModal(false);
-            await handleCertificateGenerationAfterRating();
+            if (pendingCertificateAfterRating) {
+              setPendingCertificateAfterRating(false);
+              await handleConfirmProfileData();
+            }
           }}
         />
       )}

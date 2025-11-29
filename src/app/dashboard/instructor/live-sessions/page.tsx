@@ -15,6 +15,7 @@ import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import LiveSessionForm from '../../../../components/live/LiveSessionForm';
 import toast from '../../../../lib/utils/toast';
+import ConfirmModal from '../../../../components/ui/ConfirmModal';
 
 export default function InstructorLiveSessionsPage() {
   const { user } = useAuthStore();
@@ -24,6 +25,8 @@ export default function InstructorLiveSessionsPage() {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'live' | 'past'>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingSession, setEditingSession] = useState<LiveSession | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'instructor') return;
@@ -176,18 +179,29 @@ export default function InstructorLiveSessionsPage() {
     }
   };
 
-  const handleDeleteSession = async (sessionId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette session ?')) {
-      return;
-    }
+  const handleDeleteSession = (sessionId: number) => {
+    setSessionToDelete(sessionId);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (!sessionToDelete) return;
+    
+    setIsDeleting(true);
     try {
-      await liveSessionService.deleteSession(sessionId);
+      await liveSessionService.deleteSession(sessionToDelete);
       await loadAllSessions();
       toast.success('Succès', 'Session supprimée avec succès');
+      setSessionToDelete(null);
     } catch (err: any) {
       console.error('Erreur suppression session:', err);
       toast.error('Erreur', 'Impossible de supprimer la session');
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  const cancelDeleteSession = () => {
+    setSessionToDelete(null);
   };
 
   const handleEditSession = (session: LiveSession) => {
@@ -433,6 +447,19 @@ export default function InstructorLiveSessionsPage() {
           )}
         </div>
       </DashboardLayout>
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={sessionToDelete !== null}
+        onClose={cancelDeleteSession}
+        onConfirm={confirmDeleteSession}
+        title="Supprimer la session"
+        message="Êtes-vous sûr de vouloir supprimer cette session ?"
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        isLoading={isDeleting}
+      />
     </AuthGuard>
   );
 }

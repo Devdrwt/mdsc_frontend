@@ -16,7 +16,6 @@ import {
   Search,
   User,
   Trophy,
-  MessageSquare,
   FileText,
   Calendar,
   Award,
@@ -31,6 +30,7 @@ import {
   Loader2,
   AlertCircle,
   Video,
+  Mail,
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"
@@ -504,9 +504,64 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
     }
   }
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + "/")
-  }
+  // Fonction pour vérifier si un enfant est actif (plus précise)
+  // Prend en compte le fait qu'un enfant peut avoir un href qui est un préfixe d'un autre enfant
+  const isChildActive = (childHref: string, allChildren?: Array<{ href: string }>) => {
+    // Si on a la liste de tous les enfants, trouver d'abord le meilleur match (le plus long qui correspond)
+    if (allChildren && allChildren.length > 0) {
+      // Trier les enfants par longueur de href (du plus long au plus court)
+      const sortedChildren = [...allChildren].sort((a, b) => b.href.length - a.href.length);
+      
+      // Trouver le premier enfant qui correspond (le plus long/specific)
+      for (const otherChild of sortedChildren) {
+        // Vérification exacte
+        if (pathname === otherChild.href) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+        // Vérification si le pathname commence par l'href de l'autre enfant + '/'
+        if (pathname.startsWith(otherChild.href + '/')) {
+          // Si c'est cet enfant, il est actif
+          return otherChild.href === childHref;
+        }
+      }
+    }
+    
+    // Si aucun enfant ne correspond avec la logique ci-dessus, vérifier l'enfant actuel
+    // Vérification exacte
+    if (pathname === childHref) {
+      return true;
+    }
+    
+    // Vérification si le pathname commence par childHref + '/'
+    if (pathname.startsWith(childHref + '/')) {
+      return true;
+    }
+    
+    return false;
+  };
+  
+  const isActive = (href: string, item?: NavigationItem) => {
+    // Pour les routes exactes, vérifier l'égalité exacte
+    if (pathname === href) {
+      return true;
+    }
+    
+    // Pour les routes avec sous-routes, vérifier que c'est bien une sous-route
+    if (pathname.startsWith(href + '/')) {
+      // Si l'item a des enfants, le parent est actif si un enfant est actif OU si on est sur une sous-route
+      // Cela permet au parent d'être actif même quand un enfant est actif
+      if (item?.children && item.children.length > 0) {
+        // Le parent est actif si un enfant est actif (car on est dans la section du parent)
+        const hasActiveChild = item.children.some(child => isChildActive(child.href, item.children));
+        // Le parent est actif si un enfant est actif OU si on est sur une sous-route du parent
+        return hasActiveChild || true; // Toujours actif si on est dans une sous-route du parent
+      }
+      return true;
+    }
+    
+    return false;
+  };
 
   const toggleSubmenu = (itemName: string) => {
     setOpenSubmenus((prev) => {
@@ -520,16 +575,10 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
     })
   }
 
-  const renderNavItem = (item: NavigationItem, isMobile = false) => {
-    const hasChildren = item.children && item.children.length > 0
-
-    // Vérifie si l'item parent est actif (exact match)
-    const active = pathname === item.href
-
-    // Vérifie si un enfant est actif
-    const childActive = hasChildren ? item.children.some((child) => pathname === child.href) : false
-
-    const isOpen = openSubmenus.has(item.name)
+  const renderNavItem = (item: NavigationItem, isMobile: boolean = false) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isOpen = openSubmenus.has(item.name);
+    const active = isActive(item.href, item);
 
     if (hasChildren && (isMobile || !sidebarCollapsed)) {
       return (
@@ -537,9 +586,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
           <button
             onClick={() => toggleSubmenu(item.name)}
             className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-              active ? ` text-gray-700` : childActive
-              // ? `${colors.primary} text-white` // Optionnel si tu veux colorer le parent quand un enfant est actif
-              // : 'text-gray-700 hover:bg-gray-100'
+              active ? `${colors.primary} text-white` : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -553,13 +600,17 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
           </button>
           {isOpen && item.children && (
             <div className={`${isMobile ? 'ml-4' : 'ml-8'} mt-1 space-y-1`}>
-              {item.children.map((child) => (
+              {item.children.map((child) => {
+                // Vérifier si cet enfant est actif (en passant tous les enfants pour comparaison)
+                const childActive = isChildActive(child.href, item.children);
+                
+                return (
                 <a
                   key={child.name}
                   href={child.href}
                   onClick={() => isMobile && setSidebarOpen(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive(child.href)
+                    childActive
                       ? `${colors.primary} text-white`
                       : 'text-gray-600 hover:bg-gray-50'
                   }`}
@@ -567,7 +618,8 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
                   <child.icon className="h-4 w-4 flex-shrink-0" />
                   <span className="ml-3">{child.name}</span>
                 </a>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -699,7 +751,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             </button>
             <div className="ml-4 lg:ml-0">
               <h2 className="text-xl font-semibold text-gray-900">
-                {pageTitle || navigationItems.find((item) => isActive(item.href))?.name || "Tableau de bord"}
+                {pageTitle || navigationItems.find(item => isActive(item.href, item))?.name || 'Tableau de bord'}
               </h2>
             </div>
           </div>
@@ -733,7 +785,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               aria-label="Messages"
               title="Messages"
             >
-              <MessageSquare className="h-6 w-6" />
+              <Mail className="h-6 w-6" />
               {unreadMessagesCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 min-w-[18px] px-1 py-0.5 bg-red-500 text-white text-[10px] font-semibold rounded-full border-2 border-white flex items-center justify-center">
                   {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
@@ -760,13 +812,13 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               </button>
 
 {notificationDropdownOpen && (
-  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
-    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+    <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200">
       <div>
-        <p className="text-sm font-semibold text-gray-900 dark:text-gray-50">
+        <p className="text-sm font-semibold text-gray-900">
           Notifications
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-xs text-gray-500">
           {unreadCount > 0
             ? `${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`
             : "Toutes lues"}
@@ -774,25 +826,25 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
       </div>
       <button
         onClick={handleMarkAllNotificationsRead}
-        className="text-xs font-medium text-mdsc-blue-primary dark:text-blue-400 hover:underline disabled:text-gray-400"
+        className="text-xs font-medium text-mdsc-blue-primary hover:underline disabled:text-gray-400"
         disabled={unreadCount === 0}
       >
         Tout marquer lu
       </button>
     </div>
-    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+    <div className="max-h-80 overflow-y-auto divide-y divide-gray-200">
       {notificationsLoading ? (
         <div className="flex items-center justify-center py-6">
-          <Loader2 className="h-5 w-5 animate-spin text-mdsc-blue-primary dark:text-blue-400" />
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Chargement…</span>
+          <Loader2 className="h-5 w-5 animate-spin text-mdsc-blue-primary" />
+          <span className="ml-2 text-sm text-gray-500">Chargement…</span>
         </div>
       ) : notificationsError ? (
-        <div className="flex items-center space-x-2 px-4 py-4 text-sm text-red-500 dark:text-red-400">
+        <div className="flex items-center space-x-2 px-4 py-4 text-sm text-red-500">
           <AlertCircle className="h-4 w-4" />
           <span>{notificationsError}</span>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="px-4 py-6 text-center text-sm text-gray-500">
           Aucune notification
         </div>
       ) : (
@@ -800,40 +852,40 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
           <button
             key={notification.id}
             onClick={() => handleNotificationClick(notification)}
-            className={`w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
-              notification.is_read ? "bg-white dark:bg-gray-800" : "bg-blue-50 dark:bg-blue-900/30"
+            className={`w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors ${
+              notification.is_read ? "bg-white" : "bg-blue-50"
             }`}
           >
             <div className="flex items-start">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate">
+                <p className="text-sm font-semibold text-gray-900 truncate">
                   {notification.title || "Notification"}
                 </p>
                 {notification.message && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
+                  <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
                     {notification.message}
                   </p>
                 )}
                 {notification.metadata?.course_title && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     Cours : {notification.metadata.course_title}
                   </p>
                 )}
                 {isCertificateNotification(notification) && (
                   <div className="mt-2 space-y-2">
-                    <div className="flex items-center text-xs font-semibold text-purple-500 dark:text-purple-400">
+                    <div className="flex items-center text-xs font-semibold text-purple-600">
                       <Award className="h-3.5 w-3.5 mr-1" />
                       <span>Certificat obtenu 🎉</span>
                     </div>
                     {notification.metadata?.certificate_title && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                      <p className="text-xs text-gray-600">
                         {notification.metadata.certificate_title}
                       </p>
                     )}
                     <button
                       onClick={(event) => {
-                        event.stopPropagation()
-                        handleNotificationClick(notification)
+                        event.stopPropagation();
+                        handleNotificationClick(notification);
                       }}
                       className="inline-flex items-center px-2.5 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
                     >
@@ -841,7 +893,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
                     </button>
                   </div>
                 )}
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">
+                <p className="text-[11px] text-gray-400 mt-2">
                   {new Date(notification.created_at).toLocaleString("fr-FR", {
                     day: "2-digit",
                     month: "short",
@@ -851,26 +903,27 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
                 </p>
               </div>
               {!notification.is_read && (
-                <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary dark:bg-blue-400 flex-shrink-0"></span>
+                <span className="ml-3 h-2.5 w-2.5 rounded-full bg-mdsc-blue-primary flex-shrink-0"></span>
               )}
             </div>
           </button>
         ))
       )}
     </div>
-    <div className="px-4 py-2 text-center border-t border-gray-100 dark:border-gray-700">
+    <div className="px-4 py-2 text-center border-t border-gray-200">
       <button
         onClick={() => {
-          setNotificationDropdownOpen(false)
-          router.push(`/dashboard/${userRole}/notifications`)
+          setNotificationDropdownOpen(false);
+          router.push(`/dashboard/${userRole}/notifications`);
         }}
-        className="text-sm font-medium text-mdsc-blue-primary dark:text-blue-400 hover:underline"
+        className="text-sm font-medium text-mdsc-blue-primary hover:underline"
       >
         Voir toutes les notifications
       </button>
     </div>
   </div>
-)}</div>
+)}
+</div>
 
 
             {/* User Menu */}

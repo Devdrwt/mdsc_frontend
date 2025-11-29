@@ -248,7 +248,7 @@ export default function InstructorSettingsPage() {
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
           <div className="relative overflow-hidden rounded-2xl bg-mdsc-gold text-white">
-            <div className="absolute inset-0 bg-black/10" />
+            <div className="absolute" />
             <div className="relative z-10 p-8">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div>

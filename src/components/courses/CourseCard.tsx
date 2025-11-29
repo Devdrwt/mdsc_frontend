@@ -208,12 +208,12 @@ export default function CourseCard({
   };
 
   const startDate = useMemo(
-    () => parseISODate(courseAny.startDate || courseAny.start_date),
-    [courseAny.startDate, courseAny.start_date]
+    () => parseISODate(courseAny.startDate || courseAny.start_date || courseAny.course_start_date),
+    [courseAny.startDate, courseAny.start_date, courseAny.course_start_date]
   );
   const endDate = useMemo(
-    () => parseISODate(courseAny.endDate || courseAny.end_date),
-    [courseAny.endDate, courseAny.end_date]
+    () => parseISODate(courseAny.endDate || courseAny.end_date || courseAny.course_end_date),
+    [courseAny.endDate, courseAny.end_date, courseAny.course_end_date]
   );
 
   const isExpired = useMemo(() => {
@@ -250,13 +250,25 @@ export default function CourseCard({
       return `Expiré le ${endDate.toLocaleDateString('fr-FR')}`;
     }
     if (!isExpired && endDate) {
+      // Pour les cours live, afficher la date avec l'heure
+      if (isLive) {
+        // Formater avec date et heure pour les cours live
+        // Utiliser un formatage manuel pour garantir l'affichage de l'heure
+        const day = String(endDate.getDate()).padStart(2, '0');
+        const month = String(endDate.getMonth() + 1).padStart(2, '0');
+        const year = endDate.getFullYear();
+        const hours = String(endDate.getHours()).padStart(2, '0');
+        const minutes = String(endDate.getMinutes()).padStart(2, '0');
+        
+        return `Disponible jusqu'au ${day}/${month}/${year} à ${hours}:${minutes}`;
+      }
       return `Disponible jusqu'au ${endDate.toLocaleDateString('fr-FR')}`;
     }
     if (!isExpired && startDate) {
       return `Commence le ${startDate.toLocaleDateString('fr-FR')}`;
     }
     return null;
-  }, [endDate, isExpired, startDate]);
+  }, [endDate, isExpired, startDate, isLive]);
 
   const handleClick = () => {
     const rawSlug = (course as any).slug || (course as any).id;

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
@@ -41,7 +41,10 @@ export default function LessonContent({
   const [pptxError, setPptxError] = useState(false);
   const [pptxData, setPptxData] = useState<ArrayBuffer | null>(null);
   const [isLoadingPptx, setIsLoadingPptx] = useState(false);
-  const [videoLoadError, setVideoLoadError] = useState<string | null>(null);
+  const [scrollCompletionTarget, setScrollCompletionTarget] = useState<HTMLDivElement | null>(null);
+
+  const autoCompletionInFlightRef = useRef(false);
+  const lastTrustedPlaybackPositionRef = useRef(0);
 
   // Normalisation des champs provenant du backend (snake_case vs camelCase)
   const lessonAny = lesson as any;
@@ -62,6 +65,41 @@ export default function LessonContent({
   const contentText = lesson.contentText || lessonAny.content_text || lessonAny.content || '';
   const lessonDescription = lesson.description || lessonAny.description || '';
   const lessonDuration = lesson.duration || lessonAny.duration_minutes || lessonAny.duration;
+
+  const normalizedFileIdentifier = useMemo(() => {
+    const source =
+      mediaFile?.originalFilename ||
+      mediaFile?.original_filename ||
+      mediaFile?.url ||
+      contentUrl ||
+      '';
+    return source.toLowerCase();
+  }, [mediaFile?.originalFilename, mediaFile?.original_filename, mediaFile?.url, contentUrl]);
+
+  const isPdfContent = useMemo(() => {
+    return normalizedFileIdentifier.endsWith('.pdf');
+  }, [normalizedFileIdentifier]);
+
+  const isPresentationContent = useMemo(() => {
+    if (contentType === 'presentation') {
+      return true;
+    }
+    return (
+      normalizedFileIdentifier.endsWith('.pptx') ||
+      normalizedFileIdentifier.endsWith('.ppt') ||
+      normalizedFileIdentifier.includes('powerpoint')
+    );
+  }, [contentType, normalizedFileIdentifier]);
+
+  const shouldWatchScrollCompletion = useMemo(() => {
+    if (contentType === 'text' && contentText) {
+      return true;
+    }
+    if (isPdfContent || isPresentationContent) {
+      return true;
+    }
+    return false;
+  }, [contentText, contentType, isPdfContent, isPresentationContent]);
 
   useEffect(() => {
     setIsCompleted(deriveCompletedStatus(lesson));
@@ -419,7 +457,7 @@ export default function LessonContent({
     };
   }, [mediaFile?.url, mediaFile?.id, lesson.id]);
 
-  const handleMarkComplete = async () => {
+  const handleMarkComplete = useCallback(async () => {
     if (!enrollmentId && !onComplete) {
       console.error('enrollmentId est requis pour marquer une leçon comme complétée');
       return;
@@ -452,7 +490,103 @@ export default function LessonContent({
     } finally {
       setIsMarkingComplete(false);
     }
-  };
+  }, [enrollmentId, lesson.id, onComplete]);
+
+  const requestAutoCompletion = useCallback(
+    (reason: string) => {
+      if (isCompleted || isMarkingComplete || autoCompletionInFlightRef.current) {
+        return;
+      }
+
+      autoCompletionInFlightRef.current = true;
+      console.log('[LessonContent] ⚡ Auto-complétion déclenchée', {
+        lessonId: lesson.id,
+        reason,
+      });
+
+      handleMarkComplete()
+        .catch((error) => {
+          console.error('[LessonContent] ❌ Échec de l’auto-complétion', error);
+        })
+        .finally(() => {
+          autoCompletionInFlightRef.current = false;
+        });
+    },
+    [handleMarkComplete, isCompleted, isMarkingComplete, lesson.id]
+  );
+
+  const registerMediaProgress = useCallback((timeInSeconds: number, mediaElement?: HTMLMediaElement) => {
+    const toleranceSeconds = 0.3; // Même tolérance que preventForwardSeeking
+    
+    // Permettre seulement une progression normale (lecture linéaire)
+    // Si on dépasse la position maximale autorisée, c'est qu'il y a eu un saut
+    if (timeInSeconds > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
+      // Saut détecté, revenir à la position autorisée
+      if (mediaElement) {
+        console.warn('[LessonContent] ⛔ Saut détecté dans onTimeUpdate – correction', {
+          attempted: timeInSeconds,
+          allowed: lastTrustedPlaybackPositionRef.current,
+          jump: timeInSeconds - lastTrustedPlaybackPositionRef.current
+        });
+        const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
+        mediaElement.currentTime = targetTime;
+      }
+    } else if (timeInSeconds > lastTrustedPlaybackPositionRef.current) {
+      // Progression normale, mettre à jour la position
+      lastTrustedPlaybackPositionRef.current = timeInSeconds;
+    }
+  }, []);
+
+  const preventForwardSeeking = useCallback((mediaElement: HTMLMediaElement) => {
+    const toleranceSeconds = 0.3; // Tolérance très stricte : 0.3 seconde maximum
+    const forwardJump = mediaElement.currentTime - lastTrustedPlaybackPositionRef.current;
+
+    if (forwardJump > toleranceSeconds) {
+      console.warn('[LessonContent] ⛔ Avance rapide détectée – retour à la dernière position valide', {
+        attempted: mediaElement.currentTime,
+        allowed: lastTrustedPlaybackPositionRef.current,
+        jump: forwardJump
+      });
+      // Forcer le retour à la position autorisée
+      const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
+      mediaElement.currentTime = targetTime;
+      
+      // Vérifier à nouveau après un court délai pour s'assurer que le changement a pris effet
+      setTimeout(() => {
+        if (mediaElement.currentTime > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
+          mediaElement.currentTime = targetTime;
+        }
+      }, 50);
+    }
+  }, []);
+
+  useEffect(() => {
+    autoCompletionInFlightRef.current = false;
+    lastTrustedPlaybackPositionRef.current = 0;
+  }, [lesson.id]);
+
+  useEffect(() => {
+    if (!shouldWatchScrollCompletion || !scrollCompletionTarget || isCompleted) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            requestAutoCompletion('scroll-depth');
+          }
+        });
+      },
+      { threshold: 0.95 }
+    );
+
+    observer.observe(scrollCompletionTarget);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isCompleted, requestAutoCompletion, scrollCompletionTarget, shouldWatchScrollCompletion]);
 
   const renderMediaContent = () => {
     // Si mediaFile n'existe pas mais contentUrl existe, construire un mediaFile minimal
@@ -526,27 +660,27 @@ export default function LessonContent({
     const mediaType = effectiveMediaFile.fileCategory;
 
     switch (mediaType) {
-      case 'video':
+      case 'video': {
         // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
         const videoUrlRaw = effectiveMediaFile.url || '';
         const videoUrl = resolveMediaUrl(videoUrlRaw) || videoUrlRaw;
         
         return (
-          <div className="bg-white">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* En-tête de la vidéo */}
-            <div className="p-4 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-white/20 rounded-lg">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                     <Video className="h-5 w-5 text-white" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-white truncate">
+                    <p className="font-semibold text-white truncate text-base sm:text-lg">
                       {effectiveMediaFile.originalFilename || lesson.title}
                     </p>
                     {lessonDuration && (
                       <div className="flex items-center space-x-3 mt-1">
-                        <p className="text-xs text-white/80">
+                        <p className="text-xs sm:text-sm text-white/80">
                           {lessonDuration} min
                         </p>
                       </div>
@@ -554,7 +688,7 @@ export default function LessonContent({
                   </div>
                 </div>
                 {isCompleted && (
-                  <div className="flex items-center space-x-2 bg-white/20 px-3 py-1.5 rounded-lg flex-shrink-0">
+                  <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex-shrink-0">
                     <CheckCircle className="h-4 w-4 text-white" />
                     <span className="text-sm font-medium text-white">Complétée</span>
                   </div>
@@ -562,54 +696,33 @@ export default function LessonContent({
               </div>
             </div>
             
-            {/* Lecteur vidéo stylé avec protection */}
-            <div className="relative w-full aspect-video bg-black group">
-              {videoLoadError ? (
-                <div className="flex flex-col items-center justify-center h-full bg-gray-900 text-white p-6">
-                  <Video className="h-16 w-16 text-red-400 mb-4" />
-                  <p className="text-lg font-semibold mb-2">Erreur de chargement de la vidéo</p>
-                  <p className="text-sm text-gray-300 text-center mb-4">{videoLoadError}</p>
-                  <button
-                    onClick={() => {
-                      setVideoLoadError(null);
-                      // Forcer le rechargement de la vidéo en changeant la clé
-                      const videoElement = document.querySelector(`video[key="video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}"]`) as HTMLVideoElement;
-                      if (videoElement) {
-                        videoElement.load();
-                      }
-                    }}
-                    className="px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors"
-                  >
-                    Réessayer
-                  </button>
-                </div>
-              ) : (
-                <video
-                key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
-                src={videoUrl}
-                controls
-                controlsList="nodownload noplaybackrate"
-                disablePictureInPicture={false}
-                className="w-full h-full object-contain"
-                preload="metadata"
-                playsInline
+            {/* Lecteur vidéo stylé avec protection - Centré avec bordures arrondies */}
+            <div className="p-4 sm:p-6 bg-gray-50">
+              <div className="max-w-3xl mx-auto">
+                <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group" style={{ maxHeight: '500px' }}>
+                  <video
+                    key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
+                    src={videoUrl}
+                    controls
+                    controlsList="nodownload noplaybackrate"
+                    disablePictureInPicture={false}
+                    className="w-full h-full object-contain rounded-xl"
+                    preload="metadata"
+                    playsInline
                 onEnded={() => {
-                  // Auto-mark as complete when video ends
                   if (!isCompleted && contentType === 'video') {
-                    handleMarkComplete();
+                    requestAutoCompletion('video-ended');
                   }
                 }}
                 onTimeUpdate={(e) => {
-                  // Suivre la progression de la vidéo
-                  const video = e.currentTarget;
-                  if (video.duration && video.duration > 0) {
-                    const progress = (video.currentTime / video.duration) * 100;
-                    // Optionnel: sauvegarder la progression
-                    if (progress > 80 && !isCompleted && enrollmentId) {
-                      // Marquer comme complété si 80% de la vidéo est regardée
-                      // (onEnded sera appelé à 100%)
-                    }
-                  }
+                  registerMediaProgress(e.currentTarget.currentTime, e.currentTarget);
+                }}
+                onSeeking={(e) => {
+                  preventForwardSeeking(e.currentTarget);
+                }}
+                onSeeked={(e) => {
+                  // Vérifier aussi après que le saut soit terminé
+                  preventForwardSeeking(e.currentTarget);
                 }}
                 onLoadedMetadata={(e) => {
                   // Restaurer la position de lecture si disponible
@@ -664,25 +777,25 @@ export default function LessonContent({
                   } else {
                     errorMessage = 'Impossible de charger la vidéo. Vérifiez que l\'URL est correcte et que le fichier existe.';
                   }
-                  
-                  setVideoLoadError(errorMessage);
                 }}
               >
                 Votre navigateur ne supporte pas la lecture vidéo.
               </video>
-              )}
+                </div>
+              </div>
             </div>
             
             {/* Barre d'information en bas */}
-            <div className="p-3 bg-gray-50">
+            <div className="px-4 pb-4 sm:px-6 sm:pb-6">
               <p className="text-xs text-center text-gray-500">
                 Lecture protégée - Téléchargement et enregistrement désactivés
               </p>
             </div>
           </div>
         );
+      }
 
-      case 'audio':
+      case 'audio': {
         // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
         const audioUrlRaw = effectiveMediaFile.url || '';
         const audioUrl = resolveMediaUrl(audioUrlRaw) || audioUrlRaw;
@@ -767,10 +880,19 @@ export default function LessonContent({
                   return false;
                 }}
                 onEnded={() => {
-                  // Auto-mark as complete when audio ends
                   if (!isCompleted && contentType === 'audio') {
-                    handleMarkComplete();
+                    requestAutoCompletion('audio-ended');
                   }
+                }}
+                onTimeUpdate={(e) => {
+                  registerMediaProgress(e.currentTarget.currentTime, e.currentTarget);
+                }}
+                onSeeking={(e) => {
+                  preventForwardSeeking(e.currentTarget);
+                }}
+                onSeeked={(e) => {
+                  // Vérifier aussi après que le saut soit terminé
+                  preventForwardSeeking(e.currentTarget);
                 }}
                 onLoadedMetadata={(e) => {
                   const audio = e.currentTarget;
@@ -843,9 +965,10 @@ export default function LessonContent({
             </div>
           </div>
         );
+      }
 
       case 'document':
-      case 'presentation':
+      case 'presentation': {
         // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
         const documentUrlRaw = effectiveMediaFile.url || '';
         const documentUrl = resolveMediaUrl(documentUrlRaw) || documentUrlRaw;
@@ -1238,6 +1361,7 @@ export default function LessonContent({
             </a>
           </div>
         );
+      }
 
       case 'h5p':
         return (
@@ -1322,6 +1446,14 @@ export default function LessonContent({
             dangerouslySetInnerHTML={{ __html: contentText }}
           />
         </div>
+      )}
+
+      {shouldWatchScrollCompletion && (
+        <div
+          ref={setScrollCompletionTarget}
+          className="h-2 w-full"
+          aria-hidden="true"
+        />
       )}
 
       {/* Quiz */}
@@ -1414,28 +1546,40 @@ export default function LessonContent({
         </div>
       )}
 
+      {/* Bouton "Marquer comme terminé" - Affiché en dessous du contenu pour les cours à la demande */}
+      {(() => {
+        // Vérifier si c'est un cours à la demande (pas live)
+        // On ne peut pas vérifier directement ici, donc on affiche le bouton si la leçon n'est pas complétée
+        if (isCompleted) {
+          return null;
+        }
 
-      {/* Completion Button */}
-      {contentType !== 'quiz' && (
-        <div className="flex justify-end">
-          {!isCompleted ? (
-            <Button
-              variant="primary"
+        return (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <button
               onClick={handleMarkComplete}
-              disabled={isMarkingComplete}
+              disabled={isMarkingComplete || !enrollmentId}
+              className="w-full sm:w-auto px-6 py-3 bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             >
               {isMarkingComplete ? (
-                'Marquage...'
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span>Marquage en cours...</span>
+                </>
               ) : (
                 <>
-                  <CheckCircle className="h-5 w-5 mr-2" />
-                  Marquer comme terminée
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Marquer comme terminé</span>
                 </>
               )}
-            </Button>
-          ) : null}
-        </div>
-      )}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 text-center sm:text-left">
+              Marquez cette leçon comme terminée pour passer à la suivante
+            </p>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }

@@ -19,6 +19,7 @@ export default function Header() {
 
   const navigation = [
     { name: 'Formations', href: '/courses' },
+    { name: 'FAQ', href: '/faq' },
     { name: 'Contacts', href: '/contact' },
   ];
 
@@ -133,7 +134,7 @@ export default function Header() {
           <div className="hidden md:flex items-center space-x-2">
             <button 
               onClick={handleThemeToggle}
-              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] transition-all duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 group"
+              className="p-2.5 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#F4A53A] transition-all duration-200 rounded-full hover:bg-gray-500/50 dark:hover:bg-gray-500/50 group"
               aria-label={theme === 'dark' ? 'Activer le mode clair' : 'Activer le mode sombre'}
               title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
             >
@@ -147,7 +148,7 @@ export default function Header() {
               <>
                 <a 
                   href={`/dashboard/${user.role}`}
-                  className="px-4 py-2 rounded-lg bg-[#3380AA] text-white hover:bg-[#2A6A8F] transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg bg-[#006095] text-white hover:bg-[#2A6A8F] transition-all duration-200 font-medium text-sm"
                   title="Mon tableau de bord"
                 >
                   <LayoutDashboard className="h-4 w-4 inline mr-2" />
@@ -155,7 +156,7 @@ export default function Header() {
                 </a>
                 <a 
                   href={`/dashboard/${user.role}/profile`}
-                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-white hover:bg-gray-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium text-sm"
                   title="Mon profil"
                 >
                   <User className="h-4 w-4 inline mr-2" />
@@ -163,7 +164,7 @@ export default function Header() {
                 </a>
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg bg-[#F4A53A] text-white hover:text-white transition-all duration-200 font-medium text-sm"
                   title="Se déconnecter"
                 >
                   <LogOut className="h-4 w-4 inline mr-2" />
@@ -180,7 +181,7 @@ export default function Header() {
                 </a>
                 <a 
                   href="/register" 
-                  className="px-4 py-2 rounded-lg bg-[#D79A49] text-white hover:text-white transition-all duration-200 font-medium text-sm"
+                  className="px-4 py-2 rounded-lg bg-[#F4A53A] text-white hover:text-white transition-all duration-200 font-medium text-sm"
                 >
                   S'inscrire
                 </a>
@@ -192,7 +193,7 @@ export default function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] focus:outline-none focus:ring-2 focus:ring-[#D79A49] rounded-lg transition-all duration-200"
+              className="p-2 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#F4A53A] focus:outline-none focus:ring-2 focus:ring-[#F4A53A] rounded-lg transition-all duration-200"
               aria-label="Toggle menu"
             >
               <div className="relative w-6 h-6">
@@ -220,7 +221,7 @@ export default function Header() {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#D79A49] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
+                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#F4A53A] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
                 style={{ 
                   animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
                 }}
@@ -231,7 +232,7 @@ export default function Header() {
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <button 
                 onClick={handleThemeToggle}
-                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-300 hover:text-[#D79A49] rounded-lg hover:bg-orange-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center gap-3"
+                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-300 hover:text-[#F4A53A] rounded-lg hover:bg-orange-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center gap-3"
               >
                 {theme === 'dark' ? (
                   <>
@@ -268,7 +269,7 @@ export default function Header() {
                       setIsMenuOpen(false);
                       handleLogout();
                     }}
-                    className="w-full px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium flex items-center justify-center gap-3"
+                    className="w-full px-4 py-3 text-center rounded-lg bg-[#F4A53A] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium flex items-center justify-center gap-3"
                   >
                     <LogOut className="h-5 w-5" />
                     Déconnexion
@@ -286,7 +287,7 @@ export default function Header() {
                   <a 
                     href="/register"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 text-center rounded-lg bg-[#D79A49] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
+                    className="block px-4 py-3 text-center rounded-lg bg-[#F4A53A] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
                   >
                     S'inscrire
                   </a>
@@ -298,10 +299,11 @@ export default function Header() {
       </div>
     </header>
     {needsSpacer && (
-      <div className="h-20 md:h-24"
-      style={{
-    backgroundImage: `url('/Hero.png')`
-  }}  />
+      <div className="h-20 md:h-24 bg-mdsc-blue-primary"
+  //     style={{
+  //   backgroundImage: `url('/Hero.png')`
+  // }}  
+  />
     )}
     </>
   );

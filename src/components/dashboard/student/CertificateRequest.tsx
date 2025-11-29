@@ -135,33 +135,13 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
 
     setRequesting(true);
     try {
-      const shouldRateFirst = await needsRatingBeforeCertificate();
-      if (shouldRateFirst) {
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Merci de noter ce cours avant de générer votre certificat.'
-        );
-        return;
-      }
-
+      // La notation est maintenant optionnelle, on peut générer le certificat directement
       await attemptCertificateGeneration();
     } catch (error: any) {
       console.error('Erreur lors de la génération du certificat:', error);
-
-      if (isRatingRequiredError(error) && enrollmentId) {
-        setPendingCertificateAfterRating(true);
-        setShowProfileVerificationModal(false);
-        setShowRatingModal(true);
-        toast.info(
-          'Notation requise',
-          'Vous devez noter ce cours avant d\'obtenir votre certificat'
-        );
-      } else {
-        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
-      }
+      
+      // La notation est maintenant optionnelle, on affiche simplement l'erreur
+      toast.error('Erreur', error.message || 'Impossible de générer le certificat');
     } finally {
       setRequesting(false);
     }

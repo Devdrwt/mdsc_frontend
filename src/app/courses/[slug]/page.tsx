@@ -45,8 +45,8 @@ export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
-  const { isAuthenticated, user, token } = useAuthStore();
-  const isUserAuthenticated = isAuthenticated || !!user;
+  const { user } = useAuthStore();
+  const isUserAuthenticated = !!user;
   
   const [course, setCourse] = useState<ServiceCourse | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
@@ -54,10 +54,17 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
-  const [isEnrolled, setIsEnrolled] = useState(false);
-  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
   const [ratingStats, setRatingStats] = useState<CourseRatingStats | null>(null);
   const [ratingStatsLoading, setRatingStatsLoading] = useState(false);
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
+
+  const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
+  const numericCourseId = useMemo(() => {
+    if (!course) return null;
+    const id = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+    return Number.isFinite(id) ? id : null;
+  }, [course]);
 
   const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
   const numericCourseId = useMemo(() => {
@@ -97,39 +104,6 @@ export default function CourseDetailPage() {
     setImageError(false);
   }, [course]);
 
-  // Vérifier l'inscription quand le cours est chargé et que l'utilisateur est connecté
-  useEffect(() => {
-    if (course && isUserAuthenticated) {
-      checkEnrollmentStatus();
-    } else if (!isUserAuthenticated) {
-      setIsEnrolled(false);
-    }
-  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
-
-  // Recharger l'état d'inscription quand la page devient visible (pour détecter les changements après désinscription)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && course && isUserAuthenticated) {
-        checkEnrollmentStatus();
-      }
-    };
-
-    const handleFocus = () => {
-      if (course && isUserAuthenticated) {
-        checkEnrollmentStatus();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
-
-  // Charger les statistiques de notation
   useEffect(() => {
     if (!numericCourseId) {
       setRatingStats(null);
@@ -163,6 +137,38 @@ export default function CourseDetailPage() {
       isMounted = false;
     };
   }, [numericCourseId]);
+
+  // Vérifier l'inscription quand le cours est chargé et que l'utilisateur est connecté
+  useEffect(() => {
+    if (course && isUserAuthenticated) {
+      checkEnrollmentStatus();
+    } else if (!isUserAuthenticated) {
+      setIsEnrolled(false);
+    }
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
+
+  // Recharger l'état d'inscription quand la page devient visible (pour détecter les changements après désinscription)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    const handleFocus = () => {
+      if (course && isUserAuthenticated) {
+        checkEnrollmentStatus();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [course, isUserAuthenticated, checkEnrollmentStatus]);
 
   const loadCourse = async () => {
     try {
@@ -255,9 +261,8 @@ export default function CourseDetailPage() {
       return;
     }
     
-    // Vérifier si l'utilisateur est connecté
-    // Vérifier à la fois isAuthenticated, user et token pour être sûr
-    if (!isAuthenticated || !user || !token) {
+    // Vérifier si l'utilisateur est connecté (utiliser useAuthStore pour une vérification fiable)
+    if (!isUserAuthenticated) {
       toast.error(
         'Connexion requise', 
         'Vous devez vous connecter ou créer un compte pour vous inscrire à ce cours. Veuillez vous connecter ou vous inscrire.'
@@ -297,11 +302,55 @@ export default function CourseDetailPage() {
     try {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
+      
+      // Si c'est un cours live, ajouter au calendrier
+      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+        
+        if (courseStartDate) {
+          try {
+            const { addToCalendar } = await import('../../../lib/utils/calendar');
+            const startDate = new Date(courseStartDate);
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Par défaut 2h après le début
+            
+            addToCalendar({
+              title: course.title || 'Cours en live',
+              description: course.description || course.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${window.location.origin}/learn/${course.id}`,
+            });
+            
+            toast.success('Inscription réussie', 'Vous êtes inscrit au cours. L\'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.');
+          } catch (calendarError) {
+            console.error('Erreur ajout calendrier:', calendarError);
+            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
+          }
+        }
+      }
+      
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
       // Mettre à jour l'état d'inscription
       if (checkEnrollmentStatus) {
         await checkEnrollmentStatus();
       }
+      
+      // Pour les cours live, rediriger vers la salle d'attente si le cours n'a pas encore démarré
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        if (courseStartDate) {
+          const startDate = new Date(courseStartDate);
+          const now = new Date();
+          if (now < startDate) {
+            router.push(`/learn/${course.id}/waiting-room`);
+            return;
+          }
+        }
+      }
+      
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
       console.error('Erreur inscription:', err);
@@ -822,7 +871,7 @@ export default function CourseDetailPage() {
       
       <main>
         {/* Hero Section avec image */}
-        <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white">
+        <div className="bg-mdsc-blue-primary text-white">
           <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
             {/* Bouton retour au catalogue */}
             <div className="mb-6">
@@ -957,37 +1006,9 @@ export default function CourseDetailPage() {
                   </div>
                 )}
 
-                {/* Bouton d'inscription */}
-                <div className="flex items-center space-x-4 pt-4 border-t border-white/20">
-                  {isEnrolled ? (
-                    <>
-                      <Button variant="primary" size="lg" onClick={handleStartLearning} className="bg-white text-mdsc-blue-dark hover:bg-gray-100 font-semibold shadow-lg hover:shadow-xl transition-all">
-                        <Play className="h-5 w-5 mr-2" />
-                        Continuer l'apprentissage
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        onClick={() => router.push(`/courses/${slug}/forum`)}
-                        className="bg-white/10 text-white border-white/30 hover:bg-white/20 font-semibold shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Users className="h-5 w-5 mr-2" />
-                        Forum
-                      </Button>
-                    </>
-                  ) : (
-                    <Button 
-                      variant="primary" 
-                      size="lg" 
-                      onClick={handleEnroll} 
-                      disabled={!enrollmentPossible}
-                      className={`bg-mdsc-blue-dark text-white hover:bg-mdsc-blue-primary font-bold text-lg px-8 py-4 shadow-2xl border-2 border-white/30 hover:border-white/50 transition-all transform hover:scale-105 ${!enrollmentPossible ? 'opacity-50 cursor-not-allowed hover:scale-100' : ''}`}
-                    >
-                      <GraduationCap className="h-6 w-6 mr-2" />
-                      {enrollmentPossible ? 'S\'inscrire maintenant' : 'Inscriptions fermées'}
-                    </Button>
-                  )}
-                  {price > 0 && (
+                {/* Prix affiché si le cours est payant */}
+                {price > 0 && (
+                  <div className="pt-4 border-t border-white/20">
                     <div className="text-right">
                       <p className="text-sm text-white/70">Prix</p>
                       <p className="text-3xl font-bold">{price.toLocaleString()} <span className="text-lg">{currency}</span></p>

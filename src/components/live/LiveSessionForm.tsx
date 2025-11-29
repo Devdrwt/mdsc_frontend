@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Save, X, Loader2, BookOpen, Video } from 'lucide-react';
+import { Calendar, Clock, Users, Save, X, Loader2, BookOpen, Video, Image as ImageIcon, Upload } from 'lucide-react';
 import { LiveSession, CreateLiveSessionData, UpdateLiveSessionData } from '../../types/liveSession';
 import toast from '../../lib/utils/toast';
 import { CourseService } from '../../lib/services/courseService';
 import { useAuthStore } from '../../lib/stores/authStore';
+import { FileService } from '../../lib/services/fileService';
 
 interface LiveSessionFormProps {
   courseId?: number | null;
@@ -52,6 +53,9 @@ export default function LiveSessionForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 
   // Charger les catégories disponibles
   useEffect(() => {
@@ -86,6 +90,36 @@ export default function LiveSessionForm({
       loadCategories();
     }
   }, [needsCourseCreation]);
+
+  const handleThumbnailUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.warning('Format invalide', 'Veuillez sélectionner une image');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.warning('Fichier trop volumineux', 'L\'image ne doit pas dépasser 5 MB');
+      return;
+    }
+
+    setUploadingThumbnail(true);
+    try {
+      const uploaded = await FileService.uploadFile(file, { category: 'course_thumbnail' });
+      const photoUrl = uploaded.url || (uploaded as any).storage_path;
+      if (photoUrl) {
+        setThumbnailFile(file);
+        setThumbnailPreview(photoUrl);
+        toast.success('Image uploadée', 'Votre image de couverture a été uploadée avec succès');
+      }
+    } catch (error: any) {
+      console.error('Error uploading thumbnail:', error);
+      toast.error('Erreur', error.message || 'Erreur lors de l\'upload de l\'image');
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -208,6 +242,7 @@ export default function LiveSessionForm({
           course_start_date: startDate.toISOString(),
           course_end_date: endDate.toISOString(),
           max_students: formData.max_participants || 50,
+          thumbnail_url: thumbnailPreview || undefined,
         };
         
         console.log('📤 [LiveSessionForm] Données du cours préparées:', JSON.stringify(courseData, null, 2));
@@ -276,6 +311,57 @@ export default function LiveSessionForm({
               placeholder="Description courte du cours"
             />
             {errors.course_short_description && <p className="mt-1 text-sm text-red-600">{errors.course_short_description}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Image de couverture
+            </label>
+            <div className="space-y-3">
+              {thumbnailPreview ? (
+                <div className="relative">
+                  <img
+                    src={thumbnailPreview}
+                    alt="Aperçu de l'image de couverture"
+                    className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setThumbnailPreview('');
+                      setThumbnailFile(null);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                    title="Supprimer l'image"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-[#F4A53A] transition-colors">
+                  <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">Aucune image sélectionnée</p>
+                </div>
+              )}
+              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors text-sm font-medium text-gray-700">
+                <Upload className="h-4 w-4" />
+                {uploadingThumbnail ? 'Upload en cours...' : thumbnailPreview ? 'Remplacer l\'image' : 'Choisir une image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailUpload}
+                  disabled={uploadingThumbnail}
+                  className="hidden"
+                />
+              </label>
+              {uploadingThumbnail && (
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Upload en cours...</span>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">Formats acceptés: JPG, PNG, GIF. Taille max: 5 MB</p>
+            </div>
           </div>
 
           <div>
