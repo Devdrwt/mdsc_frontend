@@ -574,7 +574,8 @@ export default function PaymentForm({
           if (typeof reason === 'object' && reason !== null) {
             reasonObject = reason;
             // Si reason est un objet, essayer d'extraire une valeur
-            reasonValue = (reason as any).value || (reason as any).reason || (reason as any).status || (reason as any).code || (reason as any).message || (reason as any).type || String(reason);
+            const reasonAny = reason as any;
+            reasonValue = reasonAny?.value || reasonAny?.reason || reasonAny?.status || reasonAny?.code || reasonAny?.message || reasonAny?.type || String(reason);
             console.log('[PaymentForm] ⚠️ Reason is an object, analyzing...');
             console.log('[PaymentForm] 📦 Reason object keys:', Object.keys(reason));
             console.log('[PaymentForm] 📦 Reason object full:', JSON.stringify(reason, null, 2));
@@ -955,7 +956,8 @@ export default function PaymentForm({
                 // Essayer d'extraire transaction_id depuis reason si c'est un objet
                 let extractedTransactionId = null;
                 if (typeof reason === 'object' && reason !== null) {
-                  extractedTransactionId = (reason as any).id || (reason as any).transaction_id || (reason as any).transactionId;
+                  const reasonAny = reason as any;
+                  extractedTransactionId = reasonAny?.id || reasonAny?.transaction_id || reasonAny?.transactionId;
                 }
                 
                 // Extraire les données de manière sécurisée

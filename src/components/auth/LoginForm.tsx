@@ -21,8 +21,14 @@ export default function LoginForm() {
 
     try {
       const formData = new FormData(e.currentTarget);
-      const email = formData.get('email') as string;
+      const email = (formData.get('email') as string)?.trim();
       const password = formData.get('password') as string;
+
+      if (!email || !password) {
+        showError('Champs requis', 'Veuillez remplir tous les champs');
+        setIsLoading(false);
+        return;
+      }
 
       // Utiliser le login du store (qui appelle déjà l'API)
       await authLogin(email, password);

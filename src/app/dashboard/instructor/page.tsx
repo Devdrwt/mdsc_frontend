@@ -14,13 +14,14 @@ import InstructorService, {
   InstructorTopCourse,
   InstructorNotificationEntry,
 } from '../../../lib/services/instructorService';
+import { ratingService } from '../../../lib/services/ratingService';
 import Link from 'next/link';
 import {
   BookOpen,
   Users,
   TrendingUp,
   DollarSign,
-  MessageSquare,
+  MessageSquare,GraduationCap,
   Plus,
   BarChart3,
   Clock,
@@ -39,6 +40,7 @@ import {
   Bell,
   AlertTriangle,
 } from 'lucide-react';
+import RatingStars from '../../../components/ui/RatingStars';
 
 interface InstructorStats {
   totalCourses: number;
@@ -256,7 +258,7 @@ export default function InstructorDashboard() {
       try {
         const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult] = await Promise.allSettled([
           InstructorService.getDashboard(),
-          InstructorService.getCourses({ limit: 12 }),
+          InstructorService.getCourses({ limit: 100 }), // Augmenter la limite pour avoir tous les cours pour le calcul de la moyenne
           InstructorService.getEnrollmentsTrend('90d'),
           InstructorService.getRecentActivity(20),
           InstructorService.getUnreadMessagesCount(),
@@ -281,6 +283,82 @@ export default function InstructorDashboard() {
               amount: toNumber(item.amount ?? (item as any).total ?? (item as any).value),
             }));
 
+          // Charger les statistiques de notation pour chaque cours
+          const topCourses = dashboardData.top_courses ?? [];
+          const coursePerformanceWithRatings = await Promise.all(
+            topCourses.map(async (course: InstructorTopCourse, index) => {
+              let rating = toNumber(
+                course.rating ??
+                (course as any).average_rating ??
+                (course as any).averageRating
+              );
+
+              // Si pas de note dans les données, essayer de récupérer depuis l'API de notation
+              if (!rating && course.course_id) {
+                try {
+                  const ratingStats = await ratingService.getRatingStats(Number(course.course_id));
+                  rating = toNumber(ratingStats.average_rating ?? 0);
+                } catch (err) {
+                  console.warn(`Impossible de charger les stats de notation pour le cours ${course.course_id}:`, err);
+                }
+              }
+
+              return {
+                id: String(course.course_id ?? index),
+                title: course.title ?? 'Cours',
+                status: course.status,
+                students: toNumber(course.enrollments),
+                completionRate: toNumber(course.completion_rate),
+                rating,
+                revenue: (course.revenue ?? []).reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
+                views: toNumber(course.views),
+              };
+            })
+          );
+
+          // Calculer la note moyenne globale à partir de TOUS les cours de l'instructeur
+          let averageRating = toNumber(ratingStats.average ?? statsData.average_rating ?? 0);
+          
+          // Si on a des cours dans coursesResult, charger leurs notes réelles
+          if (coursesResult.status === 'fulfilled') {
+            const coursesData = coursesResult.value;
+            const allCourses = coursesData?.courses ?? [];
+            
+            if (allCourses.length > 0) {
+              try {
+                const ratingPromises = allCourses
+                  .filter((c: any) => c.id)
+                  .map(async (course: any) => {
+                    try {
+                      const ratingStats = await ratingService.getRatingStats(Number(course.id));
+                      return toNumber(ratingStats.average_rating ?? 0);
+                    } catch (err) {
+                      return 0;
+                    }
+                  });
+                
+                const ratings = await Promise.all(ratingPromises);
+                const validRatings = ratings.filter(r => r > 0);
+                if (validRatings.length > 0) {
+                  averageRating = validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length;
+                }
+              } catch (err) {
+                console.warn('Impossible de charger les notes réelles de tous les cours:', err);
+                // Fallback : utiliser les notes des top courses si disponibles
+                const coursesWithRatings = coursePerformanceWithRatings.filter(c => c.rating > 0);
+                if (coursesWithRatings.length > 0) {
+                  averageRating = coursesWithRatings.reduce((sum, c) => sum + c.rating, 0) / coursesWithRatings.length;
+                }
+              }
+            }
+          } else {
+            // Fallback : utiliser les notes des top courses si disponibles
+            const coursesWithRatings = coursePerformanceWithRatings.filter(c => c.rating > 0);
+            if (coursesWithRatings.length > 0) {
+              averageRating = coursesWithRatings.reduce((sum, c) => sum + c.rating, 0) / coursesWithRatings.length;
+            }
+          }
+
           setStats({
             totalCourses: toNumber(coursesStats.total),
             publishedCourses: toNumber(coursesStats.published),
@@ -290,20 +368,11 @@ export default function InstructorDashboard() {
             activeStudents: toNumber(studentsStats.active),
             totalRevenue: revenueStats.reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
             revenueByCurrency,
-            averageRating: toNumber(ratingStats.average),
+            averageRating,
             totalViews: toNumber(viewsStats.total),
           });
 
-          setCoursePerformance((dashboardData.top_courses ?? []).map((course: InstructorTopCourse, index) => ({
-            id: String(course.course_id ?? index),
-            title: course.title ?? 'Cours',
-            status: course.status,
-            students: toNumber(course.enrollments),
-            completionRate: toNumber(course.completion_rate),
-            rating: toNumber(course.rating),
-            revenue: (course.revenue ?? []).reduce((sum, item) => sum + toNumber(item?.amount ?? (item as any).total ?? (item as any).value), 0),
-            views: toNumber(course.views),
-          })));
+          setCoursePerformance(coursePerformanceWithRatings);
 
           setRecentEnrollments((dashboardData.recent_enrollments ?? []).map((item: InstructorRecentEnrollment, index) => ({
             id: item.enrollment_id ?? index,
@@ -471,14 +540,18 @@ export default function InstructorDashboard() {
           )}
 
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-gold via-orange-500 to-mdsc-gold rounded-2xl p-8 text-white">
-            <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative overflow-hidden bg-mdsc-gold rounded-2xl p-8 text-white">
+            <div className="absolute inset-0 "></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">
-                    Bienvenue, {user?.firstName} ! 🎓
-                  </h1>
+                  <div className="flex items-center space-x-2 mb-2">
+ <GraduationCap className="h-8 w-8" />
+                    <h1 className="text-3xl font-bold">
+                      Bienvenue, {user?.firstName} !
+                    </h1>
+                  </div>
+                 
                   <p className="text-white/90 text-lg">
                     Gérez vos cours et accompagnez vos étudiants vers la réussite.
                   </p>
@@ -553,8 +626,13 @@ export default function InstructorDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Note Moyenne</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.averageRating.toFixed(1)}</p>
-                  <p className="text-xs text-yellow-600 mt-1 flex items-center">
+                  <RatingStars
+                    value={stats.averageRating}
+                    size="sm"
+                    showValue
+                    valueClassName="text-lg font-semibold text-gray-900"
+                  />
+                  <p className="text-xs text-yellow-600 mt-2 flex items-center">
                     <Eye className="h-3 w-3 mr-1" />
                     {stats.totalViews.toLocaleString()} vues
                   </p>
@@ -597,7 +675,12 @@ export default function InstructorDashboard() {
                       </div>
                       <div className="flex items-center justify-between text-sm text-gray-500">
                       <span>{course.students} étudiants</span>
-                        <span>{course.rating.toFixed(1)} ⭐</span>
+                        <RatingStars
+                          value={Number.isFinite(course.rating) ? course.rating : 0}
+                          size="sm"
+                          showValue
+                          valueClassName="text-xs font-semibold text-gray-700"
+                        />
                       <span>{course.views} vues</span>
                     </div>
                   </div>
@@ -621,9 +704,14 @@ export default function InstructorDashboard() {
               <div className="space-y-6">
                 {/* Note moyenne */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium text-gray-600">Note moyenne</span>
-                    <span className="text-sm font-bold text-gray-900">{stats.averageRating.toFixed(1)} / 5</span>
+                    <RatingStars
+                      value={stats.averageRating}
+                      size="sm"
+                      showValue
+                      valueClassName="text-sm font-semibold text-gray-900"
+                    />
                   </div>
                   <div className="bg-gray-200 rounded-full h-2">
                     <div 

@@ -32,9 +32,13 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="min-h-screen flex items-center relative overflow-hidden" style={{
-      background: 'linear-gradient(180deg, #0C3C5C 0%, #3B7C8A 100%)'
-    }}>
+<section
+  className="min-h-screen flex items-center relative overflow-hidden bg-cover bg-center"
+  style={{
+    backgroundImage: `url('/Hero.png')`
+  }}
+>
+
       {/* Very subtle line pattern */}
       <div
         aria-hidden="true"
@@ -46,7 +50,7 @@ export default function HeroSection() {
           backgroundRepeat: 'repeat'
         }}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 md:pt-36">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 pt-28 md:pt-36">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Contenu principal */}
           <div className="space-y-8">

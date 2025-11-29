@@ -56,6 +56,7 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+<<<<<<< HEAD
       // Headers pour les ressources PWA (accessibles publiquement)
       {
         source: '/manifest.json',
@@ -107,6 +108,20 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+=======
+      {
+        // Permissions Policy pour les sessions live Jitsi
+        // Permet l'accès aux médias (microphone, caméra, haut-parleur, partage d'écran)
+        source: '/courses/:path*/live-sessions/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'speaker-selection=(self), microphone=(self), camera=(self), display-capture=(self), autoplay=(self), fullscreen=(self)',
+          },
+          {
+            key: 'Feature-Policy',
+            value: 'microphone *; camera *; speaker *',
+>>>>>>> develop
           },
         ],
       },

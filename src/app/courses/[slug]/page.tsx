@@ -22,7 +22,8 @@ import {
   Award,
   Info,
   ArrowLeft,
-  BarChart3
+  BarChart3,
+  MessageSquare
 } from 'lucide-react';
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
@@ -36,6 +37,9 @@ import Header from '../../../components/layout/Header';
 import Footer from '../../../components/layout/Footer';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE, DEFAULT_INSTRUCTOR_AVATAR } from '../../../lib/utils/media';
 import CourseSchedule from '../../../components/courses/CourseSchedule';
+import { ratingService } from '../../../lib/services/ratingService';
+import type { CourseRatingStats } from '../../../types/rating';
+import RatingStars from '../../../components/ui/RatingStars';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -50,8 +54,17 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
   const [imageError, setImageError] = useState(false);
+  const [ratingStats, setRatingStats] = useState<CourseRatingStats | null>(null);
+  const [ratingStatsLoading, setRatingStatsLoading] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [checkingEnrollment, setCheckingEnrollment] = useState(false);
+
+  const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
+  const numericCourseId = useMemo(() => {
+    if (!course) return null;
+    const id = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
+    return Number.isFinite(id) ? id : null;
+  }, [course]);
 
   // Vérifier l'état d'inscription
   const checkEnrollmentStatus = useCallback(async () => {
@@ -83,6 +96,40 @@ export default function CourseDetailPage() {
   useEffect(() => {
     setImageError(false);
   }, [course]);
+
+  useEffect(() => {
+    if (!numericCourseId) {
+      setRatingStats(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchRatingStats = async () => {
+      try {
+        setRatingStatsLoading(true);
+        const stats = await ratingService.getRatingStats(numericCourseId);
+        if (isMounted) {
+          setRatingStats(stats);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des statistiques de notation:', err);
+        if (isMounted) {
+          setRatingStats(null);
+        }
+      } finally {
+        if (isMounted) {
+          setRatingStatsLoading(false);
+        }
+      }
+    };
+
+    fetchRatingStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [numericCourseId]);
 
   // Vérifier l'inscription quand le cours est chargé et que l'utilisateur est connecté
   useEffect(() => {
@@ -182,10 +229,6 @@ export default function CourseDetailPage() {
     }
   };
 
-  // Tous les hooks doivent être appelés avant les retours conditionnels
-  // Utiliser useMemo pour éviter les redéfinitions
-  const courseAny = useMemo(() => course ? (course as any) : null, [course]);
-
   // Vérifier si l'inscription est possible
   const canEnroll = useCallback(() => {
     if (!course || !courseAny) return false;
@@ -252,11 +295,55 @@ export default function CourseDetailPage() {
     try {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
+      
+      // Si c'est un cours live, ajouter au calendrier
+      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+        
+        if (courseStartDate) {
+          try {
+            const { addToCalendar } = await import('../../../lib/utils/calendar');
+            const startDate = new Date(courseStartDate);
+            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Par défaut 2h après le début
+            
+            addToCalendar({
+              title: course.title || 'Cours en live',
+              description: course.description || course.short_description || '',
+              startDate,
+              endDate,
+              location: 'En ligne',
+              url: `${window.location.origin}/learn/${course.id}`,
+            });
+            
+            toast.success('Inscription réussie', 'Vous êtes inscrit au cours. L\'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.');
+          } catch (calendarError) {
+            console.error('Erreur ajout calendrier:', calendarError);
+            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
+          }
+        }
+      }
+      
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
       // Mettre à jour l'état d'inscription
       if (checkEnrollmentStatus) {
         await checkEnrollmentStatus();
       }
+      
+      // Pour les cours live, rediriger vers la salle d'attente si le cours n'a pas encore démarré
+      if (isLiveCourse) {
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        if (courseStartDate) {
+          const startDate = new Date(courseStartDate);
+          const now = new Date();
+          if (now < startDate) {
+            router.push(`/learn/${course.id}/waiting-room`);
+            return;
+          }
+        }
+      }
+      
       router.push(`/learn/${course.id}`);
     } catch (err: any) {
       console.error('Erreur inscription:', err);
@@ -443,6 +530,29 @@ export default function CourseDetailPage() {
       avatar,
     };
   }, [courseAny]);
+
+  const averageRatingValue = useMemo(() => {
+    const value =
+      ratingStats?.average_rating ??
+      (typeof course?.rating === 'number' ? course.rating : undefined) ??
+      courseAny?.metrics?.average_rating ??
+      courseAny?.average_rating ??
+      courseAny?.rating ??
+      0;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [ratingStats, course, courseAny]);
+
+  const ratingCount = useMemo(() => {
+    if (typeof ratingStats?.rating_count === 'number') {
+      return ratingStats.rating_count;
+    }
+    const fallback =
+      courseAny?.rating_count ??
+      courseAny?.metrics?.rating_count ??
+      0;
+    return typeof fallback === 'number' && Number.isFinite(fallback) ? fallback : 0;
+  }, [ratingStats, courseAny]);
 
   // Fonction pour convertir les codes de langue en noms complets
   const getLanguageLabel = useCallback((langCode: string | undefined | null): string => {
@@ -754,8 +864,8 @@ export default function CourseDetailPage() {
       
       <main>
         {/* Hero Section avec image */}
-        <div className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-mdsc-blue-primary text-white">
+          <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
             {/* Bouton retour au catalogue */}
             <div className="mb-6">
               <Button
@@ -845,11 +955,23 @@ export default function CourseDetailPage() {
                       <p className="font-semibold">{courseAny.total_lessons || courseAny.metrics?.total_lessons || modules.reduce((acc, m) => acc + ((m as any).lessons?.length || 0), 0) || 0}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                  <div className="flex items-center space-x-3">
+                    <RatingStars
+                      value={averageRatingValue}
+                      size="sm"
+                    />
                     <div>
                       <p className="text-sm text-white/70">Note</p>
-                      <p className="font-semibold">{(course.rating || 0).toFixed(1)}</p>
+                      <p className="font-semibold text-white">
+                        {ratingStatsLoading && !ratingStats
+                          ? 'Chargement...'
+                          : `${averageRatingValue.toFixed(1)} / 5`}
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {ratingCount > 0
+                          ? `${ratingCount} avis`
+                          : 'Aucun avis pour le moment'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -892,7 +1014,7 @@ export default function CourseDetailPage() {
         </div>
 
         {/* Section principale avec contenu détaillé */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contenu principal */}
             <div className="lg:col-span-2 space-y-8">
@@ -1346,15 +1468,26 @@ export default function CourseDetailPage() {
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onClick={handleStartLearning}
-                      className="w-full mb-4"
-                    >
-                      <Play className="h-5 w-5 mr-2" />
-                      Continuer l'apprentissage
-                    </Button>
+                    <>
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        onClick={handleStartLearning}
+                        className="w-full mb-4"
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        Continuer l'apprentissage
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => router.push(`/courses/${slug}/forum`)}
+                        className="w-full mb-4 border-2 border-mdsc-blue-primary text-mdsc-blue-primary hover:bg-mdsc-blue-primary hover:text-white transition-all"
+                      >
+                        <MessageSquare className="h-5 w-5 mr-2" />
+                        Accéder au Forum
+                      </Button>
+                    </>
                   )}
 
                   <div className="space-y-3 pt-4 border-t border-gray-200">
@@ -1381,7 +1514,16 @@ export default function CourseDetailPage() {
                         <Star className="h-4 w-4 mr-2" />
                         Note
                       </span>
-                      <span className="font-medium">{(course.rating || 0).toFixed(1)} ⭐</span>
+                      <span className="font-medium flex items-center gap-1">
+                        {ratingStatsLoading && !ratingStats ? (
+                          '—'
+                        ) : (
+                          <>
+                            {averageRatingValue.toFixed(1)} / 5
+                            {ratingCount > 0 && <span className="text-xs text-gray-500">({ratingCount})</span>}
+                          </>
+                        )}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 flex items-center">

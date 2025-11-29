@@ -11,8 +11,9 @@ import {
   Search,
   Building,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
-import { ProfessionalService, Domain } from '../../../lib/services/professionalService';
+import { ProfessionalService, Domain, Module } from '../../../lib/services/professionalService';
 import ConfirmModal from '../../ui/ConfirmModal';
 import { useNotification } from '../../../lib/hooks/useNotification';
 
@@ -35,6 +36,11 @@ export default function DomainManagement() {
     color: '#3b82f6',
     is_active: true,
   });
+  const [modulesModalOpen, setModulesModalOpen] = useState(false);
+  const [modulesModalDomain, setModulesModalDomain] = useState<Domain | null>(null);
+  const [modulesLoading, setModulesLoading] = useState(false);
+  const [domainModules, setDomainModules] = useState<Module[]>([]);
+  const [modulesError, setModulesError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDomains();
@@ -64,10 +70,26 @@ export default function DomainManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedName = formData.name.trim();
+    const trimmedDescription = formData.description.trim();
+
+    if (!trimmedName || !trimmedDescription) {
+      showError('Validation', 'Merci de renseigner un nom et une description valides.');
+      return;
+    }
+
+    if (
+      !editingDomain &&
+      domains.some((domain) => domain.name.trim().toLowerCase() === trimmedName.toLowerCase())
+    ) {
+      showError('Domaine existant', `Le domaine "${trimmedName}" existe déjà.`);
+      return;
+    }
+
     try {
       const payload = {
-        name: formData.name,
-        description: formData.description,
+        name: trimmedName,
+        description: trimmedDescription,
         icon: formData.icon,
         color: formData.color,
         is_active: formData.is_active,
@@ -139,9 +161,26 @@ export default function DomainManagement() {
     }
   };
 
+  const handleViewModules = async (domain: Domain) => {
+    setModulesModalDomain(domain);
+    setModulesModalOpen(true);
+    setModulesLoading(true);
+    setModulesError(null);
+    try {
+      const modules = await ProfessionalService.getModulesByDomain(domain.id);
+      setDomainModules(modules);
+    } catch (error) {
+      console.error('Erreur lors du chargement des modules:', error);
+      setModulesError(extractErrorMessage(error, 'Impossible de récupérer les modules de ce domaine.'));
+      setDomainModules([]);
+    } finally {
+      setModulesLoading(false);
+    }
+  };
+
   const filteredDomains = domains.filter(domain =>
-    domain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    domain.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (domain.name || '').toLowerCase().includes(searchTerm.trim().toLowerCase()) ||
+    (domain.description || '').toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
   const getColorClass = (color: string) => {
@@ -182,7 +221,7 @@ export default function DomainManagement() {
             disabled={reloading}
             title="Rafraîchir la liste"
           >
-            {reloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            {reloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             <span>Actualiser</span>
           </button>
           <button
@@ -272,7 +311,10 @@ export default function DomainManagement() {
                   {domain.is_active ? 'Actif' : 'Inactif'}
                 </span>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <button
+                onClick={() => handleViewModules(domain)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium underline-offset-2 hover:underline"
+              >
                 Voir modules
               </button>
             </div>
@@ -300,6 +342,62 @@ export default function DomainManagement() {
               <span>Créer un domaine</span>
             </button>
           )}
+        </div>
+      )}
+
+      {modulesModalOpen && modulesModalDomain && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-400">Modules du domaine</p>
+                <h3 className="text-xl font-semibold text-gray-900">{modulesModalDomain.name}</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setModulesModalOpen(false);
+                  setModulesModalDomain(null);
+                  setDomainModules([]);
+                  setModulesError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[65vh]">
+              {modulesLoading ? (
+                <div className="flex items-center justify-center py-10 text-gray-500">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Chargement des modules...
+                </div>
+              ) : modulesError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {modulesError}
+                </div>
+              ) : domainModules.length === 0 ? (
+                <div className="text-center text-gray-500 py-10">
+                  Aucun module n'est rattaché à ce domaine.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {domainModules.map((module) => (
+                    <div key={module.id} className="rounded-xl border border-gray-200/70 bg-gray-50 p-4">
+                      <p className="font-semibold text-gray-900">{module.title}</p>
+                      <p className="text-sm text-gray-600 line-clamp-2 mt-1">{module.short_description || module.description}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">
+                          {module.difficulty}
+                        </span>
+                        <span>{module.duration_hours}h</span>
+                        <span>{module.price.toLocaleString()} {module.currency}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -4,21 +4,24 @@ import React from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import ProgressPanel from '../../../../components/dashboard/student/ProgressPanel';
-
+import {TrendingUp } from 'lucide-react'
 export default function StudentProgressPage() {
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Header */}
-          <div className="bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary dark:from-mdsc-blue-dark dark:via-mdsc-blue-primary dark:to-mdsc-blue-dark text-white rounded-lg p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Ma Progression 📈</h1>
-                <p className="text-white/90">Suivez votre progression dans tous vos cours</p>
-              </div>
-            </div>
-          </div>
+         <div className="bg-mdsc-blue-primary  text-white rounded-lg p-6 shadow-lg">
+  <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center space-x-2 mb-2">
+        <TrendingUp className="h-8 w-8" />
+        <h1 className="text-3xl font-bold">Ma Progression</h1>
+      </div>
+      <p className="text-white/90">Suivez votre progression dans tous vos cours</p>
+    </div>
+  </div>
+</div>
 
           {/* Progress Panel */}
           <ProgressPanel />

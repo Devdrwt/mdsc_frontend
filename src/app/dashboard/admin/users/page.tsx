@@ -8,7 +8,7 @@ import UserManagement from '../../../../components/dashboard/admin/UserManagemen
 export default function AdminUsersPage() {
   return (
     <AuthGuard requiredRole="admin">
-      <DashboardLayout userRole="admin">
+      <DashboardLayout userRole="admin" pageTitle="Utilisateurs">
         <UserManagement />
       </DashboardLayout>
     </AuthGuard>

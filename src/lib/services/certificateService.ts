@@ -83,10 +83,49 @@ export class CertificateService {
 
   // Générer un certificat pour un cours (évaluation réussie)
   static async generateForCourse(courseId: string | number): Promise<{ certificateId: number }> {
-    const response = await apiRequest(`/certificates/generate/${courseId}`, {
-      method: 'POST',
-    });
-    return response.data || {};
+    try {
+      const response = await apiRequest(`/certificates/generate/${courseId}`, {
+        method: 'POST',
+      });
+      return response.data || {};
+    } catch (error: any) {
+      // Vérifier si l'erreur indique qu'une notation est requise
+      // L'erreur peut venir de différentes sources selon la structure de l'API
+      console.log('🔍 [CertificateService] Erreur capturée:', {
+        error,
+        details: error.details,
+        response: error.response,
+        requires_rating: error.requires_rating,
+        message: error.message,
+      });
+
+      // Vérifier dans plusieurs emplacements possibles
+      const requiresRating = 
+        error.details?.requires_rating === true ||
+        error.details?.data?.requires_rating === true ||
+        error.response?.data?.requires_rating === true ||
+        error.response?.requires_rating === true ||
+        error.requires_rating === true ||
+        (error.details && typeof error.details === 'object' && error.details.requires_rating === true) ||
+        (error.message && error.message.includes('noter')) ||
+        (error.message && error.message.includes('rating'));
+
+      if (requiresRating) {
+        console.log('✅ [CertificateService] requires_rating détecté, lancement du modal');
+        const enhancedError = {
+          ...error,
+          requires_rating: true,
+          course_id: courseId,
+          message: error.details?.message || 
+                   error.details?.data?.message ||
+                   error.response?.data?.message || 
+                   error.message || 
+                   'Vous devez noter le cours avant d\'obtenir votre certificat',
+        };
+        throw enhancedError;
+      }
+      throw error;
+    }
   }
 
   // Alias pour compatibilité

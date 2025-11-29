@@ -6,7 +6,7 @@ import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import MyCourses from '../../../../components/dashboard/student/MyCourses';
 
-function CoursesContent() {
+function CoursesPageContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -146,7 +146,7 @@ export default function CoursesPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
           </div>
         }>
-          <CoursesContent />
+          <CoursesPageContent />
         </Suspense>
       </DashboardLayout>
     </AuthGuard>

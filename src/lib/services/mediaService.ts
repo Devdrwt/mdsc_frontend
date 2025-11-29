@@ -27,14 +27,15 @@ export class MediaService {
    */
   static async uploadBulkFiles(
     files: File[],
-    contentType: string,
+    fileCategory: 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other',
     courseId?: string
   ): Promise<MediaFile[]> {
     const formData = new FormData();
+    // Format attendu par le backend : files[0], files[1], etc.
     files.forEach((file) => {
-      formData.append('files', file);
+      formData.append('files[]', file);
     });
-    formData.append('content_type', contentType);
+    formData.append('file_category', fileCategory);
     if (courseId) formData.append('course_id', courseId);
 
     // Utiliser apiRequest qui gère déjà l'auth correctement

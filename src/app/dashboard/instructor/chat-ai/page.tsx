@@ -4,6 +4,7 @@ import React from 'react';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import InstructorChatIA from '../../../../components/dashboard/instructor/InstructorChatIA';
+import { Bot } from "lucide-react";
 
 export default function InstructorChatIAPage() {
   return (
@@ -11,10 +12,12 @@ export default function InstructorChatIAPage() {
       <DashboardLayout userRole="instructor">
         <div className="space-y-6">
           {/* En-tête */}
-          <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
-            <h1 className="text-2xl font-bold mb-2">
-              Assistant IA Formateur 🤖
-            </h1>
+          <div className="bg-mdsc-gold rounded-lg p-6 text-white">
+            <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
+  <Bot className="w-8 h-8" />
+  Assistant IA Formateur
+</h1>
+
             <p className="text-yellow-100">
               Votre compagnon pédagogique intelligent. Créez du contenu, analysez les performances et optimisez vos cours.
             </p>

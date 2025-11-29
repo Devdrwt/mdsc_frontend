@@ -953,6 +953,35 @@ export class AdminService {
       method: 'DELETE',
     });
   }
+
+  static async inviteUsers(payload: {
+    emails: string[];
+    role?: 'student' | 'instructor' | 'admin';
+    sendEmail?: boolean;
+  }): Promise<{ invited: string[] }> {
+    const body = {
+      emails: payload.emails,
+      role: payload.role ?? 'student',
+      send_email: payload.sendEmail ?? true,
+    };
+
+    const response = await apiRequest('/admin/users/invite', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    if (response?.data) {
+      return {
+        invited: Array.isArray(response.data?.invited)
+          ? response.data.invited
+          : payload.emails,
+      };
+    }
+
+    return {
+      invited: payload.emails,
+    };
+  }
 }
 
 // Export par défaut

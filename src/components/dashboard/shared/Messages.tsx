@@ -168,7 +168,7 @@ export default function Messages({ courseId }: MessagesProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
+    <div className="max-w-full mx-auto p-4 space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {/* Onglets */}
         <div className="flex border-b border-gray-200">
@@ -216,59 +216,81 @@ export default function Messages({ courseId }: MessagesProps) {
                   <p>Chargement...</p>
                 </div>
               ) : filteredMessages.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Mail className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <p className="font-medium">
-                    {activeTab === 'inbox' ? 'Aucun message reçu' : activeTab === 'sent' ? 'Aucun message envoyé' : 'Aucun message'}
-                  </p>
-                </div>
-              ) : (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+  <Mail className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+  <p className="font-medium text-gray-700 dark:text-gray-200">
+    {activeTab === 'inbox' ? 'Aucun message reçu' :
+     activeTab === 'sent' ? 'Aucun message envoyé' :
+     'Aucun message'}
+  </p>
+  <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">
+    {activeTab === 'inbox' ? 'Vos messages reçus apparaîtront ici' :
+     activeTab === 'sent' ? 'Vos messages envoyés apparaîtront ici' :
+     'Les messages du cours apparaîtront ici'}
+  </p>
+</div>) : (
                 <div>
-                  <div className="p-3 bg-gray-50 border-b border-gray-200 text-sm text-gray-600">
-                    {filteredMessages.length} message{filteredMessages.length > 1 ? 's' : ''}
-                    {activeTab === 'inbox' && (
-                      <span className="ml-2">
-                        ({filteredMessages.filter(m => !m.is_read).length} non lu{filteredMessages.filter(m => !m.is_read).length > 1 ? 's' : ''})
-                      </span>
-                    )}
-                  </div>
-                  {filteredMessages.map((msg) => {
-                    const person = getPerson(msg);
+  <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+    {filteredMessages.length} message{filteredMessages.length > 1 ? 's' : ''}
+    {activeTab === 'inbox' && (
+      <span className="ml-2">
+        ({filteredMessages.filter(m => !m.is_read).length} non lu{filteredMessages.filter(m => !m.is_read).length > 1 ? 's' : ''})
+      </span>
+    )}
+  </div>
+  {filteredMessages.map((msg) => {
+    const person = getPerson(msg);
+    return (
+<div
+  key={msg.id}
+  onClick={() => handleOpenMessage(msg)}
+  className={`
+    p-4 border-b border-gray-200
+    cursor-pointer hover:bg-gray-100
+    transition-colors
+    ${!msg.is_read && activeTab === 'inbox' ? 'bg-gray-900/30' : 'bg-white'}
+    ${selectedMessage?.id === msg.id ? 'bg-gray-100 border-l-4 border-mdsc-blue-primary' : ''}
+    text-gray-900
+  `}
+>
+  <div className="flex items-start justify-between mb-2">
+    <div className="flex items-center gap-2 flex-1 min-w-0">
+      {!msg.is_read && activeTab === 'inbox' && (
+        <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
+      )}
+      {msg.is_read && activeTab === 'inbox' && (
+        <MailOpen className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      )}
+      {activeTab === 'sent' && (
+        <Send className="w-4 h-4 text-gray-500 flex-shrink-0" />
+      )}
+      {renderAvatar(person)}
+      <span className="font-medium text-gray-900 truncate">
+        {formatPerson(person)}
+      </span>
+    </div>
+    <span className="text-xs text-gray-500 flex-shrink-0">
+      {new Date(msg.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+    </span>
+  </div>
+  <p className="font-medium text-gray-900 mb-1 truncate">
+    {msg.subject || '(Sans objet)'}
+  </p>
+  <p className="text-sm text-gray-700 line-clamp-2">
+    {msg.content || ''}
+  </p>
+  {msg.message_type && msg.message_type !== 'direct' && (
+    <span className="inline-block mt-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+      {msg.message_type === 'broadcast' ? 'Diffusion' : msg.message_type}
+    </span>
+  )}
+</div>
 
-                    return (
-                      <div
-                        key={msg.id}
-                        onClick={() => handleOpenMessage(msg)}
-                        className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${!msg.is_read && activeTab === 'inbox' ? 'bg-blue-50' : ''
-                          } ${selectedMessage?.id === msg.id ? 'bg-mdsc-blue-50 border-l-4 border-mdsc-blue-primary' : ''}`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {!msg.is_read && activeTab === 'inbox' && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
-                            )}
-                            {msg.is_read && activeTab === 'inbox' && <MailOpen className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                            {activeTab === 'sent' && <Send className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                            {renderAvatar(person)}
-                            <span className="font-medium text-gray-900 truncate">
-                              {formatPerson(person)}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 flex-shrink-0">
-                            {new Date(msg.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </span>
-                        </div>
-                        <p className="font-medium text-gray-900 mb-1 truncate">{msg.subject || '(Sans objet)'}</p>
-                        <p className="text-sm text-gray-600 line-clamp-2">{msg.content || ''}</p>
-                        {msg.message_type && msg.message_type !== 'direct' && (
-                          <span className="inline-block mt-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
-                            {msg.message_type === 'broadcast' ? 'Diffusion' : msg.message_type}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+
+
+    );
+  })}
+</div>
               )}
             </div>
           )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink } from 'lucide-react';
+import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
@@ -1457,6 +1457,39 @@ export default function LessonContent({
         </div>
       )}
 
+      {/* Bouton "Marquer comme terminé" - Affiché en dessous du contenu pour les cours à la demande */}
+      {(() => {
+        // Vérifier si c'est un cours à la demande (pas live)
+        // On ne peut pas vérifier directement ici, donc on affiche le bouton si la leçon n'est pas complétée
+        if (isCompleted) {
+          return null;
+        }
+
+        return (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <button
+              onClick={handleMarkComplete}
+              disabled={isMarkingComplete || !enrollmentId}
+              className="w-full sm:w-auto px-6 py-3 bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              {isMarkingComplete ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span>Marquage en cours...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Marquer comme terminé</span>
+                </>
+              )}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 text-center sm:text-left">
+              Marquez cette leçon comme terminée pour passer à la suivante
+            </p>
+          </div>
+        );
+      })()}
 
     </div>
   );

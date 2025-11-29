@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Modal from '../../ui/Modal';
+import ConfirmModal from '../../ui/ConfirmModal';
 import DataTable from '../shared/DataTable';
 import { adminService } from '../../../lib/services/adminService';
 import { CourseService } from '../../../lib/services/courseService';
@@ -87,6 +88,9 @@ const [editForm, setEditForm] = useState({
 });
 const [editLoading, setEditLoading] = useState(false);
 const [editSaving, setEditSaving] = useState(false);
+const [bulkProcessing, setBulkProcessing] = useState(false);
+const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+const [isDeleting, setIsDeleting] = useState(false);
 
 const loadCourses = useCallback(async () => {
   try {
@@ -322,7 +326,96 @@ useEffect(() => {
     }
 
     setFilteredCourses(filtered);
+    setSelectedCourses((prev) =>
+      prev.filter((id) => filtered.some((course) => course.id === id))
+    );
   }, [courses, searchTerm, filterStatus, filterLevel]);
+
+  const toggleCourseSelection = (courseId: string) => {
+    setSelectedCourses((prev) =>
+      prev.includes(courseId)
+        ? prev.filter((id) => id !== courseId)
+        : [...prev, courseId]
+    );
+  };
+
+  const getCoursesForActions = () => {
+    if (selectedCourses.length === 0) {
+      return filteredCourses;
+    }
+    return filteredCourses.filter((course) => selectedCourses.includes(course.id));
+  };
+
+  const exportCoursesToCsv = (dataset: Course[]) => {
+    const headers = [
+      'ID',
+      'Titre',
+      'Instructeur',
+      'Email instructeur',
+      'Catégorie',
+      'Statut',
+      'Niveau',
+      'Inscrits',
+      'Note moyenne',
+      'Prix',
+    ];
+    const rows = dataset.map((course) => [
+      `"${course.id}"`,
+      `"${course.title}"`,
+      `"${course.instructor}"`,
+      `"${course.instructorEmail}"`,
+      `"${course.category}"`,
+      course.status,
+      course.level,
+      course.studentsEnrolled ?? 0,
+      course.averageRating ?? 0,
+      course.price ?? 0,
+    ]);
+    const csv = [headers, ...rows].map((row) => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mdsc-cours-${new Date().toISOString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkApprove = async () => {
+    const dataset = getCoursesForActions().filter(
+      (course) => course.status === 'pending'
+    );
+    if (dataset.length === 0) {
+      toast.info('Aucun cours en attente', 'Sélectionnez des cours avec le statut "en attente".');
+      return;
+    }
+    setBulkProcessing(true);
+    try {
+      await Promise.all(
+        dataset.map((course) =>
+          adminService.approveCourse(course.id, 'Approbation groupée via le dashboard')
+        )
+      );
+      toast.success('Cours approuvés', `${dataset.length} cours validés.`);
+      setSelectedCourses([]);
+      await loadCourses();
+    } catch (error: any) {
+      console.error('Erreur lors de l’approbation groupée:', error);
+      toast.error('Erreur', error?.message || 'Impossible d’approuver certains cours.');
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const handleExportCourses = () => {
+    const dataset = getCoursesForActions();
+    if (dataset.length === 0) {
+      toast.info('Aucun cours à exporter', 'Aucun résultat correspondant aux filtres actuels.');
+      return;
+    }
+    exportCoursesToCsv(dataset);
+    toast.success('Export prêt', `${dataset.length} cours exportés en CSV.`);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -434,8 +527,16 @@ const handleCourseAction = async (courseId: string, action: string) => {
 };
 
   const handleBulkAction = (action: string) => {
-    console.log(`Action en masse ${action} sur ${selectedCourses.length} cours`);
-    // Implémenter les actions en masse
+    switch (action) {
+      case 'export':
+        handleExportCourses();
+        break;
+      case 'approve':
+        handleBulkApprove();
+        break;
+      default:
+        console.log(`Action en masse ${action} sur ${selectedCourses.length} cours`);
+    }
   };
 
 const handleCloseEditModal = () => {
@@ -476,6 +577,31 @@ const handleSaveEdit = async () => {
   }
 };
 
+const handleDeleteCourse = (course: Course) => {
+  setCourseToDelete(course);
+};
+
+const confirmDeleteCourse = async () => {
+  if (!courseToDelete) return;
+
+  setIsDeleting(true);
+  try {
+    await CourseService.deleteCourse(courseToDelete.id);
+    toast.success('Cours supprimé', 'Le cours a été supprimé définitivement.');
+    setCourseToDelete(null);
+    await loadCourses();
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression du cours:', error);
+    toast.error('Erreur', error.message || 'Impossible de supprimer le cours.');
+  } finally {
+    setIsDeleting(false);
+  }
+};
+
+const cancelDeleteCourse = () => {
+  setCourseToDelete(null);
+};
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -485,6 +611,19 @@ const handleSaveEdit = async () => {
   }
 
   const columns = [
+    {
+      key: 'select',
+      label: '',
+      render: (_value: any, course: Course) => (
+        <input
+          type="checkbox"
+          className="h-4 w-4 text-mdsc-blue-dark border-gray-300 rounded focus:ring-mdsc-blue-dark"
+          checked={selectedCourses.includes(course.id)}
+          onChange={() => toggleCourseSelection(course.id)}
+          aria-label={`Sélectionner ${course.title}`}
+        />
+      ),
+    },
     {
       key: 'course',
       label: 'Cours',
@@ -593,10 +732,21 @@ const handleSaveEdit = async () => {
           >
             <Edit className="h-4 w-4" />
           </button>
+          <button
+            onClick={() => handleDeleteCourse(course)}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+            title="Supprimer définitivement"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
       )
     }
   ];
+
+  const selectedCount = selectedCourses.length;
+  const allCoursesSelected =
+    filteredCourses.length > 0 && selectedCount === filteredCourses.length;
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -620,7 +770,8 @@ const handleSaveEdit = async () => {
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => handleBulkAction('export')}
-              className="group relative bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-white/20 hover:border-white/30 hover:shadow-lg"
+              className="group relative bg-white/10 hover:bg-white/20 backdrop-blur-sm px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 border border-white/20 hover:border-white/30 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={filteredCourses.length === 0}
             >
               <span className="relative z-10 flex items-center gap-2">
                 Exporter
@@ -628,14 +779,51 @@ const handleSaveEdit = async () => {
             </button>
             <button
               onClick={() => handleBulkAction('approve')}
-              className="group relative bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="group relative bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={bulkProcessing}
             >
               <span className="relative z-10 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Approuver en masse
+                {bulkProcessing ? 'Traitement...' : 'Approuver en masse'}
               </span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-amber-50/70 dark:bg-slate-800/70 border border-amber-200 dark:border-slate-700 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-amber-900 dark:text-slate-100">
+            {selectedCount > 0
+              ? `${selectedCount} cours sélectionné${selectedCount > 1 ? 's' : ''}`
+              : 'Aucun cours sélectionné'}
+          </p>
+          <p className="text-xs text-amber-800/80 dark:text-slate-300">
+            Sélectionnez des cours pour les exporter ou lancer une approbation groupée.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => {
+              if (allCoursesSelected) {
+                setSelectedCourses([]);
+              } else {
+                setSelectedCourses(filteredCourses.map((course) => course.id));
+              }
+            }}
+            disabled={filteredCourses.length === 0}
+            className="px-4 py-2 text-xs font-semibold rounded-lg border border-amber-300 text-amber-900 bg-white/80 hover:bg-white disabled:opacity-50"
+          >
+            {allCoursesSelected ? 'Tout désélectionner' : 'Sélectionner tous les résultats'}
+          </button>
+          {selectedCount > 0 && (
+            <button
+              onClick={() => setSelectedCourses([])}
+              className="px-4 py-2 text-xs font-semibold rounded-lg text-amber-900 hover:text-amber-700"
+            >
+              Effacer la sélection
+            </button>
+          )}
         </div>
       </div>
 
@@ -1009,6 +1197,66 @@ const handleSaveEdit = async () => {
               </div>
             </form>
           )}
+        </Modal>
+      )}
+
+      {/* Modal de confirmation de suppression */}
+      {courseToDelete && (
+        <Modal
+          isOpen={courseToDelete !== null}
+          onClose={cancelDeleteCourse}
+          title="Supprimer définitivement le cours"
+          size="md"
+        >
+          <div className="py-4">
+            <div className="space-y-4">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
+                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 mb-3">
+                    Êtes-vous sûr de vouloir supprimer définitivement le cours <strong>"{courseToDelete.title}"</strong> ?
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-sm font-semibold text-red-800 mb-2">⚠️ Cette action est irréversible et supprimera :</p>
+                    <ul className="text-sm text-red-700 space-y-1.5 list-disc list-inside">
+                      <li>Le cours et toutes ses informations</li>
+                      <li>Toutes les leçons et modules associés</li>
+                      <li>Toutes les inscriptions des étudiants</li>
+                      <li>Toutes les progressions et statistiques</li>
+                      <li>Les certificats délivrés pour ce cours</li>
+                      <li>Les évaluations et quiz associés</li>
+                      <li>Les fichiers multimédias (vidéos, documents, etc.)</li>
+                      <li>Les commentaires et avis sur le cours</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-3">
+                    Cette suppression sera effective <strong>partout dans le système</strong> et ne pourra pas être annulée.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button
+                onClick={cancelDeleteCourse}
+                disabled={isDeleting}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDeleteCourse}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50"
+              >
+                {isDeleting ? 'Suppression...' : 'Oui, supprimer définitivement'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

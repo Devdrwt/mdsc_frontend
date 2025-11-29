@@ -107,7 +107,7 @@ export const useKkiapay = () => {
         keyLength: normalizedOptions.key?.length || 0,
         sandbox: normalizedOptions.sandbox,
         sandboxType: typeof normalizedOptions.sandbox,
-        environment: sandboxString === 'true' ? 'SANDBOX' : 'PRODUCTION',
+        environment: (normalizedOptions.sandbox === 'true' || normalizedOptions.sandbox === '1' || (typeof normalizedOptions.sandbox === 'boolean' && normalizedOptions.sandbox)) ? 'SANDBOX' : 'PRODUCTION',
       });
       
       window.openKkiapayWidget(normalizedOptions);

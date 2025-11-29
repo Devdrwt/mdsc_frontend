@@ -71,15 +71,15 @@ export default function GamificationPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête avec niveau actuel */}
-      <div className="bg-gradient-to-r from-mdsc-gold to-yellow-600 rounded-lg p-6 text-white">
+      <div className="bg-mdsc-blue-primary  rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">Gamification 🏆</h2>
-            <p className="text-yellow-100">Votre parcours d'apprentissage gamifié</p>
-          </div>
+          <div className="flex items-center space-x-2 mb-2">
+        <Award className="h-8 w-8" />
+        <h2 className="text-3xl font-bold">Gamification</h2>
+      </div>
           <div className="text-right">
             <div className="text-3xl font-bold">{currentLevel.levelName}</div>
-            <div className="text-sm text-yellow-100">Niveau {currentLevel.level}</div>
+            <div className="text-sm text-blue-100">Niveau {currentLevel.level}</div>
           </div>
         </div>
         
@@ -89,7 +89,7 @@ export default function GamificationPanel() {
             <span>{userPoints} points</span>
             <span>{currentLevel.pointsToNext} points vers le prochain niveau</span>
           </div>
-          <div className="w-full bg-yellow-200 rounded-full h-3">
+          <div className="w-full bg-mdsc-blue-dark/50 rounded-full h-4">
             <div 
               className="bg-white h-3 rounded-full transition-all duration-500"
               style={{ 
@@ -189,7 +189,7 @@ export default function GamificationPanel() {
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <Star className="h-5 w-5 text-yellow-500" />
+                        <Star className="h-5 w-5 text-blue-500" />
                         <span className="text-sm font-medium">Série de connexion</span>
                       </div>
                       <span className="font-bold text-gray-900">0 jours</span>
@@ -231,7 +231,7 @@ export default function GamificationPanel() {
                     >
                       <div className="flex items-center space-x-4">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                          index === 0 ? 'bg-yellow-500 text-white' :
+                          index === 0 ? 'bg-blue-500 text-white' :
                           index === 1 ? 'bg-gray-400 text-white' :
                           index === 2 ? 'bg-orange-500 text-white' :
                           'bg-gray-200 text-gray-700'

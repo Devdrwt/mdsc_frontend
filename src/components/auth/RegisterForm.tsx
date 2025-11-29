@@ -54,7 +54,11 @@ export default function RegisterForm() {
   };
 
   const validateForm = (): string | null => {
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
+    const trimmedEmail = formData.email.trim();
+    const trimmedFirstName = formData.firstName.trim();
+    const trimmedLastName = formData.lastName.trim();
+    
+    if (!trimmedEmail || !formData.password || !trimmedFirstName || !trimmedLastName) {
       return 'Tous les champs obligatoires doivent être remplis.';
     }
 
@@ -87,10 +91,10 @@ export default function RegisterForm() {
     try {
       // Appel à l'API d'inscription (seulement les champs requis par le backend)
       const response = await register({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
       });
 
       if (response.success) {

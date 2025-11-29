@@ -615,7 +615,7 @@ export default function CalendarPanel() {
           </div>
 
           {/* Statistiques rapides */}
-          <div className="bg-gradient-to-br from-mdsc-blue-primary to-blue-600 rounded-lg p-6 text-white">
+          <div className="bg-mdsc-blue-primary rounded-lg p-6 text-white">
             <h3 className="text-lg font-semibold mb-4">Ce mois</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">

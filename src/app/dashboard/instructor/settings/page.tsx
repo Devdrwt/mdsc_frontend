@@ -247,8 +247,8 @@ export default function InstructorSettingsPage() {
     <AuthGuard requiredRole="instructor">
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-mdsc-blue-primary to-mdsc-gold text-white">
-            <div className="absolute inset-0 bg-black/10" />
+          <div className="relative overflow-hidden rounded-2xl bg-mdsc-gold text-white">
+            <div className="absolute" />
             <div className="relative z-10 p-8">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div>
@@ -345,11 +345,11 @@ export default function InstructorSettingsPage() {
                     <p className="text-sm text-gray-500">Mettez à jour vos informations personnelles et vos identifiants.</p>
                   </div>
                   <Link
-                    href="/dashboard/instructor/profile"
-                    className="inline-flex items-center gap-2 rounded-lg border border-mdsc-blue-primary px-3 py-2 text-sm font-medium text-mdsc-blue-primary hover:bg-mdsc-blue-primary hover:text-white transition"
-                  >
-                    <UserCog className="h-4 w-4" /> Modifier le profil
-                  </Link>
+  href="/dashboard/instructor/profile"
+  className="inline-flex items-center gap-2 rounded-lg border border-mdsc-blue-primary px-3 py-2 text-sm font-medium text-mdsc-blue-primary hover:bg-mdsc-blue-primary/20 hover:text-mdsc-blue-primary transition"
+>
+  <UserCog className="h-4 w-4" /> Modifier le profil
+</Link>
                 </div>
                 <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                   <p><strong>Nom complet :</strong> {instructorName}</p>

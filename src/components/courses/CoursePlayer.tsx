@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, X, Menu } from 'lucide-react';
+import { ChevronRight, CheckCircle, Lock, BookOpen, Clock, Award, FileText, GraduationCap, ArrowLeft, Loader, XCircle, Users, X, Menu, Star } from 'lucide-react';
 import { Course, Module, Lesson } from '../../types/course';
 import LessonContent from './LessonContent';
 import ModuleQuizPlayer from '../dashboard/student/ModuleQuizPlayer';
@@ -17,8 +17,10 @@ import FloatingChatButton from './FloatingChatButton';
 import CertificateCelebrateModal from '../certificates/CertificateCelebrateModal';
 import ProfileVerificationModal from '../dashboard/student/ProfileVerificationModal';
 import { certificateService } from '../../lib/services/certificateService';
+import { ratingService } from '../../lib/services/ratingService';
 import { useAuthStore } from '../../lib/stores/authStore';
 import toast from '../../lib/utils/toast';
+import RatingModal from './RatingModal';
 
 interface CoursePlayerProps {
   course: Course;
@@ -66,6 +68,8 @@ export default function CoursePlayer({
   const { user } = useAuthStore();
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const [generatedCertificate, setGeneratedCertificate] = useState<any>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
 
   const getOrderedLessons = useCallback((): Lesson[] => {
@@ -1092,6 +1096,54 @@ export default function CoursePlayer({
     }, 3000);
   };
 
+  const isRatingRequiredError = (error: any): boolean => {
+    if (!error) {
+      return false;
+    }
+
+    return (
+      error.requires_rating === true ||
+      error.details?.requires_rating === true ||
+      error.details?.data?.requires_rating === true ||
+      error.response?.data?.requires_rating === true ||
+      error.response?.requires_rating === true ||
+      (typeof error.message === 'string' &&
+        (error.message.toLowerCase().includes('noter') ||
+          error.message.toLowerCase().includes('rating')))
+    );
+  };
+
+  const needsRatingBeforeCertificate = async (): Promise<boolean> => {
+    if (!enrollmentId) {
+      return false;
+    }
+
+    try {
+      const result = await ratingService.canRate(enrollmentId);
+      return result.can_rate && !result.has_rated;
+    } catch (error) {
+      console.error('[CoursePlayer] Impossible de vérifier la nécessité de noter:', error);
+      return false;
+    }
+  };
+
+  const attemptCertificateGeneration = async () => {
+    if (!course.id) {
+      throw new Error('Impossible de générer le certificat sans courseId');
+    }
+
+    const courseIdValue =
+      typeof course.id === 'number' ? course.id.toString() : course.id;
+
+    await certificateService.generateForCourse(courseIdValue);
+    toast.success(
+      'Certificat généré',
+      'Votre certificat a été généré avec succès avec les données de votre profil.'
+    );
+    setShowProfileVerificationModal(false);
+    window.location.href = `/dashboard/student/certificates?courseId=${courseIdValue}`;
+  };
+
   const handleConfirmProfileData = async () => {
     if (!course.id) {
       toast.error('Erreur', 'Impossible de générer le certificat sans courseId');
@@ -1100,6 +1152,7 @@ export default function CoursePlayer({
 
     setRequestingCertificate(true);
     try {
+      // La notation est maintenant optionnelle, on peut générer le certificat directement
       // Utiliser generateForCourse pour créer le certificat après confirmation des données
       // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
       const courseId = typeof course.id === 'number' ? course.id.toString() : course.id;
@@ -1169,6 +1222,8 @@ export default function CoursePlayer({
       );
     } catch (error: any) {
       console.error('[CoursePlayer] ❌ Erreur lors de la génération du certificat:', error);
+      
+      // La notation est maintenant optionnelle, on affiche simplement l'erreur
       const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
       toast.error('Erreur', errorMessage);
       // Ne pas fermer le modal en cas d'erreur pour permettre à l'utilisateur de réessayer
@@ -1669,6 +1724,31 @@ export default function CoursePlayer({
                 <span className="md:hidden">Retour</span>
               </Link>
             </div>
+            {course.id && (
+              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center gap-2 sm:gap-3">
+                {/* Bouton Noter le cours */}
+                {enrollmentId && (
+                  <button
+                    onClick={() => setShowRatingModal(true)}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold shadow-md transition-colors gap-2"
+                    title="Noter ce cours"
+                  >
+                    <Star className="h-4 w-4 fill-current" />
+                    <span className="hidden sm:inline">Noter le cours</span>
+                    <span className="sm:hidden">Noter</span>
+                  </button>
+                )}
+                {/* Bouton Forum */}
+                <Link
+                  href={`/courses/${typeof course.id === 'number' ? course.id : course.id}/forum`}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-mdsc-blue-primary text-white text-sm font-semibold shadow-md hover:bg-mdsc-blue-dark transition-colors gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Forum</span>
+                  <span className="sm:hidden">Forum</span>
+                </Link>
+              </div>
+            )}
             <div className="flex items-center justify-between sm:justify-end text-xs sm:text-sm text-gray-600">
               <div className="flex items-center">
                 <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
@@ -1829,6 +1909,26 @@ export default function CoursePlayer({
         courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
         isGenerating={requestingCertificate}
       />
+
+      {/* Modal de notation (requis avant certificat) */}
+      {course.id && enrollmentId && (
+        <RatingModal
+          courseId={typeof course.id === 'number' ? course.id : parseInt(String(course.id), 10)}
+          enrollmentId={enrollmentId}
+          isOpen={showRatingModal}
+          onClose={() => {
+            setShowRatingModal(false);
+            setPendingCertificateAfterRating(false);
+          }}
+          onSuccess={async () => {
+            setShowRatingModal(false);
+            if (pendingCertificateAfterRating) {
+              setPendingCertificateAfterRating(false);
+              await handleConfirmProfileData();
+            }
+          }}
+        />
+      )}
     </div>
     </>
   );

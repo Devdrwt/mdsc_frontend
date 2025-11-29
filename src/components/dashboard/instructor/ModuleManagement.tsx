@@ -161,16 +161,27 @@ export default function ModuleManagement() {
       return;
     }
     
+    // Validation des champs obligatoires (trim pour éviter les espaces)
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      toast.error('Champ requis', 'Le titre du module est obligatoire');
+      return;
+    }
+    
     try {
       if (editingModule) {
         await moduleService.updateModule(editingModule.id, {
           ...formData,
+          title: trimmedTitle,
+          description: formData.description.trim(),
           order_index: editingModule.order_index || 0,
         });
         toast.success('Module mis à jour', 'Les modifications ont été enregistrées');
       } else {
         await moduleService.createModule(Number(selectedCourseId), {
           ...formData,
+          title: trimmedTitle,
+          description: formData.description.trim(),
           order_index: modules.length,
         });
         toast.success('Module créé', 'Le module a été créé avec succès');
@@ -512,7 +523,7 @@ export default function ModuleManagement() {
             setEditingModule(null);
             resetForm();
           }}
-          className="btn-mdsc-primary flex items-center space-x-2"
+          className="btn-mdsc-secondary flex items-center space-x-2"
         >
           <Plus className="h-5 w-5" />
           <span>Nouveau Module</span>
@@ -610,8 +621,8 @@ export default function ModuleManagement() {
 
       {/* Modal de création/édition */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex-shrink-0 p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">
                 {editingModule ? 'Modifier le Module' : 'Nouveau Module'}

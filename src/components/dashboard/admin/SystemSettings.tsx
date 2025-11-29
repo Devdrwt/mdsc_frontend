@@ -239,7 +239,7 @@ export default function SystemSettings() {
   const tabs = [
     { id: 'general', label: 'Général', icon: Globe, color: 'from-blue-500 to-blue-600' },
     { id: 'email', label: 'Email', icon: Mail, color: 'from-purple-500 to-purple-600' },
-    { id: 'security', label: 'Sécurité', icon: Shield, color: 'from-red-500 to-red-600' },
+    { id: 'security', label: 'Sécurité', icon: Shield, color: 'from-blue-600 to-indigo-600' },
     { id: 'features', label: 'Fonctionnalités', icon: Zap, color: 'from-green-500 to-green-600' },
     { id: 'integrations', label: 'Intégrations', icon: Server, color: 'from-orange-500 to-orange-600' },
     { id: 'payments', label: 'Paiements', icon: CreditCard, color: 'from-emerald-500 to-teal-600' }
@@ -477,7 +477,7 @@ export default function SystemSettings() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Navigation des onglets moderne */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sticky top-6">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 sticky top-6">
             <nav className="space-y-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -489,10 +489,10 @@ export default function SystemSettings() {
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group ${
                       isActive
                         ? `bg-gradient-to-r ${tab.color} text-white shadow-lg scale-105`
-                        : 'text-gray-700 hover:bg-gray-50 hover:scale-102'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 hover:scale-102'
                     }`}
                   >
-                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-700'}`} />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'}`} />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -503,7 +503,7 @@ export default function SystemSettings() {
 
         {/* Contenu des onglets */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 md:p-8">
             {/* Onglet Général */}
             {activeTab === 'general' && (
               <div className="space-y-6">
@@ -512,26 +512,26 @@ export default function SystemSettings() {
                     <Globe className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Configuration Générale</h3>
-                    <p className="text-sm text-gray-500">Paramètres de base de votre plateforme</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Configuration Générale</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Paramètres de base de votre plateforme</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       Nom du site
                     </label>
                     <input
                       type="text"
                       value={config.general.siteName}
                       onChange={(e) => handleConfigChange('general', 'siteName', e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400"
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-white hover:border-gray-400 dark:hover:border-slate-500"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       URL du site
                     </label>
                     <div className="relative">
@@ -539,7 +539,7 @@ export default function SystemSettings() {
                         type="url"
                         value={config.general.siteUrl}
                         onChange={(e) => handleConfigChange('general', 'siteUrl', e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white hover:border-gray-400 pr-10"
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg focus:border-mdsc-blue-primary focus:ring-2 focus:ring-mdsc-blue-primary/20 transition-all duration-200 bg-white dark:bg-slate-800 text-gray-900 dark:text-white hover:border-gray-400 dark:hover:border-slate-500 pr-10"
                       />
                       <button
                         onClick={() => copyToClipboard(config.general.siteUrl, 'URL')}

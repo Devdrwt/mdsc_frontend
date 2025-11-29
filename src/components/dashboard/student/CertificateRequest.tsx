@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Award, CheckCircle, Clock, AlertCircle, Download, Loader, GraduationCap, User, Calendar } from 'lucide-react';
 import { certificateService } from '../../../lib/services/certificateService';
+import { ratingService } from '../../../lib/services/ratingService';
 import { Certificate } from '../../../types/course';
 import toast from '../../../lib/utils/toast';
 import ProfileVerificationModal from './ProfileVerificationModal';
+import RatingModal from '../../courses/RatingModal';
 
 interface CertificateRequestProps {
   courseId?: string;
@@ -20,6 +22,8 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
   const [showProfileVerificationModal, setShowProfileVerificationModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
 
   useEffect(() => {
     loadCertificates();
@@ -81,6 +85,48 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
     }
   };
 
+  const isRatingRequiredError = (error: any): boolean => {
+    if (!error) return false;
+    const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+    return (
+      error.requires_rating === true ||
+      error.details?.requires_rating === true ||
+      error.details?.data?.requires_rating === true ||
+      error.response?.data?.requires_rating === true ||
+      error.response?.requires_rating === true ||
+      message.includes('noter') ||
+      message.includes('rating')
+    );
+  };
+
+  const needsRatingBeforeCertificate = async (): Promise<boolean> => {
+    if (!enrollmentId) {
+      return false;
+    }
+
+    try {
+      const result = await ratingService.canRate(enrollmentId);
+      return result.can_rate && !result.has_rated;
+    } catch (error) {
+      console.error('[CertificateRequest] Impossible de vérifier la notation:', error);
+      return false;
+    }
+  };
+
+  const attemptCertificateGeneration = async () => {
+    if (!courseId) {
+      throw new Error('Impossible de générer le certificat sans courseId');
+    }
+
+    await certificateService.generateForCourse(courseId);
+    toast.success(
+      'Certificat généré',
+      'Votre certificat a été généré avec succès avec les données de votre profil.'
+    );
+    setShowProfileVerificationModal(false);
+    await loadCertificates();
+  };
+
   const handleConfirmProfileData = async () => {
     if (!courseId) {
       toast.error('Erreur', 'Impossible de générer le certificat sans courseId');
@@ -89,18 +135,32 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
 
     setRequesting(true);
     try {
-      // Utiliser generateForCourse pour créer le certificat après confirmation des données
-      // Le backend vérifie que l'évaluation finale est réussie avant de créer le certificat
-      await certificateService.generateForCourse(courseId);
-      toast.success(
-        'Certificat généré',
-        'Votre certificat a été généré avec succès avec les données de votre profil.'
-      );
-      setShowProfileVerificationModal(false);
-      loadCertificates();
+      // La notation est maintenant optionnelle, on peut générer le certificat directement
+      await attemptCertificateGeneration();
     } catch (error: any) {
       console.error('Erreur lors de la génération du certificat:', error);
+      
+      // La notation est maintenant optionnelle, on affiche simplement l'erreur
       toast.error('Erreur', error.message || 'Impossible de générer le certificat');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleCertificateGenerationAfterRating = async () => {
+    if (!pendingCertificateAfterRating) {
+      return;
+    }
+
+    try {
+      setRequesting(true);
+      await attemptCertificateGeneration();
+      setPendingCertificateAfterRating(false);
+    } catch (error: any) {
+      console.error('[CertificateRequest] Erreur après notation lors de la génération:', error);
+      if (!isRatingRequiredError(error)) {
+        toast.error('Erreur', error.message || 'Impossible de générer le certificat');
+      }
     } finally {
       setRequesting(false);
     }
@@ -284,6 +344,23 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
           onConfirm={handleConfirmProfileData}
           onUpdateProfile={handleUpdateProfile}
           courseId={courseId}
+        />
+      )}
+
+      {/* Modal de notation (requis avant certificat) */}
+      {courseId && enrollmentId && (
+        <RatingModal
+          courseId={parseInt(courseId, 10)}
+          enrollmentId={enrollmentId}
+          isOpen={showRatingModal}
+          onClose={() => {
+            setShowRatingModal(false);
+            setPendingCertificateAfterRating(false);
+          }}
+          onSuccess={async () => {
+            setShowRatingModal(false);
+            await handleCertificateGenerationAfterRating();
+          }}
         />
       )}
     </div>

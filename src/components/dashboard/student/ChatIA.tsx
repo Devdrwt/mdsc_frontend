@@ -30,7 +30,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Bonjour ${user?.firstName} ! 👋 Je suis votre assistant IA personnel. Je peux vous aider avec vos cours, répondre à vos questions, générer des résumés et vous recommander du contenu. Comment puis-je vous aider aujourd'hui ?`,
+      content: `Bonjour ${user?.firstName} ! 👋 Je suis votre assistant IA personnel de la Maison de la Société Civile (MdSC). Je peux vous aider avec vos formations MdSC, répondre à vos questions sur les cours, générer des résumés des modules et vous recommander du contenu pédagogique. Je suis spécialisé dans les sujets concernant MdSC et ses formations. Comment puis-je vous aider aujourd'hui ?`,
       timestamp: new Date(),
       context,
     };
@@ -110,8 +110,8 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
       {/* En-tête */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <Bot className="h-6 w-6 text-purple-600" />
+          <div className="p-2 bg-mdsc-blue-dark/20 rounded-lg">
+            <Bot className="h-6 w-6 text-mdsc-blue-primary" />
           </div>
           <div>
             <h3 className="font-semibold text-gray-900">Assistant IA</h3>
@@ -119,7 +119,7 @@ export default function ChatIA({ courseId, moduleId }: ChatIAProps) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Sparkles className="h-4 w-4 text-purple-500" />
+          <Sparkles className="h-4 w-4 text-mdsc-blue-dark" />
           <span className="text-sm text-gray-500">GPT-3.5</span>
         </div>
       </div>

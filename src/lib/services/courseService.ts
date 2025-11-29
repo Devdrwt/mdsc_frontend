@@ -89,6 +89,8 @@ export interface CreateCourseData {
   enrollment_deadline?: string;
   course_start_date?: string;
   course_end_date?: string;
+  course_type?: 'live' | 'on_demand';
+  max_students?: number;
 }
 
 export interface UpdateCourseData {
@@ -434,6 +436,14 @@ export class CourseService {
     });
   }
 
+  // Demander la suppression d'un cours publié (pour instructeur)
+  static async requestCourseDeletion(id: string, reason?: string): Promise<void> {
+    await apiRequest(`/courses/${id}/request-deletion`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
   // Publier/Dépublier un cours
   static async toggleCourseStatus(id: string): Promise<Course> {
     const response = await apiRequest(`/courses/${id}/toggle-status`, {
@@ -612,9 +622,9 @@ export class CourseService {
     return response.data;
   }
 
-  // Supprimer une leçon
-  static async deleteLesson(lessonId: string): Promise<void> {
-    await apiRequest(`/lessons/${lessonId}`, {
+  // Supprimer une leçon (endpoint RESTful /courses/:courseId/lessons/:lessonId)
+  static async deleteLesson(courseId: string | number, lessonId: string | number): Promise<void> {
+    await apiRequest(`/courses/${courseId}/lessons/${lessonId}`, {
       method: 'DELETE',
     });
   }

@@ -687,9 +687,11 @@ function StudentDashboardContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <AuthGuard requiredRole="student">
+      <DashboardLayout userRole="student">
+        <div className="space-y-8">
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-mdsc-blue-primary via-mdsc-blue-dark to-mdsc-blue-primary rounded-2xl p-8 text-white">
+          <div className="relative overflow-hidden bg-mdsc-blue-primary rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
@@ -1081,6 +1083,8 @@ function StudentDashboardContent() {
             </div>
           </div>
         </div>
+      </DashboardLayout>
+    </AuthGuard>
   );
 }
 
