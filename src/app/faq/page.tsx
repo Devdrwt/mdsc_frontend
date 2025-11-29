@@ -274,7 +274,6 @@ export default function FAQPage() {
       setOpenCategory('general');
       setOpenItems(new Set());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   const toggleCategory = (categoryId: string) => {

@@ -209,25 +209,42 @@ export class CourseService {
                 ...module,
                 lessons: module.lessons.map((lesson: any) => {
                   // Créer l'objet mediaFile si les données médias sont disponibles
+                  // Priorité 1: lesson.media (nouvelle structure - peut être un objet ou un tableau)
                   let mediaFile: any = null;
-                  const mediaFileId = lesson.media_file_id || lesson.media_file_id_from_join;
-                  if (mediaFileId || lesson.media_url || lesson.file_category) {
-                    mediaFile = {
-                      id: mediaFileId || lesson.id,
-                      url: lesson.media_url || lesson.content_url || lesson.video_url || '',
-                      thumbnail_url: lesson.thumbnail_url,
-                      thumbnailUrl: lesson.thumbnail_url,
-                      file_category: lesson.file_category,
-                      fileCategory: lesson.file_category,
-                      original_filename: lesson.original_filename || '',
-                      originalFilename: lesson.original_filename || '',
-                      file_size: lesson.file_size || 0,
-                      fileSize: lesson.file_size || 0,
-                      file_type: lesson.file_type || '',
-                      fileType: lesson.file_type || '',
-                      lesson_id: lesson.id,
-                      lessonId: lesson.id,
-                    };
+                  
+                  if (lesson.media) {
+                    // Si c'est un tableau, prendre le premier média
+                    if (Array.isArray(lesson.media) && lesson.media.length > 0) {
+                      mediaFile = lesson.media[0];
+                    } 
+                    // Si c'est un objet
+                    else if (typeof lesson.media === 'object' && lesson.media !== null) {
+                      mediaFile = lesson.media;
+                    }
+                  }
+                  // Priorité 2: Construire depuis les champs individuels
+                  else {
+                    const mediaFileId = lesson.media_file_id || lesson.media_file_id_from_join;
+                    const mediaUrl = lesson.media_url || lesson.content_url || lesson.video_url || lesson.document_url || '';
+                    
+                    if (mediaFileId || mediaUrl || lesson.file_category) {
+                      mediaFile = {
+                        id: mediaFileId || lesson.id,
+                        url: mediaUrl,
+                        thumbnail_url: lesson.thumbnail_url,
+                        thumbnailUrl: lesson.thumbnail_url,
+                        file_category: lesson.file_category,
+                        fileCategory: lesson.file_category,
+                        original_filename: lesson.original_filename || '',
+                        originalFilename: lesson.original_filename || '',
+                        file_size: lesson.file_size || 0,
+                        fileSize: lesson.file_size || 0,
+                        file_type: lesson.file_type || '',
+                        fileType: lesson.file_type || '',
+                        lesson_id: lesson.id,
+                        lessonId: lesson.id,
+                      };
+                    }
                   }
 
                   return {
@@ -242,11 +259,14 @@ export class CourseService {
                     contentType: lesson.content_type ?? 'text',
                     content_text: lesson.content_text ?? lesson.content ?? '',
                     contentText: lesson.content_text ?? lesson.content ?? '',
-                    content_url: lesson.content_url ?? lesson.video_url ?? null,
-                    contentUrl: lesson.content_url ?? lesson.video_url ?? null,
-                    media_file_id: lesson.media_file_id,
-                    mediaFileId: lesson.media_file_id,
+                    content_url: lesson.content_url ?? lesson.video_url ?? lesson.media_url ?? null,
+                    contentUrl: lesson.content_url ?? lesson.video_url ?? lesson.media_url ?? null,
+                    media_url: lesson.media_url || mediaFile?.url || null,
+                    video_url: lesson.video_url || (lesson.content_type === 'video' ? mediaFile?.url : null) || null,
+                    media_file_id: lesson.media_file_id || mediaFile?.id || null,
+                    mediaFileId: lesson.media_file_id || mediaFile?.id || null,
                     mediaFile: mediaFile,
+                    media: lesson.media || (mediaFile ? [mediaFile] : null),
                     is_published: lesson.is_published ?? true,
                     isPublished: lesson.is_published ?? true,
                   };
@@ -296,25 +316,42 @@ export class CourseService {
             ...module,
             lessons: module.lessons.map((lesson: any) => {
               // Créer l'objet mediaFile si les données médias sont disponibles
+              // Priorité 1: lesson.media (nouvelle structure - peut être un objet ou un tableau)
               let mediaFile: any = null;
-              const mediaFileId = lesson.media_file_id || lesson.media_file_id_from_join;
-              if (mediaFileId || lesson.media_url || lesson.file_category) {
-                mediaFile = {
-                  id: mediaFileId || lesson.id,
-                  url: lesson.media_url || lesson.content_url || lesson.video_url || '',
-                  thumbnail_url: lesson.thumbnail_url,
-                  thumbnailUrl: lesson.thumbnail_url,
-                  file_category: lesson.file_category,
-                  fileCategory: lesson.file_category,
-                  original_filename: lesson.original_filename || '',
-                  originalFilename: lesson.original_filename || '',
-                  file_size: lesson.file_size || 0,
-                  fileSize: lesson.file_size || 0,
-                  file_type: lesson.file_type || '',
-                  fileType: lesson.file_type || '',
-                  lesson_id: lesson.id,
-                  lessonId: lesson.id,
-                };
+              
+              if (lesson.media) {
+                // Si c'est un tableau, prendre le premier média
+                if (Array.isArray(lesson.media) && lesson.media.length > 0) {
+                  mediaFile = lesson.media[0];
+                } 
+                // Si c'est un objet
+                else if (typeof lesson.media === 'object' && lesson.media !== null) {
+                  mediaFile = lesson.media;
+                }
+              }
+              // Priorité 2: Construire depuis les champs individuels
+              else {
+                const mediaFileId = lesson.media_file_id || lesson.media_file_id_from_join;
+                const mediaUrl = lesson.media_url || lesson.content_url || lesson.video_url || lesson.document_url || '';
+                
+                if (mediaFileId || mediaUrl || lesson.file_category) {
+                  mediaFile = {
+                    id: mediaFileId || lesson.id,
+                    url: mediaUrl,
+                    thumbnail_url: lesson.thumbnail_url,
+                    thumbnailUrl: lesson.thumbnail_url,
+                    file_category: lesson.file_category,
+                    fileCategory: lesson.file_category,
+                    original_filename: lesson.original_filename || '',
+                    originalFilename: lesson.original_filename || '',
+                    file_size: lesson.file_size || 0,
+                    fileSize: lesson.file_size || 0,
+                    file_type: lesson.file_type || '',
+                    fileType: lesson.file_type || '',
+                    lesson_id: lesson.id,
+                    lessonId: lesson.id,
+                  };
+                }
               }
 
               return {
@@ -329,11 +366,14 @@ export class CourseService {
                 contentType: lesson.content_type ?? 'text',
                 content_text: lesson.content_text ?? lesson.content ?? '',
                 contentText: lesson.content_text ?? lesson.content ?? '',
-                content_url: lesson.content_url ?? lesson.video_url ?? null,
-                contentUrl: lesson.content_url ?? lesson.video_url ?? null,
-                media_file_id: lesson.media_file_id,
-                mediaFileId: lesson.media_file_id,
+                content_url: lesson.content_url ?? lesson.video_url ?? lesson.media_url ?? null,
+                contentUrl: lesson.content_url ?? lesson.video_url ?? lesson.media_url ?? null,
+                media_url: lesson.media_url || mediaFile?.url || null,
+                video_url: lesson.video_url || (lesson.content_type === 'video' ? mediaFile?.url : null) || null,
+                media_file_id: lesson.media_file_id || mediaFile?.id || null,
+                mediaFileId: lesson.media_file_id || mediaFile?.id || null,
                 mediaFile: mediaFile,
+                media: lesson.media || (mediaFile ? [mediaFile] : null),
                 is_published: lesson.is_published ?? true,
                 isPublished: lesson.is_published ?? true,
               };

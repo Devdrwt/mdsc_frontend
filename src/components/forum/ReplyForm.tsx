@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Send, X, Loader2 } from "lucide-react";
 import { forumService } from "../../lib/services/forumService";
 import toast from "../../lib/utils/toast";

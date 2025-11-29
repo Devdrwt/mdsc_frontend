@@ -1693,12 +1693,12 @@ export default function CoursePlayer({
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full lg:w-auto">
         <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 order-1">
               {/* Bouton menu mobile */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+                className="lg:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0 mb-2 sm:mb-0"
                 aria-label="Ouvrir le menu"
               >
                 <Menu className="h-5 w-5" />

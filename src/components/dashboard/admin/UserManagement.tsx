@@ -872,7 +872,7 @@ export default function UserManagement() {
           pageSize={10}
         />
       )}
-    </div>
+      </div>
 
       <Modal
         isOpen={inviteModalOpen}

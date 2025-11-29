@@ -40,17 +40,19 @@ export default function WaitingRoomPage() {
       setError(null);
       
       const courseData = await CourseService.getCourseById(courseId);
-      setCourse(courseData);
+      setCourse(courseData as unknown as Course);
       
       // Charger les fichiers de support du cours (documents uniquement)
       try {
         const mediaFiles = await mediaService.getCourseMedia(courseId);
         // Filtrer pour ne garder que les documents
         const documents = mediaFiles.filter(
-          (file: MediaFile) => 
-            file.file_category === 'document' || 
-            file.fileCategory === 'document' ||
-            (file.content_type && ['document', 'presentation'].includes(file.content_type))
+          (file: MediaFile) => {
+            const fileAny = file as any;
+            return fileAny.file_category === 'document' ||
+              fileAny.fileCategory === 'document' ||
+              (fileAny.content_type && ['document', 'presentation'].includes(fileAny.content_type));
+          }
         );
         setSupportFiles(documents);
       } catch (mediaError) {
@@ -303,9 +305,10 @@ export default function WaitingRoomPage() {
                   const fileName = file.original_filename || file.originalFilename || file.filename || 'Document';
                   const fileSize = file.file_size || file.fileSize;
                   
+                  const fileAny = file as any;
                   return (
                     <div
-                      key={file.id || file.file_id}
+                      key={file.id || fileAny.file_id}
                       className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                     >
                       <div className="flex items-start space-x-3">

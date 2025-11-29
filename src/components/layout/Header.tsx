@@ -41,7 +41,7 @@ export default function Header() {
   };
 
   // Synchroniser les changements de thème avec le backend
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
     if (!isAuthenticated || !user || user.role !== 'student') {

@@ -46,7 +46,7 @@ export default function PaymentSuccess({
             
             addToCalendar({
               title: courseTitle,
-              description: course.description || course.short_description || '',
+              description: course.description || course.shortDescription || '',
               startDate,
               endDate,
               location: 'En ligne',

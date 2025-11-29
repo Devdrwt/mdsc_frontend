@@ -310,7 +310,7 @@ export default function CourseDetailPage() {
             
             addToCalendar({
               title: course.title || 'Cours en live',
-              description: course.description || course.short_description || '',
+              description: course.description || course.shortDescription || '',
               startDate,
               endDate,
               location: 'En ligne',

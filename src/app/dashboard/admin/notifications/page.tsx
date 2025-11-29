@@ -275,7 +275,7 @@ export default function AdminNotificationsPage() {
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => loadNotifications((pagination.page ?? 1) - 1)}
-                disabled={!pagination.has_previous_page || loading}
+                disabled={(pagination.page ?? 1) <= 1 || loading}
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Précédent
@@ -285,7 +285,7 @@ export default function AdminNotificationsPage() {
               </span>
               <button
                 onClick={() => loadNotifications((pagination.page ?? 1) + 1)}
-                disabled={!pagination.has_next_page || loading}
+                disabled={(pagination.page ?? 1) >= (pagination.total_pages ?? 1) || loading}
                 className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Suivant

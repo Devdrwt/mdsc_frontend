@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader } from 'lucide-react';
+import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader, AlertCircle } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
@@ -209,22 +209,41 @@ export default function LessonContent({
     const lessonAny = lesson as any;
     let resolvedMedia: MediaFile | null = null;
     
+    console.log('[LessonContent] 🔍 Chargement des médias pour la leçon:', {
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      contentType,
+      hasMedia: !!lessonAny.media,
+      hasMediaFile: !!lesson.mediaFile,
+      hasMediaUrl: !!lessonAny.media_url,
+      hasContentUrl: !!contentUrl,
+      hasVideoUrl: !!lessonAny.video_url,
+      mediaData: lessonAny.media ? (Array.isArray(lessonAny.media) ? `Array[${lessonAny.media.length}]` : 'Object') : null,
+      mediaFileData: lesson.mediaFile ? 'Object' : null,
+      mediaUrl: lessonAny.media_url,
+      contentUrl: contentUrl,
+      videoUrl: lessonAny.video_url,
+    });
+    
     if (lessonAny.media) {
       // Si c'est un tableau, prendre le premier média
       if (Array.isArray(lessonAny.media) && lessonAny.media.length > 0) {
         resolvedMedia = lessonAny.media[0] as MediaFile;
+        console.log('[LessonContent] ✅ Média trouvé dans lesson.media (tableau):', resolvedMedia);
       } 
       // Si c'est un objet
       else if (typeof lessonAny.media === 'object' && lessonAny.media !== null) {
         resolvedMedia = lessonAny.media as MediaFile;
+        console.log('[LessonContent] ✅ Média trouvé dans lesson.media (objet):', resolvedMedia);
       }
     }
     // Priorité 2: lesson.mediaFile (ancienne structure)
     else if (lesson.mediaFile) {
       resolvedMedia = lesson.mediaFile;
+      console.log('[LessonContent] ✅ Média trouvé dans lesson.mediaFile:', resolvedMedia);
     } 
     // Priorité 3: Construire mediaFile à partir des champs individuels (fallback)
-    else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join) {
+    else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join || lessonAny.video_url) {
       const fileCategory: 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other' = 
         (lessonAny.file_category as 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other') || 
         (contentType === 'video' ? 'video' : 
@@ -234,7 +253,13 @@ export default function LessonContent({
          contentType === 'h5p' ? 'h5p' : 'other');
       
       const mediaFileId = lessonAny.media_file_id || lessonAny.media_file_id_from_join;
-      const mediaUrl = lessonAny.media_url || contentUrl || lessonAny.content_url || '';
+      // Essayer plusieurs sources pour l'URL du média
+      const mediaUrl = lessonAny.media_url || 
+                       lessonAny.video_url || 
+                       contentUrl || 
+                       lessonAny.content_url || 
+                       lessonAny.document_url || 
+                       '';
       
       // Si on a un media_file_id ou media_url, créer l'objet mediaFile
       if (mediaFileId || mediaUrl) {
@@ -254,7 +279,17 @@ export default function LessonContent({
           lesson_id: lesson.id,
           lessonId: lesson.id,
         } as MediaFile;
+        console.log('[LessonContent] ✅ Média construit à partir des champs individuels:', resolvedMedia);
+      } else {
+        console.warn('[LessonContent] ⚠️ Aucune URL de média trouvée pour la leçon:', lesson.id);
       }
+    } else {
+      console.warn('[LessonContent] ⚠️ Aucune donnée de média trouvée pour la leçon:', {
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        contentType,
+        lessonAnyKeys: Object.keys(lessonAny),
+      });
     }
     
     // Normaliser le mediaFile résolu pour s'assurer qu'il a toutes les propriétés nécessaires
@@ -278,6 +313,13 @@ export default function LessonContent({
         lessonId: (typeof resolvedMedia.lessonId === 'number' ? resolvedMedia.lessonId : typeof resolvedMedia.lesson_id === 'number' ? resolvedMedia.lesson_id : lesson.id),
       };
       
+      console.log('[LessonContent] ✅ Média normalisé et défini:', {
+        id: normalizedMedia.id,
+        url: normalizedMedia.url,
+        fileCategory: normalizedMedia.fileCategory,
+        originalFilename: normalizedMedia.originalFilename,
+      });
+      
       setMediaFile(normalizedMedia);
       
       // Activer la protection globale si c'est un document PDF
@@ -296,6 +338,7 @@ export default function LessonContent({
         window.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
       }
     } else {
+      console.warn('[LessonContent] ⚠️ Aucun média résolu, mediaFile sera null');
       setMediaFile(null);
     }
 
@@ -547,34 +590,70 @@ export default function LessonContent({
   const renderMediaContent = () => {
     // Si mediaFile n'existe pas mais contentUrl existe, construire un mediaFile minimal
     let effectiveMediaFile = mediaFile;
-    if (!effectiveMediaFile && contentUrl) {
-      // Déterminer le type de média basé sur contentType et contentUrl
-      const fileCategory = contentType === 'video' ? 'video' :
-                          contentType === 'audio' ? 'audio' :
-                          contentType === 'document' ? 'document' :
-                          contentType === 'presentation' ? 'presentation' :
-                          contentType === 'h5p' ? 'h5p' : 'other';
+    const lessonAny = lesson as any;
+    
+    if (!effectiveMediaFile) {
+      // Essayer de construire un mediaFile à partir de contentUrl ou d'autres sources
+      const fallbackUrl = contentUrl || 
+                         lessonAny.media_url || 
+                         lessonAny.video_url || 
+                         lessonAny.content_url || 
+                         lessonAny.document_url || 
+                         '';
       
-      effectiveMediaFile = {
-        id: lesson.id,
-        url: contentUrl,
-        thumbnail_url: lesson.thumbnail_url,
-        thumbnailUrl: lesson.thumbnail_url,
-        file_category: fileCategory,
-        fileCategory: fileCategory,
-        original_filename: lesson.title || '',
-        originalFilename: lesson.title || '',
-        file_size: 0,
-        fileSize: 0,
-        file_type: '',
-        fileType: '',
-        lesson_id: lesson.id,
-        lessonId: lesson.id,
-      } as MediaFile;
+      if (fallbackUrl) {
+        // Déterminer le type de média basé sur contentType et contentUrl
+        const fileCategory = contentType === 'video' ? 'video' :
+                            contentType === 'audio' ? 'audio' :
+                            contentType === 'document' ? 'document' :
+                            contentType === 'presentation' ? 'presentation' :
+                            contentType === 'h5p' ? 'h5p' : 'other';
+        
+        effectiveMediaFile = {
+          id: lesson.id,
+          url: fallbackUrl,
+          thumbnail_url: lessonAny.thumbnail_url || lesson.thumbnail_url,
+          thumbnailUrl: lessonAny.thumbnail_url || lesson.thumbnail_url,
+          file_category: fileCategory,
+          fileCategory: fileCategory,
+          original_filename: lessonAny.original_filename || lessonAny.filename || lesson.title || '',
+          originalFilename: lessonAny.original_filename || lessonAny.filename || lesson.title || '',
+          file_size: lessonAny.file_size || 0,
+          fileSize: lessonAny.file_size || 0,
+          file_type: lessonAny.file_type || '',
+          fileType: lessonAny.file_type || '',
+          lesson_id: lesson.id,
+          lessonId: lesson.id,
+        } as MediaFile;
+        
+        console.log('[LessonContent] 🔧 MediaFile construit depuis fallbackUrl:', {
+          url: fallbackUrl,
+          fileCategory,
+          lessonId: lesson.id,
+        });
+      }
     }
     
     if (!effectiveMediaFile) {
-      return null;
+      console.warn('[LessonContent] ⚠️ Aucun média disponible pour affichage:', {
+        lessonId: lesson.id,
+        contentType,
+        hasMediaFile: !!mediaFile,
+        hasContentUrl: !!contentUrl,
+      });
+      
+      // Afficher un message d'erreur informatif au lieu de retourner null
+      return (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
+          <p className="text-yellow-800 font-medium mb-2">
+            Contenu non disponible
+          </p>
+          <p className="text-yellow-700 text-sm">
+            Le contenu de cette leçon n'a pas pu être chargé. Veuillez contacter le support si le problème persiste.
+          </p>
+        </div>
+      );
     }
 
     const mediaType = effectiveMediaFile.fileCategory;
@@ -660,6 +739,8 @@ export default function LessonContent({
                 onError={(e) => {
                   const videoElement = e.currentTarget;
                   const error = videoElement.error;
+                  let errorMessage = 'Erreur lors du chargement de la vidéo';
+                  
                   console.error('Erreur lors du chargement de la vidéo:', {
                     url: videoUrl,
                     errorCode: error?.code,
@@ -669,24 +750,31 @@ export default function LessonContent({
                     src: videoElement.src,
                   });
                   
-                  // Afficher un message d'erreur plus détaillé dans la console
+                  // Afficher un message d'erreur plus détaillé dans la console et dans l'UI
                   if (error) {
                     switch (error.code) {
                       case MediaError.MEDIA_ERR_ABORTED:
+                        errorMessage = 'Le chargement de la vidéo a été interrompu. Veuillez réessayer.';
                         console.error('Le chargement de la vidéo a été interrompu');
                         break;
                       case MediaError.MEDIA_ERR_NETWORK:
+                        errorMessage = 'Une erreur réseau a empêché le chargement de la vidéo. Vérifiez votre connexion internet.';
                         console.error('Une erreur réseau a empêché le chargement de la vidéo');
                         break;
                       case MediaError.MEDIA_ERR_DECODE:
+                        errorMessage = 'Le format de la vidéo n\'est pas supporté par votre navigateur.';
                         console.error('Le décodage de la vidéo a échoué');
                         break;
                       case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = 'Le format de la vidéo n\'est pas supporté ou l\'URL est invalide.';
                         console.error('Le format de la vidéo n\'est pas supporté ou l\'URL est invalide');
                         break;
                       default:
+                        errorMessage = 'Erreur inconnue lors du chargement de la vidéo.';
                         console.error('Erreur inconnue lors du chargement de la vidéo');
                     }
+                  } else {
+                    errorMessage = 'Impossible de charger la vidéo. Vérifiez que l\'URL est correcte et que le fichier existe.';
                   }
                 }}
               >
@@ -919,7 +1007,7 @@ export default function LessonContent({
                   touchAction: 'none',
                   WebkitTouchCallout: 'none',
                   KhtmlUserSelect: 'none',
-                  // @ts-ignore - Propriétés webkit non standard
+                  // @ts-expect-error - Propriétés webkit non standard
                   WebkitUserDrag: 'none'
                 }}
                 onContextMenu={(e) => {
@@ -1115,13 +1203,13 @@ export default function LessonContent({
                             if (doc.body) {
                               doc.body.style.userSelect = 'none';
                               doc.body.style.webkitUserSelect = 'none';
-                              // @ts-ignore - Propriétés non standard
+                              // @ts-expect-error - Propriétés non standard
                               doc.body.style.mozUserSelect = 'none';
-                              // @ts-ignore - Propriétés non standard
+                              // @ts-expect-error - Propriétés non standard
                               doc.body.style.msUserSelect = 'none';
-                              // @ts-ignore - Propriétés webkit non standard
+                              // @ts-expect-error - Propriétés webkit non standard
                               doc.body.style.webkitTouchCallout = 'none';
-                              // @ts-ignore - Propriétés webkit non standard
+                              // @ts-expect-error - Propriétés webkit non standard
                               doc.body.style.webkitUserDrag = 'none';
                               // Empêcher le menu contextuel via CSS
                               doc.body.setAttribute('oncontextmenu', 'return false;');
@@ -1192,7 +1280,7 @@ export default function LessonContent({
                     touchAction: 'none',
                     WebkitTouchCallout: 'none',
                     KhtmlUserSelect: 'none',
-                    // @ts-ignore - Propriétés webkit non standard
+                    // @ts-expect-error - Propriétés webkit non standard
                     WebkitUserDrag: 'none'
                   }}
                   onContextMenu={(e) => {

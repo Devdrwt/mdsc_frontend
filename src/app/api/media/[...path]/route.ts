@@ -72,19 +72,22 @@ export async function GET(
     const publicUploadsUrl = `${baseUrl}/public/uploads/${cleanPath}`;
     alternativeUrls.push(publicUploadsUrl);
     
-    // Log pour vérifier la construction des URLs
-    console.log('🔍 [PROXY] Construction des URLs:', {
-      cleanPath,
-      baseUrl,
-      apiBaseUrl,
-      mediaUrl,
-      alternativeUrls: alternativeUrls.map((url, idx) => ({
-        index: idx,
-        url,
-        type: typeof url,
-        length: url.length,
-      })),
-    });
+    // Log pour vérifier la construction des URLs (seulement en développement pour éviter les logs excessifs en production)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [PROXY] Construction des URLs:', {
+        cleanPath,
+        baseUrl,
+        apiBaseUrl,
+        mediaUrl,
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+        alternativeUrls: alternativeUrls.map((url, idx) => ({
+          index: idx,
+          url,
+          type: typeof url,
+          length: url.length,
+        })),
+      });
+    }
     
     // Valider les URLs avant de les utiliser
     const validateUrl = (url: string): boolean => {
@@ -112,27 +115,64 @@ export async function GET(
     // Valider les URLs alternatives
     const validAlternativeUrls = alternativeUrls.filter(validateUrl);
     
-    console.log('🖼️ [PROXY] Récupération de l\'image:', {
-      params: resolvedParams,
-      pathArray,
-      path,
-      cleanPath,
-      mediaUrl,
-      alternativeUrls: validAlternativeUrls,
-      MEDIA_BASE_URL,
-      baseUrl,
-      apiBaseUrl,
-    });
+    // Log seulement en développement
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🖼️ [PROXY] Récupération du média:', {
+        params: resolvedParams,
+        pathArray,
+        path,
+        cleanPath,
+        mediaUrl,
+        alternativeUrls: validAlternativeUrls,
+        MEDIA_BASE_URL,
+        baseUrl,
+        apiBaseUrl,
+      });
+    }
     
-    // Récupérer l'image depuis le backend
-    let response = await fetch(mediaUrl, {
+    // Récupérer le média depuis le backend (image, vidéo, audio, document, etc.)
+    // En production, ajouter un timeout pour éviter les attentes infinies
+    let abortController: AbortController | null = null;
+    if (process.env.NODE_ENV === 'production') {
+      abortController = new AbortController();
+      // Timeout de 30 secondes en production
+      setTimeout(() => {
+        if (abortController) {
+          abortController.abort();
+        }
+      }, 30000);
+    }
+    
+    const fetchOptions: RequestInit = {
       method: 'GET',
       headers: {
-        'Accept': 'image/*,*/*',
+        'Accept': '*/*', // Accepter tous les types de médias (image, vidéo, audio, document, etc.)
+        'User-Agent': 'MDSC-Frontend-Media-Proxy/1.0',
       },
       // Désactiver le cache pour éviter les problèmes
       cache: 'no-store',
-    });
+      signal: abortController?.signal,
+    };
+    
+    let response: Response;
+    try {
+      response = await fetch(mediaUrl, fetchOptions);
+    } catch (fetchError: any) {
+      console.error('❌ [PROXY] Erreur fetch:', {
+        url: mediaUrl,
+        error: fetchError.message,
+        name: fetchError.name,
+        code: fetchError.code,
+      });
+      
+      // Si c'est une erreur de timeout ou de réseau, essayer les URLs alternatives
+      if (fetchError.name === 'AbortError' || fetchError.name === 'TypeError') {
+        // Continuer avec les URLs alternatives
+        response = new Response(null, { status: 0 });
+      } else {
+        throw fetchError;
+      }
+    }
     
     // Si la première tentative échoue, essayer les URLs alternatives validées
     if (!response.ok && validAlternativeUrls.length > 0) {
@@ -141,30 +181,42 @@ export async function GET(
         
         // Vérifier que l'URL est bien construite avant de l'essayer
         const urlToTry = String(altUrl);
-        console.log(`⚠️ [PROXY] Première tentative échouée, essai avec URL alternative ${i + 1}/${validAlternativeUrls.length}:`, urlToTry);
-        console.log(`🔍 [PROXY] Détails de l'URL alternative ${i + 1}:`, {
-          original: altUrl,
-          stringified: urlToTry,
-          type: typeof altUrl,
-          length: urlToTry.length,
-        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`⚠️ [PROXY] Première tentative échouée, essai avec URL alternative ${i + 1}/${validAlternativeUrls.length}:`, urlToTry);
+        }
         
         try {
-          const altResponse = await fetch(urlToTry, {
+          let altAbortController: AbortController | null = null;
+          if (process.env.NODE_ENV === 'production') {
+            altAbortController = new AbortController();
+            setTimeout(() => {
+              if (altAbortController) {
+                altAbortController.abort();
+              }
+            }, 30000);
+          }
+          
+          const altFetchOptions: RequestInit = {
             method: 'GET',
             headers: {
-              'Accept': 'image/*,*/*',
+              'Accept': '*/*', // Accepter tous les types de médias
+              'User-Agent': 'MDSC-Frontend-Media-Proxy/1.0',
             },
             cache: 'no-store',
-          });
+            signal: altAbortController?.signal,
+          };
+          
+          const altResponse = await fetch(urlToTry, altFetchOptions);
           if (altResponse.ok) {
             // Mettre à jour mediaUrl et response si l'URL alternative fonctionne
             mediaUrl = urlToTry;
             response = altResponse;
-            console.log('✅ [PROXY] Image trouvée via URL alternative:', urlToTry);
+            console.log('✅ [PROXY] Média trouvé via URL alternative:', urlToTry);
             break;
           } else {
-            console.log(`⚠️ [PROXY] URL alternative ${i + 1} a retourné ${altResponse.status}:`, urlToTry);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`⚠️ [PROXY] URL alternative ${i + 1} a retourné ${altResponse.status}:`, urlToTry);
+            }
           }
         } catch (err: any) {
           console.warn(`⚠️ [PROXY] Erreur avec URL alternative ${i + 1}:`, urlToTry, err?.message || err);
@@ -173,37 +225,83 @@ export async function GET(
       }
     }
 
-    if (!response.ok) {
+    if (!response || !response.ok) {
+      const errorStatus = response?.status || 0;
+      const errorStatusText = response?.statusText || 'Unknown error';
+      
       console.error('❌ [PROXY] Erreur lors de la récupération:', {
-        status: response.status,
-        statusText: response.statusText,
+        status: errorStatus,
+        statusText: errorStatusText,
         url: mediaUrl,
+        cleanPath,
+        baseUrl,
+        apiBaseUrl,
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
       });
-      return new NextResponse(`Image not found: ${mediaUrl}`, { status: 404 });
+      
+      // En production, retourner une erreur plus détaillée pour le débogage
+      return new NextResponse(
+        JSON.stringify({
+          error: 'Media not found',
+          message: `Impossible de récupérer le média depuis: ${mediaUrl}`,
+          status: errorStatus,
+          path: cleanPath,
+        }),
+        { 
+          status: errorStatus || 404,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     }
 
     // Récupérer le type de contenu et les données
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const imageBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    let mediaBuffer: ArrayBuffer;
+    
+    try {
+      mediaBuffer = await response.arrayBuffer();
+    } catch (bufferError: any) {
+      console.error('❌ [PROXY] Erreur lors de la lecture du buffer:', {
+        error: bufferError.message,
+        url: mediaUrl,
+      });
+      return new NextResponse(
+        JSON.stringify({
+          error: 'Buffer read error',
+          message: bufferError.message,
+        }),
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
 
-    console.log('✅ [PROXY] Image récupérée avec succès:', {
-      contentType,
-      size: imageBuffer.byteLength,
-      url: mediaUrl,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ [PROXY] Média récupéré avec succès:', {
+        contentType,
+        size: mediaBuffer.byteLength,
+        url: mediaUrl,
+      });
+    }
 
-    // Retourner l'image avec les en-têtes appropriés
-    return new NextResponse(imageBuffer, {
+    // Retourner le média avec les en-têtes appropriés
+    return new NextResponse(mediaBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET',
+        'Accept-Ranges': 'bytes', // Important pour les vidéos (streaming)
       },
     });
   } catch (error: any) {
-    console.error('❌ [PROXY] Erreur lors du proxy de l\'image:', {
+    console.error('❌ [PROXY] Erreur lors du proxy du média:', {
       error: error.message,
       stack: error.stack,
     });

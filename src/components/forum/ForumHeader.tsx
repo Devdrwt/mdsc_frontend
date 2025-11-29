@@ -1,8 +1,8 @@
 "use client";
 
+import React, { useState } from "react";
 import { Users, Plus, Search, Layers3, Sparkles } from "lucide-react";
 import type { CourseForum } from "../../types/forum";
-import { useState } from "react";
 
 interface ForumHeaderProps {
   forum: CourseForum;

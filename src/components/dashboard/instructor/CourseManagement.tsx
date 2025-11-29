@@ -476,7 +476,8 @@ export default function CourseManagement() {
   // Vérifier si un cours est publié
   const isCoursePublished = (course: Course | null): boolean => {
     if (!course) return false;
-    const isPublishedValue = course.is_published ?? course.isPublished ?? false;
+    const courseAny = course as any;
+    const isPublishedValue = courseAny.is_published ?? course.isPublished ?? false;
     if (typeof isPublishedValue === 'boolean') return isPublishedValue;
     if (typeof isPublishedValue === 'number') return isPublishedValue === 1;
     if (typeof isPublishedValue === 'string') {
