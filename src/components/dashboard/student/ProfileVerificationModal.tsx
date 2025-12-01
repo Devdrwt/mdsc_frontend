@@ -133,15 +133,6 @@ export default function ProfileVerificationModal({
                     </p>
                   </div>
 
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">
-                      Téléphone
-                    </label>
-                    <p className="text-base font-semibold text-gray-900">
-                      {displayData?.phone || 'Non renseigné'}
-                    </p>
-                  </div>
-
                   {displayData?.country && (
                     <div className="bg-gray-50 rounded-lg p-4">
                       <label className="text-xs font-medium text-gray-500 uppercase mb-1 block">

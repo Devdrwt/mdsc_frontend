@@ -1694,7 +1694,7 @@ export default function CoursePlayer({
       <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full lg:w-auto">
         <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 order-1">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 order-1 flex-1">
               {/* Bouton menu mobile */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1723,33 +1723,36 @@ export default function CoursePlayer({
                 <span className="hidden md:inline">Retour à mes cours</span>
                 <span className="md:hidden">Retour</span>
               </Link>
-            </div>
-            {course.id && (
-              <div className="order-3 lg:order-2 w-full lg:w-auto flex justify-start lg:justify-center gap-2 sm:gap-3">
-                {/* Bouton Noter le cours */}
-                {enrollmentId && (
-                  <button
-                    onClick={() => setShowRatingModal(true)}
-                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold shadow-md transition-colors gap-2"
-                    title="Noter ce cours"
+              
+              {/* Boutons Noter et Forum déplacés à gauche */}
+              {course.id && (
+                <div className="flex gap-2 sm:gap-3">
+                  {/* Bouton Noter le cours */}
+                  {enrollmentId && (
+                    <button
+                      onClick={() => setShowRatingModal(true)}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-semibold shadow-md transition-colors gap-2"
+                      title="Noter ce cours"
+                    >
+                      <Star className="h-4 w-4 fill-current" />
+                      <span className="hidden sm:inline">Noter le cours</span>
+                      <span className="sm:hidden">Noter</span>
+                    </button>
+                  )}
+                  {/* Bouton Forum */}
+                  <Link
+                    href={`/courses/${typeof course.id === 'number' ? course.id : course.id}/forum`}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-mdsc-blue-primary text-white text-sm font-semibold shadow-md hover:bg-mdsc-blue-dark transition-colors gap-2"
                   >
-                    <Star className="h-4 w-4 fill-current" />
-                    <span className="hidden sm:inline">Noter le cours</span>
-                    <span className="sm:hidden">Noter</span>
-                  </button>
-                )}
-                {/* Bouton Forum */}
-                <Link
-                  href={`/courses/${typeof course.id === 'number' ? course.id : course.id}/forum`}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-mdsc-blue-primary text-white text-sm font-semibold shadow-md hover:bg-mdsc-blue-dark transition-colors gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  <span className="hidden sm:inline">Forum</span>
-                  <span className="sm:hidden">Forum</span>
-                </Link>
-              </div>
-            )}
-            <div className="flex items-center justify-between sm:justify-end text-xs sm:text-sm text-gray-600">
+                    <Users className="h-4 w-4" />
+                    <span className="hidden sm:inline">Forum</span>
+                    <span className="sm:hidden">Forum</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+            {/* Jauge de progression au milieu */}
+            <div className="order-2 flex items-center justify-center text-xs sm:text-sm text-gray-600">
               <div className="flex items-center">
                 <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
                 <span className="ml-1 hidden sm:inline">complété</span>
