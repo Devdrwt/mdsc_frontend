@@ -134,23 +134,21 @@ function CoursesPageContent() {
     }
   }, [searchParams]);
 
-  return (
-    <AuthGuard requiredRole="student">
-      <DashboardLayout userRole="student">
-        <MyCourses />
-      </DashboardLayout>
-    </AuthGuard>
-  );
+  return <MyCourses />;
 }
 
 export default function CoursesPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
-      <CoursesPageContent />
-    </Suspense>
+    <AuthGuard requiredRole="student">
+      <DashboardLayout userRole="student">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
+          </div>
+        }>
+          <CoursesPageContent />
+        </Suspense>
+      </DashboardLayout>
+    </AuthGuard>
   );
 }

@@ -27,13 +27,13 @@ function CertificatesContent() {
 
     setIsGenerating(true);
     try {
-      console.log('[CertificatesPage] 🎓 Génération automatique du certificat pour le cours:', courseId);
+      console.log('[CertificatesPage] 🎓 Génération automatique de l\'attestation pour le cours:', courseId);
       const result = await certificateService.generateForCourse(courseId);
-      console.log('[CertificatesPage] ✅ Certificat généré avec succès:', result);
+      console.log('[CertificatesPage] ✅ Attestation générée avec succès:', result);
       
       toast.success(
-        'Certificat généré',
-        'Votre certificat a été généré avec succès avec les données mises à jour de votre profil.'
+        'Attestation générée',
+        'Votre attestation a été générée avec succès avec les données mises à jour de votre profil.'
       );
       
       // Retirer les paramètres de l'URL pour éviter de régénérer
@@ -42,13 +42,13 @@ function CertificatesContent() {
       url.searchParams.delete('courseId');
       window.history.replaceState({}, '', url.toString());
       
-      // Recharger la page après un court délai pour afficher le nouveau certificat
+      // Recharger la page après un court délai pour afficher la nouvelle attestation
       setTimeout(() => {
         window.location.reload();
       }, 1500);
     } catch (error: any) {
-      console.error('[CertificatesPage] ❌ Erreur lors de la génération automatique du certificat:', error);
-      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez réessayer.';
+      console.error('[CertificatesPage] ❌ Erreur lors de la génération automatique de l\'attestation:', error);
+      const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer l\'attestation. Veuillez réessayer.';
       toast.error('Erreur', errorMessage);
       
       // Retirer les paramètres même en cas d'erreur pour éviter de réessayer indéfiniment
@@ -68,12 +68,12 @@ function CertificatesContent() {
           <div className="flex items-center space-x-3">
             <Loader className="h-5 w-5 text-blue-600 animate-spin" />
             <p className="text-sm text-blue-900">
-              Génération de votre certificat en cours...
+              Génération de votre attestation en cours...
             </p>
           </div>
         </div>
       )}
-      {/* Liste des certificats de l'utilisateur */}
+      {/* Liste des attestations de l'utilisateur */}
       <CertificateCollection />
     </div>
   );

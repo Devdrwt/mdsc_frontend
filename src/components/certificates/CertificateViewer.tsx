@@ -31,18 +31,19 @@ export default function CertificateViewer({
       const downloadUrl = await certificateService.downloadCertificate(certificate.id.toString());
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `certificat-${certificate.certificateCode}.pdf`;
+      a.download = `attestation-${certificate.certificateCode}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
     } catch (error) {
       console.error('Erreur lors du téléchargement:', error);
-      alert('Erreur lors du téléchargement du certificat');
+      alert('Erreur lors du téléchargement de l\'attestation');
     }
   };
 
   const handleVerify = () => {
-    const code = (certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
+    // Utiliser certificate_number (format MDSC-XXXXXX-BJ) pour la vérification
+    const code = ((certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificateCode || (certificate as any).certificate_code || '').toUpperCase();
     const verifyUrl = `/verify-certificate/${encodeURIComponent(code)}`;
     window.open(verifyUrl, '_blank');
   };
@@ -71,7 +72,7 @@ export default function CertificateViewer({
             <Award className="h-6 w-6 sm:h-8 sm:w-8" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold break-words">Certificat de Formation</h2>
+            <h2 className="text-xl sm:text-2xl font-bold break-words">Attestation de Formation</h2>
             <p className="text-sm sm:text-base text-white/90 mt-1 break-words">
               {certificate.course?.title || (certificate as any).course_title || '—'}
             </p>
@@ -81,7 +82,7 @@ export default function CertificateViewer({
         {certificate.verified && (
           <div className="flex items-center space-x-2 text-mdsc-gold text-sm sm:text-base">
             <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="font-medium">Certificat vérifié</span>
+            <span className="font-medium">Attestation vérifiée</span>
           </div>
         )}
       </div>
@@ -96,7 +97,7 @@ export default function CertificateViewer({
               courseTitle={certificate.course?.title || (certificate as any).course_title || '—'}
               location="Cotonou, Bénin"
               issuedAt={new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now())}
-              code={((certificate as any).certificate_code || certificate.certificateCode || '').toUpperCase()}
+              code={((certificate as any).certificate_number || (certificate as any).certificateNumber || (certificate as any).certificate_code || certificate.certificateCode || '').toUpperCase()}
             />
           </div>
         </div>
@@ -106,7 +107,7 @@ export default function CertificateViewer({
           <div>
             <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Code de vérification</h3>
             <p className="font-mono text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 break-all px-1">
-              {(certificate.certificateCode || (certificate as any).certificate_code || '—').toUpperCase()}
+              {((certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificateCode || (certificate as any).certificate_code || '—').toUpperCase()}
             </p>
           </div>
 

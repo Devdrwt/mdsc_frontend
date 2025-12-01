@@ -19,13 +19,13 @@ export default function CertificatePrintPage() {
         setLoading(true);
         const cert = await certificateService.getById(certId);
         if (!cert) {
-          setError('Certificat introuvable');
+          setError('Attestation introuvable');
         } else {
           setCertificate(cert as any);
           setError(null);
         }
       } catch (e: any) {
-        setError(e?.message || 'Erreur lors du chargement du certificat');
+        setError(e?.message || 'Erreur lors du chargement de l\'attestation');
       } finally {
         setLoading(false);
       }
@@ -55,7 +55,7 @@ export default function CertificatePrintPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
-          <div className="text-sm sm:text-base text-gray-600">Chargement du certificat…</div>
+          <div className="text-sm sm:text-base text-gray-600">Chargement de l'attestation…</div>
         </div>
       </div>
     );
@@ -65,7 +65,7 @@ export default function CertificatePrintPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="text-red-600 text-sm sm:text-base">{error || 'Certificat introuvable'}</div>
+          <div className="text-red-600 text-sm sm:text-base">{error || 'Attestation introuvable'}</div>
         </div>
       </div>
     );

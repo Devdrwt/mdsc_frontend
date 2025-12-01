@@ -7,10 +7,10 @@ interface CertificatePreviewProps {
   courseTitle: string;
   location: string;
   issuedAt: Date;
-  code?: string;
+  code?: string; // Code d'affichage et de vérification (certificate_number) - format MDSC-XXXXXX-BJ
 }
 
-// Génère un code de certificat au format MDSC-########-BJ
+// Génère un code d'attestation au format MDSC-########-BJ
 function generateCertificateCode(): string {
   const random = Math.floor(10000000 + Math.random() * 90000000);
   return `MDSC-${random}-BJ`;
@@ -21,23 +21,26 @@ export default function CertificatePreview({
   courseTitle,
   location,
   issuedAt,
-  code,
+  code, // Code d'affichage et de vérification (certificate_number) - format MDSC-XXXXXX-BJ
 }: CertificatePreviewProps) {
-  const certificateCode = useMemo(() => {
+  // Code d'affichage et de vérification : format MDSC-XXXXXX-BJ
+  const displayCode = useMemo(() => {
     const generated = code || generateCertificateCode();
     return generated.toUpperCase();
   }, [code]);
 
-  // URL du QR réel (service public, scannable). On encode une URL de vérification si disponible.
+  // URL du QR réel (service public, scannable). Utilise certificate_number pour la vérification
   const qrUrl = useMemo(() => {
+    // Utiliser certificate_number (format MDSC-XXXXXX-BJ) pour la vérification
+    const codeForQR = displayCode;
     const baseVerify =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/verify-certificate/${encodeURIComponent(certificateCode)}`
-        : `https://mdsc.local/verify-certificate/${encodeURIComponent(certificateCode)}`;
+        ? `${window.location.origin}/verify-certificate/${encodeURIComponent(codeForQR)}`
+        : `https://mdsc.local/verify-certificate/${encodeURIComponent(codeForQR)}`;
     const data = encodeURIComponent(baseVerify);
     // Taille calibrée pour s'approcher du rendu de la maquette
-    return `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=0&data=${data}`;
-  }, [certificateCode]);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=0&data=${data}`;
+  }, [displayCode]);
 
   return (
     <div
@@ -45,10 +48,10 @@ export default function CertificatePreview({
       style={{ borderColor: '#006599' }}
     >
       {/* Cadre bleu et coins décoratifs */}
-      <div className="relative p-4 sm:p-6 lg:p-8 xl:p-10">
+      <div className="relative pt-4 px-4 pb-[1.625rem] sm:pt-6 sm:px-6 sm:pb-[2.25rem] lg:pt-8 lg:px-8 lg:pb-[2.875rem] xl:pt-10 xl:px-10 xl:pb-[3.625rem]">
         <div className="absolute inset-0 pointer-events-none z-10">
           <div
-            className="absolute inset-1 sm:inset-2 border-[2px] sm:border-[3px] lg:border-[4px] border-solid rounded-none"
+            className="absolute top-1 left-1 right-1 bottom-1 sm:top-2 sm:left-2 sm:right-2 sm:bottom-2 border-[2px] sm:border-[3px] lg:border-[4px] border-solid rounded-none"
             style={{ borderColor: '#006599' }}
           ></div>
           {/* Décor bas gauche via image */}
@@ -68,43 +71,42 @@ export default function CertificatePreview({
 
         <div className="relative">
           {/* En-tête */}
-          <div className="text-center mt-8 sm:mt-12 lg:mt-16 relative">
+          <div className="text-center mt-10 sm:mt-14 lg:mt-20 relative">
             {/* Logo en haut à gauche */}
             <img
               src="/mdsc-logo.png"
               alt="Logo MDSC"
-              className="absolute left-2 sm:left-4 -top-16 sm:-top-24 lg:-top-32 w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 object-contain z-0 pointer-events-none select-none opacity-100"
+              className="absolute left-2 sm:left-4 -top-20 sm:-top-28 lg:-top-36 xl:-top-40 w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 object-contain z-0 pointer-events-none select-none opacity-100"
             />
             {/* Badge en haut à droite */}
             <img
               src="/badge.png"
               alt="Badge"
-              className="absolute right-4 sm:right-8 lg:right-16 -top-4 sm:-top-6 lg:-top-8 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 object-contain z-0 pointer-events-none select-none opacity-100"
+              className="absolute right-4 sm:right-8 lg:right-16 -top-12 sm:-top-14 lg:-top-16 xl:-top-18 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 object-contain z-0 pointer-events-none select-none opacity-100"
             />
             <div className="relative z-20">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-700 uppercase tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.32em]">
-                CERTIFICAT
+                ATTESTATION
               </h1>
               <p className="mt-1 sm:mt-2 uppercase tracking-[0.1em] sm:tracking-[0.15em] lg:tracking-[0.22em] text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl font-semibold">
-                D'APPLICATION
+                DE FORMATION
               </p>
             </div>
-            <p className="mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base text-mdsc-blue-primary">Ce diplôme est décerné à :</p>
-            <p className="mt-2 sm:mt-3 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-gray-700 break-words px-2">
+            <p className="mt-4 sm:mt-5 lg:mt-7 text-sm sm:text-base text-mdsc-blue-primary">La Maison de la Société Civile atteste que :</p>
+            <p className="mt-4 sm:mt-5 lg:mt-7 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-gray-700 break-words px-2">
               {fullName}
             </p>
           </div>
 
           {/* Paragraphe */}
-          <div className="max-w-3xl mx-auto mt-4 sm:mt-6 text-gray-600 text-xs sm:text-sm md:text-[15px] leading-5 sm:leading-6 text-center px-2 sm:px-4">
-            Nous certifions par la présente que {fullName} a complété avec succès la formation&nbsp;
+          <div className="max-w-3xl mx-auto mt-6 sm:mt-8 lg:mt-10 text-gray-600 text-xs sm:text-sm md:text-[15px] leading-5 sm:leading-6 text-center px-2 sm:px-4">
+            a suivi et validé le cursus de formation entièrement à distance en&nbsp;
             <span className="font-semibold text-gray-700">« {courseTitle} »</span>.
-            Ses réalisations exceptionnelles, son professionnalisme et sa quête
-            d'excellence constituent une véritable source d'inspiration.
+            En foi de quoi, nous décernons la présente attestation pour faire valoir ce que de droit.
           </div>
 
           {/* Lieu et Date sous le paragraphe (même design) - Toujours horizontal */}
-          <div className="mt-4 sm:mt-6 lg:mt-8 flex flex-row items-end justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 flex-wrap">
+          <div className="mt-6 sm:mt-8 lg:mt-10 flex flex-row items-end justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 flex-wrap">
             <div className="flex items-baseline gap-1.5 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap flex-shrink-0">Fait à :</span>
               <div className="border-b border-gray-300 flex items-center min-w-[120px] sm:min-w-[140px] md:min-w-[160px] lg:min-w-[180px] max-w-[200px] px-1 sm:px-2">
@@ -132,18 +134,18 @@ export default function CertificatePreview({
                 src={qrUrl}
                 width={120}
                 height={120}
-                alt="Code QR de vérification du certificat"
+                alt="Code QR de vérification de l'attestation"
                 className="block w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-[160px] lg:h-[160px]"
               />
             </div>
           </div>
-          <p className="mt-1 sm:mt-2 text-center font-mono text-[10px] sm:text-xs text-gray-600 break-all px-2">{certificateCode}</p>
+          <p className="mt-1 sm:mt-2 mb-0 text-center font-mono text-[10px] sm:text-xs text-gray-600 break-all px-2">{displayCode}</p>
 
           {/* Sceau (image) en bas à droite, hors flux */}
           <img
             src="/Sceau.png"
             alt="Sceau officiel"
-            className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 lg:bottom-6 lg:right-6 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 object-contain opacity-100"
+            className="absolute -bottom-2 right-2 sm:-bottom-2 sm:right-4 lg:-bottom-2 lg:right-6 xl:-bottom-2 xl:right-6 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 object-contain opacity-100"
           />
         </div>
       </div>

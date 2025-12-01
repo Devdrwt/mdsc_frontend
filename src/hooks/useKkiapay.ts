@@ -91,11 +91,13 @@ export const useKkiapay = () => {
 
     try {
       // Normaliser le paramètre sandbox (Kkiapay attend 'true' ou 'false' en string)
+      const sandboxString = typeof options.sandbox === 'boolean' 
+        ? (options.sandbox ? 'true' : 'false')
+        : String(options.sandbox || 'false');
+      
       const normalizedOptions = {
         ...options,
-        sandbox: typeof options.sandbox === 'boolean' 
-          ? (options.sandbox ? 'true' : 'false')
-          : options.sandbox,
+        sandbox: sandboxString,
       };
       
       console.log('[Kkiapay] Ouverture du widget avec options:', {

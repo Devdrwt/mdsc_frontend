@@ -8,9 +8,7 @@ export default function Footer() {
   const footerLinks = {
     formation: [
       { name: 'Catalogue des cours', href: '/courses' },
-      { name: 'Formations en ligne', href: '/online-training' },
-      { name: 'Certifications', href: '/certifications' },
-      { name: 'Classes virtuelles', href: '/virtual-classes' },
+      { name: 'Attestations', href: '/courses' },
     ],
     organisation: [
       { name: 'À propos de MdSC', href: '/about' },
@@ -22,7 +20,6 @@ export default function Footer() {
       { name: 'Centre d\'aide', href: '/help' },
       { name: 'FAQ', href: '/faq' },
       { name: 'Contact', href: '/contact' },
-      { name: 'Support technique', href: '/support' },
     ],
   };
 

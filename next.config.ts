@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+// @ts-ignore - next-pwa types might not be fully compatible
+import withPWA from "@ducanh2912/next-pwa";
 
 const nextConfig: NextConfig = {
   // Configuration pour la production
@@ -54,6 +56,69 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Headers pour les ressources PWA (accessibles publiquement)
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+        ],
+      },
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      {
+        source: '/workbox-:hash.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/apple-touch.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/icon-192x192.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/icon-512x512.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
       {
         // Permissions Policy pour les sessions live Jitsi
         // Permet l'accès aux médias (microphone, caméra, haut-parleur, partage d'écran)
@@ -103,4 +168,150 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const pwaConfig = withPWA({
+  dest: "public",
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === "development",
+  workboxOptions: {
+    disableDevLogs: true,
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "google-fonts",
+          expiration: {
+            maxEntries: 4,
+            maxAgeSeconds: 365 * 24 * 60 * 60, // 1 année
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "static-font-assets",
+          expiration: {
+            maxEntries: 4,
+            maxAgeSeconds: 7 * 24 * 60 * 60, // 7 jours
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "static-image-assets",
+          expiration: {
+            maxEntries: 64,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\/_next\/image\?url=.+$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "next-image",
+          expiration: {
+            maxEntries: 64,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:mp3|wav|ogg)$/i,
+        handler: "CacheFirst",
+        options: {
+          rangeRequests: true,
+          cacheName: "static-audio-assets",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:mp4)$/i,
+        handler: "CacheFirst",
+        options: {
+          rangeRequests: true,
+          cacheName: "static-video-assets",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:js)$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "static-js-assets",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\.(?:css|less)$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "static-style-assets",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\/_next\/data\/.+\/.+\.json$/i,
+        handler: "StaleWhileRevalidate",
+        options: {
+          cacheName: "next-data",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+        },
+      },
+      {
+        urlPattern: /\/api\/.*$/i,
+        handler: "NetworkFirst",
+        method: "GET",
+        options: {
+          cacheName: "apis",
+          expiration: {
+            maxEntries: 16,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+          networkTimeoutSeconds: 10,
+        },
+      },
+      {
+        urlPattern: ({ url }) => {
+          const isSameOrigin = self.origin === url.origin;
+          if (!isSameOrigin) return false;
+          const pathname = url.pathname;
+          // Exclure les routes API
+          if (pathname.startsWith("/api/")) return false;
+          return true;
+        },
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "others",
+          expiration: {
+            maxEntries: 32,
+            maxAgeSeconds: 24 * 60 * 60, // 24 heures
+          },
+          networkTimeoutSeconds: 10,
+        },
+      },
+    ],
+  },
+});
+
+export default pwaConfig(nextConfig);

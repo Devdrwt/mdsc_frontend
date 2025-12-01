@@ -81,7 +81,7 @@ export default function FAQPage() {
         },
         {
           question: 'Puis-je supprimer mon compte ?',
-          answer: 'Oui, vous pouvez supprimer votre compte à tout moment depuis les paramètres de votre profil. Attention : cette action est irréversible et supprimera toutes vos données, y compris vos certificats et votre progression dans les cours.'
+          answer: 'Oui, vous pouvez supprimer votre compte à tout moment depuis les paramètres de votre profil. Attention : cette action est irréversible et supprimera toutes vos données, y compris vos attestations et votre progression dans les cours.'
         },
         {
           question: 'Comment vérifier mon adresse email ?',
@@ -122,28 +122,28 @@ export default function FAQPage() {
     },
     {
       id: 'certificates',
-      title: 'Certificats',
+      title: 'Attestations',
       icon: Award,
       items: [
         {
-          question: 'Comment obtenir un certificat ?',
-          answer: 'Pour obtenir un certificat, vous devez compléter tous les modules du cours, réussir tous les quiz intermédiaires et passer l\'évaluation finale avec une note minimale requise. Une fois ces conditions remplies, votre certificat sera généré automatiquement.'
+          question: 'Comment obtenir une attestation ?',
+          answer: 'Pour obtenir une attestation, vous devez compléter tous les modules du cours, réussir tous les quiz intermédiaires et passer l\'évaluation finale avec une note minimale requise. Une fois ces conditions remplies, votre attestation sera générée automatiquement.'
         },
         {
-          question: 'Les certificats sont-ils reconnus ?',
-          answer: 'Nos certificats sont délivrés par la Maison de la Société Civile et attestent de votre réussite dans le cours. Ils peuvent être ajoutés à votre CV et partagés sur les réseaux professionnels comme LinkedIn.'
+          question: 'Les attestations sont-elles reconnues ?',
+          answer: 'Nos attestations sont délivrées par la Maison de la Société Civile et attestent de votre réussite dans le cours. Elles peuvent être ajoutées à votre CV et partagées sur les réseaux professionnels comme LinkedIn.'
         },
         {
-          question: 'Comment télécharger mon certificat ?',
-          answer: 'Une fois votre certificat généré, allez dans "Mes Certificats" dans votre tableau de bord. Cliquez sur le certificat souhaité, puis sur "Télécharger" pour obtenir le fichier PDF. Vous pouvez également l\'imprimer directement depuis la page.'
+          question: 'Comment télécharger mon attestation ?',
+          answer: 'Une fois votre attestation générée, allez dans "Mes Attestations" dans votre tableau de bord. Cliquez sur l\'attestation souhaitée, puis sur "Télécharger" pour obtenir le fichier PDF. Vous pouvez également l\'imprimer directement depuis la page.'
         },
         {
-          question: 'Comment vérifier l\'authenticité d\'un certificat ?',
-          answer: 'Chaque certificat possède un code unique (format MDSC-XXXXXXXX-BJ). Utilisez la fonction "Vérifier un certificat" sur notre site en entrant ce code pour confirmer son authenticité.'
+          question: 'Comment vérifier l\'authenticité d\'une attestation ?',
+          answer: 'Chaque attestation possède un code unique (format MDSC-XXXXXXXX-BJ). Utilisez la fonction "Vérifier une attestation" sur notre site en entrant ce code pour confirmer son authenticité.'
         },
         {
-          question: 'Puis-je obtenir un certificat si je repasse un cours ?',
-          answer: 'Si vous avez déjà obtenu un certificat pour un cours, vous ne pouvez pas en obtenir un nouveau en repassant le même cours. Cependant, vous pouvez toujours accéder au contenu pour réviser.'
+          question: 'Puis-je obtenir une attestation si je repasse un cours ?',
+          answer: 'Si vous avez déjà obtenu une attestation pour un cours, vous ne pouvez pas en obtenir une nouvelle en repassant le même cours. Cependant, vous pouvez toujours accéder au contenu pour réviser.'
         }
       ]
     },

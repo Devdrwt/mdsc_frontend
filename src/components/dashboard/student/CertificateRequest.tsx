@@ -278,9 +278,9 @@ export default function CertificateRequest({ courseId, enrollmentId }: Certifica
                 <div className="flex items-center space-x-2 ml-4">
                   {certificate.is_valid && (
                     <>
-                      {certificate.certificate_code && (
+                      {((certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificate_code) && (
                         <a
-                          href={`/verify-certificate/${encodeURIComponent(certificate.certificate_code.toUpperCase())}`}
+                          href={`/verify-certificate/${encodeURIComponent(((certificate as any).certificate_number || (certificate as any).certificateNumber || certificate.certificate_code || '').toUpperCase())}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-4 py-2 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors"

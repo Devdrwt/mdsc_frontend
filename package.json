@@ -38,6 +38,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@ducanh2912/next-pwa": "^10.2.9",
     "@eslint/eslintrc": "^3.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

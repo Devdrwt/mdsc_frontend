@@ -31,7 +31,7 @@ export default function CertificateCollection({
       const data = await certificateService.getUserCertificates();
       setCertificates(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error('Erreur lors du chargement des certificats:', error);
+      console.error('Erreur lors du chargement des attestations:', error);
       setCertificates([]);
     } finally {
       setLoading(false);
@@ -41,7 +41,9 @@ export default function CertificateCollection({
   const filteredCertificates = Array.isArray(certificates) ? certificates.filter((cert) => {
     const matchesSearch = searchTerm === '' || 
       cert.course?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.certificateCode.toLowerCase().includes(searchTerm.toLowerCase());
+      (cert as any).certificate_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cert as any).certificateNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cert.certificateCode?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const now = new Date();
     let matchesFilter = true;
@@ -59,7 +61,7 @@ export default function CertificateCollection({
     return (
       <div className={`text-center py-12 ${className}`}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
-        <p className="text-gray-600">Chargement des certificats...</p>
+        <p className="text-gray-600">Chargement des attestations...</p>
       </div>
     );
   }
@@ -71,15 +73,15 @@ export default function CertificateCollection({
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h2 className="text-xl sm:text-2xl font-bold flex items-center space-x-2 mb-2">
-              {/* Icône plus professionnelle pour la section certificats */}
+              {/* Icône plus professionnelle pour la section attestations */}
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17l-3-2-3 2 .75-3.5L7 11l3.5-.25L12 7l1.5 3.75L17 11l-2.25 2.5L15 17z" />
                 <circle cx="11" cy="12" r="10" strokeWidth="1.5" />
               </svg>
-              <span className="truncate">Mes Certificats</span>
+              <span className="truncate">Mes Attestations</span>
             </h2>
             <p className="text-sm sm:text-base text-white/80">
-              {certificates.length} certificat{certificates.length > 1 ? 's' : ''} obtenu{certificates.length > 1 ? 's' : ''}
+              {certificates.length} attestation{certificates.length > 1 ? 's' : ''} obtenue{certificates.length > 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -91,7 +93,7 @@ export default function CertificateCollection({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher un certificat..."
+            placeholder="Rechercher une attestation..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
@@ -121,12 +123,12 @@ export default function CertificateCollection({
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               {searchTerm || filter !== 'all'
-                ? 'Aucun certificat ne correspond à votre recherche'
-                : 'Aucun certificat disponible pour le moment'}
+                ? 'Aucune attestation ne correspond à votre recherche'
+                : 'Aucune attestation disponible pour le moment'}
             </h3>
             <p className="text-gray-600 max-w-xl mx-auto">
-              Réussissez une évaluation finale pour générer automatiquement votre certificat,
-              qui apparaîtra ici et pourra être téléchargé au format PDF.
+              Réussissez une évaluation finale pour générer automatiquement votre attestation,
+              qui apparaîtra ici et pourra être téléchargée au format PDF.
             </p>
             <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
               <Link

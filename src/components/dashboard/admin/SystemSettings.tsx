@@ -821,7 +821,7 @@ export default function SystemSettings() {
                   {[
                     { key: 'enableGamification', label: 'Gamification', desc: 'Badges, points, niveaux', icon: Award, color: 'from-yellow-500 to-amber-600' },
                     { key: 'enableChatIA', label: 'Chat IA', desc: 'Assistant intelligent', icon: Brain, color: 'from-purple-500 to-indigo-600' },
-                    { key: 'enableCertificates', label: 'Certificats', desc: 'Certificats de complétion', icon: Award, color: 'from-blue-500 to-blue-600' },
+                    { key: 'enableCertificates', label: 'Attestations', desc: 'Attestations de complétion', icon: Award, color: 'from-blue-500 to-blue-600' },
                     { key: 'enableAnalytics', label: 'Analytics', desc: 'Statistiques et rapports', icon: Users, color: 'from-green-500 to-emerald-600' },
                     { key: 'enableNotifications', label: 'Notifications', desc: 'Alertes et notifications', icon: Bell, color: 'from-orange-500 to-red-600' },
                   ].map((feature) => {

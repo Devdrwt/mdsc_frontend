@@ -1188,6 +1188,9 @@ export default function CoursePlayer({
         ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
         : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)');
       
+      // Utiliser certificate_number pour l'affichage (format MDSC-XXXXXX-BJ)
+      // certificate_code est l'UUID utilisé pour la vérification/QR code, pas pour l'affichage
+      const certificateNumber = certificate?.certificate_number || certificate?.certificateNumber || '';
       const certificateCode = certificate?.certificate_code || certificate?.certificateCode || '';
       const issuedAt = certificate?.issued_at || certificate?.issuedAt 
         ? new Date(certificate.issued_at || certificate.issuedAt)
@@ -1196,13 +1199,17 @@ export default function CoursePlayer({
       // Afficher le modal de célébration avec confettis
       setGeneratedCertificate({
         ...certificate,
+        certificate_number: certificateNumber,
+        certificateNumber: certificateNumber,
         certificate_code: certificateCode,
+        certificateCode: certificateCode,
         issued_at: issuedAt.toISOString()
       });
       setShowCertificateModal(true);
       
       console.log('[CoursePlayer] ✅ Certificat généré et modal de célébration affiché:', {
         certificateId: result?.certificateId,
+        certificateNumber,
         certificateCode,
         fullName,
         courseTitle: course.title
@@ -1885,7 +1892,7 @@ export default function CoursePlayer({
             : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')
         }
         courseTitle={course.title || 'Formation'}
-        code={(generatedCertificate as any)?.certificate_code || (generatedCertificate as any)?.certificateCode}
+        code={(generatedCertificate as any)?.certificate_number || (generatedCertificate as any)?.certificateNumber || '—'}
         issuedAt={
           (generatedCertificate as any)?.issued_at
             ? new Date((generatedCertificate as any).issued_at)
