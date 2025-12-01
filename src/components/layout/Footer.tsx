@@ -57,7 +57,7 @@ export default function Footer() {
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-white hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -74,7 +74,7 @@ export default function Footer() {
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-white hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -91,7 +91,7 @@ export default function Footer() {
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-white hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -132,8 +132,8 @@ export default function Footer() {
               © {currentYear} Maison de la Société Civile. Tous droits réservés.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="/privacy" className="text-white hover:text-mdsc-orange text-sm">Politique de confidentialité</a>
-              <a href="/terms" className="text-white hover:text-mdsc-orange text-sm">Conditions d'utilisation</a>
+              <a href="/privacy" className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm">Politique de confidentialité</a>
+              <a href="/terms" className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm">Conditions d'utilisation</a>
             </div>
           </div>
         </div>

@@ -558,6 +558,15 @@ select:focus {
   color: #93c5fd !important;
 }
 
+/* Liens du footer en dark mode - couleur orange */
+.dark footer a {
+  color: #F4A53A !important;
+}
+
+.dark footer a:hover {
+  color: #F4A53A !important;
+}
+
 /* Hover states en dark mode */
 .dark .hover\:bg-gray-100:hover {
   background-color: #334155 !important;
