@@ -28,6 +28,18 @@ import MediaUpload from '../../media/MediaUpload';
 import toast from '../../../lib/utils/toast';
 import Modal from '../../ui/Modal';
 import { resolveMediaUrl } from '../../../lib/utils/media';
+import dynamic from 'next/dynamic';
+
+// Import dynamique du composant FileViewer (solution optimisée par format)
+const FileViewer = dynamic(() => import('../../viewers/FileViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex flex-col items-center justify-center h-full bg-gray-50 min-h-[600px]">
+      <Loader className="h-8 w-8 animate-spin text-mdsc-blue-primary mb-4" />
+      <p className="text-sm text-gray-600">Chargement du lecteur de documents...</p>
+    </div>
+  ),
+});
 
 interface CourseMediaManagerProps {
   courseId: string | number;
@@ -592,34 +604,24 @@ export default function CourseMediaManager({
               }
 
               if ((category === 'document' || category === 'presentation') && resolvedMediaUrl) {
-                // Pour les PDF et présentations, utiliser l'URL directe
-                // Les navigateurs modernes peuvent afficher les PDF directement
-                const isPdf = rawMediaUrl.toLowerCase().endsWith('.pdf') || resolvedMediaUrl.toLowerCase().includes('.pdf');
+                // Vérifier le type de fichier
+                const filename = originalFilename?.toLowerCase() || rawMediaUrl.toLowerCase();
+                const isPdf = filename.endsWith('.pdf') || resolvedMediaUrl.toLowerCase().includes('.pdf');
+                const isPPTX = filename.endsWith('.pptx') || 
+                              filename.endsWith('.ppt') ||
+                              selectedMedia.fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+                              selectedMedia.fileType === 'application/vnd.ms-powerpoint';
                 
-                if (isPdf) {
-                  // Pour les PDF, utiliser l'URL directe - les navigateurs modernes peuvent les afficher
+                // Pour les PDF, PowerPoint, Word et Excel, utiliser FileViewer (solution optimisée)
+                if (isPdf || isPPTX || filename.endsWith('.docx') || filename.endsWith('.doc') || 
+                    filename.endsWith('.xlsx') || filename.endsWith('.xls')) {
                   return (
-                    <div className="w-full h-[60vh] rounded-lg overflow-hidden border border-gray-200 bg-gray-50 relative">
-                      <iframe
-                        src={resolvedMediaUrl}
-                        className="w-full h-full"
-                        title={originalFilename}
-                        onError={() => {
-                          console.error('Erreur de chargement du PDF:', resolvedMediaUrl);
-                        }}
+                    <div className="w-full rounded-lg overflow-hidden border border-gray-200 bg-white">
+                      <FileViewer 
+                        fileUrl={resolvedMediaUrl}
+                        filename={originalFilename}
+                        fileType={selectedMedia.fileType}
                       />
-                      <div className="absolute bottom-4 right-4 z-10">
-                        <a
-                          href={resolvedMediaUrl}
-                          download
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-mdsc-blue-primary hover:bg-mdsc-blue-dark rounded-lg transition-colors shadow-lg"
-                        >
-                          <Download className="h-4 w-4" />
-                          Télécharger le PDF
-                        </a>
-                      </div>
                     </div>
                   );
                 }

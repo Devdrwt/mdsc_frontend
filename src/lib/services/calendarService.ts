@@ -84,6 +84,28 @@ export class CalendarService {
       return endDate < now;
     });
   }
+
+  /**
+   * Récupère un événement spécifique par son ID
+   * @param eventId ID de l'événement (peut être numérique ou avec préfixe "event-" ou "live-session-")
+   * @returns L'événement demandé
+   */
+  static async getEventById(eventId: number | string): Promise<CalendarEvent> {
+    // Extraire l'ID numérique si nécessaire (ex: "event-1" -> "1", "live-session-2" -> "2")
+    const numericId = typeof eventId === 'string' 
+      ? eventId.replace(/^(event-|live-session-)/, '')
+      : String(eventId);
+
+    const response = await apiRequest<CalendarEvent>(`/calendar/${numericId}`, {
+      method: 'GET',
+    });
+
+    if (!response.success || !response.data) {
+      throw new Error('Erreur lors de la récupération de l\'événement');
+    }
+
+    return response.data;
+  }
 }
 
 export const calendarService = CalendarService;

@@ -110,6 +110,7 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     // Essayer de parser en JSON
     try {
       data = responseText ? JSON.parse(responseText) : {};
+      
     } catch (parseError) {
       // Si ce n'est pas du JSON, utiliser le texte comme message
       data = { message: responseText || 'Erreur serveur' };
@@ -314,11 +315,66 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const errorCode = hasValidData ? (data.code ?? null) : null;
     const errorDetails = hasValidData ? (data.details ?? data.errors ?? null) : null;
 
+    // Améliorer le message d'erreur pour les 404 avec plus de contexte
+    let finalErrorMessage = errorMessage;
+    const responseUrl = response.url || errorLog.url || 'URL inconnue';
+    if (response.status === 404) {
+      finalErrorMessage = `Route non trouvée (404): ${responseUrl}. ${errorMessage || 'La ressource demandée n\'existe pas sur le serveur.'}`;
+    }
+
+    // Extraire les détails d'erreur pour les messages plus informatifs
+    let errorDetailsMessage = '';
+    if (errorDetails) {
+      if (typeof errorDetails === 'string') {
+        errorDetailsMessage = errorDetails;
+      } else if (Array.isArray(errorDetails)) {
+        errorDetailsMessage = errorDetails.map((err: any) => 
+          typeof err === 'string' ? err : err.message || JSON.stringify(err)
+        ).join('. ');
+      } else if (typeof errorDetails === 'object') {
+        // Extraire les messages d'erreur des propriétés de l'objet
+        const detailMessages: string[] = [];
+        for (const [key, value] of Object.entries(errorDetails)) {
+          if (value) {
+            if (typeof value === 'string') {
+              detailMessages.push(value);
+            } else if (Array.isArray(value)) {
+              detailMessages.push(...value.filter((v: any) => typeof v === 'string'));
+            } else if (typeof value === 'object' && value !== null && 'message' in value) {
+              detailMessages.push((value as any).message);
+            }
+          }
+        }
+        if (detailMessages.length > 0) {
+          errorDetailsMessage = detailMessages.join('. ');
+        } else if ('message' in errorDetails) {
+          errorDetailsMessage = String((errorDetails as any).message);
+        } else if ('reason' in errorDetails) {
+          errorDetailsMessage = String((errorDetails as any).reason);
+        }
+      }
+    }
+
+    // Enrichir le message d'erreur avec les détails si disponibles
+    if (errorDetailsMessage && !finalErrorMessage.includes(errorDetailsMessage)) {
+      finalErrorMessage = `${finalErrorMessage}${errorDetailsMessage ? `. ${errorDetailsMessage}` : ''}`;
+    }
+
+    // Créer un objet de détails enrichi avec l'URL
+    const enrichedDetails = {
+      ...(errorDetails && typeof errorDetails === 'object' ? errorDetails : {}),
+      url: responseUrl,
+      endpoint: errorLog.url || responseUrl,
+      status: response.status,
+      statusText: response.statusText,
+      detailsMessage: errorDetailsMessage || undefined,
+    };
+
     const error = new ApiError(
-      errorMessage,
+      finalErrorMessage,
       response.status,
       errorCode,
-      errorDetails
+      enrichedDetails
     );
     
     // Gérer les erreurs d'authentification
@@ -337,9 +393,40 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     throw error;
   }
   
+  // Gérer les réponses qui ont à la fois des données au niveau racine et dans data
+  // Exemple: { success: true, count: 45, courses: [...], data: { courses: [...], pagination: {...} } }
+  let responseData: any;
+  
+  // Si la réponse a des propriétés au niveau racine (comme courses, count), les préserver
+  // mais privilégier data.data s'il existe
+  if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+    // Si data.data existe et est un objet, l'utiliser comme base
+    responseData = { ...data.data };
+    // Mais aussi préserver les propriétés au niveau racine si elles existent
+    // (par exemple, si l'API retourne { success: true, count: 45, courses: [...], data: {...} })
+    if (data.courses && Array.isArray(data.courses)) {
+      // Si courses existe au niveau racine, l'utiliser (il a priorité)
+      responseData.courses = data.courses;
+    }
+    if (data.count !== undefined) {
+      responseData.count = data.count;
+    }
+  } else if (data.courses && Array.isArray(data.courses)) {
+    // Si courses est au niveau racine mais pas dans data
+    responseData = { 
+      courses: data.courses, 
+      count: data.count,
+      ...(data.data || {}) 
+    };
+  } else {
+    // Sinon, utiliser data.data ou data directement
+    responseData = data.data || data;
+  }
+  
+  
   return {
     success: true,
-    data: data.data || data,
+    data: responseData,
     message: data.message,
     status: response.status,
   };
@@ -378,8 +465,8 @@ export async function apiRequest<T = any>(
   let hasTriedRefresh = false;
   
   const makeRequest = async (): Promise<ApiResponse<T>> => {
-    // Logger pour debug sur POST/PUT/DELETE
-    if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+    // Logger pour debug sur POST/PUT/DELETE et GET pour /favorites
+    if (method === 'POST' || method === 'PUT' || method === 'DELETE' || (method === 'GET' && endpoint.includes('/favorites'))) {
       console.log(`📤 [${method}] ${url}`, {
         headers: requestHeaders,
         body: body instanceof FormData ? '[FormData]' : body,

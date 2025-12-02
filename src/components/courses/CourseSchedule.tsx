@@ -164,12 +164,26 @@ const CourseSchedule: React.FC<CourseScheduleProps> = ({ courseId, onItemClick }
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-900 mb-1">{item.title}</h4>
                     <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>
-                          {format(new Date(item.scheduled_date), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
-                        </span>
-                      </div>
+                      {/* Utiliser start_date pour les sessions live, scheduled_date pour les autres */}
+                      {((item as any).start_date || item.scheduled_date) && (
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>
+                            {(() => {
+                              const dateToUse = (item as any).start_date || item.scheduled_date;
+                              if (!dateToUse) return 'Date non disponible';
+                              try {
+                                const date = new Date(dateToUse);
+                                if (isNaN(date.getTime())) return 'Date invalide';
+                                return format(date, "dd MMM yyyy 'à' HH:mm", { locale: fr });
+                              } catch (error) {
+                                console.error('Erreur lors du formatage de la date:', error, dateToUse);
+                                return 'Date invalide';
+                              }
+                            })()}
+                          </span>
+                        </div>
+                      )}
                       {item.duration_minutes > 0 && (
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />

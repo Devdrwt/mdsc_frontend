@@ -1,13 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, Loader, AlertCircle } from 'lucide-react';
+import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
 import { progressService } from '../../lib/services/progressService';
-import { init } from 'pptx-preview';
 import { resolveMediaUrl } from '../../lib/utils/media';
+import { courseService } from '../../lib/services/courseService';
+import dynamic from 'next/dynamic';
+
+// Import dynamique du composant FileViewer (solution optimisée par format)
+// Le spinner de chargement est géré par FileViewer lui-même, pas besoin d'en ajouter un ici
+const FileViewer = dynamic(() => import('../viewers/FileViewer'), {
+  ssr: false,
+});
 
 interface LessonContentProps {
   lesson: Lesson;
@@ -37,11 +44,9 @@ export default function LessonContent({
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [mediaFile, setMediaFile] = useState<MediaFile | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
-  const [pdfLoadError, setPdfLoadError] = useState(false);
-  const [pptxError, setPptxError] = useState(false);
-  const [pptxData, setPptxData] = useState<ArrayBuffer | null>(null);
-  const [isLoadingPptx, setIsLoadingPptx] = useState(false);
   const [scrollCompletionTarget, setScrollCompletionTarget] = useState<HTMLDivElement | null>(null);
+  const [isLoadingFullLesson, setIsLoadingFullLesson] = useState(false);
+  const [fullLessonData, setFullLessonData] = useState<Lesson | null>(null);
 
   const autoCompletionInFlightRef = useRef(false);
   const lastTrustedPlaybackPositionRef = useRef(0);
@@ -103,11 +108,7 @@ export default function LessonContent({
 
   useEffect(() => {
     setIsCompleted(deriveCompletedStatus(lesson));
-    setPdfLoadError(false); // Réinitialiser l'erreur PDF quand la leçon change
-    setPptxError(false); // Réinitialiser l'erreur PPTX quand la leçon change
     setMediaFile(null); // Réinitialiser le mediaFile pour forcer la mise à jour
-    setPptxData(null); // Réinitialiser les données PPTX
-    setIsLoadingPptx(false);
 
     // Protection globale contre le clic droit et autres interactions non désirées
     const handleContextMenu = (e: MouseEvent) => {
@@ -214,17 +215,26 @@ export default function LessonContent({
       lessonTitle: lesson.title,
       contentType,
       hasMedia: !!lessonAny.media,
-      hasMediaFile: !!lesson.mediaFile,
+      hasMediaFiles: !!lessonAny.media_files,
+      hasMediaFile: !!lessonAny.media_file,
+      hasMediaFileProp: !!lesson.mediaFile,
       hasMediaUrl: !!lessonAny.media_url,
       hasContentUrl: !!contentUrl,
       hasVideoUrl: !!lessonAny.video_url,
       mediaData: lessonAny.media ? (Array.isArray(lessonAny.media) ? `Array[${lessonAny.media.length}]` : 'Object') : null,
-      mediaFileData: lesson.mediaFile ? 'Object' : null,
+      mediaFilesData: lessonAny.media_files ? (Array.isArray(lessonAny.media_files) ? `Array[${lessonAny.media_files.length}]` : 'Object') : null,
+      mediaFileData: lessonAny.media_file ? 'Object' : null,
+      mediaFilePropData: lesson.mediaFile ? 'Object' : null,
       mediaUrl: lessonAny.media_url,
       contentUrl: contentUrl,
       videoUrl: lessonAny.video_url,
+      content_url: lessonAny.content_url,
+      media_file_id: lessonAny.media_file_id,
+      // Afficher les premières propriétés pour débogage
+      lessonKeys: Object.keys(lessonAny).slice(0, 20),
     });
     
+    // Priorité 1: lesson.media (nouvelle structure du backend - peut être un objet ou un tableau)
     if (lessonAny.media) {
       // Si c'est un tableau, prendre le premier média
       if (Array.isArray(lessonAny.media) && lessonAny.media.length > 0) {
@@ -237,13 +247,31 @@ export default function LessonContent({
         console.log('[LessonContent] ✅ Média trouvé dans lesson.media (objet):', resolvedMedia);
       }
     }
-    // Priorité 2: lesson.mediaFile (ancienne structure)
-    else if (lesson.mediaFile) {
+    // Priorité 2: lesson.media_files (nouveau format backend - tableau de médias, inclut les médias associés automatiquement)
+    else if (lessonAny.media_files && Array.isArray(lessonAny.media_files) && lessonAny.media_files.length > 0) {
+      // Filtrer les médias valides (avec URL)
+      const validMedia = lessonAny.media_files.filter((m: any) => m && m.url);
+      if (validMedia.length > 0) {
+        resolvedMedia = validMedia[0] as MediaFile;
+        console.log('[LessonContent] ✅ Média trouvé dans lesson.media_files (tableau):', {
+          total: lessonAny.media_files.length,
+          valid: validMedia.length,
+          selected: resolvedMedia,
+        });
+      }
+    }
+    // Priorité 3: lesson.media_file (nouveau format backend - objet unique)
+    else if (lessonAny.media_file && typeof lessonAny.media_file === 'object' && lessonAny.media_file !== null && lessonAny.media_file.url) {
+      resolvedMedia = lessonAny.media_file as MediaFile;
+      console.log('[LessonContent] ✅ Média trouvé dans lesson.media_file (objet):', resolvedMedia);
+    }
+    // Priorité 4: lesson.mediaFile (ancienne structure)
+    else if (lesson.mediaFile && lesson.mediaFile.url) {
       resolvedMedia = lesson.mediaFile;
       console.log('[LessonContent] ✅ Média trouvé dans lesson.mediaFile:', resolvedMedia);
     } 
-    // Priorité 3: Construire mediaFile à partir des champs individuels (fallback)
-    else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join || lessonAny.video_url) {
+    // Priorité 5: Construire mediaFile à partir des champs individuels (fallback)
+    else if (lessonAny.media_url || contentUrl || lessonAny.media_file_id || lessonAny.media_file_id_from_join || lessonAny.video_url || lessonAny.document_url || lessonAny.audio_url) {
       const fileCategory: 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other' = 
         (lessonAny.file_category as 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other') || 
         (contentType === 'video' ? 'video' : 
@@ -340,6 +368,65 @@ export default function LessonContent({
     } else {
       console.warn('[LessonContent] ⚠️ Aucun média résolu, mediaFile sera null');
       setMediaFile(null);
+      
+      // Si aucun média n'est trouvé et qu'on a un enrollmentId, essayer de charger la leçon complète depuis le backend
+      if (enrollmentId && !isLoadingFullLesson && !fullLessonData) {
+        console.log('[LessonContent] 🔄 Tentative de chargement de la leçon complète depuis le backend...');
+        setIsLoadingFullLesson(true);
+        
+        courseService.getLessonForStudent(courseId, lesson.id)
+          .then((fullLesson) => {
+            console.log('[LessonContent] ✅ Leçon complète chargée:', fullLesson);
+            setFullLessonData(fullLesson as any);
+            
+            // Essayer de résoudre le média depuis la leçon complète (médias distribués automatiquement)
+            const fullLessonAny = fullLesson as any;
+            let resolvedFromFull: MediaFile | null = null;
+            
+            // Priorité 1: media_files (médias distribués automatiquement par le backend selon order_index)
+            if (fullLessonAny.media_files && Array.isArray(fullLessonAny.media_files) && fullLessonAny.media_files.length > 0) {
+              const validMedia = fullLessonAny.media_files.filter((m: any) => m && m.url);
+              if (validMedia.length > 0) {
+                resolvedFromFull = validMedia[0] as MediaFile;
+                console.log('[LessonContent] ✅ Média distribué automatiquement trouvé dans media_files:', {
+                  total: fullLessonAny.media_files.length,
+                  valid: validMedia.length,
+                  selected: resolvedFromFull,
+                });
+              }
+            }
+            // Priorité 2: media_file (objet unique)
+            else if (fullLessonAny.media_file && typeof fullLessonAny.media_file === 'object' && fullLessonAny.media_file !== null && fullLessonAny.media_file.url) {
+              resolvedFromFull = fullLessonAny.media_file as MediaFile;
+            }
+            // Priorité 3: media (ancienne structure)
+            else if (fullLessonAny.media) {
+              if (Array.isArray(fullLessonAny.media) && fullLessonAny.media.length > 0) {
+                const validMedia = fullLessonAny.media.filter((m: any) => m && m.url);
+                if (validMedia.length > 0) {
+                  resolvedFromFull = validMedia[0] as MediaFile;
+                }
+              } else if (typeof fullLessonAny.media === 'object' && fullLessonAny.media !== null && fullLessonAny.media.url) {
+                resolvedFromFull = fullLessonAny.media as MediaFile;
+              }
+            }
+            // Priorité 4: mediaFile (propriété directe)
+            else if (fullLessonAny.mediaFile && fullLessonAny.mediaFile.url) {
+              resolvedFromFull = fullLessonAny.mediaFile;
+            }
+            
+            if (resolvedFromFull) {
+              console.log('[LessonContent] ✅ Média trouvé dans la leçon complète:', resolvedFromFull);
+              setMediaFile(resolvedFromFull);
+            }
+          })
+          .catch((error) => {
+            console.error('[LessonContent] ❌ Erreur lors du chargement de la leçon complète:', error);
+          })
+          .finally(() => {
+            setIsLoadingFullLesson(false);
+          });
+      }
     }
 
     // Cleanup: retirer les event listeners quand le composant se démonte ou change de leçon
@@ -353,108 +440,10 @@ export default function LessonContent({
       window.removeEventListener('mousedown', handleMouseDown, { capture: true } as any);
       window.removeEventListener('mouseup', handleMouseUp, { capture: true } as any);
     };
-  }, [lesson]);
+  }, [lesson, courseId, enrollmentId]);
 
-  // Charger et afficher le fichier PPTX avec pptx-preview
-  useEffect(() => {
-    const loadAndRenderPptx = async () => {
-      if (!mediaFile?.url) {
-        setPptxData(null);
-        setIsLoadingPptx(false);
-        return;
-      }
-      
-      // Vérifier si c'est un fichier PPTX
-      const filename = mediaFile.originalFilename?.toLowerCase() || mediaFile.url?.toLowerCase() || '';
-      const isPPTX = mediaFile.fileType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
-                    mediaFile.fileType === 'application/vnd.ms-powerpoint' ||
-                    filename.endsWith('.pptx') ||
-                    filename.endsWith('.ppt');
-      
-      if (!isPPTX) {
-        setPptxData(null);
-        setIsLoadingPptx(false);
-        return;
-      }
-      
-      setIsLoadingPptx(true);
-      setPptxError(false);
-      
-      try {
-        // Utiliser resolveMediaUrl pour construire l'URL via le proxy Next.js (évite CORS)
-        const fileUrlRaw = mediaFile.url || '';
-        const fileUrl = resolveMediaUrl(fileUrlRaw) || fileUrlRaw;
-        
-        // Télécharger le fichier PPTX
-        const response = await fetch(fileUrl);
-        
-        if (!response.ok) {
-          throw new Error('Erreur lors du chargement du fichier');
-        }
-        
-        // Convertir en ArrayBuffer
-        const arrayBuffer = await response.arrayBuffer();
-        setPptxData(arrayBuffer);
-        
-        // Attendre que le DOM soit prêt et que le conteneur soit disponible
-        let container = null;
-        let attempts = 0;
-        const maxAttempts = 10;
-        
-        while (!container && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          const containerId = `pptx-preview-${lesson.id}`;
-          container = document.getElementById(containerId);
-          attempts++;
-        }
-        
-        if (container) {
-          // Nettoyer le contenu précédent
-          container.innerHTML = '';
-          
-          // Obtenir les dimensions du conteneur
-          const width = container.offsetWidth || container.clientWidth || 960;
-          const height = Math.max(container.offsetHeight || container.clientHeight || 540, 540);
-          
-          console.log('Initialisation pptx-preview avec:', { width, height, containerId: `pptx-preview-${lesson.id}` });
-          
-          // Initialiser le preview avec pptx-preview
-          const pptxPreviewer = init(container, {
-            width: width,
-            height: height
-          });
-          
-          // Afficher le fichier
-          pptxPreviewer.preview(arrayBuffer);
-          
-          console.log('PPTX preview initialisé avec succès');
-        } else {
-          console.error('Conteneur PPTX non trouvé après', maxAttempts, 'tentatives');
-          throw new Error('Conteneur PPTX non trouvé');
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement du fichier PPTX:', error);
-        setPptxError(true);
-      } finally {
-        setIsLoadingPptx(false);
-      }
-    };
-    
-    // Délai pour laisser le temps au mediaFile d'être mis à jour
-    const timer = setTimeout(() => {
-      loadAndRenderPptx();
-    }, 200);
-    
-    return () => {
-      clearTimeout(timer);
-      // Nettoyer le preview si nécessaire
-      const containerId = `pptx-preview-${lesson.id}`;
-      const container = document.getElementById(containerId);
-      if (container) {
-        container.innerHTML = '';
-      }
-    };
-  }, [mediaFile?.url, mediaFile?.id, lesson.id]);
+  // Note: Le chargement des documents (PDF, PowerPoint, Word, Excel) est maintenant géré par le composant FileViewer
+  // qui utilise des viewers optimisés par format (react-pdf, pptx-preview, mammoth, xlsx)
 
   const handleMarkComplete = useCallback(async () => {
     if (!enrollmentId && !onComplete) {
@@ -588,58 +577,182 @@ export default function LessonContent({
   }, [isCompleted, requestAutoCompletion, scrollCompletionTarget, shouldWatchScrollCompletion]);
 
   const renderMediaContent = () => {
+    // Pour les leçons de type "text", on n'a pas besoin de média si on a du contenu texte
+    // Si c'est une leçon texte sans contenu texte ni URL, c'est probablement une leçon vide ou en cours de création
+    if (contentType === 'text') {
+      if (contentText && !contentUrl) {
+        // Si c'est une leçon texte avec du contenu mais sans URL de média, retourner null
+        // Le contenu texte sera affiché dans la section dédiée plus bas
+        return null;
+      }
+      // Si c'est une leçon texte sans contenu texte ni URL, ne pas afficher d'erreur
+      // Le contenu texte (même vide) sera affiché dans la section dédiée plus bas
+      if (!contentText && !contentUrl) {
+        console.log('[LessonContent] ℹ️ Leçon de type "text" sans contenu texte ni URL - affichage de la section texte vide');
+        return null;
+      }
+    }
+    
+    // Utiliser les données de la leçon complète si disponibles
+    const lessonToUse = fullLessonData || lesson;
+    const lessonToUseAny = lessonToUse as any;
+    
     // Si mediaFile n'existe pas mais contentUrl existe, construire un mediaFile minimal
     let effectiveMediaFile = mediaFile;
-    const lessonAny = lesson as any;
+    const lessonAny = lessonToUseAny;
     
     if (!effectiveMediaFile) {
-      // Essayer de construire un mediaFile à partir de contentUrl ou d'autres sources
+      // Essayer de construire un mediaFile à partir de toutes les sources possibles
+      // Vérifier d'abord si lesson a directement un mediaFile ou media
+      if (lessonAny.media) {
+        if (Array.isArray(lessonAny.media) && lessonAny.media.length > 0) {
+          effectiveMediaFile = lessonAny.media[0] as MediaFile;
+          console.log('[LessonContent] 🔧 MediaFile trouvé dans lesson.media (tableau):', effectiveMediaFile);
+        } else if (typeof lessonAny.media === 'object' && lessonAny.media !== null) {
+          effectiveMediaFile = lessonAny.media as MediaFile;
+          console.log('[LessonContent] 🔧 MediaFile trouvé dans lesson.media (objet):', effectiveMediaFile);
+        }
+      } else if (lessonAny.media_files && Array.isArray(lessonAny.media_files) && lessonAny.media_files.length > 0) {
+        effectiveMediaFile = lessonAny.media_files[0] as MediaFile;
+        console.log('[LessonContent] 🔧 MediaFile trouvé dans lesson.media_files (tableau):', effectiveMediaFile);
+      } else if (lessonAny.media_file && typeof lessonAny.media_file === 'object' && lessonAny.media_file !== null) {
+        effectiveMediaFile = lessonAny.media_file as MediaFile;
+        console.log('[LessonContent] 🔧 MediaFile trouvé dans lesson.media_file (objet):', effectiveMediaFile);
+      } else if (lesson.mediaFile) {
+        effectiveMediaFile = lesson.mediaFile;
+        console.log('[LessonContent] 🔧 MediaFile trouvé dans lesson.mediaFile:', effectiveMediaFile);
+      }
+    }
+    
+    // Si toujours pas de mediaFile, essayer de le construire depuis les URLs
+    if (!effectiveMediaFile) {
+      // Essayer toutes les sources possibles pour l'URL
       const fallbackUrl = contentUrl || 
+                         lessonAny.content_url ||
                          lessonAny.media_url || 
                          lessonAny.video_url || 
-                         lessonAny.content_url || 
                          lessonAny.document_url || 
+                         lessonAny.audio_url ||
+                         lesson.contentUrl ||
+                         lessonAny.url ||
                          '';
       
+      console.log('[LessonContent] 🔍 Tentative de construction depuis fallbackUrl:', {
+        fallbackUrl,
+        contentUrl,
+        hasContentUrl: !!contentUrl,
+        lessonContentUrl: lessonAny.content_url,
+        lessonMediaUrl: lessonAny.media_url,
+        lessonVideoUrl: lessonAny.video_url,
+        lessonDocumentUrl: lessonAny.document_url,
+        lessonAudioUrl: lessonAny.audio_url,
+        contentType,
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        hasContentText: !!contentText,
+        contentTextLength: contentText?.length || 0,
+        media_file_id: lessonAny.media_file_id,
+        hasMediaFiles: !!lessonAny.media_files,
+        hasMediaFile: !!lessonAny.media_file,
+        hasMedia: !!lessonAny.media,
+        lessonKeys: Object.keys(lessonAny),
+        // Afficher un résumé des données disponibles
+        availableUrls: {
+          content_url: lessonAny.content_url,
+          media_url: lessonAny.media_url,
+          video_url: lessonAny.video_url,
+          document_url: lessonAny.document_url,
+          audio_url: lessonAny.audio_url,
+        },
+      });
+      
       if (fallbackUrl) {
-        // Déterminer le type de média basé sur contentType et contentUrl
-        const fileCategory = contentType === 'video' ? 'video' :
-                            contentType === 'audio' ? 'audio' :
-                            contentType === 'document' ? 'document' :
-                            contentType === 'presentation' ? 'presentation' :
-                            contentType === 'h5p' ? 'h5p' : 'other';
+        // Déterminer le type de média basé sur contentType et l'extension de l'URL
+        let fileCategory: 'video' | 'document' | 'audio' | 'image' | 'presentation' | 'h5p' | 'other' = 'other';
+        
+        // D'abord essayer depuis contentType
+        if (contentType === 'video') fileCategory = 'video';
+        else if (contentType === 'audio') fileCategory = 'audio';
+        else if (contentType === 'document') fileCategory = 'document';
+        else if (contentType === 'presentation') fileCategory = 'presentation';
+        else if (contentType === 'h5p') fileCategory = 'h5p';
+        // Sinon, essayer de détecter depuis l'extension de l'URL
+        else {
+          const urlLower = fallbackUrl.toLowerCase();
+          if (urlLower.includes('.pdf')) fileCategory = 'document';
+          else if (urlLower.includes('.mp4') || urlLower.includes('.webm') || urlLower.includes('.mov')) fileCategory = 'video';
+          else if (urlLower.includes('.mp3') || urlLower.includes('.wav') || urlLower.includes('.ogg')) fileCategory = 'audio';
+          else if (urlLower.includes('.pptx') || urlLower.includes('.ppt')) fileCategory = 'presentation';
+          else if (urlLower.includes('.docx') || urlLower.includes('.doc')) fileCategory = 'document';
+          else if (urlLower.includes('.xlsx') || urlLower.includes('.xls')) fileCategory = 'document';
+        }
+        
+        // Extraire le nom de fichier depuis l'URL
+        let originalFilename = lessonAny.original_filename || lessonAny.originalFilename || lessonAny.filename || '';
+        if (!originalFilename && fallbackUrl) {
+          try {
+            const urlParts = fallbackUrl.split('/');
+            originalFilename = urlParts[urlParts.length - 1].split('?')[0]; // Enlever les query params
+            if (!originalFilename || originalFilename === '') {
+              originalFilename = lesson.title || `fichier-${lesson.id}`;
+            }
+          } catch (e) {
+            originalFilename = lesson.title || `fichier-${lesson.id}`;
+          }
+        }
         
         effectiveMediaFile = {
-          id: lesson.id,
+          id: lessonAny.media_file_id || lessonAny.mediaFileId || lesson.id,
           url: fallbackUrl,
-          thumbnail_url: lessonAny.thumbnail_url || lesson.thumbnail_url,
-          thumbnailUrl: lessonAny.thumbnail_url || lesson.thumbnail_url,
+          thumbnail_url: lessonAny.thumbnail_url || lesson.thumbnail_url || '',
+          thumbnailUrl: lessonAny.thumbnail_url || lesson.thumbnail_url || '',
           file_category: fileCategory,
           fileCategory: fileCategory,
-          original_filename: lessonAny.original_filename || lessonAny.filename || lesson.title || '',
-          originalFilename: lessonAny.original_filename || lessonAny.filename || lesson.title || '',
-          file_size: lessonAny.file_size || 0,
-          fileSize: lessonAny.file_size || 0,
-          file_type: lessonAny.file_type || '',
-          fileType: lessonAny.file_type || '',
+          original_filename: originalFilename,
+          originalFilename: originalFilename,
+          file_size: lessonAny.file_size || lessonAny.fileSize || 0,
+          fileSize: lessonAny.file_size || lessonAny.fileSize || 0,
+          file_type: lessonAny.file_type || lessonAny.fileType || '',
+          fileType: lessonAny.file_type || lessonAny.fileType || '',
           lesson_id: lesson.id,
           lessonId: lesson.id,
         } as MediaFile;
         
-        console.log('[LessonContent] 🔧 MediaFile construit depuis fallbackUrl:', {
-          url: fallbackUrl,
-          fileCategory,
+        console.log('[LessonContent] ✅ MediaFile construit depuis fallbackUrl:', {
+          id: effectiveMediaFile.id,
+          url: effectiveMediaFile.url,
+          fileCategory: effectiveMediaFile.fileCategory,
+          originalFilename: effectiveMediaFile.originalFilename,
           lessonId: lesson.id,
         });
       }
     }
     
     if (!effectiveMediaFile) {
-      console.warn('[LessonContent] ⚠️ Aucun média disponible pour affichage:', {
+      // Pour les leçons de type "text", si on a du contenu texte, ne pas afficher d'erreur
+      if (contentType === 'text' && contentText) {
+        console.log('[LessonContent] ℹ️ Leçon de type "text" avec contenu texte, pas de média nécessaire');
+        return null;
+      }
+      
+      console.error('[LessonContent] ❌ Aucun média disponible pour affichage:', {
         lessonId: lesson.id,
+        lessonTitle: lesson.title,
         contentType,
         hasMediaFile: !!mediaFile,
         hasContentUrl: !!contentUrl,
+        contentUrl: contentUrl,
+        hasContentText: !!contentText,
+        contentTextLength: contentText?.length || 0,
+        lessonContentUrl: lessonAny.content_url,
+        lessonMediaUrl: lessonAny.media_url,
+        lessonVideoUrl: lessonAny.video_url,
+        lessonKeys: Object.keys(lessonAny),
+        lessonMediaFile: lesson.mediaFile,
+        lessonMedia: lessonAny.media,
+        lessonMediaFiles: lessonAny.media_files,
+        lessonMediaFileObj: lessonAny.media_file,
+        fullLessonData: JSON.stringify(lessonAny, null, 2).substring(0, 1000), // Premiers 1000 caractères
       });
       
       // Afficher un message d'erreur informatif au lieu de retourner null
@@ -649,9 +762,21 @@ export default function LessonContent({
           <p className="text-yellow-800 font-medium mb-2">
             Contenu non disponible
           </p>
-          <p className="text-yellow-700 text-sm">
+          <p className="text-yellow-700 text-sm mb-4">
             Le contenu de cette leçon n'a pas pu être chargé. Veuillez contacter le support si le problème persiste.
           </p>
+          <details className="text-left text-xs text-gray-600 mt-4">
+            <summary className="cursor-pointer font-medium">Détails techniques</summary>
+            <div className="mt-2 p-2 bg-gray-100 rounded">
+              <p>Leçon ID: {lesson.id}</p>
+              <p>Type de contenu: {contentType}</p>
+              <p>Content URL: {contentUrl || 'non défini'}</p>
+              <p>Content Text: {contentText ? `${contentText.length} caractères` : 'absent'}</p>
+              <p>Media File: {mediaFile ? 'présent' : 'absent'}</p>
+              <p>Media Files: {lessonAny.media_files ? 'présent' : 'absent'}</p>
+              <p>Media File (obj): {lessonAny.media_file ? 'présent' : 'absent'}</p>
+            </div>
+          </details>
         </div>
       );
     }
@@ -696,9 +821,9 @@ export default function LessonContent({
             </div>
             
             {/* Lecteur vidéo stylé avec protection - Centré avec bordures arrondies */}
-            <div className="p-4 sm:p-6 bg-gray-50">
-              <div className="max-w-3xl mx-auto">
-                <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group" style={{ maxHeight: '500px' }}>
+            <div className="p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+              <div className="max-w-5xl mx-auto">
+                <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group" style={{ maxHeight: '600px' }}>
                   <video
                     key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
                     src={videoUrl}
@@ -785,10 +910,43 @@ export default function LessonContent({
             </div>
             
             {/* Barre d'information en bas */}
-            <div className="px-4 pb-4 sm:px-6 sm:pb-6">
-              <p className="text-xs text-center text-gray-500">
+            <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50">
+              <p className="text-xs text-center text-gray-500 mb-4">
                 Lecture protégée - Téléchargement et enregistrement désactivés
               </p>
+              
+              {/* Bouton "Marquer comme terminé" */}
+              {enrollmentId && !isCompleted && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleMarkComplete}
+                    disabled={isMarkingComplete}
+                    className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isMarkingComplete ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        <span>Marquage en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        <span>Marquer comme terminé</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+              
+              {/* Indicateur de complétion */}
+              {isCompleted && (
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center px-6 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    <span className="font-medium">Leçon terminée</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -800,9 +958,9 @@ export default function LessonContent({
         const audioUrl = resolveMediaUrl(audioUrlRaw) || audioUrlRaw;
         
         return (
-          <div className="bg-white">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* En-tête de l'audio */}
-            <div className="p-4 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-white/20 rounded-lg">
@@ -832,7 +990,7 @@ export default function LessonContent({
             
             {/* Lecteur audio stylé avec protection */}
             <div 
-              className="p-6 bg-gray-50"
+              className="p-6 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100"
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -957,8 +1115,8 @@ export default function LessonContent({
             </div>
             
             {/* Barre d'information en bas */}
-            <div className="p-3 bg-gray-50">
-              <p className="text-xs text-gray-500">
+            <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50 border-t border-gray-200">
+              <p className="text-xs text-center text-gray-500">
                 Lecture protégée - Téléchargement et enregistrement désactivés
               </p>
             </div>
@@ -981,359 +1139,43 @@ export default function LessonContent({
                       filename.endsWith('.pptx') ||
                       filename.endsWith('.ppt');
         
-        // Pour les PDFs, afficher intégré
-        if (isPDF) {
-          // Afficher le PDF intégré dans un iframe
+        // Pour les PDFs, PowerPoint, Word et Excel, utiliser FileViewer (solution optimisée par format)
+        if (isPDF || isPPTX) {
           return (
-            <div className="bg-white">
-              <div className="flex items-center justify-between p-4 bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <File className="h-5 w-5 text-mdsc-blue-primary" />
-                  <div>
-                    <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+              <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm flex-shrink-0">
+                    <File className="h-5 w-5 text-white" />
                   </div>
-                </div>
-                {/* Supprimé le bouton "Ouvrir dans un nouvel onglet" pour empêcher le téléchargement */}
-              </div>
-              <div 
-                className="w-full relative select-none pdf-viewer-container" 
-                style={{ 
-                  height: '800px', 
-                  minHeight: '600px',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  MozUserSelect: 'none',
-                  msUserSelect: 'none',
-                  touchAction: 'none',
-                  WebkitTouchCallout: 'none',
-                  KhtmlUserSelect: 'none',
-                  // @ts-expect-error - Propriétés webkit non standard
-                  WebkitUserDrag: 'none'
-                }}
-                onContextMenu={(e) => {
-                  // Empêcher le menu contextuel sur le conteneur
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                    (e.nativeEvent as any).stopImmediatePropagation();
-                  }
-                  return false;
-                }}
-                onMouseDown={(e) => {
-                  // Empêcher le clic droit (bouton 2 = clic droit)
-                  if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                      (e.nativeEvent as any).stopImmediatePropagation();
-                    }
-                    return false;
-                  }
-                }}
-                onMouseUp={(e) => {
-                  // Empêcher aussi au relâchement du clic droit
-                  if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                      (e.nativeEvent as any).stopImmediatePropagation();
-                    }
-                    return false;
-                  }
-                }}
-                onAuxClick={(e) => {
-                  // Empêcher UNIQUEMENT les clics droits (bouton 2)
-                  // Laisser passer le bouton du milieu (button === 1) pour le scroll
-                  if (e.button === 2) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                      (e.nativeEvent as any).stopImmediatePropagation();
-                    }
-                    return false;
-                  }
-                  // Laisser passer les autres clics (bouton du milieu, etc.)
-                }}
-                onKeyDown={(e) => {
-                  // Empêcher les raccourcis clavier d'impression, sauvegarde, et autres
-                  if ((e.ctrlKey || e.metaKey) && (
-                    e.key === 'p' || e.key === 's' || e.key === 'P' || e.key === 'S' ||
-                    e.key === 'u' || e.key === 'U' || // Ctrl+U (code source)
-                    e.key === 'i' || e.key === 'I' || // Ctrl+I (inspecter)
-                    e.key === 'j' || e.key === 'J' || // Ctrl+J (console)
-                    e.key === 'k' || e.key === 'K'    // Ctrl+K (recherche)
-                  )) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.nativeEvent.stopImmediatePropagation();
-                    return false;
-                  }
-                  // Empêcher F12 (outils développeur)
-                  if (e.key === 'F12') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.nativeEvent.stopImmediatePropagation();
-                    return false;
-                  }
-                }}
-                // onDragStart et onSelectStart supprimés - laisser fonctionner normalement
-                // onClick supprimé - laisser tous les clics gauches fonctionner normalement
-              >
-                {pdfLoadError ? (
-                  <div className="flex flex-col items-center justify-center h-full bg-gray-50">
-                    <File className="h-16 w-16 text-gray-400" />
-                    <p className="text-gray-600">
-                      Impossible d'afficher le PDF dans cette page
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-white truncate text-base sm:text-lg">
+                      {effectiveMediaFile.originalFilename || lesson.title}
+                    </p>
+                    <p className="text-xs sm:text-sm text-white/80 mt-1">
+                      {isPDF ? 'Document PDF' : 'Présentation PowerPoint'}
                     </p>
                   </div>
-                ) : (
-                  <>
-                    <iframe
-                      key={`pdf-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
-                      src={`${documentUrl}#toolbar=0&navpanes=0&scrollbar=1&view=FitH`}
-                      className="w-full h-full border-0 relative z-10"
-                      title={effectiveMediaFile.originalFilename || 'Document'}
-                      allow="fullscreen"
-                      style={{ 
-                        border: 'none',
-                        pointerEvents: 'auto',
-                        userSelect: 'none',
-                        WebkitUserSelect: 'none',
-                        MozUserSelect: 'none',
-                        msUserSelect: 'none'
-                      }}
-                      onContextMenu={(e) => {
-                        // Empêcher le menu contextuel sur l'iframe
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                          (e.nativeEvent as any).stopImmediatePropagation();
-                        }
-                        return false;
-                      }}
-                      onMouseDown={(e) => {
-                        // Empêcher le clic droit sur l'iframe
-                        if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                            (e.nativeEvent as any).stopImmediatePropagation();
-                          }
-                          return false;
-                        }
-                      }}
-                      onMouseUp={(e) => {
-                        // Empêcher aussi au relâchement
-                        if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (e.nativeEvent && 'stopImmediatePropagation' in e.nativeEvent) {
-                            (e.nativeEvent as any).stopImmediatePropagation();
-                          }
-                          return false;
-                        }
-                      }}
-                      onLoad={() => {
-                        setPdfLoadError(false);
-                        // Désactiver le menu contextuel et autres interactions dans l'iframe après chargement
-                        try {
-                          const iframe = document.querySelector(`iframe[title="${effectiveMediaFile.originalFilename || 'Document'}"]`) as HTMLIFrameElement;
-                          if (iframe?.contentDocument) {
-                            const doc = iframe.contentDocument;
-                            const win = iframe.contentWindow;
-                            
-                            // Empêcher le menu contextuel avec capture
-                            const preventContextMenu = (e: Event) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              e.stopImmediatePropagation();
-                              return false;
-                            };
-                            
-                            doc.addEventListener('contextmenu', preventContextMenu, { capture: true, passive: false });
-                            doc.addEventListener('contextmenu', preventContextMenu, true);
-                            
-                            // Empêcher les clics droits
-                            const preventRightClick = (e: MouseEvent) => {
-                              if (e.button === 2 || e.which === 3) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.stopImmediatePropagation();
-                                return false;
-                              }
-                            };
-                            
-                            doc.addEventListener('mousedown', preventRightClick, { capture: true, passive: false });
-                            doc.addEventListener('mouseup', preventRightClick, { capture: true, passive: false });
-                            
-                            // Empêcher les raccourcis clavier
-                            doc.addEventListener('keydown', (e) => {
-                              if ((e.ctrlKey || e.metaKey) && (
-                                e.key === 'p' || e.key === 's' || 
-                                e.key === 'u' || e.key === 'i' || 
-                                e.key === 'j' || e.key === 'k'
-                              )) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                e.stopImmediatePropagation();
-                                return false;
-                              }
-                              if (e.key === 'F12') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return false;
-                              }
-                            }, { capture: true, passive: false });
-                            
-                            // Empêcher la sélection de texte
-                            doc.addEventListener('selectstart', (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              return false;
-                            }, { capture: true, passive: false });
-                            
-                            // Empêcher le glisser-déposer
-                            doc.addEventListener('dragstart', (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              return false;
-                            }, { capture: true, passive: false });
-                            
-                            // Désactiver la sélection via CSS
-                            if (doc.body) {
-                              doc.body.style.userSelect = 'none';
-                              doc.body.style.webkitUserSelect = 'none';
-                              // @ts-expect-error - Propriétés non standard
-                              doc.body.style.mozUserSelect = 'none';
-                              // @ts-expect-error - Propriétés non standard
-                              doc.body.style.msUserSelect = 'none';
-                              // @ts-expect-error - Propriétés webkit non standard
-                              doc.body.style.webkitTouchCallout = 'none';
-                              // @ts-expect-error - Propriétés webkit non standard
-                              doc.body.style.webkitUserDrag = 'none';
-                              // Empêcher le menu contextuel via CSS
-                              doc.body.setAttribute('oncontextmenu', 'return false;');
-                            }
-                            
-                            // Empêcher les clics droits via window
-                            if (win) {
-                              win.addEventListener('contextmenu', preventContextMenu, { capture: true, passive: false });
-                              win.addEventListener('contextmenu', preventContextMenu, true);
-                              win.addEventListener('mousedown', preventRightClick, { capture: true, passive: false });
-                              win.addEventListener('mouseup', preventRightClick, { capture: true, passive: false });
-                            }
-                          }
-                        } catch (err) {
-                          // Ignorer les erreurs CORS (normal si le PDF vient d'un autre domaine)
-                          console.warn('Impossible d\'accéder au contenu de l\'iframe (CORS) - Protection limitée');
-                        }
-                      }}
-                      onError={() => {
-                        console.error('Erreur lors du chargement du PDF dans l\'iframe');
-                        setPdfLoadError(true);
-                      }}
-                    />
-                    <div className="mt-2 text-center">
-                      <p className="text-xs text-gray-500">
-                        Document en lecture seule - Impression, téléchargement et enregistrement désactivés
-                      </p>
-                    </div>
-                  </>
+                </div>
+                {isCompleted && (
+                  <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex-shrink-0 ml-3">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                    <span className="text-sm font-medium text-white">Complétée</span>
+                  </div>
                 )}
               </div>
-            </div>
-          );
-        }
-        
-        // Pour les PowerPoint (PPTX/PPT), utiliser la bibliothèque PPTXRenderer
-        if (isPPTX) {
-          return (
-            <div className="bg-white">
-              <div className="flex items-center justify-between p-4 bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <File className="h-5 w-5 text-mdsc-blue-primary" />
-                  <div>
-                    <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
-                  </div>
-                </div>
+              
+              <div className="p-4 sm:p-6 bg-gray-50">
+                <FileViewer 
+                  fileUrl={documentUrl}
+                  filename={effectiveMediaFile.originalFilename || lesson.title}
+                  fileType={effectiveMediaFile.fileType}
+                />
               </div>
               
-              {pptxError ? (
-                <div className="p-8 text-center">
-                  <File className="h-16 w-16 text-gray-400" />
-                  <p className="text-gray-600">
-                    Impossible de charger la présentation
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Veuillez réessayer plus tard ou contacter le support.
-                  </p>
-                </div>
-              ) : (
-                <div 
-                  className="w-full relative select-none pdf-viewer-container" 
-                  style={{ 
-                    minHeight: '600px',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    MozUserSelect: 'none',
-                    msUserSelect: 'none',
-                    touchAction: 'none',
-                    WebkitTouchCallout: 'none',
-                    KhtmlUserSelect: 'none',
-                    // @ts-expect-error - Propriétés webkit non standard
-                    WebkitUserDrag: 'none'
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                  }}
-                  onMouseDown={(e) => {
-                    if (e.button === 2 || (e.nativeEvent && (e.nativeEvent as any).which === 3)) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return false;
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if ((e.ctrlKey || e.metaKey) && (
-                      e.key === 'p' || e.key === 's' || e.key === 'P' || e.key === 'S' ||
-                      e.key === 'u' || e.key === 'U' || e.key === 'i' || e.key === 'I' ||
-                      e.key === 'j' || e.key === 'J' || e.key === 'k' || e.key === 'K'
-                    )) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.nativeEvent.stopImmediatePropagation();
-                      return false;
-                    }
-                  }}
-                >
-                  {isLoadingPptx && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white">
-                      <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary mx-auto mb-4"></div>
-                        <p className="text-gray-600">
-                          Chargement de la présentation...
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <div 
-                    id={`pptx-preview-${lesson.id}`}
-                    style={{ 
-                      width: '100%', 
-                      height: '600px',
-                      minHeight: '600px',
-                      backgroundColor: '#f5f5f5',
-                      position: 'relative'
-                    }}
-                  />
-                </div>
-              )}
-              
-              <div className="p-3 bg-gray-50">
-                <p className="text-xs text-gray-500">
-                  Présentation en lecture seule - Téléchargement et enregistrement désactivés
+              <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50 border-t border-gray-200">
+                <p className="text-xs text-center text-gray-500">
+                  Document en lecture seule - Impression, téléchargement et enregistrement désactivés
                 </p>
               </div>
             </div>
@@ -1342,42 +1184,74 @@ export default function LessonContent({
         
         // Pour les autres types de documents, afficher un lien de téléchargement
         return (
-          <div className="bg-white">
-            <div className="flex items-center space-x-3 mb-4">
-              <File className="h-6 w-6 text-mdsc-blue-primary" />
-              <div>
-                <p className="font-medium text-gray-900">{effectiveMediaFile.originalFilename}</p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-mdsc-blue-primary/10 rounded-lg">
+                  <File className="h-5 w-5 text-mdsc-blue-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{effectiveMediaFile.originalFilename || lesson.title}</p>
+                  <p className="text-sm text-gray-600 mt-1">Document à télécharger</p>
+                </div>
               </div>
             </div>
-            <a
-              href={documentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Télécharger/Ouvrir
-            </a>
+            <div className="p-4 sm:p-6">
+              <a
+                href={documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium shadow-md hover:shadow-lg"
+              >
+                <ExternalLink className="h-5 w-5 mr-2" />
+                Télécharger/Ouvrir le document
+              </a>
+            </div>
           </div>
         );
       }
 
       case 'h5p':
         return (
-          <div className="w-full aspect-video">
-            <iframe
-              src={effectiveMediaFile.url}
-              className="w-full h-full rounded-lg border border-gray-200"
-              allowFullScreen
-              title={lesson.title}
-            />
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary/5 to-mdsc-blue-primary/10 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-mdsc-blue-primary/10 rounded-lg">
+                  <FileText className="h-5 w-5 text-mdsc-blue-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Contenu interactif H5P</h3>
+                  <p className="text-sm text-gray-600">{lesson.title}</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 sm:p-6 bg-gray-50">
+              <div className="w-full aspect-video rounded-lg overflow-hidden border border-gray-200 shadow-md">
+                <iframe
+                  src={effectiveMediaFile.url}
+                  className="w-full h-full"
+                  allowFullScreen
+                  title={lesson.title}
+                />
+              </div>
+            </div>
           </div>
         );
 
       default:
+        // Pour le type 'text', ne rien afficher ici car le contenu texte est affiché séparément
+        if (contentType === 'text') {
+          return null;
+        }
         return (
-          <div className="bg-gray-50">
-            <p className="text-gray-500">Type de média non supporté</p>
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="p-6 sm:p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium mb-2">Type de média non supporté</p>
+              <p className="text-sm text-gray-500">
+                Ce type de contenu n'est pas encore pris en charge
+              </p>
+            </div>
           </div>
         );
     }
@@ -1405,45 +1279,86 @@ export default function LessonContent({
   return (
     <div className={`space-y-4 sm:space-y-6 ${className}`}>
       {/* Lesson Header */}
-      <div className="bg-white">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4">
-          <div className="flex items-start space-x-3 sm:space-x-4 flex-1 min-w-0">
-            <div className="p-2 sm:p-3 bg-mdsc-blue-primary/10 rounded-lg flex-shrink-0">
-              {getContentIcon()}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
+            <div className="flex items-start space-x-4 flex-1 min-w-0">
+              <div className="p-3 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-xl flex-shrink-0 shadow-md">
+                <div className="text-white">
+                  {getContentIcon()}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words mb-2">{lesson.title}</h2>
+                {lessonDescription && (
+                  <p className="text-gray-600 text-base leading-relaxed mb-3">{lessonDescription}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                  {lessonDuration && (
+                    <div className="flex items-center space-x-1.5">
+                      <Clock className="h-4 w-4" />
+                      <span>Durée: {lessonDuration} min</span>
+                    </div>
+                  )}
+                  {lesson.is_required && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
+                      Obligatoire
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{lesson.title}</h2>
-              {lessonDescription && (
-                <p className="text-gray-600">{lessonDescription}</p>
-              )}
-              {lessonDuration && (
-                <p className="text-sm text-gray-500">
-                  Durée estimée: {lessonDuration} min
-                </p>
-              )}
-            </div>
+
+            {isCompleted && (
+              <div className="inline-flex items-center px-4 py-2 rounded-lg bg-green-50 border border-green-200 shadow-sm">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-green-700 font-medium">Terminée</span>
+              </div>
+            )}
           </div>
-
-          {isCompleted && (
-            <span className="inline-flex items-center px-4 py-2 rounded-lg bg-green-50">
-              <CheckCircle className="h-5 w-5 mr-2" />
-              Terminée
-            </span>
-          )}
         </div>
-
       </div>
 
       {/* Media Content */}
       {contentType !== 'quiz' && renderMediaContent()}
 
-      {/* Text Content - Afficher pour tous les types si contentText existe */}
+      {/* Text Content - Afficher s'il y a du contenu texte (pour les leçons de type "text" ou si le contenu texte existe) */}
       {contentText && (
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <div
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: contentText }}
-          />
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary/5 to-mdsc-blue-primary/10 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-mdsc-blue-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-mdsc-blue-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Contenu de la leçon</h3>
+            </div>
+          </div>
+          <div className="p-6 sm:p-8">
+            {contentText ? (
+              <div
+                id="lesson-content-text"
+                className="prose prose-md sm:prose-lg max-w-none 
+                  prose-headings:text-gray-900 prose-headings:font-bold
+                  prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-6
+                  prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-5
+                  prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-4
+                  prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-4
+                  prose-a:text-mdsc-blue-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+                  prose-strong:text-gray-900 prose-strong:font-semibold
+                  prose-ul:text-gray-700 prose-ul:my-4 prose-ul:pl-6
+                  prose-ol:text-gray-700 prose-ol:my-4 prose-ol:pl-6
+                  prose-li:text-gray-700 prose-li:my-2 prose-li:leading-relaxed
+                  prose-img:rounded-xl prose-img:shadow-lg prose-img:my-6 prose-img:max-w-full prose-img:h-auto
+                  prose-blockquote:border-l-4 prose-blockquote:border-mdsc-blue-primary prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-600 prose-blockquote:my-4
+                  prose-code:text-mdsc-blue-primary prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+                  prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto
+                  prose-table:w-full prose-table:my-4 prose-table:border-collapse
+                  prose-th:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
+                  prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2"
+                dangerouslySetInnerHTML={{ __html: contentText }}
+              />
+            ) : null}
+          </div>
         </div>
       )}
 
@@ -1455,31 +1370,51 @@ export default function LessonContent({
         />
       )}
 
-      {/* Quiz */}
+      {/* Quiz - Afficher uniquement après complétion de la leçon (pour les leçons de type quiz) */}
       {contentType === 'quiz' && (
-        <div>
-          {showQuiz ? (
-            <QuizComponent
-              quizId={lesson.quiz_id?.toString() || (typeof lesson.id === 'number' ? lesson.id.toString() : lesson.id)}
-              lessonId={typeof lesson.id === 'number' ? lesson.id.toString() : lesson.id}
-              onComplete={(attempt) => {
-                if (attempt.passed) {
-                  setIsCompleted(true);
-                  onComplete?.();
-                }
-                setShowQuiz(false);
-              }}
-            />
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          {!isCompleted ? (
+            <div className="p-6 sm:p-8 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="p-4 bg-yellow-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <AlertCircle className="h-10 w-10 text-yellow-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Quiz verrouillé</h3>
+                <p className="text-gray-600 mb-6">Vous devez compléter la leçon avant de pouvoir accéder au quiz.</p>
+              </div>
+            </div>
+          ) : showQuiz ? (
+            <div className="p-4 sm:p-6">
+              <QuizComponent
+                quizId={lesson.quiz_id?.toString() || (typeof lesson.id === 'number' ? lesson.id.toString() : lesson.id)}
+                lessonId={typeof lesson.id === 'number' ? lesson.id.toString() : lesson.id}
+                onComplete={(attempt) => {
+                  if (attempt.passed) {
+                    setIsCompleted(true);
+                    onComplete?.();
+                  }
+                  setShowQuiz(false);
+                }}
+              />
+            </div>
           ) : (
-            <div className="bg-white">
-              <p className="text-gray-700">Commencez le quiz pour cette leçon</p>
-              <Button
-                variant="primary"
-                onClick={() => setShowQuiz(true)}
-              >
-                <PlayCircle className="h-5 w-5 mr-2" />
-                Commencer le quiz
-              </Button>
+            <div className="p-6 sm:p-8 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="p-4 bg-mdsc-blue-primary/10 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                  <FileText className="h-10 w-10 text-mdsc-blue-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Quiz de la leçon</h3>
+                <p className="text-gray-600 mb-6">Testez vos connaissances avec ce quiz</p>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => setShowQuiz(true)}
+                  className="w-full sm:w-auto"
+                >
+                  <PlayCircle className="h-5 w-5 mr-2" />
+                  Commencer le quiz
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -1487,98 +1422,38 @@ export default function LessonContent({
 
       {/* Forum Content */}
       {contentType === 'forum' && (
-        <div className="bg-white">
-          <div className="flex items-center space-x-3 mb-4">
-            <FileText className="h-6 w-6 text-mdsc-blue-primary" />
-            <h3 className="text-lg font-semibold text-gray-900">Forum de Discussion</h3>
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary/5 to-mdsc-blue-primary/10 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-mdsc-blue-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-mdsc-blue-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Forum de Discussion</h3>
+            </div>
           </div>
-          {contentText && (
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: contentText }}
-            />
-          )}
-          {contentUrl ? (
-            <a
-              href={contentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
-            >
-              Accéder au forum
-            </a>
-          ) : (
-            <p className="text-gray-500">Le forum sera bientôt disponible</p>
-          )}
+          <div className="p-6 sm:p-8">
+            {contentText && (
+              <div
+                className="prose prose-md max-w-none mb-6 prose-p:text-gray-700 prose-a:text-mdsc-blue-primary"
+                dangerouslySetInnerHTML={{ __html: contentText }}
+              />
+            )}
+            {contentUrl ? (
+              <a
+                href={contentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium shadow-md hover:shadow-lg"
+              >
+                <ExternalLink className="h-5 w-5 mr-2" />
+                Accéder au forum
+              </a>
+            ) : (
+              <p className="text-gray-500">Le forum sera bientôt disponible</p>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Assignment Content */}
-      {contentType === 'assignment' && (
-        <div className="bg-white">
-          <div className="flex items-center space-x-3 mb-4">
-            <FileText className="h-6 w-6 text-mdsc-blue-primary" />
-            <h3 className="text-lg font-semibold text-gray-900">Devoir</h3>
-          </div>
-          {contentText && (
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: contentText }}
-            />
-          )}
-          {lesson.content && (
-            <div
-              className="prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: lesson.content }}
-            />
-          )}
-          {contentUrl && (
-            <a
-              href={contentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 bg-mdsc-blue-primary text-white rounded-lg hover:bg-white/20 hover:text-white transition-colors"
-            >
-              Voir les instructions du devoir
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* Bouton "Marquer comme terminé" - Affiché en dessous du contenu pour les cours à la demande */}
-      {(() => {
-        // Vérifier si c'est un cours à la demande (pas live)
-        // On ne peut pas vérifier directement ici, donc on affiche le bouton si la leçon n'est pas complétée
-        if (isCompleted) {
-          return null;
-        }
-
-        return (
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <button
-              onClick={handleMarkComplete}
-              disabled={isMarkingComplete || !enrollmentId}
-              className="w-full sm:w-auto px-6 py-3 bg-mdsc-blue-primary hover:bg-mdsc-blue-dark text-white rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-            >
-              {isMarkingComplete ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>Marquage en cours...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Marquer comme terminé</span>
-                </>
-              )}
-            </button>
-            <p className="mt-2 text-xs text-gray-500 text-center sm:text-left">
-              Marquez cette leçon comme terminée pour passer à la suivante
-            </p>
-          </div>
-        );
-      })()}
-
     </div>
   );
 }

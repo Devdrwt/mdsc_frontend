@@ -682,7 +682,44 @@ export default function InstructorCourseDetailPage() {
                               setCourseStatus(courseAny.status || 'pending_approval');
                             } catch (error: any) {
                               console.error('Erreur lors de la demande de publication:', error);
-                              notifyError?.('Erreur', error.message || 'Impossible d\'envoyer la demande de publication');
+                              
+                              // Extraire un message d'erreur plus détaillé
+                              let errorMessage = error.message || 'Impossible d\'envoyer la demande de publication';
+                              
+                              // Si l'erreur contient des détails, les utiliser
+                              if (error.details) {
+                                if (typeof error.details === 'string') {
+                                  errorMessage = error.details;
+                                } else if (error.details.detailsMessage) {
+                                  errorMessage = error.details.detailsMessage;
+                                } else if (error.details.message) {
+                                  errorMessage = error.details.message;
+                                } else if (error.details.reason) {
+                                  errorMessage = error.details.reason;
+                                } else if (Array.isArray(error.details.errors)) {
+                                  errorMessage = error.details.errors.join('. ');
+                                }
+                              }
+                              
+                              // Messages d'erreur spécifiques selon le code d'erreur
+                              if (error.code) {
+                                switch (error.code) {
+                                  case 'COURSE_INCOMPLETE':
+                                    errorMessage = 'Le cours n\'est pas complet. Vérifiez que tous les modules ont des leçons et que l\'évaluation finale est créée.';
+                                    break;
+                                  case 'MISSING_REQUIRED_FIELDS':
+                                    errorMessage = 'Certains champs requis sont manquants. Vérifiez le titre, la description et tous les champs obligatoires.';
+                                    break;
+                                  case 'NO_MODULES':
+                                    errorMessage = 'Le cours doit contenir au moins un module avec des leçons pour être publié.';
+                                    break;
+                                  case 'NO_EVALUATION':
+                                    errorMessage = 'L\'évaluation finale est obligatoire pour publier le cours.';
+                                    break;
+                                }
+                              }
+                              
+                              notifyError?.('Erreur de publication', errorMessage);
                             } finally {
                               setRequestingPublication(false);
                             }

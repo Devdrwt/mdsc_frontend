@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react'],
+    // Turbopack est utilisé en développement, Webpack en production (pour PWA)
+    // Cet avertissement est normal et peut être ignoré
   },
   
   // Configuration des images
@@ -168,6 +170,10 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Note: Le plugin PWA configure Webpack en interne, ce qui peut causer un avertissement
+// avec Turbopack. C'est normal et peut être ignoré car :
+// - En développement : PWA est désactivé (disable: true) et Turbopack est utilisé
+// - En production : Webpack est utilisé normalement (pas Turbopack)
 const pwaConfig = withPWA({
   dest: "public",
   cacheOnFrontEndNav: true,

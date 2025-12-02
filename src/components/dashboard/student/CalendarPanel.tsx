@@ -105,6 +105,12 @@ export default function CalendarPanel() {
 
       // Ajouter les événements du calendrier
       calendarEvents.forEach((event) => {
+        // Vérifier que start_date existe avant de parser
+        if (!event.start_date) {
+          console.warn('Événement du calendrier sans start_date ignoré:', event);
+          return;
+        }
+        
         const startDate = parseISO(event.start_date);
         unifiedEvents.push({
           id: `calendar-${event.id}`,
@@ -122,7 +128,17 @@ export default function CalendarPanel() {
 
       // Ajouter les items de planning avec le bon course_id
       scheduleItemsWithCourse.forEach(({ item, courseId }) => {
-        const scheduledDate = parseISO(item.scheduled_date);
+        // Pour les sessions live, utiliser start_date au lieu de scheduled_date
+        // Pour les autres items, utiliser scheduled_date
+        const dateToUse = (item as any).start_date || item.scheduled_date;
+        
+        // Vérifier qu'une date existe avant de parser
+        if (!dateToUse) {
+          console.warn('Item de planning sans date valide ignoré:', item);
+          return;
+        }
+        
+        const scheduledDate = parseISO(dateToUse);
         const courseInfo = coursesMap.get(courseId) || { title: 'Cours', slug: '' };
         
         unifiedEvents.push({
@@ -203,6 +219,11 @@ export default function CalendarPanel() {
   };
 
   const getEventStatus = (startDate: string, endDate: string): CalendarEvent['status'] => {
+    // Vérifier que les dates existent
+    if (!startDate || !endDate) {
+      return 'pending';
+    }
+    
     const now = new Date();
     const start = parseISO(startDate);
     const end = parseISO(endDate);

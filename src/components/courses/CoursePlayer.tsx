@@ -71,6 +71,7 @@ export default function CoursePlayer({
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
+  const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -169,6 +170,9 @@ export default function CoursePlayer({
         const moduleId = fallbackLesson.module_id ?? (fallbackLesson as any).moduleId ?? course.modules[0]?.id;
         setSelectedModuleId(moduleId);
         setSelectedLessonId(fallbackLesson.id);
+        // Sauvegarder la position de scroll
+        const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        setSavedScrollPosition(scrollPosition);
         router.replace(`/learn/${course.id}?module=${moduleId}&lesson=${fallbackLesson.id}`);
       }
     }
@@ -178,12 +182,13 @@ export default function CoursePlayer({
 
   // Charger les quiz des modules et l'évaluation finale
   const loadCourseQuizzesAndEvaluation = async () => {
-    if (!enrollmentId) return; // Pas d'enrollment, pas de quiz/évaluation à charger
+    // Charger les quiz même sans enrollmentId (pour les instructeurs ou prévisualisation)
     
     try {
-      // Charger l'évaluation finale pour l'étudiant
-      try {
-        const evalData = await evaluationService.getEnrollmentEvaluation(enrollmentId);
+      // Charger l'évaluation finale pour l'étudiant (seulement si enrollmentId existe)
+      if (enrollmentId) {
+        try {
+          const evalData = await evaluationService.getEnrollmentEvaluation(enrollmentId);
         console.log('[CoursePlayer] 📊 Données d\'évaluation chargées:', {
           hasEvaluation: !!evalData?.evaluation,
           evaluationId: evalData?.evaluation?.id,
@@ -207,72 +212,77 @@ export default function CoursePlayer({
           setFinalEvaluationAttempts([]);
           console.log('[CoursePlayer] ⚠️ Pas d\'évaluation finale trouvée');
         }
-      } catch (error) {
-        console.log('[CoursePlayer] ⚠️ Pas d\'évaluation finale pour ce cours:', error);
-        setEvaluationId(null);
-        setFinalEvaluation(null);
-        setFinalEvaluationAttempts([]);
+        } catch (error) {
+          console.log('[CoursePlayer] ⚠️ Pas d\'évaluation finale pour ce cours:', error);
+          setEvaluationId(null);
+          setFinalEvaluation(null);
+          setFinalEvaluationAttempts([]);
+        }
       }
 
       // Charger les quiz de chaque module et vérifier leur statut de complétion
-      if (course.modules && enrollmentId) {
+      if (course.modules) {
         const quizzesMap = new Map<number, string>();
         const completedQuizzesSet = new Set<number>();
         
         for (const module of course.modules) {
-          // Vérifier si le module contient déjà l'ID du quiz
           const moduleAny = module as any;
-          // Vérifier plusieurs propriétés possibles pour le quiz_id
-          const quizId = moduleAny.quiz_id || moduleAny.module_quiz_id || (moduleAny as any).quizId;
           
+          // 1. Vérifier d'abord si le module contient déjà l'ID du quiz dans les données
+          let quizId = moduleAny.quiz_id || moduleAny.module_quiz_id || moduleAny.quizId || 
+                       (moduleAny.module_quiz?.id) || (moduleAny.quiz?.id);
+          
+          // 2. Si pas d'ID dans les données, essayer de récupérer via l'API
+          if (!quizId) {
+            try {
+              // Pour les étudiants, utiliser l'endpoint spécifique
+              if (enrollmentId) {
+                const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
+                quizId = quiz?.id || (quiz as any)?.quiz?.id;
+              } else {
+                // Pour les instructeurs ou sans enrollment, utiliser l'endpoint standard
+                const quiz = await quizService.getModuleQuiz(module.id.toString());
+                quizId = quiz?.id;
+              }
+            } catch (error: any) {
+              // 404 ou 403 sont normaux si pas de quiz
+              if (error.status !== 404 && error.status !== 403) {
+                console.warn(`⚠️ Erreur lors de la récupération du quiz pour le module ${module.id}:`, error);
+              }
+            }
+          }
+          
+          // 3. Si on a un quizId, l'ajouter à la map
           if (quizId) {
             console.log(`✅ Quiz trouvé pour le module ${module.id}: quiz_id=${quizId}`);
             quizzesMap.set(module.id, quizId.toString());
             
-            // Vérifier si le quiz est complété/réussi
-            try {
-              const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
-              const quizData = (quiz as any)?.quiz || quiz;
-              const previousAttempts = (quiz as any)?.previous_attempts || [];
-              
-              // Vérifier si une tentative a réussi (is_passed = true)
-              const hasPassedAttempt = previousAttempts.some((attempt: any) => attempt.is_passed === true || attempt.is_passed === 1);
-              if (hasPassedAttempt) {
-                completedQuizzesSet.add(module.id);
-                console.log(`✅ Quiz du module ${module.id} est réussi`);
-              }
-            } catch (error) {
-              console.log(`⚠️ Erreur lors de la vérification du quiz pour le module ${module.id}:`, error);
-            }
-          } else {
-            // Essayer de récupérer le quiz via l'API pour les étudiants
-            try {
-              const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
-              // Le quiz peut être dans quiz.id ou directement dans l'objet
-              const quizId = quiz?.id || (quiz as any)?.quiz?.id;
-              if (quizId) {
-                console.log(`✅ Quiz récupéré via API pour le module ${module.id}: quiz_id=${quizId}`);
-                quizzesMap.set(module.id, quizId.toString());
-                
-                // Vérifier si le quiz est complété/réussi
-                const quizData = (quiz as any)?.quiz || quiz;
+            // 4. Vérifier si le quiz est complété/réussi (seulement pour les étudiants)
+            if (enrollmentId) {
+              try {
+                const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
                 const previousAttempts = (quiz as any)?.previous_attempts || [];
-                const hasPassedAttempt = previousAttempts.some((attempt: any) => attempt.is_passed === true || attempt.is_passed === 1);
+                
+                // Vérifier si une tentative a réussi
+                const hasPassedAttempt = previousAttempts.some((attempt: any) => 
+                  attempt.is_passed === true || attempt.is_passed === 1
+                );
                 if (hasPassedAttempt) {
                   completedQuizzesSet.add(module.id);
                   console.log(`✅ Quiz du module ${module.id} est réussi`);
                 }
-              } else {
-                console.log(`⚠️ Pas de quiz pour le module ${module.id} (quiz=${JSON.stringify(quiz)})`);
+              } catch (error) {
+                // Ignorer les erreurs silencieusement
+                console.log(`⚠️ Erreur lors de la vérification du quiz pour le module ${module.id}:`, error);
               }
-            } catch (error) {
-              // Pas de quiz pour ce module, continuer
-              console.log(`⚠️ Erreur lors de la récupération du quiz pour le module ${module.id}:`, error);
             }
           }
         }
+        
         console.log(`📊 Total quiz chargés: ${quizzesMap.size}`, Array.from(quizzesMap.entries()));
-        console.log(`✅ Quiz complétés: ${completedQuizzesSet.size}`, Array.from(completedQuizzesSet));
+        if (enrollmentId) {
+          console.log(`✅ Quiz complétés: ${completedQuizzesSet.size}`, Array.from(completedQuizzesSet));
+        }
         setModuleQuizzes(quizzesMap);
         setCompletedModuleQuizzes(completedQuizzesSet);
       }
@@ -598,6 +608,27 @@ export default function CoursePlayer({
     } as Lesson;
   }, [selectedLesson, completedLessons]);
 
+  // Effet pour restaurer la position de scroll après changement de leçon
+  useEffect(() => {
+    if (savedScrollPosition !== null && selectedLessonId) {
+      // Restaurer la position de scroll après plusieurs délais pour s'assurer que le DOM est mis à jour
+      const restoreScroll = () => {
+        window.scrollTo({ top: savedScrollPosition, behavior: 'instant' });
+      };
+      
+      requestAnimationFrame(restoreScroll);
+      const timeout1 = setTimeout(restoreScroll, 50);
+      const timeout2 = setTimeout(restoreScroll, 150);
+      const timeout3 = setTimeout(restoreScroll, 300);
+      
+      return () => {
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        clearTimeout(timeout3);
+      };
+    }
+  }, [selectedLessonId, savedScrollPosition]);
+
   // Si aucune leçon n'est sélectionnée mais qu'un module l'est, sélectionner la première leçon
   useEffect(() => {
     if (selectedModuleId && !selectedLessonId && selectedModule?.lessons && selectedModule.lessons.length > 0) {
@@ -606,6 +637,9 @@ export default function CoursePlayer({
       setSelectedLessonId(null);
       // Puis sélectionner la première leçon du module
       setTimeout(() => {
+        // Sauvegarder la position de scroll
+        const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        setSavedScrollPosition(scrollPosition);
         setSelectedLessonId(firstLesson.id);
         router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${firstLesson.id}`);
       }, 0);
@@ -619,6 +653,10 @@ export default function CoursePlayer({
       alert('Cette leçon est verrouillée. Vous devez compléter la leçon précédente pour y accéder.');
       return;
     }
+
+    // Sauvegarder la position de scroll actuelle
+    const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+    setSavedScrollPosition(scrollPosition);
 
     // S'assurer que le module de la leçon est ouvert/expanded
     const lessonModuleId = lesson.module_id ?? (lesson as any).moduleId;

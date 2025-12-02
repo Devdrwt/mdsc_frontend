@@ -23,7 +23,9 @@ import {
   Info,
   ArrowLeft,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  Bookmark,
+  Heart
 } from 'lucide-react';
 import { CourseService, Course as ServiceCourse } from '../../../lib/services/courseService';
 import { ModuleService } from '../../../lib/services/moduleService';
@@ -58,6 +60,8 @@ export default function CourseDetailPage() {
   const [ratingStatsLoading, setRatingStatsLoading] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [checkingEnrollment, setCheckingEnrollment] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [togglingFavorite, setTogglingFavorite] = useState(false);
 
   const courseAny = useMemo(() => (course ? (course as any) : null), [course]);
   const numericCourseId = useMemo(() => {
@@ -194,6 +198,14 @@ export default function CourseDetailPage() {
       
       // Utiliser les modules retournés par getCourseBySlug/getCourseById qui incluent déjà les leçons
       const courseAny = courseData as any;
+      
+      // Mettre à jour le statut favori depuis la réponse du backend
+      if (isUserAuthenticated && courseAny.is_favorite !== undefined) {
+        setIsFavorite(Boolean(courseAny.is_favorite));
+      } else if (!isUserAuthenticated) {
+        setIsFavorite(false);
+      }
+      
       if (courseAny.modules && Array.isArray(courseAny.modules)) {
         setModules(courseAny.modules);
       } else {
@@ -379,6 +391,35 @@ export default function CourseDetailPage() {
       router.push(`/learn/${course.id}`);
     }
   }, [course, router]);
+
+  // Toggle favori
+  const handleToggleFavorite = useCallback(async () => {
+    if (!course || !isUserAuthenticated) {
+      toast.error('Connexion requise', 'Vous devez être connecté pour ajouter un cours aux favoris');
+      router.push(`/login?redirect=/courses/${slug}`);
+      return;
+    }
+
+    try {
+      setTogglingFavorite(true);
+      const courseId = String(course.id);
+      
+      if (isFavorite) {
+        await CourseService.removeFromFavorites(courseId);
+        setIsFavorite(false);
+        toast.success('Favori retiré', 'Le cours a été retiré de vos favoris');
+      } else {
+        await CourseService.addToFavorites(courseId);
+        setIsFavorite(true);
+        toast.success('Ajouté aux favoris', 'Le cours a été ajouté à vos favoris');
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la modification du favori:', error);
+      toast.error('Erreur', error.message || 'Impossible de modifier le statut du favori');
+    } finally {
+      setTogglingFavorite(false);
+    }
+  }, [course, isUserAuthenticated, isFavorite, slug, router]);
 
   const toggleModule = (moduleId: number) => {
     setExpandedModules(prev => ({
@@ -1488,6 +1529,38 @@ export default function CourseDetailPage() {
                         Accéder au Forum
                       </Button>
                     </>
+                  )}
+
+                  {/* Bouton Favoris */}
+                  {isUserAuthenticated && (
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={handleToggleFavorite}
+                      disabled={togglingFavorite}
+                      className={`w-full mb-4 ${isFavorite ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100' : 'border-mdsc-blue-primary text-mdsc-blue-primary hover:bg-mdsc-blue-primary hover:text-white'}`}
+                    >
+                      {togglingFavorite ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current mr-2"></div>
+                          {isFavorite ? 'Retrait...' : 'Ajout...'}
+                        </>
+                      ) : (
+                        <>
+                          {isFavorite ? (
+                            <>
+                              <Heart className="h-5 w-5 mr-2 fill-current" />
+                              Retirer des favoris
+                            </>
+                          ) : (
+                            <>
+                              <Bookmark className="h-5 w-5 mr-2" />
+                              Ajouter aux favoris
+                            </>
+                          )}
+                        </>
+                      )}
+                    </Button>
                   )}
 
                   <div className="space-y-3 pt-4 border-t border-gray-200">

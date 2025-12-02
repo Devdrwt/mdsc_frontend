@@ -21,9 +21,7 @@ const CONTENT_TYPES = [
   { value: 'document', label: 'Document PDF', icon: FileText },
   { value: 'audio', label: 'Audio', icon: PlayCircle },
   { value: 'presentation', label: 'Présentation', icon: FileText },
-  { value: 'quiz', label: 'Quiz', icon: FileText },
   { value: 'h5p', label: 'Contenu H5P', icon: FileText },
-  { value: 'assignment', label: 'Devoir', icon: FileText },
 ] as const;
 
 export default function LessonManagement({ courseId, moduleId, onLessonCreated }: LessonManagementProps) {
@@ -46,7 +44,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
     duration: number;
     order: number;
     is_required: boolean;
-    is_published: boolean;
   }>({
     title: '',
     description: '',
@@ -57,7 +54,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
     duration: 0,
     order: 1,
     is_required: true,
-    is_published: false,
   });
 
   // États pour l'upload de fichier média
@@ -136,7 +132,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
       duration: 0,
       order: lessons.length + 1,
       is_required: true,
-      is_published: false,
     });
     setMediaFile(null);
     setMediaPreview('');
@@ -156,7 +151,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
       duration: lessonAny.duration_minutes || lesson.duration || 0,
       order: lessonAny.order_index || lesson.order || 1,
       is_required: lessonAny.is_required ?? lesson.isRequired ?? true,
-      is_published: lessonAny.is_published ?? lesson.isPublished ?? false,
     });
     setMediaPreview(lesson.content_url || '');
     setShowModal(true);
@@ -251,7 +245,8 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
         order: formData.order,
         order_index: formData.order,
         is_required: formData.is_required,
-        is_published: formData.is_published,
+        // Les leçons sont automatiquement publiées lors de leur création
+        is_published: true,
       };
 
       if (editingLesson) {
@@ -343,17 +338,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                       <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
                         Leçon {(lesson as any).order_index || lesson.order}
                       </span>
-                      {((lesson as any).is_published ?? lesson.isPublished) ? (
-                        <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full flex items-center">
-                          <Eye className="h-3 w-3 mr-1" />
-                          Publié
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full flex items-center">
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Brouillon
-                        </span>
-                      )}
                       {((lesson as any).is_required ?? lesson.isRequired) && (
                         <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
                           Obligatoire
@@ -632,9 +616,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                                 {formData.content_type === 'audio' && 'Formats: MP3, WAV, OGG'}
                                 {formData.content_type === 'document' && 'Formats: PDF, DOC, DOCX'}
                                 {formData.content_type === 'presentation' && 'Formats: PPT, PPTX'}
-                                {formData.content_type === 'quiz' && 'Formats: JSON, PDF'}
                                 {formData.content_type === 'h5p' && 'Formats: H5P'}
-                                {formData.content_type === 'assignment' && 'Formats: PDF, DOC, DOCX'}
                               </p>
                             </>
                           )}
@@ -648,9 +630,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                             formData.content_type === 'audio' ? 'audio/*' :
                             formData.content_type === 'document' ? '.pdf,.doc,.docx' :
                             formData.content_type === 'presentation' ? '.ppt,.pptx' :
-                            formData.content_type === 'quiz' ? '.json,.pdf' :
                             formData.content_type === 'h5p' ? '.h5p' :
-                            formData.content_type === 'assignment' ? '.pdf,.doc,.docx' :
                             '*/*'
                           }
                         />
@@ -780,7 +760,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                             )}
                           </div>
                         )}
-                        {['presentation', 'quiz', 'h5p', 'assignment'].includes(formData.content_type) && (
+                        {['presentation', 'h5p'].includes(formData.content_type) && (
                           <div className="space-y-2">
                             <div className="flex items-center space-x-2 text-gray-900">
                               <FileText className="h-6 w-6 text-orange-600" />
@@ -808,11 +788,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                       {formData.is_required && (
                         <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                           Obligatoire
-                        </span>
-                      )}
-                      {formData.is_published && (
-                        <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                          Publié
                         </span>
                       )}
                     </div>
@@ -864,7 +839,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                     <p className="text-sm text-gray-600">Contrôlez l'accès et la visibilité</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <label className="flex items-center space-x-3 p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
                     <input
                       type="checkbox"
@@ -875,18 +850,6 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                     <div>
                       <div className="font-medium text-gray-900">Leçon obligatoire</div>
                       <div className="text-sm text-gray-500">Les étudiants doivent la compléter</div>
-                    </div>
-                  </label>
-                  <label className="flex items-center space-x-3 p-4 bg-white rounded-lg border-2 border-gray-200 cursor-pointer hover:border-mdsc-gold transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_published}
-                      onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                      className="rounded border-gray-300 text-mdsc-gold focus:ring-mdsc-gold h-5 w-5"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">Publier immédiatement</div>
-                      <div className="text-sm text-gray-500">Rendre visible aux étudiants</div>
                     </div>
                   </label>
                 </div>

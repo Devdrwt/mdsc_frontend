@@ -16,6 +16,9 @@ export interface NotificationEntry {
   message?: string;
   metadata?: Record<string, any> | null;
   is_read: boolean;
+  action_url?: string | null; // URL d'action pour la notification
+  read_at?: string | null; // Date de lecture (ISO 8601)
+  expires_at?: string | null; // Date d'expiration (ISO 8601)
   created_at: string;
   updated_at?: string;
   trigger_at?: string | null;
@@ -27,7 +30,8 @@ export interface NotificationListResponse {
     page: number;
     limit: number;
     total: number;
-    total_pages: number;
+    pages: number; // Nombre total de pages (selon le guide API)
+    total_pages?: number; // Alias pour compatibilité
   };
 }
 
@@ -105,7 +109,28 @@ export class NotificationService {
       method: 'GET',
     });
 
-    return response.data ?? { notifications: [] };
+    // Gérer la structure de réponse selon le guide API
+    // Format attendu: { success: true, data: { notifications: [...], pagination: {...} } }
+    const responseData = response.data;
+    
+    if (responseData && typeof responseData === 'object') {
+      // Si la structure est déjà correcte (notifications et pagination au même niveau)
+      if (Array.isArray(responseData.notifications)) {
+        return {
+          notifications: responseData.notifications,
+          pagination: responseData.pagination || null,
+        };
+      }
+      // Si les données sont directement dans data.data
+      if (responseData.data && typeof responseData.data === 'object') {
+        return {
+          notifications: responseData.data.notifications || [],
+          pagination: responseData.data.pagination || null,
+        };
+      }
+    }
+    
+    return { notifications: [], pagination: null };
   }
 
   static async markAsRead(id: number | string): Promise<void> {

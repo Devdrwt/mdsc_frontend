@@ -647,6 +647,56 @@ select:focus {
 .pdf-viewer-container * {
   -webkit-user-drag: none !important;
   -khtml-user-drag: none !important;
+}
+
+/* Styles pour les présentations PPTX - Amélioration du formatage */
+.pptx-container {
+  width: 100% !important;
+  height: auto !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* S'assurer que le contenu généré par pptx-preview est correctement formaté */
+.pptx-container > * {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  box-sizing: border-box !important;
+}
+
+/* Améliorer le rendu des slides dans pptx-preview */
+.pptx-container canvas,
+.pptx-container svg,
+.pptx-container img {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+/* S'assurer que les contrôles de navigation sont bien positionnés */
+.pptx-container .pptx-controls {
+  position: absolute !important;
+  bottom: 10px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 10 !important;
+}
+
+/* Améliorer l'affichage des slides */
+.pptx-container .pptx-slide {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
   -moz-user-drag: none !important;
   -o-user-drag: none !important;
   user-drag: none !important;

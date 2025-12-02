@@ -30,27 +30,35 @@ export interface CourseSchedule {
 }
 
 export interface CalendarEvent {
-  id: number;
+  id: number | string; // Peut être numérique ou "event-1", "live-session-2"
   title: string;
   description: string;
-  event_type: 'course_start' | 'quiz_scheduled' | 'announcement' | 'deadline' | 'milestone';
+  event_type: 'workshop' | 'course_start' | 'quiz_scheduled' | 'announcement' | 'deadline' | 'milestone' | 'live_session' | string;
   start_date: string; // ISO 8601
   end_date: string; // ISO 8601
   is_all_day: boolean;
   location: string | null;
   is_public: boolean;
+  type?: 'event' | 'live_session'; // Type principal de l'événement
+  status?: 'scheduled' | 'ongoing' | 'completed' | 'cancelled'; // Pour les live sessions
   course: {
     id: number;
     title: string;
     slug: string;
   } | null;
-  created_by: {
+  created_by?: {
     id: number;
     first_name: string;
     last_name: string;
     email: string;
     role: string;
   } | null;
+  instructor?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  url?: string; // URL pour les live sessions
   created_at: string;
   updated_at: string;
 }
