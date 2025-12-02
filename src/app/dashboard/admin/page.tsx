@@ -17,7 +17,7 @@ import AdminService, {
   AdminPaymentEntry,
   AdminFeatureSummary,
 } from '../../../lib/services/adminService';
-import { 
+import {
   Users,
   User,
   BookOpen,
@@ -1113,18 +1113,18 @@ export default function AdminDashboard() {
           {/* Statistiques principales avec animations modernes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {/* Carte Utilisateurs */}
-            <div className="group relative bg-white dark:bg-slate-900 rounded-xl shadow-md hover:shadow-xl border border-gray-200 dark:border-slate-800 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="group relative bg-white  rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-transparent opacity-0  transition-opacity duration-300"></div>
               <div className="relative z-10 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 md:mb-2">Total Utilisateurs</p>
-                  <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">{stats.totalUsers.toLocaleString()}</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-black mb-1 md:mb-2">Total Utilisateurs</p>
+                  <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-black mb-1 md:mb-2">{stats.totalUsers.toLocaleString()}</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-600 bg-green-50 dark:bg-green-900/10 px-2 py-1 rounded-full">
                       <ArrowUp className="h-3 w-3 mr-1" />
                       +{stats.monthlyUserGrowth.toLocaleString()}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">ce mois</span>
+                    <span className="text-xs text-gray-500 dark:text-black">ce mois</span>
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 md:p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 ml-2">
@@ -1134,18 +1134,18 @@ export default function AdminDashboard() {
             </div>
 
             {/* Carte Cours */}
-            <div className="group relative bg-white dark:bg-slate-900 rounded-xl shadow-md hover:shadow-xl border border-gray-200 dark:border-slate-800 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50 dark:from-green-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="group relative bg-white  rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-transparent opacity-0  transition-opacity duration-300"></div>
               <div className="relative z-10 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 md:mb-2">Total Cours</p>
-                  <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">{stats.totalCourses}</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-black mb-1 md:mb-2">Total Cours</p>
+                  <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-black mb-1 md:mb-2">{stats.totalCourses}</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-600 bg-green-50 dark:bg-green-900/10 px-2 py-1 rounded-full">
                       <ArrowUp className="h-3 w-3 mr-1" />
                       +{stats.monthlyCourseGrowth.toLocaleString()}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">ce mois</span>
+                    <span className="text-xs text-gray-500 dark:text-black">ce mois</span>
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-3 md:p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 ml-2">
@@ -1155,19 +1155,19 @@ export default function AdminDashboard() {
             </div>
 
             {/* Carte Revenus */}
-            <div className="group relative bg-white dark:bg-slate-900 rounded-xl shadow-md hover:shadow-xl border border-gray-200 dark:border-slate-800 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 dark:from-emerald-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="group relative bg-white  rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-transparent opacity-0  transition-opacity duration-300"></div>
               <div className="relative z-10 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 md:mb-2">Revenus Totaux</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">{stats.totalRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 md:mb-2">FCFA</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-black mb-1 md:mb-2">Revenus Totaux</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-black mb-1 md:mb-2">{stats.totalRevenue.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 dark:text-black mb-1 md:mb-2">FCFA</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-600 bg-green-50 dark:bg-green-900/10 px-2 py-1 rounded-full">
                       <ArrowUp className="h-3 w-3 mr-1" />
                       +{stats.monthlyRevenueGrowth.toLocaleString()}
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">ce mois</span>
+                    <span className="text-xs text-gray-500 dark:text-black">ce mois</span>
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-3 md:p-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300 flex-shrink-0 ml-2">
@@ -1177,14 +1177,14 @@ export default function AdminDashboard() {
             </div>
 
             {/* Carte Santé Système */}
-            <div className="group relative bg-white dark:bg-slate-900 rounded-xl shadow-md hover:shadow-xl border border-gray-200 dark:border-slate-800 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="group relative bg-white  rounded-xl shadow-md hover:shadow-xl border border-gray-200 p-4 md:p-6 transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 dark:from-blue-900/20 to-transparent opacity-0  transition-opacity duration-300"></div>
               <div className="relative z-10 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 md:mb-2">Santé Système</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-black mb-1 md:mb-2">Santé Système</p>
                   <p className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">{stats.systemHealth}%</p>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
+                    <div className="flex items-center text-xs font-semibold text-green-600 dark:text-green-600 bg-green-50 dark:bg-green-900/10 px-2 py-1 rounded-full">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Optimal
                     </div>
@@ -1200,13 +1200,13 @@ export default function AdminDashboard() {
           {/* Métriques système et activité */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {/* Métriques système */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
+            <div className="bg-white dark:bg-white rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
-                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-black flex items-center">
                   <BarChart3 className="h-4 w-4 md:h-5 md:w-5 mr-2 text-mdsc-blue-primary" />
                   Métriques Système
                 </h3>
-                <span className="text-xs md:text-sm text-green-600 dark:text-green-400 flex items-center">
+                <span className="text-xs md:text-sm text-green-600 dark:text-green-600 flex items-center">
                   <CheckCircle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                   Tous les systèmes opérationnels
                 </span>
@@ -1216,21 +1216,21 @@ export default function AdminDashboard() {
                   {systemMetricsError}
                 </div>
               )}
-              
+
               <div className="space-y-4 md:space-y-6">
                 {/* CPU Usage */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-black flex items-center">
                       <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       CPU Usage
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-black">
                       {systemMetricsError ? 'N/A' : `${Math.round(systemMetrics.cpuUsage)}%`}
                     </span>
                   </div>
                   <div className="bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark h-2 rounded-full transition-all duration-500"
                       style={{ width: `${systemMetrics.cpuUsage}%` }}
                     ></div>
@@ -1240,16 +1240,16 @@ export default function AdminDashboard() {
                 {/* Memory Usage */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-black flex items-center">
                       <Database className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       Memory Usage
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-black">
                       {systemMetricsError ? 'N/A' : `${Math.round(systemMetrics.memoryUsage)}%`}
                     </span>
                   </div>
                   <div className="bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark h-2 rounded-full transition-all duration-500"
                       style={{ width: `${systemMetrics.memoryUsage}%` }}
                     ></div>
@@ -1259,16 +1259,16 @@ export default function AdminDashboard() {
                 {/* Disk Usage */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-black flex items-center">
                       <Server className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       Disk Usage
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-black">
                       {systemMetricsError ? 'N/A' : `${Math.round(systemMetrics.diskUsage)}%`}
                     </span>
                   </div>
                   <div className="bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-mdsc-gold to-orange-600 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${systemMetrics.diskUsage}%` }}
                     ></div>
@@ -1278,16 +1278,16 @@ export default function AdminDashboard() {
                 {/* Network Latency */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+                    <span className="text-xs md:text-sm font-medium text-gray-600 dark:text-black flex items-center">
                       <Globe className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                       Network Latency
                     </span>
-                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
+                    <span className="text-xs md:text-sm font-bold text-gray-900 dark:text-black">
                       {systemMetricsError ? 'N/A' : `${Math.round(systemMetrics.networkLatency)} ms`}
                     </span>
                   </div>
                   <div className="bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-mdsc-gold to-orange-500 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${(systemMetrics.networkLatency / 100) * 100}%` }}
                     ></div>
@@ -1298,14 +1298,14 @@ export default function AdminDashboard() {
               <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200 dark:border-slate-700">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Uptime:</span>
-                    <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                    <span className="text-gray-600 dark:text-black">Uptime:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-black">
                       {systemMetrics.uptime || 'Non disponible'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Dernière sauvegarde:</span>
-                    <span className="ml-2 font-medium text-gray-900 dark:text-white">
+                    <span className="text-gray-600 dark:text-black">Dernière sauvegarde:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-black">
                       {systemMetrics.lastBackup || 'Non disponible'}
                     </span>
                   </div>
@@ -1314,15 +1314,15 @@ export default function AdminDashboard() {
             </div>
 
             {/* Alertes et notifications */}
-            <div className="bg-gradient-to-br from-white dark:from-slate-900 to-gray-50 dark:to-slate-800 rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 md:p-6 hover:shadow-xl transition-shadow duration-300">
+            <div className="bg-white dark:bg-white rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700 p-4 md:p-6 hover:shadow-xl transition-shadow duration-300">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
                 <div className="flex items-center gap-2 md:gap-3">
                   <div className="p-2 md:p-2.5 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl shadow-md">
                     <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-base md:text-xl font-bold text-gray-900 dark:text-white">Alertes & Notifications</h3>
-                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5">Surveillance système en temps réel</p>
+                    <h3 className="text-base md:text-xl font-bold text-gray-900 dark:text-black">Alertes & Notifications</h3>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-500 mt-0.5">Surveillance système en temps réel</p>
                   </div>
                 </div>
                 {alerts.length > 0 && (
@@ -1331,7 +1331,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
-              
+
               {alertsError ? (
                 <div className="rounded-xl border-2 border-red-300 dark:border-red-800 bg-gradient-to-r from-red-50 dark:from-red-900/20 to-red-100 dark:to-red-900/30 px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-red-800 dark:text-red-400 shadow-sm">
                   <div className="flex items-center gap-2">
@@ -1345,7 +1345,7 @@ export default function AdminDashboard() {
                     <CheckCircle className="h-6 w-6 md:h-8 md:w-8 text-green-500" />
                   </div>
                   <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-300">Aucune alerte récente</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tous les systèmes fonctionnent normalement</p>
+                  <p className="text-xs text-gray-500 dark:text-black mt-1">Tous les systèmes fonctionnent normalement</p>
                 </div>
               ) : (
                 <div className="space-y-2 md:space-y-3">
@@ -1380,7 +1380,7 @@ export default function AdminDashboard() {
                       },
                     };
                     const config = severityConfig[alert.severity as keyof typeof severityConfig] || severityConfig.info;
-                    
+
                     return (
                       <div
                         key={alert.id}
@@ -1394,16 +1394,16 @@ export default function AdminDashboard() {
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-1">
-                                  <h4 className="font-bold text-gray-900 dark:text-white text-sm md:text-base">{alert.title}</h4>
+                                  <h4 className="font-bold text-gray-900 dark:text-black text-sm md:text-base">{alert.title}</h4>
                                   <span className={`px-2 py-0.5 ${config.badge} text-white text-xs font-semibold rounded-full`}>
                                     {alert.severity === 'danger' ? 'Critique' : alert.severity === 'warning' ? 'Attention' : 'Info'}
                                   </span>
                                 </div>
                                 {alert.description && (
-                                  <p className="text-xs md:text-sm text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">{alert.description}</p>
+                                  <p className="text-xs md:text-sm text-gray-700 dark:text-gray-500 mt-1 leading-relaxed">{alert.description}</p>
                                 )}
                               </div>
-                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap flex items-center gap-1 flex-shrink-0">
+                              <span className="text-xs font-medium text-gray-500 dark:text-black whitespace-nowrap flex items-center gap-1 flex-shrink-0">
                                 <Clock className="h-3 w-3" />
                                 {formatDateTime(alert.created_at)}
                               </span>
@@ -1418,9 +1418,9 @@ export default function AdminDashboard() {
             </div>
 
             {/* Événements */}
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+            <div className="bg-white dark:bg-white rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-black flex items-center">
                   <Calendar className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
                   Événements
                 </h3>
@@ -1428,7 +1428,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => loadAdminEvents()}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 rounded-lg hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200 text-sm font-medium disabled:opacity-60"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-600 rounded-lg hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-white transition-all duration-200 text-sm font-medium disabled:opacity-60"
                     disabled={eventsLoading}
                   >
                     <RefreshCw className={`h-4 w-4 ${eventsLoading ? 'animate-spin' : ''}`} />
@@ -1437,7 +1437,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setEventFormExpanded((prev) => !prev)}
-                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-blue-200 rounded-lg text-sm font-semibold text-blue-900 bg-white dark:bg-slate-800 dark:border-slate-600"
+                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-blue-200 rounded-lg text-sm font-semibold text-blue-900 bg-white dark:bg-white dark:border-slate-600"
                   >
                     {eventFormExpanded ? 'Masquer le formulaire' : 'Afficher le formulaire'}
                   </button>
@@ -1842,8 +1842,8 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {recentPayments.map((payment) => (
-                        <tr 
-                          key={payment.id} 
+                        <tr
+                          key={payment.id}
                           className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200 cursor-pointer group"
                         >
                           <td className="px-4 py-3.5">
@@ -1923,8 +1923,8 @@ export default function AdminDashboard() {
                     gradient: 'from-purple-50 to-purple-100/50',
                   },
                 ].map(({ title, summary, icon: Icon, accent, bgAccent, gradient }, index) => (
-                  <div 
-                    key={`${title}-${index}`} 
+                  <div
+                    key={`${title}-${index}`}
                     className="group relative p-4 rounded-xl border border-gray-200 bg-gradient-to-r hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
                   >
                     <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}></div>
@@ -1956,17 +1956,17 @@ export default function AdminDashboard() {
 
           {/* Gestion notifications & événements */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-white to-blue-50/30 dark:from-slate-900 dark:to-slate-800 rounded-2xl shadow-lg border border-gray-200 dark:border-slate-700 p-6 hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
-                    <Bell className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">Notifications administrateur</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">Gestion des notifications système</p>
-                  </div>
-                </div>
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-shadow duration-300">
+  <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+    <div className="flex items-center gap-3">
+      <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+        <Bell className="h-5 w-5 text-white" />
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-gray-900">Notifications administrateur</h3>
+        <p className="text-sm text-gray-500 mt-0.5">Gestion des notifications système</p>
+      </div>
+    </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <button
                     type="button"
@@ -1980,7 +1980,7 @@ export default function AdminDashboard() {
                   <button
                     type="button"
                     onClick={() => setNotificationFormExpanded((prev) => !prev)}
-                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-blue-200 rounded-lg text-sm font-semibold text-blue-900 bg-white dark:bg-slate-800 dark:border-slate-600"
+                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-blue-200 rounded-lg text-sm font-semibold text-blue-900 bg-white dark:bg-white dark:border-slate-600"
                   >
                     {notificationFormExpanded ? 'Masquer le formulaire' : 'Afficher le formulaire'}
                   </button>
@@ -2315,12 +2315,12 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                  Événements & calendrier
-                </h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+  <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+      <Calendar className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
+      Événements & calendrier
+    </h3>
                 <div className="flex items-center gap-3">
                   {hasMoreEvents && (
                     <Link href="/dashboard/admin/calendar" className="text-sm font-semibold text-mdsc-blue-primary hover:text-mdsc-blue-dark">
@@ -2557,9 +2557,9 @@ export default function AdminDashboard() {
           </div>
 
           {/* Actions rapides modernes */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4 md:mb-6">Actions Rapides</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-6">
+  <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-4 md:mb-6">Actions Rapides</h3>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               {[
                 {
                   icon: Users,
@@ -2597,15 +2597,15 @@ export default function AdminDashboard() {
                 <Link
                   key={index}
                   href={action.href}
-                  className="group relative flex items-center p-3 md:p-5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                  className="group relative flex items-center p-3 md:p-5 bg-white dark:bg-white border border-gray-200 dark:border-slate-700 rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-gray-50 dark:from-slate-700/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className={`relative z-10 bg-gradient-to-br ${action.color} ${action.hoverColor} p-2.5 md:p-3.5 rounded-xl mr-3 md:mr-4 group-hover:scale-110 transition-transform duration-300 shadow-md flex-shrink-0`}>
                     <action.icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
                   <div className="relative z-10 flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 dark:text-white group-hover:text-mdsc-blue-primary dark:group-hover:text-mdsc-blue-400 transition-colors text-sm md:text-base">{action.title}</p>
-                    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">{action.description}</p>
+                    <p className="font-bold text-gray-900 dark:text-black group-hover:text-mdsc-blue-primary dark:group-hover:text-mdsc-blue-400 transition-colors text-sm md:text-base">{action.title}</p>
+                    <p className="text-xs md:text-sm text-gray-600 dark:text-black">{action.description}</p>
                   </div>
                   <div className="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0 ml-2">
                     <ArrowUp className="h-3 w-3 md:h-4 md:w-4 text-mdsc-blue-primary dark:text-mdsc-blue-400 transform rotate-45" />
@@ -2616,8 +2616,8 @@ export default function AdminDashboard() {
           </div>
 
           {/* Activité récente */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4 md:mb-6 flex items-center">
+          <div className="bg-white dark:bg-white rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-black mb-4 md:mb-6 flex items-center">
               <Activity className="h-4 w-4 md:h-5 md:w-5 mr-2 text-mdsc-blue-primary" />
               Activité Récente
             </h3>
@@ -2627,7 +2627,7 @@ export default function AdminDashboard() {
               </div>
             )}
             {recentActivityNotice && !recentActivityError && (
-              <div className="mb-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              <div className="mb-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 text-xs md:text-sm text-gray-600 dark:text-black">
                 {recentActivityNotice}
               </div>
             )}
@@ -2640,7 +2640,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
-                      <h4 className="font-medium text-gray-900 dark:text-white text-sm md:text-base">{activity.title}</h4>
+                      <h4 className="font-medium text-gray-900 dark:text-black text-sm md:text-base">{activity.title}</h4>
                       <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
                         activity.priority === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' :
                         activity.priority === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
@@ -2650,7 +2650,7 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300">{activity.description}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activity.timestamp}</p>
+                    <p className="text-xs text-gray-500 dark:text-black mt-1">{activity.timestamp}</p>
                   </div>
                 </div>
               ))}
@@ -2659,13 +2659,13 @@ export default function AdminDashboard() {
           </div>
 
           {/* Statut des services */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
+          <div className="bg-white dark:bg-white rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 md:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
-              <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+              <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-black flex items-center">
                 <Server className="h-4 w-4 md:h-5 md:w-5 mr-2 text-mdsc-blue-primary" />
                 État des services
               </h3>
-              <span className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-xs md:text-sm text-gray-500 dark:text-black">
                 {serviceStatusCheckedAt
                   ? `Dernière vérification : ${formatDateTime(serviceStatusCheckedAt)}`
                   : 'Vérification en cours'}
@@ -2676,7 +2676,7 @@ export default function AdminDashboard() {
                 {serviceStatusError}
               </div>
             ) : serviceStatus.length === 0 ? (
-              <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
+              <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 px-3 py-2 text-xs md:text-sm text-gray-600 dark:text-black">
                 Aucun service vérifié pour le moment.
               </div>
             ) : (
@@ -2688,7 +2688,7 @@ export default function AdminDashboard() {
                         ? 'border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
                         : serviceStatusSummary === 'degraded'
                         ? 'border border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
-                        : 'border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                        : 'border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400'
                     }`}
                   >
                     {serviceStatusSummary === 'up'
@@ -2703,19 +2703,19 @@ export default function AdminDashboard() {
                   {serviceStatus.map((service, index) => (
                     <div key={`${service.id ?? index}-${service.name ?? 'service'}`} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 px-3 md:px-4 py-2 md:py-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm md:text-base">{service.name}</p>
+                        <p className="font-medium text-gray-900 dark:text-black text-sm md:text-base">{service.name}</p>
                         {service.message && (
-                          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">{service.message}</p>
+                          <p className="text-xs md:text-sm text-gray-600 dark:text-black mt-1">{service.message}</p>
                         )}
                       </div>
                       <span
                         className={`inline-flex items-center rounded-full px-2 md:px-3 py-1 text-xs font-semibold flex-shrink-0 ${
                           service.status === 'up'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            ? 'bg-green-100 dark:bg-green-900/10 text-green-700 dark:text-green-500'
                             : service.status === 'degraded'
-                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/10 text-yellow-700 dark:text-yellow-500'
                             : service.status === 'down'
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                            ? 'bg-red-100 dark:bg-red-900/10 text-red-700 dark:text-red-500'
                             : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300'
                         }`}
                       >

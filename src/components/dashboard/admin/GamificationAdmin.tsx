@@ -97,56 +97,56 @@ export default function GamificationAdmin() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
+        <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg mr-4">
-              <Trophy className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-400" />
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg mr-4">
+              <Trophy className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-500" />
             </div>
             <div>
-              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Badges disponibles</p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{totalBadges}</p>
+              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-700 ">Badges disponibles</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-black">{totalBadges}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
+        <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mr-4">
+            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg mr-4">
               <Award className="h-5 w-5 md:h-6 md:w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Total attributions</p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{totalAttributions}</p>
+              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-700">Total attributions</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-black">{totalAttributions}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
+        <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-4">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg mr-4">
               <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Badges actifs</p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{badgesWithAttributions}</p>
+              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-700">Badges actifs</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-black">{badgesWithAttributions}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
+        <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg mr-4">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg mr-4">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">Moyenne attributions</p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">{averageAttributions}</p>
+              <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-700">Moyenne attributions</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-black">{averageAttributions}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Gestion des badges */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
+      <div className="bg-white dark:bg-white rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 p-4 md:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 md:mb-6">
-          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Gestion des Badges</h3>
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-black">Gestion des Badges</h3>
           <button 
             onClick={checkAndAward} 
             disabled={checking} 
@@ -163,10 +163,10 @@ export default function GamificationAdmin() {
               return (
                 <div 
                   key={badge.id} 
-                  className="p-3 md:p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-shadow bg-gray-50 dark:bg-slate-800/50"
+                  className="p-3 md:p-4 border border-gray-200 dark:border-slate-700 rounded-lg hover:shadow-md transition-shadow bg-gray-50 dark:bg-slate-800/10"
                 >
                   <div className="flex items-center space-x-3 mb-2">
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-yellow-100 dark:bg-yellow-900/30 flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center bg-yellow-100 dark:bg-yellow-900/10 flex-shrink-0">
                       {badge.icon_url ? (
                         <img src={badge.icon_url} alt={badge.name} className="h-8 w-8 rounded-full" />
                       ) : (
@@ -174,15 +174,15 @@ export default function GamificationAdmin() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white text-sm md:text-base truncate">{badge.name}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{badge.category || 'Général'}</div>
+                      <div className="font-medium text-gray-900 dark:text-black text-sm md:text-base truncate">{badge.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-700">{badge.category || 'Général'}</div>
                     </div>
                   </div>
-                  <div className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">
+                  <div className="text-xs md:text-sm text-gray-600 dark:text-black mb-2 line-clamp-2">
                     {badge.description || 'Aucune description'}
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-slate-700">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Attributions:</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-white">
+                    <span className="text-xs text-gray-500 dark:text-gray-700">Attributions:</span>
                     <span className="text-xs font-semibold text-mdsc-blue-primary dark:text-blue-400">{attributionCount}</span>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export default function GamificationAdmin() {
             })}
           </div>
         ) : (
-          <div className="text-center text-gray-600 dark:text-gray-400 py-12">
+          <div className="text-center text-gray-600 dark:text-gray-700 py-12">
             <Trophy className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
             <p className="text-sm md:text-base">Aucun badge disponible</p>
             <p className="text-xs md:text-sm mt-2">Créez des badges pour commencer à gamifier votre plateforme</p>
