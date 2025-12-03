@@ -800,7 +800,7 @@ export default function LessonContent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white truncate text-base sm:text-lg">
-                      {effectiveMediaFile.originalFilename || lesson.title}
+                      {lesson.title}
                     </p>
                     {lessonDuration && (
                       <div className="flex items-center space-x-3 mt-1">
@@ -968,7 +968,7 @@ export default function LessonContent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white truncate">
-                      {effectiveMediaFile.originalFilename || lesson.title}
+                      {lesson.title}
                     </p>
                     {lessonDuration && (
                       <div className="flex items-center space-x-3 mt-1">
@@ -1150,7 +1150,7 @@ export default function LessonContent({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-white truncate text-base sm:text-lg">
-                      {effectiveMediaFile.originalFilename || lesson.title}
+                      {lesson.title}
                     </p>
                     <p className="text-xs sm:text-sm text-white/80 mt-1">
                       {isPDF ? 'Document PDF' : 'Présentation PowerPoint'}
@@ -1168,7 +1168,7 @@ export default function LessonContent({
               <div className="p-4 sm:p-6 bg-gray-50">
                 <FileViewer 
                   fileUrl={documentUrl}
-                  filename={effectiveMediaFile.originalFilename || lesson.title}
+                  filename={lesson.title}
                   fileType={effectiveMediaFile.fileType}
                 />
               </div>
@@ -1191,7 +1191,7 @@ export default function LessonContent({
                   <File className="h-5 w-5 text-mdsc-blue-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{effectiveMediaFile.originalFilename || lesson.title}</p>
+                  <p className="font-semibold text-gray-900 truncate">{lesson.title}</p>
                   <p className="text-sm text-gray-600 mt-1">Document à télécharger</p>
                 </div>
               </div>

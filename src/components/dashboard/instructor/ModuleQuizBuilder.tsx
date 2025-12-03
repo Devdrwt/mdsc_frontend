@@ -47,9 +47,29 @@ export default function ModuleQuizBuilder({
     description: initialQuiz?.description || '',
     passing_score: initialQuiz?.passing_score || 70,
     duration_minutes: initialQuiz?.duration_minutes,
-    questions: (initialQuiz?.questions || []).map((q, idx) => ({...q,
-      id: q.id || `temp-${Date.now()}-${idx}-${Math.random()}`, // S'assurer que chaque question a un ID unique
-    })),
+    questions: (initialQuiz?.questions || []).map((q, idx) => {
+      // Normaliser les options : convertir un tableau d'objets en tableau de strings si nécessaire
+      let normalizedOptions: string[] = [];
+      if (q.options) {
+        if (Array.isArray(q.options)) {
+          if (q.options.length > 0 && typeof q.options[0] === 'object') {
+            // Format backend : tableau d'objets avec option_text
+            normalizedOptions = (q.options as any[]).map((opt: any) => 
+              typeof opt === 'string' ? opt : (opt.option_text || opt.text || '')
+            ).filter((opt: string) => opt.trim());
+          } else {
+            // Format déjà correct : tableau de strings
+            normalizedOptions = q.options.filter((opt: any) => typeof opt === 'string' && opt.trim());
+          }
+        }
+      }
+      
+      return {
+        ...q,
+        id: q.id || `temp-${Date.now()}-${idx}-${Math.random()}`, // S'assurer que chaque question a un ID unique
+        options: normalizedOptions.length > 0 ? normalizedOptions : (q.question_type === 'multiple_choice' ? ['', '', '', ''] : []),
+      };
+    }),
   });
 
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -79,10 +99,27 @@ export default function ModuleQuizBuilder({
 
   const handleEditQuestion = (question: QuizQuestion) => {
     setEditingQuestion(question);
+    
+    // Normaliser les options : convertir un tableau d'objets en tableau de strings si nécessaire
+    let normalizedOptions: string[] = [];
+    if (question.options) {
+      if (Array.isArray(question.options)) {
+        if (question.options.length > 0 && typeof question.options[0] === 'object') {
+          // Format backend : tableau d'objets avec option_text
+          normalizedOptions = (question.options as any[]).map((opt: any) => 
+            typeof opt === 'string' ? opt : (opt.option_text || opt.text || '')
+          ).filter((opt: string) => opt.trim());
+        } else {
+          // Format déjà correct : tableau de strings
+          normalizedOptions = question.options.filter((opt: any) => typeof opt === 'string' && opt.trim());
+        }
+      }
+    }
+    
     setQuestionForm({
       question_text: question.question_text,
       question_type: question.question_type,
-      options: question.options || ['', '', '', ''],
+      options: normalizedOptions.length > 0 ? normalizedOptions : (question.question_type === 'multiple_choice' ? ['', '', '', ''] : []),
       correct_answer: question.correct_answer,
       points: question.points,
     });
@@ -322,7 +359,7 @@ export default function ModuleQuizBuilder({
                         <p className="text-gray-700 mb-2">{question.question_text}</p>
                         {question.question_type === 'multiple_choice' && (
                           <ul className="list-disc list-inside text-sm text-gray-600 ml-4">
-                            {question.options.filter(o => o.trim()).map((opt, optIdx) => (
+                            {(question.options || []).filter((o: string) => o && o.trim()).map((opt: string, optIdx: number) => (
                               <li key={optIdx} className={opt === question.correct_answer ? 'text-green-600 font-medium' : ''}>
                                 {opt} {opt === question.correct_answer && '✓'}
                               </li>

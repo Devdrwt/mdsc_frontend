@@ -6,23 +6,37 @@ import { ChevronLeft, ChevronRight, Loader, AlertCircle } from 'lucide-react';
 
 // Configurer le worker PDF.js avec préchargement
 if (typeof window !== 'undefined') {
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs-worker/pdf.worker.min.mjs';
+  // Essayer d'abord le worker local, sinon utiliser le CDN
+  const localWorkerPath = '/pdfjs-worker/pdf.worker.min.mjs';
+  const cdnWorkerPath = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   
-  // Précharger le worker pour améliorer les performances
-  const preloadWorker = async () => {
+  // Vérifier si le worker local existe, sinon utiliser le CDN
+  const checkAndSetWorker = async () => {
     try {
-      const workerUrl = pdfjs.GlobalWorkerOptions.workerSrc;
-      await fetch(workerUrl, { method: 'HEAD' });
+      const response = await fetch(localWorkerPath, { method: 'HEAD' });
+      if (response.ok) {
+        pdfjs.GlobalWorkerOptions.workerSrc = localWorkerPath;
+      } else {
+        pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerPath;
+      }
     } catch (error) {
-      console.warn('Impossible de précharger le worker PDF.js:', error);
+      // Si le worker local n'existe pas, utiliser le CDN
+      pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerPath;
     }
   };
   
-  // Précharger le worker dès que possible
+  // Configurer le worker dès que possible
   if (document.readyState === 'complete') {
-    preloadWorker();
+    checkAndSetWorker();
   } else {
-    window.addEventListener('load', preloadWorker);
+    window.addEventListener('load', checkAndSetWorker);
+    // Aussi essayer immédiatement si le document est déjà chargé
+    checkAndSetWorker();
+  }
+  
+  // Par défaut, utiliser le CDN en attendant
+  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerPath;
   }
 }
 
@@ -39,7 +53,32 @@ export default function PdfViewer({ url, filename }: PdfViewerProps) {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [error, setError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [workerReady, setWorkerReady] = useState(false);
   const documentRef = useRef<any>(null);
+
+  // Vérifier que le worker est prêt
+  useEffect(() => {
+    const checkWorker = async () => {
+      try {
+        // Vérifier que le worker est configuré
+        if (pdfjs.GlobalWorkerOptions.workerSrc) {
+          // Attendre un peu pour que le worker soit initialisé
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setWorkerReady(true);
+        } else {
+          // Si pas de worker configuré, utiliser le CDN par défaut
+          pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setWorkerReady(true);
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation du worker PDF.js:', error);
+        setWorkerReady(true); // Continuer quand même
+      }
+    };
+    
+    checkWorker();
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -96,53 +135,60 @@ export default function PdfViewer({ url, filename }: PdfViewerProps) {
                 <p className="text-xs text-gray-500">{loadingProgress}%</p>
               </div>
             )}
-            <Document
-              ref={documentRef}
-              file={url}
-              loading={
-                <div className="flex flex-col items-center justify-center min-h-[400px]">
-                  <Loader className="h-8 w-8 animate-spin text-mdsc-blue-primary mb-4" />
-                  <p className="text-sm text-gray-600">Chargement du document...</p>
-                </div>
-              }
-              onLoadSuccess={({ numPages }) => {
-                setNumPages(numPages);
-                setIsLoading(false);
-                setError(false);
-                setLoadingProgress(100);
-              }}
-              onLoadError={(error) => {
-                console.error('Erreur lors du chargement du PDF:', error);
-                setError(true);
-                setIsLoading(false);
-                setIsLoadingPage(false);
-              }}
-              onLoadProgress={handleDocumentLoadProgress}
-              options={documentOptions}
-              className="shadow-lg"
-            >
-              {!isLoading && (
-                <Page
-                  pageNumber={pageNumber}
-                  scale={scale}
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                  loading={
-                    <div className="flex items-center justify-center min-h-[400px]">
-                      <Loader className="h-6 w-6 animate-spin text-mdsc-blue-primary" />
-                    </div>
-                  }
-                  onRenderSuccess={() => {
-                    setIsLoadingPage(false);
-                  }}
-                  onRenderError={(error) => {
-                    console.error('Erreur lors du rendu de la page:', error);
-                    setIsLoadingPage(false);
-                  }}
-                  className="border border-gray-300"
-                />
-              )}
-            </Document>
+            {workerReady ? (
+              <Document
+                ref={documentRef}
+                file={url}
+                loading={
+                  <div className="flex flex-col items-center justify-center min-h-[400px]">
+                    <Loader className="h-8 w-8 animate-spin text-mdsc-blue-primary mb-4" />
+                    <p className="text-sm text-gray-600">Chargement du document...</p>
+                  </div>
+                }
+                onLoadSuccess={({ numPages }) => {
+                  setNumPages(numPages);
+                  setIsLoading(false);
+                  setError(false);
+                  setLoadingProgress(100);
+                }}
+                onLoadError={(error) => {
+                  console.error('Erreur lors du chargement du PDF:', error);
+                  setError(true);
+                  setIsLoading(false);
+                  setIsLoadingPage(false);
+                }}
+                onLoadProgress={handleDocumentLoadProgress}
+                options={documentOptions}
+                className="shadow-lg"
+              >
+                {!isLoading && numPages && (
+                  <Page
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    loading={
+                      <div className="flex items-center justify-center min-h-[400px]">
+                        <Loader className="h-6 w-6 animate-spin text-mdsc-blue-primary" />
+                      </div>
+                    }
+                    onRenderSuccess={() => {
+                      setIsLoadingPage(false);
+                    }}
+                    onRenderError={(error) => {
+                      console.error('Erreur lors du rendu de la page:', error);
+                      setIsLoadingPage(false);
+                    }}
+                    className="border border-gray-300"
+                  />
+                )}
+              </Document>
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <Loader className="h-8 w-8 animate-spin text-mdsc-blue-primary mb-4" />
+                <p className="text-sm text-gray-600">Initialisation du visualiseur PDF...</p>
+              </div>
+            )}
           </>
         )}
       </div>

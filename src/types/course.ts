@@ -1,5 +1,40 @@
 // Types étendus pour la gestion des cours selon l'architecture
 
+export interface ModuleQuizQuestion {
+  id: number | string;
+  quiz_id?: number;
+  question_text: string;
+  question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+  order_index: number;
+  points: number;
+  // Options peuvent être un tableau de strings (format backend) ou un tableau d'objets
+  options?: string[] | Array<{
+    id: number;
+    option_text: string;
+    is_correct?: boolean;
+  }>;
+  correct_answer?: string;
+}
+
+export interface ModuleQuiz {
+  id: number;
+  module_id: number;
+  title: string;
+  description?: string;
+  passing_score: number;
+  max_attempts?: number;
+  time_limit_minutes?: number;
+  questions: ModuleQuizQuestion[];
+  previous_attempts?: Array<{
+    id: number;
+    score: number;
+    percentage: number;
+    is_passed: boolean;
+    completed_at: string;
+  }>;
+  can_attempt?: boolean;
+}
+
 export interface Module {
   id: number;
   course_id: number;
@@ -12,6 +47,7 @@ export interface Module {
   updated_at: string;
   lessons_count?: number;
   lessons?: Lesson[];
+  quiz?: ModuleQuiz; // Quiz du module avec questions (depuis getCourseProgress)
   // Compatibilité avec l'ancien format
   courseId?: string | number;
   orderIndex?: number;

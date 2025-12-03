@@ -86,4 +86,78 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
 export const DEFAULT_COURSE_IMAGE = '/apprenant.png';
 export const DEFAULT_INSTRUCTOR_AVATAR = '/mdsc-logo.png';
 
+/**
+ * Décode correctement un nom de fichier UTF-8 qui pourrait être mal encodé
+ * Gère les cas où le texte est encodé en Latin-1 mais devrait être en UTF-8
+ * Exemple: "vidÃ©o" -> "vidéo"
+ */
+export function decodeFilename(filename: string | null | undefined): string {
+  // Si pas de nom de fichier, retourner chaîne vide
+  if (!filename) {
+    return '';
+  }
+
+  try {
+    // Vérifier si le nom de fichier contient des caractères mal encodés
+    const hasMalformedChars = /Ã|â€™|â€œ|â€|â€"/.test(filename);
+    
+    // Si pas de caractères mal formés, retourner tel quel
+    if (!hasMalformedChars) {
+      return filename;
+    }
+
+    // Méthode 1: Décoder comme Latin-1 puis réencoder en UTF-8
+    // C'est la méthode la plus fiable pour corriger "vidÃ©o" -> "vidéo"
+    try {
+      // Convertir chaque caractère en byte Latin-1, puis décoder en UTF-8
+      const bytes = new Uint8Array(filename.length);
+      for (let i = 0; i < filename.length; i++) {
+        bytes[i] = filename.charCodeAt(i) & 0xFF;
+      }
+      const decoded = new TextDecoder('latin1').decode(bytes);
+      
+      // Vérifier que le résultat est meilleur (moins de caractères mal formés)
+      if (decoded && !/Ã|â€™/.test(decoded)) {
+        return decoded;
+      }
+    } catch (e) {
+      // Continuer avec les autres méthodes
+    }
+
+    // Méthode 2: Remplacements manuels pour les cas courants
+    const replacements: Record<string, string> = {
+      'Ã©': 'é',
+      'Ã¨': 'è',
+      'Ãª': 'ê',
+      'Ã«': 'ë',
+      'Ã ': 'à',
+      'Ã¢': 'â',
+      'Ã§': 'ç',
+      'Ã´': 'ô',
+      'Ã¹': 'ù',
+      'Ã»': 'û',
+      'Ã¯': 'ï',
+      'Ã°': 'ð',
+      'Ã±': 'ñ',
+    };
+    
+    let result = filename;
+    for (const [wrong, correct] of Object.entries(replacements)) {
+      result = result.replace(new RegExp(wrong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), correct);
+    }
+    
+    // Si le résultat est différent et meilleur, l'utiliser
+    if (result && result !== filename && !/Ã|â€™/.test(result)) {
+      return result;
+    }
+    
+    // Toujours retourner le nom original si on ne peut pas le décoder
+    return filename;
+  } catch (error) {
+    console.warn('Erreur lors du décodage du nom de fichier:', error);
+    // En cas d'erreur, retourner le nom original
+    return filename || '';
+  }
+}
+
 

@@ -19,13 +19,47 @@ export class ProgressService {
 
   /**
    * Récupérer la progression d'un cours
+   * Utilise la route /student/courses/:courseId/progress qui retourne les modules avec quiz
    */
   static async getCourseProgress(courseId: number): Promise<CourseProgressStats> {
     try {
-      const response = await apiRequest(`/progress/course/${courseId}`, {
-        method: 'GET',
-      });
-      return response.data;
+      // Essayer d'abord la route student qui inclut les modules avec quiz
+      try {
+        const response = await apiRequest(`/student/courses/${courseId}/progress`, {
+          method: 'GET',
+        });
+        console.log('[ProgressService] ✅ Données récupérées depuis /student/courses/:id/progress:', {
+          hasModules: !!response.data?.modules,
+          modulesCount: response.data?.modules?.length || 0,
+          modulesWithQuiz: response.data?.modules?.filter((m: any) => m.quiz)?.length || 0,
+          hasQuizzes: !!response.data?.quizzes,
+          quizzesCount: response.data?.quizzes?.length || 0,
+          moduleQuizzesCount: response.data?.quizzes?.filter((q: any) => q.type === 'module_quiz' || q.module_id)?.length || 0,
+          responseKeys: Object.keys(response.data || {}),
+          fullResponse: JSON.stringify(response.data, null, 2).substring(0, 4000), // Limiter à 4000 caractères pour voir la structure
+        });
+        return response.data;
+      } catch (studentError: any) {
+        // Si la route student n'existe pas (404), essayer l'ancienne route
+        if (studentError?.status === 404) {
+          console.log('[ProgressService] ⚠️ Route /student/courses/:id/progress non trouvée, utilisation de /progress/course/:id');
+          const response = await apiRequest(`/progress/course/${courseId}`, {
+            method: 'GET',
+          });
+          console.log('[ProgressService] ✅ Données récupérées depuis /progress/course/:id:', {
+            hasModules: !!response.data?.modules,
+            modulesCount: response.data?.modules?.length || 0,
+            modulesWithQuiz: response.data?.modules?.filter((m: any) => m.quiz)?.length || 0,
+            hasQuizzes: !!response.data?.quizzes,
+            quizzesCount: response.data?.quizzes?.length || 0,
+            moduleQuizzesCount: response.data?.quizzes?.filter((q: any) => q.type === 'module_quiz' || q.module_id)?.length || 0,
+            responseKeys: Object.keys(response.data || {}),
+            fullResponse: JSON.stringify(response.data, null, 2).substring(0, 4000),
+          });
+          return response.data;
+        }
+        throw studentError;
+      }
     } catch (error) {
       console.warn('ProgressService.getCourseProgress fallback:', error);
       return {

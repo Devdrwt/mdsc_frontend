@@ -87,6 +87,36 @@ export default function ModuleQuizPlayer({
     }
   }, [quiz, timeRemaining, result]);
 
+  // Fonction pour normaliser les options d'une question (convertir tableau d'objets en tableau de strings)
+  const normalizeQuestionOptions = (question: any): string[] => {
+    if (!question.options) {
+      return [];
+    }
+    
+    if (Array.isArray(question.options)) {
+      if (question.options.length === 0) {
+        return [];
+      }
+      
+      // Si c'est déjà un tableau de strings, le retourner tel quel
+      if (typeof question.options[0] === 'string') {
+        return question.options.filter((opt: string) => opt && opt.trim());
+      }
+      
+      // Si c'est un tableau d'objets, extraire les textes
+      if (typeof question.options[0] === 'object') {
+        return question.options
+          .map((opt: any) => {
+            if (typeof opt === 'string') return opt;
+            return opt.option_text || opt.text || opt.label || '';
+          })
+          .filter((opt: string) => opt && opt.trim());
+      }
+    }
+    
+    return [];
+  };
+
   const loadQuiz = async () => {
     try {
       setLoading(true);
@@ -99,8 +129,20 @@ export default function ModuleQuizPlayer({
         if (!quiz) {
           throw new Error('Quiz non trouvé');
         }
+        
+        // Normaliser les questions : convertir les options au format attendu
+        const normalizedQuestions = (quiz.questions || []).map((q: any) => ({
+          ...q,
+          options: normalizeQuestionOptions(q),
+        }));
+        
         // S'assurer que l'ID est défini
-        quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
+        quizData = { 
+          ...quiz, 
+          id: quiz.id || quizId,
+          questions: normalizedQuestions,
+        } as ModuleQuiz;
+        
         // Extraire les informations sur les tentatives
         attemptInfoData = {
           previous_attempts: (quiz as any).previous_attempts || [],
@@ -109,9 +151,32 @@ export default function ModuleQuizPlayer({
         };
       } else {
         const quiz = await quizService.getQuizForStudent(quizId);
+        
+        // Normaliser les questions : convertir les options au format attendu
+        const normalizedQuestions = (quiz.questions || []).map((q: any) => ({
+          ...q,
+          options: normalizeQuestionOptions(q),
+        }));
+        
         // S'assurer que l'ID est défini
-        quizData = { ...quiz, id: quiz.id || quizId } as ModuleQuiz;
+        quizData = { 
+          ...quiz, 
+          id: quiz.id || quizId,
+          questions: normalizedQuestions,
+        } as ModuleQuiz;
       }
+      
+      console.log('[ModuleQuizPlayer] ✅ Quiz chargé et normalisé:', {
+        quizId: quizData.id,
+        questionsCount: quizData.questions.length,
+        questions: quizData.questions.map((q: any) => ({
+          id: q.id,
+          type: q.question_type,
+          optionsCount: q.options?.length || 0,
+          options: q.options,
+        })),
+      });
+      
       setQuiz(quizData);
       setAttemptInfo(attemptInfoData);
       

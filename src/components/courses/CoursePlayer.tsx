@@ -220,72 +220,8 @@ export default function CoursePlayer({
         }
       }
 
-      // Charger les quiz de chaque module et vérifier leur statut de complétion
-      if (course.modules) {
-        const quizzesMap = new Map<number, string>();
-        const completedQuizzesSet = new Set<number>();
-        
-        for (const module of course.modules) {
-          const moduleAny = module as any;
-          
-          // 1. Vérifier d'abord si le module contient déjà l'ID du quiz dans les données
-          let quizId = moduleAny.quiz_id || moduleAny.module_quiz_id || moduleAny.quizId || 
-                       (moduleAny.module_quiz?.id) || (moduleAny.quiz?.id);
-          
-          // 2. Si pas d'ID dans les données, essayer de récupérer via l'API
-          if (!quizId) {
-            try {
-              // Pour les étudiants, utiliser l'endpoint spécifique
-              if (enrollmentId) {
-                const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
-                quizId = quiz?.id || (quiz as any)?.quiz?.id;
-              } else {
-                // Pour les instructeurs ou sans enrollment, utiliser l'endpoint standard
-                const quiz = await quizService.getModuleQuiz(module.id.toString());
-                quizId = quiz?.id;
-              }
-            } catch (error: any) {
-              // 404 ou 403 sont normaux si pas de quiz
-              if (error.status !== 404 && error.status !== 403) {
-                console.warn(`⚠️ Erreur lors de la récupération du quiz pour le module ${module.id}:`, error);
-              }
-            }
-          }
-          
-          // 3. Si on a un quizId, l'ajouter à la map
-          if (quizId) {
-            console.log(`✅ Quiz trouvé pour le module ${module.id}: quiz_id=${quizId}`);
-            quizzesMap.set(module.id, quizId.toString());
-            
-            // 4. Vérifier si le quiz est complété/réussi (seulement pour les étudiants)
-            if (enrollmentId) {
-              try {
-                const quiz = await quizService.getModuleQuizForStudent(enrollmentId, module.id.toString());
-                const previousAttempts = (quiz as any)?.previous_attempts || [];
-                
-                // Vérifier si une tentative a réussi
-                const hasPassedAttempt = previousAttempts.some((attempt: any) => 
-                  attempt.is_passed === true || attempt.is_passed === 1
-                );
-                if (hasPassedAttempt) {
-                  completedQuizzesSet.add(module.id);
-                  console.log(`✅ Quiz du module ${module.id} est réussi`);
-                }
-              } catch (error) {
-                // Ignorer les erreurs silencieusement
-                console.log(`⚠️ Erreur lors de la vérification du quiz pour le module ${module.id}:`, error);
-              }
-            }
-          }
-        }
-        
-        console.log(`📊 Total quiz chargés: ${quizzesMap.size}`, Array.from(quizzesMap.entries()));
-        if (enrollmentId) {
-          console.log(`✅ Quiz complétés: ${completedQuizzesSet.size}`, Array.from(completedQuizzesSet));
-        }
-        setModuleQuizzes(quizzesMap);
-        setCompletedModuleQuizzes(completedQuizzesSet);
-      }
+      // Les quiz de modules sont maintenant chargés depuis getCourseProgress dans loadProgress()
+      // Plus besoin de faire des appels API séparés ici
     } catch (error) {
       console.error('Erreur lors du chargement des quiz et évaluation:', error);
     }
@@ -332,10 +268,81 @@ export default function CoursePlayer({
         Number.isNaN(numericCourseId) ? 0 : numericCourseId
       );
 
+      console.log('[CoursePlayer] 📦 Données complètes de getCourseProgress:', {
+        hasPayload: !!progressPayload,
+        payloadKeys: progressPayload ? Object.keys(progressPayload) : [],
+        modulesCount: progressPayload?.modules?.length || 0,
+        quizzesCount: progressPayload?.quizzes?.length || 0,
+        fullPayload: JSON.stringify(progressPayload, null, 2).substring(0, 3000), // Limiter à 3000 caractères
+        modules: progressPayload?.modules?.map((m: any) => ({
+          id: m.id || m.module_id,
+          title: m.title,
+          hasQuiz: !!m.quiz,
+          quizId: m.quiz?.id,
+          quizIsPublished: m.quiz?.is_published,
+          quizQuestionsCount: m.quiz?.questions?.length || 0,
+          quizStructure: m.quiz ? JSON.stringify(m.quiz).substring(0, 500) : null,
+        })) || [],
+        quizzes: progressPayload?.quizzes?.map((q: any) => ({
+          id: q.id,
+          type: q.type,
+          moduleId: q.module_id,
+          moduleTitle: q.module_title,
+          title: q.title,
+          isPublished: q.is_published,
+          questionsCount: q.questions?.length || 0,
+        })) || [],
+      });
+
       const summary = progressPayload?.summary || {};
       const progressRows: any[] = progressPayload?.progress || [];
       const modulesData: any[] = progressPayload?.modules || [];
+      const quizzesData: any[] = progressPayload?.quizzes || [];
       const enrollmentInfo: any = progressPayload?.enrollment;
+
+      console.log('[CoursePlayer] 📋 Quiz depuis data.quizzes:', {
+        quizzesCount: quizzesData.length,
+        moduleQuizzes: quizzesData.filter((q: any) => q.type === 'module_quiz' || q.module_id).map((q: any) => ({
+          id: q.id,
+          moduleId: q.module_id,
+          moduleTitle: q.module_title,
+          title: q.title,
+          isPublished: q.is_published,
+          questionsCount: q.questions?.length || 0,
+        })),
+      });
+
+      console.log('[CoursePlayer] 📊 ModulesData extraits:', {
+        modulesDataCount: modulesData.length,
+        modulesData: modulesData.map((m: any) => ({
+          id: m.id || m.module_id,
+          title: m.title,
+          hasQuiz: !!m.quiz,
+          quizStructure: m.quiz ? {
+            id: m.quiz.id,
+            title: m.quiz.title,
+            questionsCount: m.quiz.questions?.length || 0,
+            hasPreviousAttempts: !!m.quiz.previous_attempts,
+            previousAttemptsCount: m.quiz.previous_attempts?.length || 0,
+            isPublished: m.quiz.is_published,
+          } : null,
+          allKeys: Object.keys(m), // Voir toutes les clés disponibles
+        })),
+      });
+
+      console.log('[CoursePlayer] 📋 QuizzesData extraits:', {
+        quizzesDataCount: quizzesData.length,
+        quizzesData: quizzesData.map((q: any) => ({
+          id: q.id,
+          type: q.type,
+          moduleId: q.module_id,
+          moduleTitle: q.module_title,
+          title: q.title,
+          isPublished: q.is_published,
+          questionsCount: q.questions?.length || 0,
+          allKeys: Object.keys(q), // Voir toutes les clés disponibles
+        })),
+      });
 
       progressRows.forEach((row) => {
         const lessonId = Number(row.lesson_id || row.lessonId || row.id);
@@ -366,6 +373,87 @@ export default function CoursePlayer({
       });
 
       setModuleProgressMap(new Map(moduleProgressEntries));
+
+      // Extraire les quiz de modules depuis modulesData ET depuis quizzesData
+      const quizzesMap = new Map<number, string>();
+      const completedQuizzesSet = new Set<number>();
+      
+      // Méthode 1: Chercher dans modulesData (format original)
+      modulesData.forEach((moduleRow: any) => {
+        const moduleId = Number(moduleRow.id || moduleRow.module_id);
+        if (Number.isNaN(moduleId)) return;
+
+        // Vérifier si le module a un quiz
+        const quiz = moduleRow.quiz;
+        if (quiz && quiz.id) {
+          const quizId = String(quiz.id);
+          quizzesMap.set(moduleId, quizId);
+          console.log(`✅ Quiz trouvé pour le module ${moduleId} (depuis modules[].quiz): quiz_id=${quizId}`, {
+            hasQuestions: !!quiz.questions,
+            questionsCount: quiz.questions?.length || 0,
+            previousAttempts: quiz.previous_attempts?.length || 0,
+          });
+
+          // Vérifier si le quiz est complété/réussi
+          const previousAttempts = quiz.previous_attempts || [];
+          const hasPassedAttempt = previousAttempts.some((attempt: any) => 
+            attempt.is_passed === true || attempt.is_passed === 1
+          );
+          if (hasPassedAttempt) {
+            completedQuizzesSet.add(moduleId);
+            console.log(`✅ Quiz du module ${moduleId} est réussi`);
+          }
+        }
+      });
+
+      // Méthode 2: Chercher dans quizzesData (nouveau format avec type: 'module_quiz')
+      quizzesData.forEach((quiz: any) => {
+        // Vérifier si c'est un quiz de module (peut avoir type: 'module_quiz' ou simplement module_id)
+        const isModuleQuiz = quiz.type === 'module_quiz' || (quiz.module_id && !quiz.lesson_id);
+        if (!isModuleQuiz) {
+          console.log(`[CoursePlayer] ⚠️ Quiz ${quiz.id} ignoré (pas un quiz de module):`, {
+            type: quiz.type,
+            moduleId: quiz.module_id,
+            lessonId: quiz.lesson_id,
+          });
+          return;
+        }
+
+        const moduleId = Number(quiz.module_id);
+        if (Number.isNaN(moduleId)) {
+          console.log(`[CoursePlayer] ⚠️ Quiz ${quiz.id} ignoré (module_id invalide):`, quiz.module_id);
+          return;
+        }
+
+        // Si le module n'a pas déjà de quiz, ou si ce quiz est plus récent, l'utiliser
+        if (!quizzesMap.has(moduleId) || quiz.id) {
+          const quizId = String(quiz.id);
+          quizzesMap.set(moduleId, quizId);
+          console.log(`✅ Quiz trouvé pour le module ${moduleId} (depuis quizzes[]): quiz_id=${quizId}`, {
+            hasQuestions: !!quiz.questions,
+            questionsCount: quiz.questions?.length || 0,
+            previousAttempts: quiz.previous_attempts?.length || 0,
+            isPublished: quiz.is_published,
+          });
+
+          // Vérifier si le quiz est complété/réussi
+          const previousAttempts = quiz.previous_attempts || [];
+          const hasPassedAttempt = previousAttempts.some((attempt: any) => 
+            attempt.is_passed === true || attempt.is_passed === 1
+          );
+          if (hasPassedAttempt) {
+            completedQuizzesSet.add(moduleId);
+            console.log(`✅ Quiz du module ${moduleId} est réussi (depuis quizzes[])`);
+          }
+        }
+      });
+
+      console.log(`📊 Total quiz chargés depuis getCourseProgress: ${quizzesMap.size}`, Array.from(quizzesMap.entries()));
+      if (enrollmentId) {
+        console.log(`✅ Quiz complétés: ${completedQuizzesSet.size}`, Array.from(completedQuizzesSet));
+      }
+      setModuleQuizzes(quizzesMap);
+      setCompletedModuleQuizzes(completedQuizzesSet);
 
       if (summary?.next_lesson_id) {
         const nextLessonId = Number(summary.next_lesson_id);

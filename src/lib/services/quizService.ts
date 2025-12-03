@@ -52,6 +52,7 @@ export class QuizService {
         description: data.description,
         passing_score: data.passing_score,
         duration_minutes: data.duration_minutes,
+        is_published: true, // Publier automatiquement le quiz
         questions: data.questions.map((q, idx) => ({
           question_text: q.question_text,
           question_type: q.question_type,
@@ -112,6 +113,7 @@ export class QuizService {
         description: data.description,
         passing_score: data.passing_score,
         duration_minutes: data.duration_minutes,
+        is_published: true, // Maintenir le quiz publié lors de la mise à jour
         questions: data.questions?.map((q, idx) => ({
           id: q.id, // Inclure l'ID si la question existe déjà
           question_text: q.question_text,
