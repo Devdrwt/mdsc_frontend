@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { MediaFile } from '../../types';
 
 export interface Course {
   id: string;
@@ -960,21 +961,27 @@ export class CourseService {
            contentType === 'presentation' ? 'presentation' :
            contentType === 'h5p' ? 'h5p' : 'other');
         
+        const originalFilename = lesson.original_filename || '';
         mediaFile = {
-          id: lesson.media_file_id || lesson.id,
+          id: String(lesson.media_file_id || lesson.id),
           url: mediaUrl,
           thumbnail_url: lesson.thumbnail_url || '',
           thumbnailUrl: lesson.thumbnail_url || '',
           file_category: fileCategory,
           fileCategory: fileCategory,
-          original_filename: lesson.original_filename || '',
-          originalFilename: lesson.original_filename || '',
+          original_filename: originalFilename,
+          originalFilename: originalFilename,
+          filename: originalFilename || 'media-file',
           file_size: lesson.file_size || 0,
           fileSize: lesson.file_size || 0,
           file_type: lesson.file_type || '',
           fileType: lesson.file_type || '',
-          lesson_id: lesson.id,
-          lessonId: lesson.id,
+          lesson_id: String(lesson.id),
+          lessonId: String(lesson.id),
+          storage_type: 'local',
+          storage_path: mediaUrl,
+          uploaded_by: lesson.uploaded_by || '',
+          uploaded_at: lesson.uploaded_at || new Date().toISOString(),
         } as MediaFile;
       }
     }

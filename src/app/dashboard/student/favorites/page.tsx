@@ -274,24 +274,24 @@ export default function FavoritesPage() {
                         </div>
 
                         {/* Description */}
-                        {(course.short_description || course.description) && (
+                        {(course.shortDescription || course.description) && (
                           <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                            {course.short_description || course.description}
+                            {course.shortDescription || course.description}
                           </p>
                         )}
 
                         {/* Informations en ligne */}
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-                          {(course.duration || course.duration_minutes) && (
+                          {course.duration && (
                             <div className="flex items-center">
                               <Clock className="h-4 w-4 mr-1.5 text-gray-400" />
-                              <span>{formatDuration(course.duration || course.duration_minutes)}</span>
+                              <span>{formatDuration(course.duration)}</span>
                             </div>
                           )}
-                          {(course.rating !== undefined && course.rating !== null) || (course.average_rating !== undefined && course.average_rating !== null) ? (
+                          {course.rating !== undefined && course.rating !== null ? (
                             <div className="flex items-center">
                               <Star className="h-4 w-4 mr-1.5 fill-yellow-400 text-yellow-400" />
-                              <span className="font-medium">{(course.average_rating ?? course.rating ?? 0).toFixed(1)}</span>
+                              <span className="font-medium">{(course.rating ?? 0).toFixed(1)}</span>
                             </div>
                           ) : null}
                         </div>
