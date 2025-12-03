@@ -564,7 +564,7 @@ export class CourseService {
 
   // Demander la suppression d'un cours publié (pour instructeur)
   static async requestCourseDeletion(id: string, reason?: string): Promise<void> {
-    await apiRequest(`/courses/${id}/request-deletion`, {
+    await apiRequest(`/instructor/courses/${id}/request-deletion`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     });
