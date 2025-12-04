@@ -407,17 +407,18 @@ select:focus {
 
 .btn-mdsc-primary:hover {
   background-color: var(--mdsc-blue-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 96, 149, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-mdsc-primary:active {
   transform: translateY(0);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 .btn-mdsc-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--mdsc-blue-primary), 0 0 0 4px rgba(59, 124, 138, 0.1);
+  box-shadow: 0 0 0 2px var(--mdsc-blue-primary), 0 0 0 4px rgba(147, 197, 253, 0.15);
 }
 
 .btn-mdsc-secondary {
@@ -433,8 +434,8 @@ select:focus {
 
 .btn-mdsc-secondary:hover {
   background-color: #c1873f;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(244, 165, 58, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-mdsc-secondary:active {
@@ -460,8 +461,8 @@ select:focus {
 .btn-mdsc-outline:hover {
   background-color: var(--mdsc-blue-dark);
   color: var(--mdsc-white);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(12, 60, 92, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .btn-mdsc-outline:active {
@@ -470,21 +471,24 @@ select:focus {
 
 .btn-mdsc-outline:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--mdsc-blue-primary), 0 0 0 4px rgba(59, 124, 138, 0.1);
+  box-shadow: 0 0 0 2px var(--mdsc-blue-primary), 0 0 0 4px rgba(147, 197, 253, 0.15);
 }
 
 /* Styles globaux pour tous les boutons - Amélioration de l'UX */
-button:not(:disabled):not([class*="no-hover"]) {
+/* Exclure les éléments de navigation de la sidebar avec la classe no-hover */
+/* Note: Les classes .btn-mdsc-* ont leurs propres styles, donc on les exclut */
+/* Exclure aussi les éléments dans .sidebar-nav */
+button:not(:disabled):not([class*="no-hover"]):not([class*="btn-mdsc-"]):not(.sidebar-nav button):not(nav button) {
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 }
 
-button:not(:disabled):not([class*="no-hover"]):hover {
+button:not(:disabled):not([class*="no-hover"]):not([class*="btn-mdsc-"]):not(.sidebar-nav button):not(nav button):hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-button:not(:disabled):not([class*="no-hover"]):active {
+button:not(:disabled):not([class*="no-hover"]):not([class*="btn-mdsc-"]):not(.sidebar-nav button):not(nav button):active {
   transform: translateY(0);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
@@ -494,33 +498,91 @@ button:disabled {
   opacity: 0.6;
 }
 
-/* Amélioration des boutons avec classes Tailwind */
-button[class*="bg-"]:not(:disabled):not([class*="no-hover"]):hover {
+/* Amélioration des boutons avec classes Tailwind (exclure btn-mdsc-* et sidebar) */
+button[class*="bg-"]:not(:disabled):not([class*="no-hover"]):not([class*="btn-mdsc-"]):not(.sidebar-nav button):not(nav button):hover {
   filter: brightness(1.05);
 }
 
-button[class*="border-"]:not(:disabled):not([class*="no-hover"]):hover {
+/* Désactiver les effets hover pour les éléments de navigation dans la sidebar */
+/* Ces règles doivent être après les styles globaux pour avoir la priorité */
+.sidebar-nav button,
+.sidebar-nav a,
+nav.sidebar-nav button,
+nav.sidebar-nav a,
+[class*="sidebar"] nav button,
+[class*="sidebar"] nav a {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out !important;
+}
+
+.sidebar-nav button:hover,
+.sidebar-nav a:hover,
+nav.sidebar-nav button:hover,
+nav.sidebar-nav a:hover,
+[class*="sidebar"] nav button:hover,
+[class*="sidebar"] nav a:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Désactiver les effets globaux sur tous les éléments nav (règle générale) */
+nav button,
+nav a {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+nav button:hover,
+nav a:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+button[class*="border-"]:not(:disabled):not([class*="no-hover"]):not([class*="btn-mdsc-"]):not(.sidebar-nav button):not(nav button):hover {
   border-width: 2px;
 }
 
 /* Styles pour les liens stylés comme des boutons */
-a[class*="bg-"]:not([class*="no-hover"]),
-a[class*="btn"]:not([class*="no-hover"]) {
+/* Exclure les éléments de navigation dans la sidebar */
+a[class*="bg-"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a),
+a[class*="btn"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a) {
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   display: inline-block;
 }
 
-a[class*="bg-"]:not([class*="no-hover"]):hover,
-a[class*="btn"]:not([class*="no-hover"]):hover {
+a[class*="bg-"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a):hover,
+a[class*="btn"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a):hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-a[class*="bg-"]:not([class*="no-hover"]):active,
-a[class*="btn"]:not([class*="no-hover"]):active {
+a[class*="bg-"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a):active,
+a[class*="btn"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a):active {
   transform: translateY(0);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+/* Adoucir le bleu des textes sur les boutons à fond blanc au survol */
+/* Règle consolidée pour éviter les conflits */
+[class*="bg-white"]:hover [class*="text-mdsc-blue-primary"],
+[class*="bg-white"]:hover [class*="text-mdsc-blue-dark"],
+.bg-white:hover [class*="text-mdsc-blue-primary"],
+.bg-white:hover [class*="text-mdsc-blue-dark"],
+button.bg-white[class*="text-mdsc-blue"]:hover,
+button.bg-white[class*="text-blue"]:hover,
+a.bg-white[class*="text-mdsc-blue"]:hover,
+a.bg-white[class*="text-blue"]:hover,
+.bg-white .hover\:text-mdsc-blue-primary:hover,
+.bg-white .group-hover\:text-mdsc-blue-primary.group:hover *,
+.bg-white .group:hover .group-hover\:text-mdsc-blue-primary,
+.bg-white.hover\:text-mdsc-blue-primary:hover {
+  color: #4A6B7A !important; /* Bleu moins saturé, plus doux pour meilleure lisibilité */
 }
 
 /* Cartes et sections */

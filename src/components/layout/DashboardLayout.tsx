@@ -677,7 +677,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               <X className="h-6 w-6" />
             </button>
           </div>
-          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto sidebar-nav">
             {navigationItems.map((item) => renderNavItem(item, true))}
           </nav>
         </div>
@@ -685,9 +685,9 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
 
       {/* Sidebar Desktop */}
       <div
-        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? "lg:w-20" : "lg:w-64"}`}
+        className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 z-30 ${sidebarCollapsed ? "lg:w-20" : "lg:w-64"}`}
       >
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
           <div className="flex h-20 items-center justify-between px-4">
             <div className="flex items-center w-full cursor-pointer" onClick={() => router.push("/")}>
               {sidebarCollapsed ? (
@@ -723,7 +723,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               </button>
             )}
           </div>
-          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto sidebar-nav">
             {navigationItems.map((item) => renderNavItem(item, false))}
           </nav>
         </div>
@@ -732,7 +732,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
       {/* Main Content */}
       <div className={`lg:transition-all lg:duration-300 ${sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"}`}>
         {/* Top Bar */}
-        <div className="sticky top-0 z-40 flex h-16 items-center justify-between bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
+        <div className="sticky top-0 z-20 flex h-16 items-center justify-between bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center">
             <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-gray-600 lg:hidden">
               <Menu className="h-6 w-6" />

@@ -907,14 +907,9 @@ export default function LessonContent({
               </div>
             </div>
             
-            {/* Barre d'information en bas */}
-            <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50">
-              <p className="text-xs text-center text-gray-500 mb-4">
-                Lecture protégée - Téléchargement et enregistrement désactivés
-              </p>
-              
-              {/* Bouton "Marquer comme terminé" */}
-              {enrollmentId && !isCompleted && (
+            {/* Bouton "Marquer comme terminé" */}
+            {enrollmentId && !isCompleted && (
+              <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50">
                 <div className="flex justify-center">
                   <button
                     onClick={handleMarkComplete}
@@ -934,9 +929,8 @@ export default function LessonContent({
                     )}
                   </button>
                 </div>
-              )}
-              
-            </div>
+              </div>
+            )}
           </div>
         );
       }
@@ -1096,13 +1090,6 @@ export default function LessonContent({
                 Votre navigateur ne supporte pas la lecture audio.
               </audio>
             </div>
-            
-            {/* Barre d'information en bas */}
-            <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50 border-t border-gray-200">
-              <p className="text-xs text-center text-gray-500">
-                Lecture protégée - Téléchargement et enregistrement désactivés
-              </p>
-            </div>
           </div>
         );
       }
@@ -1148,12 +1135,6 @@ export default function LessonContent({
                   filename={lesson.title}
                   fileType={effectiveMediaFile.fileType}
                 />
-              </div>
-              
-              <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50 border-t border-gray-200">
-                <p className="text-xs text-center text-gray-500">
-                  Document en lecture seule - Impression, téléchargement et enregistrement désactivés
-                </p>
               </div>
             </div>
           );
