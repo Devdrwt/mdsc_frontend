@@ -734,6 +734,17 @@ export default function CoursePlayer({
     }
   }, [selectedModuleId]);
 
+  // Fonction pour obtenir la leçon suivante
+  const getNextLesson = useCallback((): Lesson | null => {
+    if (!selectedLessonId) return null;
+    const orderedLessons = getOrderedLessons();
+    const lessonIndex = orderedLessons.findIndex((lesson) => lesson.id === selectedLessonId);
+    if (lessonIndex === -1 || lessonIndex >= orderedLessons.length - 1) {
+      return null;
+    }
+    return orderedLessons[lessonIndex + 1] || null;
+  }, [selectedLessonId, getOrderedLessons]);
+
   const handleLessonSelect = async (lesson: Lesson) => {
     // Vérifier l'accès à la leçon
     if (enrollmentId && !isLessonUnlocked(lesson)) {
@@ -782,6 +793,14 @@ export default function CoursePlayer({
       }, 1000);
     }
   };
+
+  // Fonction pour naviguer vers la leçon suivante
+  const handleNextLesson = useCallback(() => {
+    const nextLesson = getNextLesson();
+    if (nextLesson) {
+      handleLessonSelect(nextLesson);
+    }
+  }, [getNextLesson, handleLessonSelect]);
 
   const handleLessonComplete = async () => {
     if (!selectedLessonId || !enrollmentId) {
@@ -1932,6 +1951,8 @@ export default function CoursePlayer({
               courseId={typeof course.id === 'number' ? course.id.toString() : course.id}
               enrollmentId={course.enrollment?.id ? (typeof course.enrollment.id === 'number' ? course.enrollment.id : parseInt(course.enrollment.id)) : undefined}
               onComplete={handleLessonComplete}
+              onNextLesson={handleNextLesson}
+              hasNextLesson={!!getNextLesson()}
             />
             
             {/* Quiz du module en bas des leçons */}

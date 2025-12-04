@@ -16,13 +16,13 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none';
   
   const variantClasses = {
-    primary: 'bg-mdsc-blue-primary text-white hover:bg-white/20 hover:text-white focus:ring-blue-500',
-    secondary: 'bg-mdsc-orange text-white hover:bg-white/20 hover:text-white focus:ring-orange-500',
-    outline: 'border-2 border-mdsc-blue-primary text-mdsc-blue-primary hover:bg-white/20 hover:text-mdsc-blue-primary focus:ring-blue-500',
-    ghost: 'text-mdsc-blue-primary hover:bg-white/20 hover:text-mdsc-blue-primary focus:ring-blue-500',
+    primary: 'bg-mdsc-blue-primary text-white hover:bg-mdsc-blue-dark hover:shadow-lg hover:scale-105 active:scale-100 focus:ring-blue-500',
+    secondary: 'bg-mdsc-orange text-white hover:bg-orange-600 hover:shadow-lg hover:scale-105 active:scale-100 focus:ring-orange-500',
+    outline: 'border-2 border-mdsc-blue-primary text-mdsc-blue-primary bg-transparent hover:bg-mdsc-blue-primary hover:text-white hover:shadow-md hover:scale-105 active:scale-100 focus:ring-blue-500',
+    ghost: 'text-mdsc-blue-primary bg-transparent hover:bg-mdsc-blue-primary/10 hover:shadow-sm hover:scale-105 active:scale-100 focus:ring-blue-500',
   };
   
   const sizeClasses = {

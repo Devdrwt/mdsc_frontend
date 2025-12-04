@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Clock, Users, User, BadgeCheck, AlertCircle, BookOpen } from 'lucide-react';
+import { Users, User, BadgeCheck, AlertCircle, BookOpen } from 'lucide-react';
 import { Course } from '../../types';
 import Button from '../ui/Button';
 import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
@@ -337,10 +337,6 @@ export default function CourseCard({
         )}
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-          <div className="flex items-center space-x-1">
-            <Clock className="h-4 w-4" />
-            <span>{course.duration}</span>
-          </div>
           <div className="flex items-center space-x-1">
             <Users className="h-4 w-4" />
             <span>{courseAny.enrollment_count || courseAny.metrics?.enrollment_count || courseAny.totalStudents || course.students || 0} inscrit{(courseAny.enrollment_count || courseAny.metrics?.enrollment_count || courseAny.totalStudents || course.students || 0) > 1 ? 's' : ''}</span>

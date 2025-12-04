@@ -14,9 +14,10 @@ import { useAuthStore } from "../../lib/stores/authStore";
 
 interface TopicDetailProps {
   topicId: number;
+  courseId?: string | number; // ID ou slug du cours pour le bouton retour
 }
 
-export default function TopicDetail({ topicId }: TopicDetailProps) {
+export default function TopicDetail({ topicId, courseId }: TopicDetailProps) {
   const router = useRouter();
   const { user } = useAuthStore();
   const [topic, setTopic] = useState<ForumTopic | null>(null);
@@ -27,6 +28,15 @@ export default function TopicDetail({ topicId }: TopicDetailProps) {
     replyId: number;
     authorName: string;
   } | null>(null);
+
+  const handleBackToCourse = () => {
+    if (courseId) {
+      router.push(`/courses/${courseId}`);
+    } else {
+      // Fallback: retour au forum si courseId n'est pas fourni
+      router.back();
+    }
+  };
 
   useEffect(() => {
     loadTopic();
@@ -87,11 +97,11 @@ export default function TopicDetail({ topicId }: TopicDetailProps) {
     <div className="space-y-6">
       {/* Bouton retour */}
       <button
-        onClick={() => router.back()}
+        onClick={handleBackToCourse}
         className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
-        <span>Retour au forum</span>
+        <span>Retour au cours</span>
       </button>
 
       {/* Commentaire (si disponible) */}

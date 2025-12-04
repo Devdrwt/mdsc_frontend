@@ -21,6 +21,8 @@ interface LessonContentProps {
   courseId: string;
   enrollmentId?: number;
   onComplete?: () => void;
+  onNextLesson?: () => void;
+  hasNextLesson?: boolean;
   className?: string;
 }
 
@@ -29,6 +31,8 @@ export default function LessonContent({
   courseId,
   enrollmentId,
   onComplete,
+  onNextLesson,
+  hasNextLesson = false,
   className = '',
 }: LessonContentProps) {
   const deriveCompletedStatus = (currentLesson: Lesson): boolean => {
@@ -811,12 +815,6 @@ export default function LessonContent({
                     )}
                   </div>
                 </div>
-                {isCompleted && (
-                  <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex-shrink-0">
-                    <CheckCircle className="h-4 w-4 text-white" />
-                    <span className="text-sm font-medium text-white">Complétée</span>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -938,15 +936,6 @@ export default function LessonContent({
                 </div>
               )}
               
-              {/* Indicateur de complétion */}
-              {isCompleted && (
-                <div className="flex justify-center">
-                  <div className="inline-flex items-center px-6 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    <span className="font-medium">Leçon terminée</span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         );
@@ -979,12 +968,6 @@ export default function LessonContent({
                     )}
                   </div>
                 </div>
-                {isCompleted && (
-                  <div className="flex items-center space-x-2 bg-white/20 px-3 py-1.5 rounded-lg flex-shrink-0">
-                    <CheckCircle className="h-4 w-4 text-white" />
-                    <span className="text-sm font-medium text-white">Complétée</span>
-                  </div>
-                )}
               </div>
             </div>
             
@@ -1157,12 +1140,6 @@ export default function LessonContent({
                     </p>
                   </div>
                 </div>
-                {isCompleted && (
-                  <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg flex-shrink-0 ml-3">
-                    <CheckCircle className="h-4 w-4 text-white" />
-                    <span className="text-sm font-medium text-white">Complétée</span>
-                  </div>
-                )}
               </div>
               
               <div className="p-4 sm:p-6 bg-gray-50">
@@ -1309,12 +1286,6 @@ export default function LessonContent({
               </div>
             </div>
 
-            {isCompleted && (
-              <div className="inline-flex items-center px-4 py-2 rounded-lg bg-green-50 border border-green-200 shadow-sm">
-                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <span className="text-green-700 font-medium">Terminée</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -1452,6 +1423,19 @@ export default function LessonContent({
               <p className="text-gray-500">Le forum sera bientôt disponible</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Bouton "Leçon suivante" en bas à droite */}
+      {isCompleted && hasNextLesson && onNextLesson && (
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onNextLesson}
+            className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium shadow-md hover:shadow-lg"
+          >
+            <span>Leçon suivante</span>
+            <span className="ml-2">→</span>
+          </button>
         </div>
       )}
     </div>

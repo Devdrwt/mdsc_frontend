@@ -7,7 +7,6 @@ import HeroSection from '../components/home/HeroSection';
 import CoursePreview from '../components/home/CoursePreview';
 import Testimonials from '../components/home/Testimonials';
 import CallToAction from '../components/home/CallToAction';
-import CertificateQuickVerify from '../components/home/CertificateQuickVerify';
 import { courseService } from '../lib/services/courseService';
 
 export default function Home() {
@@ -69,8 +68,6 @@ export default function Home() {
         <HeroSection />
       </div>
       <main>
-        <CertificateQuickVerify />
-
         {loading ? (
           <div className="section-mdsc bg-white">
             <div className="max-w-full mx-auto text-center py-12 px-20">
@@ -80,8 +77,8 @@ export default function Home() {
         ) : (
           <CoursePreview courses={featuredCourses} />
         )}
-        <Testimonials />
         <CallToAction />
+        <Testimonials />
       </main>
       <Footer />
     </div>

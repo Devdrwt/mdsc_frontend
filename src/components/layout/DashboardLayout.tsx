@@ -31,6 +31,8 @@ import {
   AlertCircle,
   Video,
   Mail,
+  MessageSquare,
+  Quote,
 } from "lucide-react"
 import { useAuthStore } from "../../lib/stores/authStore"
 import NotificationContainer from "../ui/NotificationContainer"
@@ -268,11 +270,13 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             children: [
               { name: "Catalogue", href: `/dashboard/${userRole}/courses/catalogue`, icon: Grid3x3 },
               { name: "Mes Cours", href: `/dashboard/${userRole}/courses`, icon: BookOpen },
+              { name: "Forum", href: `/dashboard/${userRole}/forum`, icon: MessageSquare },
           ],
         },
           { name: "Progression", href: `/dashboard/${userRole}/progress`, icon: BarChart3 },
           { name: "Évaluations", href: `/dashboard/${userRole}/evaluations`, icon: FileText },
           { name: "Attestations", href: `/dashboard/${userRole}/certificates`, icon: Award },
+          { name: "Témoignage", href: `/dashboard/${userRole}/testimonials`, icon: Quote },
           { name: "Gamification", href: `/dashboard/${userRole}/gamification`, icon: Trophy },
           { name: "Assistant IA", href: `/dashboard/${userRole}/chat-ai`, icon: Brain },
           { name: "Calendrier", href: `/dashboard/${userRole}/calendar`, icon: Calendar },
@@ -309,6 +313,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
           { name: "Domaines", href: `/dashboard/${userRole}/domains`, icon: BookOpen },
           { name: "Utilisateurs", href: `/dashboard/${userRole}/users`, icon: Users },
           { name: "Cours", href: `/dashboard/${userRole}/courses`, icon: BookOpen },
+          { name: "Témoignages", href: `/dashboard/${userRole}/testimonials`, icon: Quote },
           { name: "Statistiques", href: `/dashboard/${userRole}/statistics`, icon: BarChart3 },
           { name: "Surveillance", href: `/dashboard/${userRole}/monitoring`, icon: Activity },
           { name: "Gamification", href: `/dashboard/${userRole}/gamification`, icon: Trophy },

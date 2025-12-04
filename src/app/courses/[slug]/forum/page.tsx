@@ -73,6 +73,7 @@ export default function CourseForumPage() {
             forum={forum}
             onNewTopic={() => setShowTopicForm(true)}
             onSearch={setSearchQuery}
+            courseId={params.slug as string}
           />
 
           {showTopicForm ? (

@@ -20,7 +20,7 @@ export default function Header() {
   const navigation = [
     { name: 'Formations', href: '/courses' },
     { name: 'FAQ', href: '/faq' },
-    { name: 'Contacts', href: '/contact' },
+    { name: 'Contacts', href: 'https://mdsc-website.webflow.io/contact-us' },
   ];
 
   useEffect(() => {
@@ -118,16 +118,20 @@ export default function Header() {
 
           {/* Navigation desktop */}
           <nav className="hidden md:flex items-center space-x-1">
-            {navigation.map((item) => (
-              <a
-                key={item.name}
-                href={item.href}
-                className="relative px-4 py-2 text-sm font-medium text-[#3380AA] hover:text-[#F8C37B] transition-all duration-200 group"
-              >
-                {item.name}
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F8C37B] group-hover:w-full transition-all duration-300 rounded-full"></span>
-              </a>
-            ))}
+            {navigation.map((item) => {
+              const isExternal = item.href.startsWith('http');
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  className="relative px-4 py-2 text-sm font-medium text-[#3380AA] hover:text-[#F8C37B] transition-all duration-200 group"
+                >
+                  {item.name}
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F8C37B] group-hover:w-full transition-all duration-300 rounded-full"></span>
+                </a>
+              );
+            })}
           </nav>
 
           {/* Boutons d'action */}
@@ -216,19 +220,23 @@ export default function Header() {
           isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}>
           <div className="bg-white/95 backdrop-blur rounded-[24px] shadow-md border border-gray-200 px-4 py-4 space-y-2">
-            {navigation.map((item, index) => (
-              <a
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#F4A53A] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
-                style={{ 
-                  animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
-                }}
-              >
-                {item.name}
-              </a>
-            ))}
+            {navigation.map((item, index) => {
+              const isExternal = item.href.startsWith('http');
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#F4A53A] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
+                  style={{ 
+                    animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
+                  }}
+                >
+                  {item.name}
+                </a>
+              );
+            })}
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
               <button 
                 onClick={handleThemeToggle}

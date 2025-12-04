@@ -562,10 +562,18 @@ export default function CourseDetailPage() {
       });
     }
 
+    // Récupérer l'organisation depuis plusieurs sources possibles
+    const organization = 
+      instructor.organization || 
+      (instructor as any).organisation || 
+      (instructor as any).organization_name ||
+      (instructor as any).org ||
+      '';
+
     return {
       name,
       title: instructor.title || '',
-      organization: instructor.organization || '',
+      organization,
       email: instructor.email || '',
       bio: instructor.bio || '',
       avatar,
@@ -674,8 +682,29 @@ export default function CourseDetailPage() {
     return typeof duration === 'number' ? duration : 0;
   }, [course, courseAny, modules]);
 
-  const totalDurationHours = courseDuration > 0 ? Math.floor(courseDuration / 60) : 0;
-  const totalDurationMinutes = courseDuration > 0 ? courseDuration % 60 : 0;
+  const totalDurationHours = useMemo(() => courseDuration > 0 ? Math.floor(courseDuration / 60) : 0, [courseDuration]);
+  const totalDurationMinutes = useMemo(() => courseDuration > 0 ? courseDuration % 60 : 0, [courseDuration]);
+
+  // Vérifier si c'est un cours en live (doit être avant les retours conditionnels)
+  const isLiveCourse = useMemo(() => {
+    if (!courseAny) return false;
+    return courseAny.course_type === 'live' || 
+           courseAny.courseType === 'live' ||
+           courseAny.is_live === true ||
+           courseAny.isLive === true;
+  }, [courseAny]);
+
+  // Extraire toutes les informations du cours (doit être avant les retours conditionnels)
+  const price = useMemo(() => courseAny?.price || course?.price || 0, [courseAny, course]);
+  const currency = useMemo(() => courseAny?.currency || 'FCFA', [courseAny]);
+  const languageRaw = useMemo(() => courseAny?.language || courseAny?.lang || 'fr', [courseAny]);
+  const language = useMemo(() => getLanguageLabel(languageRaw), [getLanguageLabel, languageRaw]);
+  const prerequisiteCourse = useMemo(() => courseAny?.prerequisite_course || courseAny?.prerequisiteCourse, [courseAny]);
+  const enrollmentDeadline = useMemo(() => courseAny?.enrollment_deadline || courseAny?.enrollmentDeadline, [courseAny]);
+  const courseStartDate = useMemo(() => courseAny?.course_start_date || courseAny?.courseStartDate, [courseAny]);
+  const courseEndDate = useMemo(() => courseAny?.course_end_date || courseAny?.courseEndDate, [courseAny]);
+  const maxStudents = useMemo(() => courseAny?.max_students || courseAny?.maxStudents, [courseAny]);
+  const shortDescription = useMemo(() => course?.shortDescription || course?.description?.substring(0, 300), [course]);
 
   if (loading) {
     return (
@@ -710,18 +739,6 @@ export default function CourseDetailPage() {
   }
 
   // isEnrolled est maintenant un état géré par checkEnrollmentStatus
-  
-  // Extraire toutes les informations du cours
-  const price = courseAny.price || course.price || 0;
-  const currency = courseAny.currency || 'FCFA';
-  const languageRaw = courseAny.language || courseAny.lang || 'fr';
-  const language = getLanguageLabel(languageRaw);
-  const prerequisiteCourse = courseAny.prerequisite_course || courseAny.prerequisiteCourse;
-  const enrollmentDeadline = courseAny.enrollment_deadline || courseAny.enrollmentDeadline;
-  const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
-  const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
-  const maxStudents = courseAny.max_students || courseAny.maxStudents;
-  const shortDescription = course.shortDescription || course.description?.substring(0, 300);
   
   // Utiliser instructorInfo qui est déjà calculé avec useMemo plus haut
   // Il contient toutes les informations de l'instructeur de manière optimisée
@@ -1330,14 +1347,9 @@ export default function CourseDetailPage() {
                       <h3 className="text-xl font-bold text-gray-900 mb-1">
                         {instructorInfo.name}
                       </h3>
-                      {(instructorInfo.title || instructorInfo.organization) && (
+                      {instructorInfo.title && (
                         <p className="text-gray-600 font-medium">
-                          {[instructorInfo.title, instructorInfo.organization].filter(Boolean).join(' • ')}
-                        </p>
-                      )}
-                      {instructorInfo.email && (
-                        <p className="text-gray-500 text-sm mt-1 flex items-center gap-1">
-                          <span>{instructorInfo.email}</span>
+                          {instructorInfo.title}
                         </p>
                       )}
                     </div>
@@ -1442,14 +1454,9 @@ export default function CourseDetailPage() {
                       <h4 className="text-xl font-bold text-gray-900 mb-2">
                         {instructorInfo.name}
                       </h4>
-                      {(instructorInfo.title || instructorInfo.organization) && (
+                      {instructorInfo.title && (
                         <p className="text-gray-600 font-medium mb-3">
-                          {[instructorInfo.title, instructorInfo.organization].filter(Boolean).join(' • ')}
-                        </p>
-                      )}
-                      {instructorInfo.email && (
-                        <p className="text-gray-500 text-sm mb-3">
-                          {instructorInfo.email}
+                          {instructorInfo.title}
                         </p>
                       )}
                       {instructorInfo.bio && (
@@ -1617,7 +1624,8 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
 
-                {/* Informations pratiques */}
+                {/* Informations pratiques - Affichage uniquement pour les cours en live */}
+                {isLiveCourse && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="p-1.5 bg-mdsc-blue-primary/10 rounded-lg">
@@ -1680,6 +1688,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 </div>
+                )}
               </div>
             </div>
           </div>

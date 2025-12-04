@@ -11,15 +11,14 @@ export default function Footer() {
       { name: 'Attestations', href: '/courses' },
     ],
     organisation: [
-      { name: 'À propos de MdSC', href: '/about' },
-      { name: 'Notre mission', href: '/mission' },
-      { name: 'Équipe', href: '/team' },
-      { name: 'Partenaires', href: '/partners' },
+      { name: 'À propos de MdSC', href: 'https://mdsc-website.webflow.io/about-us' },
+      { name: 'Notre mission', href: 'https://mdsc-website.webflow.io/about-us' },
+      { name: 'Équipe', href: 'https://mdsc-website.webflow.io/notre-equipe' },
+      { name: 'Partenaires', href: 'https://mdsc-website.webflow.io/' },
     ],
     support: [
-      { name: 'Centre d\'aide', href: '/help' },
       { name: 'FAQ', href: '/faq' },
-      { name: 'Contact', href: '/contact' },
+      { name: 'Contact', href: 'https://mdsc-website.webflow.io/contact-us' },
     ],
   };
 
@@ -71,6 +70,8 @@ export default function Footer() {
                 <li key={link.name}>
                   <a
                     href={link.href}
+                    target={link.href.startsWith('http') ? '_blank' : undefined}
+                    rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                     className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
                   >
                     {link.name}
@@ -88,6 +89,8 @@ export default function Footer() {
                 <li key={link.name}>
                   <a
                     href={link.href}
+                    target={link.href.startsWith('http') ? '_blank' : undefined}
+                    rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                     className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
                   >
                     {link.name}
@@ -112,7 +115,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-mdsc-orange" />
-                <span>(+229) 43 05 00 00</span>
+                <span>(+229) 01 43 05 00 00</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-mdsc-orange" />

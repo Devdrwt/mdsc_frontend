@@ -149,17 +149,14 @@ export default function PWAInstallPrompt() {
         userAgent: navigator.userAgent,
       });
 
-      // Vérifier si le prompt a été rejeté récemment (seulement 24h)
+      // Vérifier si le prompt a déjà été rejeté (ne plus jamais l'afficher)
       const dismissed = localStorage.getItem('pwa-install-dismissed');
       let shouldShow = true;
       
       if (dismissed) {
-        const dismissedTime = parseInt(dismissed, 10);
-        const hoursSinceDismissed = (Date.now() - dismissedTime) / (1000 * 60 * 60);
-        if (hoursSinceDismissed < 24) {
-          console.log('[PWA] ⏸️ Prompt masqué (rejeté il y a', Math.round(hoursSinceDismissed), 'heures)');
-          shouldShow = false;
-        }
+        // Si le prompt a été rejeté, ne plus jamais l'afficher
+        console.log('[PWA] ⏸️ Prompt masqué (déjà rejeté par l\'utilisateur)');
+        shouldShow = false;
       }
       
       if (shouldShow && manifestOk) {
@@ -197,11 +194,13 @@ export default function PWAInstallPrompt() {
           setShowPrompt(false);
           setDeferredPrompt(null);
           setIsInstalled(true);
-          // Supprimer le flag de rejet pour permettre une réinstallation si nécessaire
-          localStorage.removeItem('pwa-install-dismissed');
+          // Marquer comme rejeté pour ne plus jamais afficher le prompt
+          localStorage.setItem('pwa-install-dismissed', 'true');
         } else {
           console.log('[PWA] ❌ Installation annulée par l\'utilisateur');
           setShowPrompt(false);
+          // Marquer comme rejeté pour ne plus jamais afficher le prompt
+          localStorage.setItem('pwa-install-dismissed', 'true');
         }
       } catch (error) {
         console.error('[PWA] ❌ Erreur lors de l\'installation:', error);
@@ -217,9 +216,8 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    // Ne pas réafficher pendant 24 heures seulement (au lieu de 7 jours)
-    // Cela permet au prompt de réapparaître plus rapidement pour les tests
-    localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    // Ne plus jamais réafficher le prompt une fois qu'il a été rejeté
+    localStorage.setItem('pwa-install-dismissed', 'true');
   };
 
   useEffect(() => {
@@ -260,7 +258,11 @@ export default function PWAInstallPrompt() {
                 </h3>
               </div>
               <button
-                onClick={() => setShowManualInstructions(false)}
+                onClick={() => {
+                  setShowManualInstructions(false);
+                  // Marquer comme rejeté pour ne plus jamais afficher le prompt
+                  localStorage.setItem('pwa-install-dismissed', 'true');
+                }}
                 className={`transition-colors ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'}`}
                 aria-label="Fermer"
               >
@@ -319,7 +321,11 @@ export default function PWAInstallPrompt() {
             </div>
             
             <button
-              onClick={() => setShowManualInstructions(false)}
+              onClick={() => {
+                setShowManualInstructions(false);
+                // Marquer comme rejeté pour ne plus jamais afficher le prompt
+                localStorage.setItem('pwa-install-dismissed', 'true');
+              }}
               className={`w-full text-white font-medium px-4 py-2.5 rounded-lg transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                 isDark 
                   ? 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-md hover:shadow-lg focus:ring-blue-400 focus:ring-offset-gray-800' 

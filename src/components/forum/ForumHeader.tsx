@@ -1,33 +1,58 @@
 "use client";
 
 import React, { useState } from "react";
-import { Users, Plus, Search, Layers3, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Users, Plus, Search, Layers3, Sparkles, ArrowLeft } from "lucide-react";
 import type { CourseForum } from "../../types/forum";
 
 interface ForumHeaderProps {
   forum: CourseForum;
   onNewTopic: () => void;
   onSearch?: (search: string) => void;
+  courseId?: string | number; // ID ou slug du cours pour le bouton retour
 }
 
 export default function ForumHeader({
   forum,
   onNewTopic,
   onSearch,
+  courseId,
 }: ForumHeaderProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const forumTitle = forum?.title?.trim() || "Forum";
   const forumDescription =
     forum?.description?.trim() ||
-    "Partagez vos questions, vos retours d’expérience et vos bonnes pratiques avec les autres apprenants.";
+    "Partagez vos questions, vos retours d'expérience et vos bonnes pratiques avec les autres apprenants.";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch?.(searchQuery);
   };
 
+  const handleBackToCourse = () => {
+    if (courseId) {
+      router.push(`/courses/${courseId}`);
+    } else if (forum?.course_id) {
+      router.push(`/courses/${forum.course_id}`);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-mdsc-blue-primary/20 bg-gradient-to-r from-white via-mdsc-blue-primary/5 to-mdsc-gold/10 p-6 shadow-sm mb-6">
+      {/* Bouton retour */}
+      {(courseId || forum?.course_id) && (
+        <button
+          onClick={handleBackToCourse}
+          className="mb-4 flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>Retour au cours</span>
+        </button>
+      )}
+      
       <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center space-x-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-mdsc-blue-primary shadow-sm border border-mdsc-blue-primary/20">

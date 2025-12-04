@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - next-pwa types might not be fully compatible
 import withPWA from "@ducanh2912/next-pwa";
 

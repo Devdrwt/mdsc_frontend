@@ -8,12 +8,13 @@ import TopicDetail from "../../../../../components/forum/TopicDetail";
 export default function TopicDetailPage() {
   const params = useParams();
   const topicId = parseInt(params.topicId as string, 10);
+  const courseId = params.slug as string;
 
   return (
     <AuthGuard requiredRole="student">
       <DashboardLayout userRole="student">
         <div className="max-w-4xl mx-auto">
-          <TopicDetail topicId={topicId} />
+          <TopicDetail topicId={topicId} courseId={courseId} />
         </div>
       </DashboardLayout>
     </AuthGuard>

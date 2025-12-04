@@ -81,7 +81,7 @@ const resolveCourseStatus = (courseAny: Record<string, any>, options: { endDate?
 const convertToCourse = (serviceCourse: ServiceCourse): any => {
   // Convertir la durée en string pour CourseCard
   const durationInWeeks = Math.ceil((serviceCourse.duration || 0) / 60 / 7); // Convertir minutes en semaines
-  const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Durée variable';
+  const durationString = durationInWeeks > 0 ? `${durationInWeeks} semaines` : 'Variable';
   
   // Convertir le niveau pour CourseCard
   const courseAny = serviceCourse as any;
