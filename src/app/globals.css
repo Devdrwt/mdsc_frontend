@@ -547,6 +547,55 @@ button[class*="border-"]:not(:disabled):not([class*="no-hover"]):not([class*="bt
   border-width: 2px;
 }
 
+/* Alignement des icônes dans les boutons et liens - Retirer les marges automatiques si gap est utilisé */
+button[class*="gap-"] svg,
+button[class*="gap-"] [class*="lucide"],
+button[class*="gap-"] [class*="icon"],
+a[class*="gap-"] svg,
+a[class*="gap-"] [class*="lucide"],
+a[class*="gap-"] [class*="icon"] {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  flex-shrink: 0;
+  align-self: center;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Alignement général des icônes dans les boutons et liens */
+button svg,
+button [class*="lucide"],
+button [class*="icon"],
+a[class*="flex"] svg,
+a[class*="flex"] [class*="lucide"],
+a[class*="flex"] [class*="icon"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* S'assurer que les icônes et le texte sont bien alignés verticalement dans les boutons et liens flex */
+button[class*="inline-flex"] svg,
+button[class*="inline-flex"] [class*="lucide"],
+button[class*="inline-flex"] [class*="icon"],
+button[class*="flex"] svg,
+button[class*="flex"] [class*="lucide"],
+button[class*="flex"] [class*="icon"],
+a[class*="inline-flex"] svg,
+a[class*="inline-flex"] [class*="lucide"],
+a[class*="inline-flex"] [class*="icon"],
+a[class*="flex"] svg,
+a[class*="flex"] [class*="lucide"],
+a[class*="flex"] [class*="icon"] {
+  align-self: center;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
 /* Styles pour les liens stylés comme des boutons */
 /* Exclure les éléments de navigation dans la sidebar */
 a[class*="bg-"]:not([class*="no-hover"]):not(.sidebar-nav a):not(nav a),
