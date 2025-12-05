@@ -197,6 +197,7 @@ export interface Quiz {
   is_published: boolean;
   created_at: string;
   question_count?: number;
+  invalid_questions_count?: number; // Nombre de questions invalides (selon recommandations backend)
   best_score?: number;
   is_passed?: boolean;
   questions?: QuizQuestion[];
@@ -218,6 +219,9 @@ export interface QuizQuestion {
   correct_answer?: string | string[]; // Pour true_false et short_answer
   points: number;
   order_index: number;
+  // Propriétés de validation (ajoutées selon recommandations backend)
+  is_valid?: boolean; // Indique si la question est valide
+  has_options?: boolean; // Indique si la question a des options
   // Compatibilité avec l'ancien format
   quizId?: string | number;
   questionType?: 'multiple_choice' | 'true_false' | 'short_answer' | 'multiple_select';

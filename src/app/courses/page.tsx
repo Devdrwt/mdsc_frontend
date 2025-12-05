@@ -414,10 +414,10 @@ export default function CoursesPage() {
       </section>
 
       <main className="py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Barre de recherche et filtres */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8 -mt-8 relative z-10">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-8 -mt-8 relative z-10">
             <div className="flex flex-col lg:flex-row gap-4 items-center">
               {/* Recherche */}
               <div className="flex-1 w-full">
@@ -436,9 +436,9 @@ export default function CoursesPage() {
               </div>
 
               {/* Filtres */}
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                 {/* Filtre catégorie */}
-                <div className="min-w-[200px]">
+                <div className="w-full sm:min-w-[200px]">
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
@@ -453,7 +453,7 @@ export default function CoursesPage() {
                 </div>
 
                 {/* Filtre niveau */}
-                <div className="min-w-[150px]">
+                <div className="w-full sm:min-w-[150px]">
                   <select
                     value={selectedLevel}
                     onChange={(e) => setSelectedLevel(e.target.value)}
@@ -479,7 +479,7 @@ export default function CoursesPage() {
 
           {/* Grille des cours */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
                   <div className="bg-gray-300 h-48 rounded-lg mb-4"></div>
@@ -492,7 +492,7 @@ export default function CoursesPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {filteredCourses.map((course) => {
                 const numericId = Number(course.id);
                 const isEnrolled = !Number.isNaN(numericId) && enrolledCourseIds.has(numericId);

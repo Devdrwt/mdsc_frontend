@@ -27,6 +27,7 @@ import { MediaFile } from '../../../types/course';
 import MediaUpload from '../../media/MediaUpload';
 import toast from '../../../lib/utils/toast';
 import Modal from '../../ui/Modal';
+import ConfirmModal from '../../ui/ConfirmModal';
 import { resolveMediaUrl } from '../../../lib/utils/media';
 import dynamic from 'next/dynamic';
 
@@ -80,6 +81,8 @@ export default function CourseMediaManager({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [deletingMediaId, setDeletingMediaId] = useState<number | null>(null);
   const [uploadingToLesson, setUploadingToLesson] = useState<{ moduleId: number; lessonId: number } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [mediaToDelete, setMediaToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     loadMedia();
@@ -207,19 +210,26 @@ export default function CourseMediaManager({
     setShowPreviewModal(true);
   };
 
-  const handleDelete = async (mediaId: number) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce média ?')) return;
+  const handleDeleteClick = (mediaId: number) => {
+    setMediaToDelete(mediaId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!mediaToDelete) return;
 
     try {
-      setDeletingMediaId(mediaId);
-      await mediaService.deleteMediaFile(mediaId.toString());
-      setAllMedia((prev) => prev.filter((m) => m.id !== mediaId));
+      setDeletingMediaId(mediaToDelete);
+      setShowDeleteConfirm(false);
+      await mediaService.deleteMediaFile(mediaToDelete.toString());
+      setAllMedia((prev) => prev.filter((m) => m.id !== mediaToDelete));
       toast.success('Média supprimé', 'Le média a été supprimé avec succès');
       onMediaUpdated?.();
     } catch (error: any) {
       toast.error('Erreur', error.message || 'Impossible de supprimer le média');
     } finally {
       setDeletingMediaId(null);
+      setMediaToDelete(null);
     }
   };
 
@@ -362,7 +372,7 @@ export default function CourseMediaManager({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleDelete(media.id);
+                handleDeleteClick(media.id);
               }}
               disabled={isDeleting}
               className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
@@ -699,6 +709,22 @@ export default function CourseMediaManager({
           </div>
         </Modal>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setMediaToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Supprimer le média"
+        message="Êtes-vous sûr de vouloir supprimer ce média ?"
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        isLoading={deletingMediaId !== null}
+      />
     </div>
   );
 }

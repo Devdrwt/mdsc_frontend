@@ -74,7 +74,7 @@ export default function CertificatePreview({
           <div className="text-center mt-10 sm:mt-14 lg:mt-20 relative">
             {/* Logo en haut à gauche */}
             <img
-              src="/mdsc-logo.png"
+              src="/mdsc-logo1.png"
               alt="Logo MDSC"
               className="absolute left-2 sm:left-4 -top-20 sm:-top-28 lg:-top-36 xl:-top-40 w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 object-contain z-0 pointer-events-none select-none opacity-100"
             />

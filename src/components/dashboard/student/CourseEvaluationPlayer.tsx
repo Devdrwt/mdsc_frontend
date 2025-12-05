@@ -7,6 +7,7 @@ import { certificateService } from '../../../lib/services/certificateService';
 import toast from '../../../lib/utils/toast';
 import ConfirmModal from '../../ui/ConfirmModal';
 import ProfileVerificationModal from './ProfileVerificationModal';
+import EvaluationResultsModal from './EvaluationResultsModal';
 
 interface EvaluationQuestion {
   id?: string;
@@ -29,12 +30,34 @@ interface FinalEvaluation {
   questions: EvaluationQuestion[];
 }
 
+interface QuestionResult {
+  question_id: number;
+  question_text: string;
+  question_type: string;
+  points: number;
+  order_index: number;
+  student_answer: string | null;
+  correct_answer: string | null;
+  is_correct: boolean;
+  points_earned: number;
+  points_lost: number;
+}
+
 interface EvaluationResult {
   score: number;
   total_points: number;
   percentage: number;
   passed: boolean;
   certificate_eligible?: boolean;
+  question_results?: QuestionResult[];
+  summary?: {
+    total_questions: number;
+    correct_questions: number;
+    incorrect_questions: number;
+    total_points: number;
+    earned_points: number;
+    lost_points: number;
+  };
 }
 
 interface CourseEvaluationPlayerProps {
@@ -68,6 +91,7 @@ export default function CourseEvaluationPlayer({
   const [showProfileVerificationModal, setShowProfileVerificationModal] = useState(false);
   const [requestingCertificate, setRequestingCertificate] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>([]);
 
   useEffect(() => {
     loadEvaluation();
@@ -409,7 +433,15 @@ export default function CourseEvaluationPlayer({
             percentage: Number(result.percentage ?? 0),
             passed: Boolean(result.passed ?? result.is_passed ?? false),
             certificate_eligible: Boolean(result.certificate_eligible ?? (result.passed ?? result.is_passed ?? false)),
+            question_results: result.question_results || [],
+            summary: result.summary,
           };
+          
+          // Stocker les résultats des questions pour le récapitulatif
+          if (result.question_results && result.question_results.length > 0) {
+            setQuestionResults(result.question_results);
+            console.log('[CourseEvaluationPlayer] ✅ Résultats des questions reçus du backend:', result.question_results);
+          }
         } catch (error: any) {
           // Si l'endpoint échoue, utiliser le calcul côté client comme fallback
           console.warn('[CourseEvaluationPlayer] Erreur lors de la soumission, utilisation du calcul côté client:', error);
@@ -488,25 +520,36 @@ export default function CourseEvaluationPlayer({
       setShowResults(true);
       setAttemptsUsed(prev => prev + 1);
       
+      // Stocker les résultats des questions si disponibles dans submissionResult
+      if (submissionResult.question_results && submissionResult.question_results.length > 0) {
+        // Trier par order_index pour afficher dans le bon ordre
+        const sorted = [...submissionResult.question_results].sort((a, b) => 
+          (a.order_index || 0) - (b.order_index || 0)
+        );
+        setQuestionResults(sorted);
+        console.log('[CourseEvaluationPlayer] ✅ Résultats des questions stockés depuis submissionResult:', {
+          total: sorted.length,
+          correct: sorted.filter(q => q.is_correct).length,
+          incorrect: sorted.filter(q => !q.is_correct).length,
+          firstItem: sorted[0]
+        });
+      } else {
+        // Conserver les réponses pour le calcul côté client (fallback)
+        console.warn('[CourseEvaluationPlayer] ⚠️ Pas de question_results dans submissionResult:', {
+          hasSubmissionResult: !!submissionResult,
+          hasQuestionResults: !!(submissionResult?.question_results),
+          questionResultsLength: submissionResult?.question_results?.length || 0,
+          submissionResultKeys: submissionResult ? Object.keys(submissionResult) : []
+        });
+      }
+      
       // Appeler onComplete avant d'afficher les toasts
       // Si onComplete est fourni, c'est que le parent gère l'affichage (popup), donc on n'affiche pas les toasts
       const hasParentHandler = !!onComplete;
       onComplete?.(submissionResult);
 
-      // N'afficher les toasts que si onComplete n'est pas fourni (pas de popup parent)
-      if (!hasParentHandler) {
-        if (submissionResult.passed) {
-          toast.success(
-            'Félicitations !',
-            `Vous avez réussi l'évaluation finale ! Vous êtes maintenant éligible pour obtenir un certificat.`
-          );
-        } else {
-          toast.warning(
-            'Évaluation non réussie',
-            `Vous avez obtenu ${submissionResult.percentage}%. Le score minimum requis est ${evaluation.passing_score}%`
-          );
-        }
-      }
+      // Ne plus afficher de toasts - le modal de résultats affiche déjà toutes les informations
+      // Cela évite la surcharge d'informations et rend le parcours plus fluide
 
       // Si l'évaluation est réussie et éligible pour certificat, ouvrir le modal de vérification
       // IMPORTANT: Le modal de vérification doit s'afficher AVANT toute création de certificat
@@ -522,24 +565,16 @@ export default function CourseEvaluationPlayer({
       // certificate_eligible peut être undefined, donc on considère que si passed est true, on est éligible
       const isEligible = submissionResult.passed && (submissionResult.certificate_eligible !== false);
       
-      // Si onComplete est fourni, c'est que le parent (CoursePlayer) gère le modal de vérification
-      // Sinon, on gère le modal ici
-      if (isEligible && !hasParentHandler) {
-        console.log('[CourseEvaluationPlayer] ✅ Ouverture du modal de vérification (pas de parent handler)...');
-        // Afficher le modal immédiatement si pas de parent handler
-        setTimeout(() => {
-          console.log('[CourseEvaluationPlayer] 🎯 Affichage du modal de vérification maintenant');
-          setShowProfileVerificationModal(true);
-        }, 100);
-      } else if (isEligible && hasParentHandler) {
-        console.log('[CourseEvaluationPlayer] ℹ️ Modal de vérification géré par le parent (CoursePlayer)');
+      // Le modal de vérification ne s'ouvre plus automatiquement
+      // Il s'ouvrira uniquement lorsque l'utilisateur clique sur "Obtenir mon certificat" dans le modal de résultats
+      if (isEligible) {
+        console.log('[CourseEvaluationPlayer] ✅ Évaluation réussie et éligible pour certificat - Le modal de vérification s\'ouvrira au clic sur "Obtenir mon certificat"');
       } else {
         console.log('[CourseEvaluationPlayer] ❌ Modal de vérification non affiché:', {
           reason: !submissionResult.passed ? 'Évaluation non réussie' : 'Non éligible pour certificat',
           passed: submissionResult.passed,
           certificate_eligible: submissionResult.certificate_eligible,
           isEligible,
-          hasParentHandler
         });
       }
     } catch (error: any) {
@@ -571,16 +606,19 @@ export default function CourseEvaluationPlayer({
       const result = await certificateService.generateForCourse(courseId);
       console.log('[CourseEvaluationPlayer] ✅ Certificat généré avec succès:', result);
       
-      toast.success(
-        'Certificat généré',
-        'Votre certificat a été généré avec succès avec les données de votre profil.'
-      );
+      // Fermer le modal de vérification
       setShowProfileVerificationModal(false);
       
-      // Rediriger vers la page des certificats après un court délai
+      // Afficher un message de succès avant la redirection
+      toast.success(
+        'Certificat généré',
+        'Votre certificat a été généré avec succès. Redirection en cours...'
+      );
+      
+      // Rediriger vers la page des certificats après un court délai pour permettre à l'utilisateur de voir le message
       setTimeout(() => {
-        window.location.href = `/dashboard/student/certificates?courseId=${courseId}`;
-      }, 1000);
+        window.location.href = `/dashboard/student/certificates?courseId=${courseId}&certificateGenerated=true`;
+      }, 1500);
     } catch (error: any) {
       console.error('[CourseEvaluationPlayer] ❌ Erreur lors de la génération du certificat:', error);
       const errorMessage = error?.message || error?.response?.data?.message || 'Impossible de générer le certificat. Veuillez vérifier que vous avez réussi l\'évaluation finale.';
@@ -634,106 +672,195 @@ export default function CourseEvaluationPlayer({
     );
   }
 
+  // Utiliser les données du backend pour le récapitulatif
+  const getQuestionResults = () => {
+    console.log('[CourseEvaluationPlayer] 🔍 getQuestionResults appelé:', {
+      questionResultsLength: questionResults.length,
+      hasResult: !!result,
+      resultQuestionResultsLength: result?.question_results?.length || 0,
+      hasEvaluation: !!evaluation,
+      evaluationQuestionsLength: evaluation?.questions?.length || 0,
+      answersCount: Object.keys(answers).length
+    });
+    
+    // Priorité 1 : Utiliser les données du backend si disponibles
+    if (questionResults && questionResults.length > 0) {
+      console.log('[CourseEvaluationPlayer] ✅ Utilisation des données du backend (questionResults) pour le récapitulatif:', {
+        total: questionResults.length,
+        correct: questionResults.filter(q => q.is_correct).length,
+        incorrect: questionResults.filter(q => !q.is_correct).length,
+        sample: questionResults[0]
+      });
+      const correct = questionResults
+        .filter(q => q.is_correct)
+        .map(q => ({
+          question: {
+            id: q.question_id,
+            question_text: q.question_text,
+            question: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            order_index: q.order_index,
+          },
+          userAnswer: q.student_answer || 'Non répondue',
+          correctAnswer: q.correct_answer || '',
+          points: q.points_earned,
+        }));
+      
+      const incorrect = questionResults
+        .filter(q => !q.is_correct)
+        .map(q => ({
+          question: {
+            id: q.question_id,
+            question_text: q.question_text,
+            question: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            order_index: q.order_index,
+          },
+          userAnswer: q.student_answer || 'Non répondue',
+          correctAnswer: q.correct_answer || '',
+          points: q.points_lost,
+        }));
+      
+      return { correct, incorrect };
+    }
+    
+    // Priorité 2 : Utiliser les données de result.question_results si disponibles
+    if (result?.question_results && result.question_results.length > 0) {
+      console.log('[CourseEvaluationPlayer] ✅ Utilisation des question_results du résultat');
+      const correct = result.question_results
+        .filter(q => q.is_correct)
+        .map(q => ({
+          question: {
+            id: q.question_id,
+            question_text: q.question_text,
+            question: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            order_index: q.order_index,
+          },
+          userAnswer: q.student_answer || 'Non répondue',
+          correctAnswer: q.correct_answer || '',
+          points: q.points_earned,
+        }));
+      
+      const incorrect = result.question_results
+        .filter(q => !q.is_correct)
+        .map(q => ({
+          question: {
+            id: q.question_id,
+            question_text: q.question_text,
+            question: q.question_text,
+            question_type: q.question_type,
+            points: q.points,
+            order_index: q.order_index,
+          },
+          userAnswer: q.student_answer || 'Non répondue',
+          correctAnswer: q.correct_answer || '',
+          points: q.points_lost,
+        }));
+      
+      return { correct, incorrect };
+    }
+    
+    // Fallback : Calcul côté client (ancienne méthode)
+    console.log('[CourseEvaluationPlayer] ⚠️ Utilisation du calcul côté client (fallback)');
+    console.log('[CourseEvaluationPlayer] 📊 Calcul du récapitulatif:', {
+      hasEvaluation: !!evaluation,
+      hasQuestions: !!(evaluation?.questions),
+      questionsCount: evaluation?.questions?.length || 0,
+      hasAnswers: !!answers,
+      answersCount: Object.keys(answers || {}).length,
+      hasQuestionResults: !!(result?.question_results),
+      questionResultsCount: questionResults.length
+    });
+    
+    if (!evaluation?.questions || !answers) {
+      console.warn('[CourseEvaluationPlayer] ⚠️ Données manquantes pour le récapitulatif');
+      return { correct: [], incorrect: [] };
+    }
+    
+    const sortedQuestions = evaluation.questions.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+    const correct: Array<{ question: any; userAnswer: any; correctAnswer: any; points: number }> = [];
+    const incorrect: Array<{ question: any; userAnswer: any; correctAnswer: any; points: number }> = [];
+    
+    sortedQuestions.forEach((q) => {
+      const questionId = String(q.id || '');
+      const questionIdNum = typeof q.id === 'number' ? q.id : parseInt(questionId, 10);
+      const userAnswer = answers[questionId] || answers[String(questionIdNum)] || answers[questionIdNum];
+      const correctAnswer = q.correct_answer;
+      const isCorrect = userAnswer && correctAnswer && 
+        String(userAnswer).toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
+      
+      const points = typeof q.points === 'number' && Number.isFinite(q.points) 
+        ? q.points 
+        : typeof q.points === 'string' 
+          ? parseFloat(String(q.points).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0
+          : 0;
+      
+      if (isCorrect) {
+        correct.push({ question: q, userAnswer, correctAnswer, points });
+      } else {
+        incorrect.push({ question: q, userAnswer: userAnswer || 'Non répondue', correctAnswer, points });
+      }
+    });
+    
+    return { correct, incorrect };
+  };
+
+  // Handlers pour le modal
+  const handleRequestCertificate = () => {
+    // Fermer d'abord le modal de résultats pour éviter la superposition
+    // Le modal de vérification ne s'ouvrira qu'après la fermeture complète du modal de résultats
+    console.log('[CourseEvaluationPlayer] 🎯 Clic sur "Obtenir mon certificat" - Fermeture du modal de résultats');
+    setShowResults(false);
+    
+    // Attendre que le modal de résultats soit complètement fermé avant d'ouvrir le modal de vérification
+    // Délai augmenté pour une transition plus fluide et professionnelle
+    setTimeout(() => {
+      console.log('[CourseEvaluationPlayer] ✅ Ouverture du modal de vérification de profil');
+      setShowProfileVerificationModal(true);
+    }, 500);
+  };
+
+  const handleRetryEvaluation = () => {
+    setResult(null);
+    setShowResults(false);
+    setIsSubmitted(false);
+    setAnswers({});
+    setQuestionResults([]);
+    setCurrentQuestionIndex(0);
+    setTimeRemaining(null);
+    setTimerStarted(false);
+    setStartTime(null);
+    console.log('[CourseEvaluationPlayer] 🔄 Nouvelle tentative démarrée');
+  };
+
+  const handleBackToCourse = () => {
+    onCancel?.();
+  };
+
   if (showResults && result) {
     return (
-      <div className="space-y-6">
-        <div className={`rounded-lg p-6 text-center ${
-          result.passed
-            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200'
-            : 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200'
-        }`}>
-          {result.passed ? (
-            <>
-              <GraduationCap className="h-16 w-16 text-green-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-green-900 mb-2">Évaluation réussie !</h2>
-              {result.certificate_eligible && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                  <div className="flex items-center justify-center space-x-2">
-                    <Award className="h-6 w-6 text-yellow-600" />
-                    <p className="text-lg font-semibold text-yellow-800">
-                      Vous êtes éligible pour obtenir un certificat !
-                    </p>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-red-900 mb-2">Évaluation non réussie</h2>
-              <p className="text-gray-600 mt-2">
-                Il vous reste {evaluation.max_attempts - attemptsUsed} tentative(s)
-              </p>
-            </>
-          )}
-
-          <div className="mt-4 sm:mt-6 space-y-2">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-              <div className="text-center sm:text-left">
-                <p className="text-xs sm:text-sm text-gray-600">Score obtenu</p>
-                <p className={`text-2xl sm:text-3xl font-bold ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
-                  {result.percentage}%
-                </p>
-              </div>
-              <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
-              <div className="text-center sm:text-left">
-                <p className="text-xs sm:text-sm text-gray-600">Score minimum</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-700">{evaluation.passing_score}%</p>
-              </div>
-              <div className="hidden sm:block w-px h-12 bg-gray-300"></div>
-              <div className="text-center sm:text-left">
-                <p className="text-xs sm:text-sm text-gray-600">Points</p>
-                <p className="text-xl sm:text-2xl font-semibold text-gray-700">
-                  {result.score} / {result.total_points}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Fermer
-            </button>
-          )}
-          {!result.passed && attemptsUsed < evaluation.max_attempts && (
-            <button
-              onClick={() => {
-                // Réinitialiser l'état pour permettre une nouvelle tentative
-                setResult(null);
-                setShowResults(false);
-                setIsSubmitted(false);
-                setAnswers({});
-                setCurrentQuestionIndex(0);
-                setTimeRemaining(null);
-                setTimerStarted(false);
-                setStartTime(null);
-                console.log('[CourseEvaluationPlayer] 🔄 Nouvelle tentative démarrée');
-              }}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <RotateCcw className="h-5 w-5" />
-              <span>Réessayer ({evaluation.max_attempts - attemptsUsed} tentative{evaluation.max_attempts - attemptsUsed > 1 ? 's' : ''} restante{evaluation.max_attempts - attemptsUsed > 1 ? 's' : ''})</span>
-            </button>
-          )}
-          {result.passed && result.certificate_eligible && (
-            <button
-              onClick={() => {
-                // Ouvrir le modal de vérification des données
-                setShowProfileVerificationModal(true);
-              }}
-              className="px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center space-x-2"
-            >
-              <Award className="h-5 w-5" />
-              <span>Demander le certificat</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <>
+        {/* Modal de résultats avec récapitulatif */}
+        <EvaluationResultsModal
+          isOpen={showResults && !!result}
+          onClose={() => {
+            // Fermer le modal et retourner au cours
+            setShowResults(false);
+            onCancel?.();
+          }}
+          result={result}
+          evaluation={evaluation}
+          attemptsUsed={attemptsUsed}
+          onRequestCertificate={handleRequestCertificate}
+          onRetryEvaluation={handleRetryEvaluation}
+          onBackToCourse={handleBackToCourse}
+          requestingCertificate={requestingCertificate}
+        />
+      </>
     );
   }
 

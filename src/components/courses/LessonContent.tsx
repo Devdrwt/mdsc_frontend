@@ -508,33 +508,50 @@ export default function LessonContent({
   );
 
   const registerMediaProgress = useCallback((timeInSeconds: number, mediaElement?: HTMLMediaElement) => {
-    const toleranceSeconds = 0.3; // Même tolérance que preventForwardSeeking
+    // Tolérance plus large pour éviter les faux positifs (2 secondes au lieu de 0.3)
+    // Cela permet à la vidéo de progresser normalement même avec de petits délais de mise à jour
+    const toleranceSeconds = 2.0;
     
-    // Permettre seulement une progression normale (lecture linéaire)
-    // Si on dépasse la position maximale autorisée, c'est qu'il y a eu un saut
-    if (timeInSeconds > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
-      // Saut détecté, revenir à la position autorisée
+    // Vérifier si la vidéo est en cours de lecture (pas en pause)
+    const isPlaying = mediaElement && !mediaElement.paused && !mediaElement.ended;
+    
+    // Si la vidéo est en lecture normale, mettre à jour la position sans restriction stricte
+    if (isPlaying && timeInSeconds >= lastTrustedPlaybackPositionRef.current) {
+      // Progression normale, mettre à jour la position
+      lastTrustedPlaybackPositionRef.current = timeInSeconds;
+      return;
+    }
+    
+    // Seulement vérifier les sauts si la vidéo n'est pas en lecture normale
+    // et si le saut est vraiment important (plus de 2 secondes)
+    if (!isPlaying && timeInSeconds > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
+      // Saut important détecté (probablement un saut manuel), revenir à la position autorisée
       if (mediaElement) {
-        console.warn('[LessonContent] ⛔ Saut détecté dans onTimeUpdate – correction', {
+        console.warn('[LessonContent] ⛔ Saut important détecté dans onTimeUpdate – correction', {
           attempted: timeInSeconds,
           allowed: lastTrustedPlaybackPositionRef.current,
-          jump: timeInSeconds - lastTrustedPlaybackPositionRef.current
+          jump: timeInSeconds - lastTrustedPlaybackPositionRef.current,
+          isPlaying: mediaElement.paused ? 'paused' : 'playing'
         });
         const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
         mediaElement.currentTime = targetTime;
       }
-    } else if (timeInSeconds > lastTrustedPlaybackPositionRef.current) {
-      // Progression normale, mettre à jour la position
+    } else if (timeInSeconds >= lastTrustedPlaybackPositionRef.current) {
+      // Progression normale ou légèrement en avance, mettre à jour la position
       lastTrustedPlaybackPositionRef.current = timeInSeconds;
     }
   }, []);
 
   const preventForwardSeeking = useCallback((mediaElement: HTMLMediaElement) => {
-    const toleranceSeconds = 0.3; // Tolérance très stricte : 0.3 seconde maximum
+    // Tolérance plus large (2 secondes) pour éviter les faux positifs
+    // Seuls les sauts vraiment importants seront bloqués
+    const toleranceSeconds = 2.0;
     const forwardJump = mediaElement.currentTime - lastTrustedPlaybackPositionRef.current;
 
+    // Ne bloquer que les sauts vraiment importants (plus de 2 secondes)
+    // Les petits sauts peuvent être dus à des buffering ou des ajustements normaux du navigateur
     if (forwardJump > toleranceSeconds) {
-      console.warn('[LessonContent] ⛔ Avance rapide détectée – retour à la dernière position valide', {
+      console.warn('[LessonContent] ⛔ Saut important détecté – retour à la dernière position valide', {
         attempted: mediaElement.currentTime,
         allowed: lastTrustedPlaybackPositionRef.current,
         jump: forwardJump
@@ -543,12 +560,11 @@ export default function LessonContent({
       const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
       mediaElement.currentTime = targetTime;
       
-      // Vérifier à nouveau après un court délai pour s'assurer que le changement a pris effet
-      setTimeout(() => {
-        if (mediaElement.currentTime > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
-          mediaElement.currentTime = targetTime;
-        }
-      }, 50);
+      // Ne pas vérifier à nouveau immédiatement pour éviter les boucles infinies
+      // Laisser le navigateur gérer la position
+    } else if (forwardJump > 0 && forwardJump <= toleranceSeconds) {
+      // Petit saut autorisé (buffering, ajustements normaux), mettre à jour la position
+      lastTrustedPlaybackPositionRef.current = mediaElement.currentTime;
     }
   }, []);
 
@@ -794,7 +810,7 @@ export default function LessonContent({
         const videoUrl = resolveMediaUrl(videoUrlRaw) || videoUrlRaw;
         
         return (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full">
             {/* En-tête de la vidéo */}
             <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
               <div className="flex items-center justify-between">
@@ -819,8 +835,8 @@ export default function LessonContent({
             </div>
             
             {/* Lecteur vidéo stylé avec protection - Centré avec bordures arrondies */}
-            <div className="p-4 sm:p-6 bg-gradient-to-br from-gray-50 to-gray-100">
-              <div className="max-w-5xl mx-auto">
+            <div className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-gray-50 to-gray-100 w-full">
+              <div className="max-w-5xl mx-auto w-full">
                 <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group" style={{ maxHeight: '600px' }}>
                   <video
                     key={`video-${lesson.id}-${effectiveMediaFile.id || effectiveMediaFile.url}`}
@@ -852,12 +868,25 @@ export default function LessonContent({
                   const savedPosition = (lesson as any)?.progress?.last_position_seconds;
                   if (savedPosition && savedPosition > 0 && video.duration > savedPosition) {
                     video.currentTime = savedPosition;
+                    // Mettre à jour la position de référence pour éviter les faux positifs
+                    lastTrustedPlaybackPositionRef.current = savedPosition;
+                  } else {
+                    // Réinitialiser la position de référence au début de la vidéo
+                    lastTrustedPlaybackPositionRef.current = 0;
                   }
                   
                   // IMPORTANT: Ne pas ajouter de gestionnaires d'événements qui pourraient interférer
                   // avec les contrôles vidéo natifs (barre de progression, boutons, etc.)
                   // Les contrôles sont dans une shadow DOM et doivent fonctionner sans aucune interférence
                   // Le menu contextuel est déjà géré par l'attribut onContextMenu sur l'élément video
+                }}
+                onPlay={(e) => {
+                  // Lorsque la vidéo commence à jouer, mettre à jour la position de référence
+                  // pour éviter les faux positifs au démarrage
+                  const video = e.currentTarget;
+                  if (video && video.currentTime >= 0) {
+                    lastTrustedPlaybackPositionRef.current = video.currentTime;
+                  }
                 }}
                 onError={(e) => {
                   const videoElement = e.currentTarget;
@@ -941,7 +970,7 @@ export default function LessonContent({
         const audioUrl = resolveMediaUrl(audioUrlRaw) || audioUrlRaw;
         
         return (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full">
             {/* En-tête de l'audio */}
             <div className="p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
               <div className="flex items-center justify-between">
@@ -1033,6 +1062,11 @@ export default function LessonContent({
                   const savedPosition = (lesson as any)?.progress?.last_position_seconds;
                   if (savedPosition && savedPosition > 0 && audio.duration > savedPosition) {
                     audio.currentTime = savedPosition;
+                    // Mettre à jour la position de référence pour éviter les faux positifs
+                    lastTrustedPlaybackPositionRef.current = savedPosition;
+                  } else {
+                    // Réinitialiser la position de référence au début de l'audio
+                    lastTrustedPlaybackPositionRef.current = 0;
                   }
                   
                   // Désactiver le menu contextuel sur l'audio
@@ -1052,6 +1086,14 @@ export default function LessonContent({
                     }, true);
                   } catch (err) {
                     console.warn('Impossible de désactiver le menu contextuel sur l\'audio');
+                  }
+                }}
+                onPlay={(e) => {
+                  // Lorsque l'audio commence à jouer, mettre à jour la position de référence
+                  // pour éviter les faux positifs au démarrage
+                  const audio = e.currentTarget;
+                  if (audio && audio.currentTime >= 0) {
+                    lastTrustedPlaybackPositionRef.current = audio.currentTime;
                   }
                 }}
                 onError={(e) => {
@@ -1112,7 +1154,7 @@ export default function LessonContent({
         // Pour les PDFs, PowerPoint, Word et Excel, utiliser FileViewer (solution optimisée par format)
         if (isPDF || isPPTX) {
           return (
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 w-full">
               <div className="flex items-center justify-between p-4 sm:p-6 bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm flex-shrink-0">
@@ -1285,11 +1327,11 @@ export default function LessonContent({
               <h3 className="text-lg font-semibold text-gray-900">Contenu de la leçon</h3>
             </div>
           </div>
-          <div className="p-6 sm:p-8">
+          <div className="p-4 sm:p-6 lg:p-8 w-full overflow-x-hidden">
             {contentText ? (
               <div
                 id="lesson-content-text"
-                className="prose prose-md sm:prose-lg max-w-none 
+                className="prose prose-md sm:prose-lg max-w-none w-full 
                   prose-headings:text-gray-900 prose-headings:font-bold
                   prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-6
                   prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-5

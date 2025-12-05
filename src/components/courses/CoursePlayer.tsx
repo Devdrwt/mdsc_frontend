@@ -796,11 +796,66 @@ export default function CoursePlayer({
 
   // Fonction pour naviguer vers la leçon suivante
   const handleNextLesson = useCallback(() => {
+    // Vérifier si toutes les leçons du module actuel sont complétées
+    if (selectedModuleId && selectedLesson) {
+      const currentModule = course.modules?.find(m => m.id === Number(selectedModuleId));
+      
+      if (currentModule && currentModule.lessons && currentModule.lessons.length > 0) {
+        // Vérifier si toutes les leçons du module sont complétées
+        const allLessonsCompleted = currentModule.lessons.every(lesson => 
+          completedLessons.has(lesson.id)
+        );
+        
+        // Si toutes les leçons sont complétées, vérifier s'il y a un quiz de module
+        if (allLessonsCompleted && moduleQuizzes.has(Number(selectedModuleId))) {
+          // Vérifier si le quiz est complété/réussi
+          if (!completedModuleQuizzes.has(Number(selectedModuleId))) {
+            // Le quiz n'est pas complété, empêcher la navigation
+            toast.error(
+              'Quiz requis',
+              'Vous devez compléter et réussir le quiz de ce module avant de passer à la leçon suivante.'
+            );
+            return;
+          }
+        }
+      }
+    }
+    
+    // Vérifier si la leçon suivante est dans un module différent
     const nextLesson = getNextLesson();
     if (nextLesson) {
+      const nextLessonModuleId = nextLesson.module_id ?? (nextLesson as any).moduleId;
+      const currentModuleId = selectedModuleId;
+      
+      // Si on change de module, vérifier que le module actuel est complété
+      if (nextLessonModuleId && currentModuleId && Number(nextLessonModuleId) !== Number(currentModuleId)) {
+        const currentModule = course.modules?.find(m => m.id === Number(currentModuleId));
+        
+        if (currentModule && currentModule.lessons && currentModule.lessons.length > 0) {
+          // Vérifier si toutes les leçons du module actuel sont complétées
+          const allLessonsCompleted = currentModule.lessons.every(lesson => 
+            completedLessons.has(lesson.id)
+          );
+          
+          // Si toutes les leçons sont complétées, vérifier s'il y a un quiz de module
+          if (allLessonsCompleted && moduleQuizzes.has(Number(currentModuleId))) {
+            // Vérifier si le quiz est complété/réussi
+            if (!completedModuleQuizzes.has(Number(currentModuleId))) {
+              // Le quiz n'est pas complété, empêcher la navigation vers le module suivant
+              toast.error(
+                'Quiz requis',
+                'Vous devez compléter et réussir le quiz de ce module avant de passer au module suivant.'
+              );
+              return;
+            }
+          }
+        }
+      }
+      
+      // Si toutes les vérifications passent, naviguer vers la leçon suivante
       handleLessonSelect(nextLesson);
     }
-  }, [getNextLesson, handleLessonSelect]);
+  }, [getNextLesson, handleLessonSelect, selectedModuleId, selectedLesson, course.modules, completedLessons, moduleQuizzes, completedModuleQuizzes]);
 
   const handleLessonComplete = async () => {
     if (!selectedLessonId || !enrollmentId) {
@@ -1183,7 +1238,9 @@ export default function CoursePlayer({
   };
 
   const handleEvaluationComplete = async (result: any) => {
-    console.log('[CoursePlayer] 🎉 handleEvaluationComplete appelé:', {
+    // Ne plus ouvrir automatiquement le modal de vérification
+    // Le modal s'ouvrira uniquement lorsque l'utilisateur clique sur "Obtenir mon certificat" dans le modal de résultats
+    console.log('[CoursePlayer] 🎉 handleEvaluationComplete appelé (modal de vérification ne s\'ouvrira que sur clic):', {
       result,
       enrollmentId,
       hasFinalEvaluation: !!finalEvaluation
@@ -1194,14 +1251,10 @@ export default function CoursePlayer({
     setShowEvaluationResultModal(true);
     setEvaluationAttemptsUsed(prev => prev + 1);
     
-    // Si l'évaluation est réussie et éligible pour certificat, ouvrir le modal de vérification
-    // Le modal de vérification doit s'afficher après la modal de résultat
+    // Ne plus ouvrir automatiquement le modal de vérification
+    // Le modal de vérification s'ouvrira uniquement lorsque l'utilisateur clique sur "Obtenir mon certificat" dans le modal de résultats
     if (result.passed && result.certificate_eligible) {
-      console.log('[CoursePlayer] ✅ Évaluation réussie et éligible, ouverture du modal de vérification après 1 seconde...');
-      setTimeout(() => {
-        console.log('[CoursePlayer] 🎯 Affichage du modal de vérification maintenant');
-        setShowProfileVerificationModal(true);
-      }, 1000);
+      console.log('[CoursePlayer] ✅ Évaluation réussie et éligible - Le modal de vérification s\'ouvrira au clic sur "Obtenir mon certificat"');
     }
     
     // Recharger les tentatives d'évaluation pour mettre à jour finalEvaluationAttempts
@@ -1836,7 +1889,7 @@ export default function CoursePlayer({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full lg:w-auto">
+      <main className="flex-1 overflow-y-auto bg-white h-full flex flex-col w-full">
         <div className="flex-shrink-0 z-20 bg-white/90 backdrop-blur border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 order-1 flex-1">
@@ -1945,7 +1998,7 @@ export default function CoursePlayer({
             />
           </div>
         ) : selectedLessonWithStatus ? (
-          <div className="px-4 py-6 sm:px-8 sm:py-8">
+          <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 w-full max-w-full overflow-x-hidden">
             <LessonContent
               lesson={selectedLessonWithStatus}
               courseId={typeof course.id === 'number' ? course.id.toString() : course.id}

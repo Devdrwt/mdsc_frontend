@@ -57,6 +57,8 @@ export default function QuizComponent({
       // Utiliser getQuizForStudent si quizId est disponible, sinon essayer via lessonId
       if (quizId) {
         const moduleQuiz = await quizService.getQuizForStudent(quizId);
+        console.log('📚 [QuizComponent] Quiz chargé:', moduleQuiz);
+        console.log('📚 [QuizComponent] Questions reçues:', moduleQuiz.questions);
         // Convertir ModuleQuiz en Quiz pour compatibilité
         const quizData: Quiz = {
           id: Number(moduleQuiz.id || quizId),
@@ -71,26 +73,69 @@ export default function QuizComponent({
           is_published: true,
           created_at: new Date().toISOString(),
           question_count: moduleQuiz.questions?.length || 0,
+          invalid_questions_count: (moduleQuiz as any).invalid_questions_count || 0,
         };
         setQuiz(quizData);
-        // Convertir les questions
+        // Convertir les questions et filtrer les invalides selon les recommandations
         const convertedQuestions: QuizQuestion[] = (moduleQuiz.questions || []).map((q, idx) => ({
           id: Number(q.id || idx + 1),
           quiz_id: Number(moduleQuiz.id || quizId),
-          question: q.question_text,
-          question_type: q.question_type,
+          question: q.question_text || q.question || '',
+          question_type: q.question_type || q.questionType || 'multiple_choice',
           options: q.options || [],
-          correct_answer: q.correct_answer,
-          points: q.points,
-          order_index: q.order_index || idx + 1,
+          correct_answer: q.correct_answer || q.correctAnswer,
+          points: q.points || 1,
+          order_index: q.order_index || q.orderIndex || idx + 1,
+          // Propriétés de validation du backend
+          is_valid: q.is_valid !== false, // Par défaut true sauf si explicitement false
+          has_options: (q.options && q.options.length > 0) || q.has_options === true,
         }));
-        setQuestions(convertedQuestions);
+        
+        // Filtrer les questions invalides selon les recommandations
+        const validQuestions = convertedQuestions.filter(q => {
+          // Vérifier is_valid si disponible
+          if (q.is_valid === false) {
+            console.warn(`⚠️ [QuizComponent] Question ${q.id} invalide (is_valid=false)`);
+            return false;
+          }
+          
+          // Pour QCM et Vrai/Faux, vérifier qu'il y a des options
+          if (
+            (q.question_type === 'multiple_choice' || q.question_type === 'true_false' || q.question_type === 'multiple_select') &&
+            (!q.options || q.options.length === 0)
+          ) {
+            console.warn(`⚠️ [QuizComponent] Question ${q.id} sans options (type: ${q.question_type})`);
+            return false;
+          }
+          
+          return true;
+        });
+        
+        console.log('📝 [QuizComponent] Questions converties:', convertedQuestions);
+        console.log('✅ [QuizComponent] Questions valides:', validQuestions);
+        
+        // Afficher un avertissement si des questions sont invalides
+        const invalidCount = convertedQuestions.length - validQuestions.length;
+        if (invalidCount > 0) {
+          console.warn(`⚠️ [QuizComponent] ${invalidCount} question(s) invalide(s) exclue(s) du quiz`);
+        }
+        
+        // Mettre à jour le quiz avec le nombre de questions invalides
+        quizData.invalid_questions_count = invalidCount;
+        
+        if (validQuestions.length === 0) {
+          setError('Ce quiz ne contient aucune question valide.');
+          return;
+        }
+        
+        setQuestions(validQuestions);
         setStartTime(new Date());
       } else {
         // Si pas de quizId, essayer de récupérer via lessonId (nécessite un endpoint backend)
         setError('Quiz ID requis pour charger le quiz');
       }
     } catch (err: any) {
+      console.error('❌ [QuizComponent] Erreur lors du chargement:', err);
       setError(err.message || 'Erreur lors du chargement du quiz');
     }
   };
@@ -114,7 +159,31 @@ export default function QuizComponent({
     }
   };
 
+  // Validation avant soumission selon les recommandations
+  const canSubmitQuiz = (): { valid: boolean; reason?: string } => {
+    if (!questions || questions.length === 0) {
+      return { valid: false, reason: 'Aucune question dans le quiz' };
+    }
+    
+    const invalidQuestions = questions.filter(q => q.is_valid === false);
+    if (invalidQuestions.length > 0) {
+      return { 
+        valid: false, 
+        reason: `${invalidQuestions.length} question(s) invalide(s) dans le quiz` 
+      };
+    }
+    
+    return { valid: true };
+  };
+
   const handleSubmit = async () => {
+    // Valider avant soumission
+    const validation = canSubmitQuiz();
+    if (!validation.valid) {
+      setError(validation.reason || 'Impossible de soumettre le quiz');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       // Utiliser submitQuiz avec le format attendu
@@ -232,6 +301,18 @@ export default function QuizComponent({
   }
 
   const currentQuestion = questions[currentQuestionIndex];
+  
+  if (!currentQuestion) {
+    return (
+      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+        <div className="flex items-center space-x-2 text-red-700">
+          <AlertCircle className="h-5 w-5" />
+          <p>Aucune question disponible pour ce quiz.</p>
+        </div>
+      </div>
+    );
+  }
+  
   const isAnswered = currentQuestion.id in answers;
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
@@ -239,6 +320,23 @@ export default function QuizComponent({
   
   return (
     <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
+      {/* Avertissement si des questions sont invalides */}
+      {quiz.invalid_questions_count && quiz.invalid_questions_count > 0 && (
+        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2 text-yellow-800">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">
+                {quiz.invalid_questions_count} question(s) invalide(s) {quiz.invalid_questions_count === 1 ? 'a été exclue' : 'ont été exclues'} du quiz.
+              </p>
+              <p className="text-sm text-yellow-700 mt-1">
+                Veuillez contacter l'administrateur si vous pensez qu'il s'agit d'une erreur.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -290,8 +388,8 @@ export default function QuizComponent({
         </p>
 
         <div className="space-y-3">
-          {currentQuestion.questionType === 'multiple_choice' ? (
-            currentQuestion.options.map((option, index) => {
+          {currentQuestion.question_type === 'multiple_choice' ? (
+            currentQuestion.options?.map((option, index) => {
               const optionValue = String.fromCharCode(65 + index); // A, B, C, D
               const isSelected = answers[currentQuestion.id] === optionValue;
               
@@ -318,8 +416,8 @@ export default function QuizComponent({
                 </label>
               );
             })
-          ) : currentQuestion.questionType === 'multiple_select' ? (
-            currentQuestion.options.map((option, index) => {
+          ) : currentQuestion.question_type === 'multiple_select' ? (
+            currentQuestion.options?.map((option, index) => {
               const optionValue = String.fromCharCode(65 + index);
               const selectedAnswers = (answers[currentQuestion.id] as string[]) || [];
               const isSelected = selectedAnswers.includes(optionValue);

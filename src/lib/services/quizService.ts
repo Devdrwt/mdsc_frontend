@@ -9,6 +9,10 @@ export interface ModuleQuiz {
   passing_score: number;
   duration_minutes?: number;
   questions: QuizQuestion[];
+  max_attempts?: number;
+  attempts_count?: number; // Nombre de tentatives déjà effectuées (depuis l'API)
+  remaining_attempts?: number; // Nombre de tentatives restantes (calculé par l'API)
+  can_attempt?: boolean; // Indique si l'étudiant peut tenter le quiz
 }
 
 export interface QuizQuestion {
@@ -169,11 +173,13 @@ export class QuizService {
       if (!quizData.questions && response.data?.questions) {
         quizData.questions = response.data.questions;
       }
-      // Ajouter les informations sur les tentatives au quiz
+      // Ajouter les informations sur les tentatives au quiz (utiliser les valeurs de l'API si disponibles)
       if (response.data) {
         quizData.previous_attempts = response.data.previous_attempts || [];
         quizData.can_attempt = response.data.can_attempt !== false;
-        quizData.remaining_attempts = Math.max(0, (quizData.max_attempts || 0) - (response.data.previous_attempts?.length || 0));
+        // Utiliser les valeurs calculées par l'API si disponibles, sinon calculer manuellement
+        quizData.attempts_count = response.data.attempts_count ?? response.data.previous_attempts?.length ?? 0;
+        quizData.remaining_attempts = response.data.remaining_attempts ?? Math.max(0, (quizData.max_attempts || 0) - (response.data.previous_attempts?.length || 0));
       }
       return quizData;
     } catch (error) {

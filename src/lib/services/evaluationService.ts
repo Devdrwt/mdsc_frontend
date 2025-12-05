@@ -313,6 +313,26 @@ export class EvaluationService {
     correct_answers?: number;
     total_questions?: number;
     certificate_eligible?: boolean;
+    question_results?: Array<{
+      question_id: number;
+      question_text: string;
+      question_type: string;
+      points: number;
+      order_index: number;
+      student_answer: string | null;
+      correct_answer: string | null;
+      is_correct: boolean;
+      points_earned: number;
+      points_lost: number;
+    }>;
+    summary?: {
+      total_questions: number;
+      correct_questions: number;
+      incorrect_questions: number;
+      total_points: number;
+      earned_points: number;
+      lost_points: number;
+    };
   }> {
     const body: any = { answers };
     // Inclure enrollmentId si fourni (le backend peut aussi le récupérer automatiquement)

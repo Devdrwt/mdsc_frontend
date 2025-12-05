@@ -31,6 +31,7 @@ interface QuizAttemptInfo {
   previous_attempts?: any[];
   can_attempt?: boolean;
   remaining_attempts?: number;
+  attempts_count?: number; // Nombre de tentatives déjà effectuées (depuis l'API)
 }
 
 interface ModuleQuizPlayerProps {
@@ -136,18 +137,44 @@ export default function ModuleQuizPlayer({
           options: normalizeQuestionOptions(q),
         }));
         
+        // Filtrer les questions invalides selon les recommandations
+        const validQuestions = normalizedQuestions.filter((q: any) => {
+          // Vérifier is_valid si disponible
+          if (q.is_valid === false) {
+            console.warn(`⚠️ [ModuleQuizPlayer] Question ${q.id} invalide (is_valid=false)`);
+            return false;
+          }
+          
+          // Pour QCM et Vrai/Faux, vérifier qu'il y a des options
+          if (
+            (q.question_type === 'multiple_choice' || q.question_type === 'true_false') &&
+            (!q.options || q.options.length === 0)
+          ) {
+            console.warn(`⚠️ [ModuleQuizPlayer] Question ${q.id} sans options (type: ${q.question_type})`);
+            return false;
+          }
+          
+          return true;
+        });
+        
+        const invalidCount = normalizedQuestions.length - validQuestions.length;
+        if (invalidCount > 0) {
+          console.warn(`⚠️ [ModuleQuizPlayer] ${invalidCount} question(s) invalide(s) exclue(s) du quiz`);
+        }
+        
         // S'assurer que l'ID est défini
         quizData = { 
           ...quiz, 
           id: quiz.id || quizId,
-          questions: normalizedQuestions,
+          questions: validQuestions,
         } as ModuleQuiz;
         
-        // Extraire les informations sur les tentatives
+        // Extraire les informations sur les tentatives (utiliser les valeurs de l'API si disponibles)
         attemptInfoData = {
           previous_attempts: (quiz as any).previous_attempts || [],
           can_attempt: (quiz as any).can_attempt !== false,
-          remaining_attempts: (quiz as any).remaining_attempts || (quizData.max_attempts ? Math.max(0, quizData.max_attempts - ((quiz as any).previous_attempts?.length || 0)) : undefined)
+          attempts_count: (quiz as any).attempts_count ?? (quiz as any).previous_attempts?.length ?? 0,
+          remaining_attempts: (quiz as any).remaining_attempts ?? (quizData.max_attempts ? Math.max(0, quizData.max_attempts - ((quiz as any).previous_attempts?.length || 0)) : undefined)
         };
       } else {
         const quiz = await quizService.getQuizForStudent(quizId);
@@ -158,12 +185,45 @@ export default function ModuleQuizPlayer({
           options: normalizeQuestionOptions(q),
         }));
         
+        // Filtrer les questions invalides selon les recommandations
+        const validQuestions = normalizedQuestions.filter((q: any) => {
+          // Vérifier is_valid si disponible
+          if (q.is_valid === false) {
+            console.warn(`⚠️ [ModuleQuizPlayer] Question ${q.id} invalide (is_valid=false)`);
+            return false;
+          }
+          
+          // Pour QCM et Vrai/Faux, vérifier qu'il y a des options
+          if (
+            (q.question_type === 'multiple_choice' || q.question_type === 'true_false') &&
+            (!q.options || q.options.length === 0)
+          ) {
+            console.warn(`⚠️ [ModuleQuizPlayer] Question ${q.id} sans options (type: ${q.question_type})`);
+            return false;
+          }
+          
+          return true;
+        });
+        
+        const invalidCount = normalizedQuestions.length - validQuestions.length;
+        if (invalidCount > 0) {
+          console.warn(`⚠️ [ModuleQuizPlayer] ${invalidCount} question(s) invalide(s) exclue(s) du quiz`);
+        }
+        
         // S'assurer que l'ID est défini
         quizData = { 
           ...quiz, 
           id: quiz.id || quizId,
-          questions: normalizedQuestions,
+          questions: validQuestions,
         } as ModuleQuiz;
+        
+        // Extraire les informations sur les tentatives (utiliser les valeurs de l'API si disponibles)
+        attemptInfoData = {
+          previous_attempts: (quiz as any).previous_attempts || [],
+          can_attempt: (quiz as any).can_attempt !== false,
+          attempts_count: (quiz as any).attempts_count ?? (quiz as any).previous_attempts?.length ?? 0,
+          remaining_attempts: (quiz as any).remaining_attempts ?? (quizData.max_attempts ? Math.max(0, quizData.max_attempts - ((quiz as any).previous_attempts?.length || 0)) : undefined)
+        };
       }
       
       console.log('[ModuleQuizPlayer] ✅ Quiz chargé et normalisé:', {
@@ -397,7 +457,11 @@ export default function ModuleQuizPlayer({
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-blue-600" />
               <p className="text-sm text-blue-900">
-                <span className="font-semibold">Tentatives :</span> {attemptInfo.remaining_attempts !== undefined ? attemptInfo.remaining_attempts : quiz.max_attempts} sur {quiz.max_attempts} restante(s)
+                <span className="font-semibold">Tentatives :</span>{' '}
+                {attemptInfo.attempts_count ?? 0} sur {quiz.max_attempts}{' '}
+                {attemptInfo.remaining_attempts !== undefined && attemptInfo.remaining_attempts > 0 && (
+                  <span>({attemptInfo.remaining_attempts} restante{attemptInfo.remaining_attempts > 1 ? 's' : ''})</span>
+                )}
               </p>
             </div>
             {attemptInfo.can_attempt === false && (

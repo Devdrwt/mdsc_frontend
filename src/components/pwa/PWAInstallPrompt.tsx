@@ -72,6 +72,23 @@ export default function PWAInstallPrompt() {
   }, [theme]);
 
   useEffect(() => {
+    // Détecter si on est en mode desktop (ne pas afficher le prompt sur desktop)
+    const isDesktop = () => {
+      // Vérifier si c'est un appareil mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      // Vérifier la largeur de l'écran (mobile généralement < 768px)
+      const isSmallScreen = window.innerWidth < 768;
+      // Si ce n'est pas mobile ET que l'écran est large, c'est probablement un desktop
+      return !isMobile && !isSmallScreen;
+    };
+
+    // Ne pas afficher le prompt en mode desktop
+    if (isDesktop()) {
+      console.log('[PWA] ⏸️ Mode desktop détecté - prompt d\'installation désactivé');
+      setIsInstalled(true); // Marquer comme installé pour ne pas afficher
+      return;
+    }
+
     // Vérifier si l'app est déjà installée
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isIOSStandalone = (window.navigator as any).standalone === true;

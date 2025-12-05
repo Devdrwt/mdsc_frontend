@@ -569,7 +569,7 @@ export default function ModuleCatalog() {
 
           {/* Grille */}
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {[...Array(6)].map((_, index) => (
                 <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
                   <div className="bg-gray-300 h-48 rounded-lg mb-4" />
@@ -589,7 +589,7 @@ export default function ModuleCatalog() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
               {displayCourses.map((course) => {
                 const numericId = Number(course.id)
                 const isEnrolled = !Number.isNaN(numericId) && enrolledCourseIds.has(numericId)
