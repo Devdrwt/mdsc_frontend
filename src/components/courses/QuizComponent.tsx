@@ -77,19 +77,22 @@ export default function QuizComponent({
         };
         setQuiz(quizData);
         // Convertir les questions et filtrer les invalides selon les recommandations
-        const convertedQuestions: QuizQuestion[] = (moduleQuiz.questions || []).map((q, idx) => ({
-          id: Number(q.id || idx + 1),
-          quiz_id: Number(moduleQuiz.id || quizId),
-          question: q.question_text || q.question || '',
-          question_type: q.question_type || q.questionType || 'multiple_choice',
-          options: q.options || [],
-          correct_answer: q.correct_answer || q.correctAnswer,
-          points: q.points || 1,
-          order_index: q.order_index || q.orderIndex || idx + 1,
-          // Propriétés de validation du backend
-          is_valid: q.is_valid !== false, // Par défaut true sauf si explicitement false
-          has_options: (q.options && q.options.length > 0) || q.has_options === true,
-        }));
+        const convertedQuestions: QuizQuestion[] = (moduleQuiz.questions || []).map((q, idx) => {
+          const questionData = q as any; // Pour accéder aux propriétés optionnelles du backend
+          return {
+            id: Number(q.id || idx + 1),
+            quiz_id: Number(moduleQuiz.id || quizId),
+            question: q.question_text || '',
+            question_type: q.question_type || 'multiple_choice',
+            options: q.options || [],
+            correct_answer: q.correct_answer,
+            points: q.points || 1,
+            order_index: q.order_index || idx + 1,
+            // Propriétés de validation du backend
+            is_valid: questionData.is_valid !== false, // Par défaut true sauf si explicitement false
+            has_options: (q.options && q.options.length > 0) || questionData.has_options === true,
+          };
+        });
         
         // Filtrer les questions invalides selon les recommandations
         const validQuestions = convertedQuestions.filter(q => {
