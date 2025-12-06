@@ -33,4 +33,4 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/mdsc_deploy
-            ./deploy.sh
+            ./deploy_frontend.sh
