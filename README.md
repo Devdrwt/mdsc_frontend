@@ -291,7 +291,7 @@ Les contributions sont les bienvenues ! Pour contribuer :
 
 ## Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails..
 
 
 Développé avec Next.js pour l'apprentissage en ligne
