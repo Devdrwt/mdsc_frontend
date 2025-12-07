@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
+import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
 
 interface DocxViewerProps {
   url: string;
@@ -82,7 +83,7 @@ export default function DocxViewer({ url, filename }: DocxViewerProps) {
           prose-table:w-full prose-table:my-4 prose-table:border-collapse
           prose-th:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
           prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={createSanitizedHtml(html)}
       />
     </div>
   );

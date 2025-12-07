@@ -8,6 +8,7 @@ import Button from '../ui/Button';
 import { progressService } from '../../lib/services/progressService';
 import { resolveMediaUrl } from '../../lib/utils/media';
 import { courseService } from '../../lib/services/courseService';
+import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
 import dynamic from 'next/dynamic';
 
 // Import dynamique du composant FileViewer (solution optimisée par format)
@@ -1349,7 +1350,7 @@ export default function LessonContent({
                   prose-table:w-full prose-table:my-4 prose-table:border-collapse
                   prose-th:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold
                   prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2"
-                dangerouslySetInnerHTML={{ __html: contentText }}
+                dangerouslySetInnerHTML={createSanitizedHtml(contentText)}
               />
             ) : null}
           </div>
@@ -1429,7 +1430,7 @@ export default function LessonContent({
             {contentText && (
               <div
                 className="prose prose-md max-w-none mb-6 prose-p:text-gray-700 prose-a:text-mdsc-blue-primary"
-                dangerouslySetInnerHTML={{ __html: contentText }}
+                dangerouslySetInnerHTML={createSanitizedHtml(contentText)}
               />
             )}
             {contentUrl ? (

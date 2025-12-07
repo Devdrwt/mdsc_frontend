@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from '../lib/context/ThemeContext';
+import CookiePreferencesService, { CookiePreferences } from '../lib/services/cookiePreferencesService';
+import toast from '../lib/utils/toast';
 
 export default function CookieConsent() {
   const { theme } = useTheme();
@@ -10,6 +12,7 @@ export default function CookieConsent() {
   const [showDetails, setShowDetails] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [marketingEnabled, setMarketingEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Détecter le thème actuel
   useEffect(() => {
@@ -58,40 +61,89 @@ export default function CookieConsent() {
 
   useEffect(() => {
     // Vérifier si l'utilisateur a déjà donné son consentement
-    const consent = localStorage.getItem('mdsc-cookie-consent');
-    if (!consent) {
-      // Afficher après un court délai pour ne pas surcharger l'interface
-      const timer = setTimeout(() => {
-        setShowConsent(true);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
+    const checkPreferences = async () => {
+      // 1. Vérifier d'abord localStorage pour éviter les appels API inutiles
+      const consentShown = localStorage.getItem('mdsc-cookie-consent-shown');
+      if (consentShown === 'true') {
+        console.log('✅ [COOKIE CONSENT] Consentement déjà donné (localStorage)');
+        return;
+      }
+
+      // 2. Vérifier via l'API si des préférences existent déjà
+      try {
+        const preferences = await CookiePreferencesService.getPreferences();
+        // Si les préférences existent (même si refusées), l'utilisateur a déjà fait un choix
+        // On vérifie si les préférences ont été explicitement définies
+        // Si l'API retourne des préférences, c'est que l'utilisateur a déjà interagi
+        const hasMadeChoice = preferences !== null && 
+                              (preferences.analytics !== undefined || preferences.marketing !== undefined);
+        
+        if (hasMadeChoice) {
+          // L'utilisateur a déjà fait un choix, marquer comme vu dans localStorage
+          localStorage.setItem('mdsc-cookie-consent-shown', 'true');
+          console.log('✅ [COOKIE CONSENT] Consentement déjà donné (API)');
+          return;
+        }
+
+        // 3. Si aucune préférence n'existe, afficher le modal une seule fois
+        console.log('📢 [COOKIE CONSENT] Affichage du modal de consentement');
+        const timer = setTimeout(() => {
+          setShowConsent(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      } catch (error) {
+        // En cas d'erreur API, vérifier localStorage avant d'afficher
+        if (consentShown !== 'true') {
+          console.warn('⚠️ [COOKIE CONSENT] Erreur API, vérification localStorage:', error);
+          const timer = setTimeout(() => {
+            setShowConsent(true);
+          }, 2000);
+          return () => clearTimeout(timer);
+        }
+      }
+    };
+    
+    checkPreferences();
   }, []);
 
-  const handleAccept = () => {
-    localStorage.setItem('mdsc-cookie-consent', JSON.stringify({
-      accepted: true,
-      date: new Date().toISOString(),
-      cookies: {
-        necessary: true,
+  const handleAccept = async () => {
+    setLoading(true);
+    try {
+      await CookiePreferencesService.savePreferences({
+        essential: true,
         analytics: true,
         marketing: true,
-      },
-    }));
-    setShowConsent(false);
+      });
+      // Marquer comme vu dans localStorage pour ne plus afficher
+      localStorage.setItem('mdsc-cookie-consent-shown', 'true');
+      setShowConsent(false);
+      toast.success('Préférences enregistrées', 'Vos préférences de cookies ont été enregistrées');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'enregistrement des préférences:', error);
+      toast.error('Erreur', 'Impossible d\'enregistrer vos préférences. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = () => {
-    localStorage.setItem('mdsc-cookie-consent', JSON.stringify({
-      accepted: false,
-      date: new Date().toISOString(),
-      cookies: {
-        necessary: true,
+  const handleReject = async () => {
+    setLoading(true);
+    try {
+      await CookiePreferencesService.savePreferences({
+        essential: true,
         analytics: false,
         marketing: false,
-      },
-    }));
-    setShowConsent(false);
+      });
+      // Marquer comme vu dans localStorage pour ne plus afficher
+      localStorage.setItem('mdsc-cookie-consent-shown', 'true');
+      setShowConsent(false);
+      toast.success('Préférences enregistrées', 'Vos préférences de cookies ont été enregistrées');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'enregistrement des préférences:', error);
+      toast.error('Erreur', 'Impossible d\'enregistrer vos préférences. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCustomize = () => {
@@ -140,23 +192,25 @@ export default function CookieConsent() {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleAccept}
-                className={`flex-1 font-medium px-6 py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                disabled={loading}
+                className={`flex-1 font-medium px-6 py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark 
                     ? 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white shadow-md hover:shadow-lg focus:ring-blue-400 focus:ring-offset-gray-800' 
                     : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white focus:ring-blue-500 focus:ring-offset-white'
                 }`}
               >
-                Tout accepter
+                {loading ? 'Enregistrement...' : 'Tout accepter'}
               </button>
               <button
                 onClick={handleReject}
-                className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                disabled={loading}
+                className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark 
                     ? 'text-gray-300 hover:text-white hover:bg-gray-700/50 focus:ring-gray-400 focus:ring-offset-gray-800' 
                     : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500 focus:ring-offset-white'
                 }`}
               >
-                Tout refuser
+                {loading ? 'Enregistrement...' : 'Tout refuser'}
               </button>
               <button
                 onClick={handleCustomize}
@@ -276,25 +330,33 @@ export default function CookieConsent() {
 
             <div className={`flex flex-col sm:flex-row gap-3 pt-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <button
-                onClick={() => {
-                  localStorage.setItem('mdsc-cookie-consent', JSON.stringify({
-                    accepted: true,
-                    date: new Date().toISOString(),
-                    cookies: {
-                      necessary: true,
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    await CookiePreferencesService.savePreferences({
+                      essential: true,
                       analytics: analyticsEnabled,
                       marketing: marketingEnabled,
-                    },
-                  }));
-                  setShowConsent(false);
+                    });
+                    // Marquer comme vu dans localStorage pour ne plus afficher
+                    localStorage.setItem('mdsc-cookie-consent-shown', 'true');
+                    setShowConsent(false);
+                    toast.success('Préférences enregistrées', 'Vos préférences de cookies ont été enregistrées');
+                  } catch (error: any) {
+                    console.error('Erreur lors de l\'enregistrement des préférences:', error);
+                    toast.error('Erreur', 'Impossible d\'enregistrer vos préférences. Veuillez réessayer.');
+                  } finally {
+                    setLoading(false);
+                  }
                 }}
-                className={`flex-1 font-medium px-6 py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                disabled={loading}
+                className={`flex-1 font-medium px-6 py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDark 
                     ? 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white shadow-md hover:shadow-lg focus:ring-blue-400 focus:ring-offset-gray-800' 
                     : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white focus:ring-blue-500 focus:ring-offset-white'
                 }`}
               >
-                Enregistrer les préférences
+                {loading ? 'Enregistrement...' : 'Enregistrer les préférences'}
               </button>
               <button
                 onClick={() => setShowDetails(false)}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
 import { 
   CheckCircle, 
   Play, 
@@ -184,17 +185,27 @@ export default function LessonPlayer({
           <div
             id="lesson-content-text"
             className="prose max-w-none bg-white rounded-lg p-6 border border-gray-200 max-h-96 overflow-y-auto"
-            dangerouslySetInnerHTML={{ __html: lesson.content_text || '' }}
+            dangerouslySetInnerHTML={createSanitizedHtml(lesson.content_text)}
           />
         );
 
       case 'document':
+        // Détecter si c'est un PDF pour ajuster l'URL avec un paramètre de zoom
+        const isPdf = lesson.content_url?.toLowerCase().endsWith('.pdf') || 
+                     lesson.content_url?.toLowerCase().includes('.pdf');
+        const documentUrl = isPdf && lesson.content_url 
+          ? `${lesson.content_url}${lesson.content_url.includes('#') ? '&' : '#'}zoom=page-fit`
+          : lesson.content_url;
+        
         return (
-          <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+          <div className="w-full h-96 sm:h-[600px] bg-gray-100 rounded-lg flex items-center justify-center overflow-auto">
             {lesson.content_url ? (
               <iframe
-                src={lesson.content_url}
+                src={documentUrl}
                 className="w-full h-full rounded-lg"
+                style={{
+                  minHeight: '100%',
+                }}
               />
             ) : (
               <div className="text-center">

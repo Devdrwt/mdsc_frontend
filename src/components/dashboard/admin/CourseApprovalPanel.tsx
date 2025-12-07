@@ -6,6 +6,7 @@ import { adminService, CourseApproval } from '../../../lib/services/adminService
 import { courseService } from '../../../lib/services/courseService';
 import { QuizService } from '../../../lib/services/quizService';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../../lib/utils/media';
+import { createSanitizedHtml } from '../../../lib/utils/sanitizeHtml';
 import toast from '../../../lib/utils/toast';
 
 interface CourseApprovalPanelProps {
@@ -465,7 +466,7 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Contenu du cours</h3>
                   <div className="prose max-w-none text-gray-600">
                     {typeof selectedCourse.content === 'string' ? (
-                      <div dangerouslySetInnerHTML={{ __html: selectedCourse.content }} />
+                      <div dangerouslySetInnerHTML={createSanitizedHtml(selectedCourse.content)} />
                     ) : (
                       <pre className="whitespace-pre-wrap">{JSON.stringify(selectedCourse.content, null, 2)}</pre>
                     )}

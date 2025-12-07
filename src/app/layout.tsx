@@ -138,8 +138,9 @@ export default function RootLayout({
           httpEquiv="Permissions-Policy"
           content="speaker-selection=(self), microphone=(self), camera=(self), display-capture=(self), autoplay=(self), fullscreen=(self)"
         />
-        {/* Script Kkiapay SDK */}
+        {/* Script Kkiapay SDK - SuppressHydrationWarning pour éviter les erreurs d'hydratation */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -161,11 +162,14 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Script de thème - SuppressHydrationWarning pour éviter les erreurs d'hydratation */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
+                  if (typeof window === 'undefined') return;
                   var root = document.documentElement;
                   var storedTheme = localStorage.getItem('mdsc-theme');
                   var storedLanguage = localStorage.getItem('mdsc-language');

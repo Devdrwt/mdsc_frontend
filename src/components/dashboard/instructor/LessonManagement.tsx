@@ -6,6 +6,7 @@ import { courseService, Course, Lesson, CreateLessonData, UpdateLessonData } fro
 import { moduleService } from '../../../lib/services/moduleService';
 import { Module } from '../../../types/course';
 import { MediaService } from '../../../lib/services/mediaService';
+import { createSanitizedHtml } from '../../../lib/utils/sanitizeHtml';
 import toast from '../../../lib/utils/toast';
 import ConfirmModal from '../../ui/ConfirmModal';
 
@@ -700,7 +701,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                       <div className="prose max-w-none">
                         <div 
                           className="text-gray-700 border border-gray-200 rounded-lg p-4 bg-gray-50"
-                          dangerouslySetInnerHTML={{ __html: formData.content_text }}
+                          dangerouslySetInnerHTML={createSanitizedHtml(formData.content_text)}
                         />
                       </div>
                     )}

@@ -5,6 +5,7 @@ import { Eye, ExternalLink } from 'lucide-react';
 import Button from '../ui/Button';
 import { courseService } from '../../lib/services/courseService';
 import { useNotification } from '../../lib/hooks/useNotification';
+import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
 import type { Lesson } from '../../types';
 
 type LegacyLesson = Lesson & {
@@ -68,7 +69,7 @@ export default function LessonEditor({ courseId, lesson, onSaved }: LessonEditor
       return (
         <div
           className="prose prose-sm max-w-none"
-          dangerouslySetInnerHTML={{ __html: contentText }}
+          dangerouslySetInnerHTML={createSanitizedHtml(contentText)}
         />
       );
     }

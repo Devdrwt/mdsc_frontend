@@ -73,6 +73,8 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
   const notificationWrapperRef = useRef<HTMLDivElement | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const refreshingNotificationsRef = useRef(false)
+  const refreshingMessagesRef = useRef(false)
 
   const isCourseModerationNotification = useCallback((notification: NotificationEntry) => {
     const type = notification.type?.toLowerCase() ?? ""
@@ -126,6 +128,12 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
   }, [userRole, isCourseModerationNotification])
 
   const refreshUnreadCount = useCallback(async () => {
+    // Éviter les requêtes simultanées multiples
+    if (refreshingNotificationsRef.current) {
+      return
+    }
+    refreshingNotificationsRef.current = true
+    
     try {
       const data = await NotificationService.getNotifications({
         page: 1,
@@ -136,18 +144,36 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
       const filteredUnread =
         userRole === "student" ? rawUnread.filter((notif) => !isCourseModerationNotification(notif)) : rawUnread
       setUnreadCount(filteredUnread.length)
-    } catch (error) {
-      console.warn("Impossible de récupérer le nombre de notifications non lues:", error)
+    } catch (error: any) {
+      // Ne pas logger les erreurs 429 (rate limit) comme des erreurs
+      // Vérifier aussi si l'erreur est marquée comme silencieuse
+      if (error?.status !== 429 && !(error as any)?.isSilent && !(error as any)?.isRateLimit) {
+        console.warn("Impossible de récupérer le nombre de notifications non lues:", error)
+      }
+    } finally {
+      refreshingNotificationsRef.current = false
     }
   }, [userRole, isCourseModerationNotification])
 
   const refreshUnreadMessages = useCallback(async () => {
+    // Éviter les requêtes simultanées multiples
+    if (refreshingMessagesRef.current) {
+      return
+    }
+    refreshingMessagesRef.current = true
+    
     try {
       const stats = await MessageService.getMessageStats()
       const unread = stats?.unread_count ?? stats?.received_count ?? 0
       setUnreadMessagesCount(unread)
-    } catch (error) {
-      console.warn("Impossible de récupérer le nombre de messages non lus:", error)
+    } catch (error: any) {
+      // Ne pas logger les erreurs 429 (rate limit) comme des erreurs
+      // Vérifier aussi si l'erreur est marquée comme silencieuse
+      if (error?.status !== 429 && !(error as any)?.isSilent && !(error as any)?.isRateLimit) {
+        console.warn("Impossible de récupérer le nombre de messages non lus:", error)
+      }
+    } finally {
+      refreshingMessagesRef.current = false
     }
   }, [])
 
@@ -162,12 +188,18 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
   }, [notificationDropdownOpen, loadNotifications])
 
   useEffect(() => {
+    // Rafraîchir immédiatement au montage
     refreshUnreadCount()
+    // Puis rafraîchir toutes les 2 minutes (au lieu de toutes les minutes)
+    const interval = setInterval(refreshUnreadCount, 120000)
+    return () => clearInterval(interval)
   }, [refreshUnreadCount])
 
   useEffect(() => {
+    // Rafraîchir immédiatement au montage
     refreshUnreadMessages()
-    const interval = setInterval(refreshUnreadMessages, 60000)
+    // Puis rafraîchir toutes les 2 minutes (au lieu de toutes les minutes)
+    const interval = setInterval(refreshUnreadMessages, 120000)
     return () => clearInterval(interval)
   }, [refreshUnreadMessages])
 
