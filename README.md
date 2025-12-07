@@ -294,6 +294,6 @@ Les contributions sont les bienvenues ! Pour contribuer :
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails
 
 
-Développé avec Next.js pour l'apprentissage en ligne
+Développé avec Next.js pour l'apprentissage en ligne.
 
 # Equipe Dev Drwintech inc
