@@ -77,7 +77,7 @@ export default function ModernDashboardLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <ModernSidebar
-        title="MdSC MOOC"
+        title="Maison de la Société Civile MOOC"
         items={sidebarItems}
         activeItem={activeSidebarItem}
         onItemClick={handleSidebarItemClick}
@@ -93,7 +93,7 @@ export default function ModernDashboardLayout({
           user={user ? {
             name: `${user.firstName} ${user.lastName}`,
             email: user.email,
-            role: user.role === 'student' ? 'Étudiant' : 
+            role: user.role === 'student' ? 'Utilisateur' : 
                   user.role === 'instructor' ? 'Formateur' : 'Administrateur'
           } : undefined}
           onSearch={handleSearch}

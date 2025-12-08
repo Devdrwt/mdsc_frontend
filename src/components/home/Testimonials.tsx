@@ -118,7 +118,7 @@ export default function Testimonials() {
             Témoignages
           </div>
           <h2 className="text-3xl md:text-4xl text-display mb-4">
-            Ce que disent nos apprenants
+            Ce que disent nos utilisateurs
           </h2>
         </div>
 

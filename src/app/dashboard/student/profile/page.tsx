@@ -191,7 +191,7 @@ function ProfileContent() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Profil Étudiant</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Profil Utilisateur</h1>
             <p className="text-gray-600 mt-1">Gérez vos informations personnelles</p>
           </div>
           {!isEditing && (

@@ -112,20 +112,20 @@ export default function CourseAnalyticsModal({
         })}
       </div>
 
-      {/* Progression des étudiants */}
+      {/* Progression des utilisateurs */}
       {(() => {
         const studentProgress = analyticsData.studentProgress || analyticsData.progressDistribution || analytics.studentProgress || [];
         return studentProgress && studentProgress.length > 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Target className="h-5 w-5 text-mdsc-blue-primary" />
-            <h3 className="text-lg font-semibold text-gray-900">Progression des étudiants</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Progression des utilisateurs</h3>
           </div>
           <div className="space-y-4">
             {studentProgress.slice(0, 10).map((student: any, index: number) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">{student.userName || `Étudiant ${index + 1}`}</p>
+                  <p className="font-medium text-gray-900">{student.userName || `Utilisateur ${index + 1}`}</p>
                   <p className="text-xs text-gray-500">
                     Dernière activité: {new Date(student.lastActivity).toLocaleDateString('fr-FR')}
                   </p>
@@ -146,7 +146,7 @@ export default function CourseAnalyticsModal({
             ))}
             {studentProgress.length > 10 && (
               <p className="text-sm text-gray-500 text-center pt-2">
-                + {studentProgress.length - 10} autres étudiants
+                + {studentProgress.length - 10} autres utilisateurs
               </p>
             )}
           </div>
@@ -174,7 +174,7 @@ export default function CourseAnalyticsModal({
             </span>
           </div>
           <div>
-            <span className="text-gray-600">Total étudiants:</span>
+            <span className="text-gray-600">Total utilisateurs:</span>
             <span className="ml-2 font-medium text-gray-900">
               {course.totalStudents || metrics.totalEnrollments || metrics.enrollments || analyticsData.totalEnrollments || 0}
             </span>

@@ -108,7 +108,7 @@ export default function LiveSessionCard({
           </span>
         </div>
 
-        {/* Instructeur */}
+        {/* Formateur */}
         {session.instructor && (
           <div className="text-sm text-gray-600 dark:text-gray-300">
             <span className="font-medium">Formateur :</span>{' '}

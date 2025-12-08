@@ -16,7 +16,6 @@ interface Course {
   students: number;
   thumbnail: string;
   category: string;
-  level: 'Débutant' | 'Intermédiaire' | 'Avancé';
   price: number;
   total_lessons?: number;
 }
@@ -28,18 +27,6 @@ interface CoursePreviewProps {
 export default function CoursePreview({ courses }: CoursePreviewProps) {
   const router = useRouter();
   
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'Débutant':
-        return 'bg-mdsc-blue-primary text-white';
-      case 'Intermédiaire':
-        return 'bg-[#D79A49] text-white';
-      case 'Avancé':
-        return 'bg-mdsc-blue-dark text-white';
-      default:
-        return 'bg-gray-700 text-white';
-    }
-  };
 
   return (
     <section className="section-mdsc bg-white">
@@ -52,7 +39,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                    Nos formations les plus demandées
                  </h2>
                  <p className="text-lg text-body max-w-2xl mx-auto">
-            Découvrez nos cours les plus appréciés par notre communauté d'apprenants
+            Découvrez nos cours les plus appréciés par notre communauté d'utilisateurs
           </p>
         </div>
 
@@ -79,11 +66,6 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                     />
                   );
                 })()}
-                <div className="absolute top-3 right-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
-                    {course.level}
-                  </span>
-                </div>
               </div>
 
               {/* Contenu */}

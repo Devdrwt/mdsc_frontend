@@ -12,7 +12,7 @@ export interface ModuleQuiz {
   max_attempts?: number;
   attempts_count?: number; // Nombre de tentatives déjà effectuées (depuis l'API)
   remaining_attempts?: number; // Nombre de tentatives restantes (calculé par l'API)
-  can_attempt?: boolean; // Indique si l'étudiant peut tenter le quiz
+  can_attempt?: boolean; // Indique si l'utilisateur peut tenter le quiz
 }
 
 export interface QuizQuestion {
@@ -218,7 +218,7 @@ export class QuizService {
     });
   }
 
-  // Soumettre un quiz (étudiant)
+  // Soumettre un quiz (utilisateur)
   static async submitQuiz(submission: QuizSubmission): Promise<QuizResult> {
     const response = await apiRequest(`/quizzes/${submission.quiz_id}/submit`, {
       method: 'POST',
@@ -227,7 +227,7 @@ export class QuizService {
     return response.data;
   }
 
-  // Récupérer un quiz pour un étudiant (sans les réponses)
+  // Récupérer un quiz pour un utilisateur (sans les réponses)
   static async getQuizForStudent(quizId: string): Promise<ModuleQuiz> {
     const response = await apiRequest(`/quizzes/${quizId}`, {
       method: 'GET',
@@ -235,7 +235,7 @@ export class QuizService {
     return response.data;
   }
 
-  // Récupérer le quiz d'un module pour un étudiant (via enrollmentId et moduleId)
+  // Récupérer le quiz d'un module pour un utilisateur (via enrollmentId et moduleId)
   static async getModuleQuizForStudent(enrollmentId: number, moduleId: string): Promise<ModuleQuiz | null> {
     try {
       const response = await apiRequest(`/enrollments/${enrollmentId}/modules/${moduleId}/quiz`, {
@@ -265,7 +265,7 @@ export class QuizService {
     }
   }
 
-  // Soumettre une tentative de quiz de module (étudiant)
+  // Soumettre une tentative de quiz de module (utilisateur)
   static async submitModuleQuizAttempt(
     enrollmentId: number,
     moduleId: string,

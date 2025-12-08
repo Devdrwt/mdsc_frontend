@@ -48,7 +48,7 @@ export default function TermsPage() {
               <section className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Acceptation des Conditions</h2>
                 <p className="text-gray-700 mb-4">
-                  En accédant et en utilisant la plateforme MdSC, vous acceptez d'être lié par ces conditions d'utilisation. 
+                  En accédant et en utilisant la plateforme Maison de la Société Civile, vous acceptez d'être lié par ces conditions d'utilisation. 
                   Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser la plateforme.
                 </p>
               </section>

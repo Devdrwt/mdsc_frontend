@@ -547,7 +547,7 @@ export default function InstructorCourseDetailPage() {
                       </div>
                       <div className="max-w-md">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Nombre maximum d'étudiants
+                          Nombre maximum d'utilisateurs
                         </label>
                         <input
                           type="number"
@@ -723,7 +723,7 @@ export default function InstructorCourseDetailPage() {
                                 errorMessage = '⚠️ Erreur de validation backend : Pour un cours en live, les modules et leçons ne sont normalement pas obligatoires. ' +
                                               'Cette erreur indique que le backend applique une validation qui ne devrait pas s\'appliquer aux cours en live. ' +
                                               'Veuillez contacter le support technique pour résoudre ce problème. ' +
-                                              'En attendant, assurez-vous que l\'évaluation finale est créée et que toutes les informations du cours sont complètes (dates, nombre maximum d\'étudiants, etc.).';
+                                              'En attendant, assurez-vous que l\'évaluation finale est créée et que toutes les informations du cours sont complètes (dates, nombre maximum d\'utilisateurs, etc.).';
                               }
                               
                               // Messages d'erreur spécifiques selon le code d'erreur
@@ -731,7 +731,7 @@ export default function InstructorCourseDetailPage() {
                                 switch (error.code) {
                                   case 'COURSE_INCOMPLETE':
                                     if (isLiveCourse && !isModuleLessonError) {
-                                      errorMessage = 'Le cours n\'est pas complet. Pour un cours en live, vérifiez que l\'évaluation finale est créée et que toutes les informations requises sont renseignées (dates, nombre maximum d\'étudiants, etc.).';
+                                      errorMessage = 'Le cours n\'est pas complet. Pour un cours en live, vérifiez que l\'évaluation finale est créée et que toutes les informations requises sont renseignées (dates, nombre maximum d\'utilisateurs, etc.).';
                                     } else if (!isLiveCourse) {
                                       errorMessage = 'Le cours n\'est pas complet. Vérifiez que tous les modules ont des leçons et que l\'évaluation finale est créée.';
                                     }

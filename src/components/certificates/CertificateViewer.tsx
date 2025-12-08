@@ -93,7 +93,7 @@ export default function CertificateViewer({
         <div className="mb-3 sm:mb-4 md:mb-6 w-full overflow-x-auto -mx-3 sm:-mx-4 md:mx-0 px-3 sm:px-4 md:px-0">
           <div className="w-full min-w-[280px] max-w-full">
             <CertificatePreview
-              fullName={`${(certificate as any).first_name || (certificate as any).firstName || ''} ${(certificate as any).last_name || (certificate as any).lastName || ''}`.trim() || 'Étudiant(e)'}
+              fullName={`${(certificate as any).first_name || (certificate as any).firstName || ''} ${(certificate as any).last_name || (certificate as any).lastName || ''}`.trim() || 'Utilisateur(trice)'}
               courseTitle={certificate.course?.title || (certificate as any).course_title || '—'}
               location="Cotonou, Bénin"
               issuedAt={new Date(certificate.issuedAt || (certificate as any).issued_at || Date.now())}

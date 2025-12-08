@@ -31,7 +31,7 @@ const CourseSchedule: React.FC<CourseScheduleProps> = ({ courseId, onItemClick }
     } catch (err: any) {
       console.error('Erreur récupération planning:', err);
       setError(err.message || 'Erreur lors de la récupération du planning');
-      // Ne pas afficher d'erreur si l'étudiant n'est pas inscrit (404)
+      // Ne pas afficher d'erreur si l'utilisateur n'est pas inscrit (404)
       if (err.status !== 404) {
         toast.error('Erreur', 'Impossible de charger le planning');
       }

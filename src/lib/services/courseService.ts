@@ -13,7 +13,6 @@ export interface Course {
     avatar?: string;
   };
   category: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
   duration: number;
   price: number;
   thumbnail: string;
@@ -68,7 +67,6 @@ export interface Attachment {
 
 export interface CourseFilter {
   category?: string;
-  level?: string;
   price?: string;
   rating?: number;
   search?: string;
@@ -82,7 +80,6 @@ export interface CreateCourseData {
   thumbnail_url?: string;
   video_url?: string;
   duration_minutes: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
   language: string;
   price: number;
   currency?: string;
@@ -99,7 +96,6 @@ export interface UpdateCourseData {
   description?: string;
   shortDescription?: string;
   category?: string;
-  level?: string;
   duration?: number;
   price?: number;
   thumbnail?: string;
@@ -180,7 +176,6 @@ export class CourseService {
   static async getAllCourses(filters?: CourseFilter): Promise<any> {
     const params = new URLSearchParams();
     if (filters?.category) params.append('category', filters.category);
-    if (filters?.level) params.append('level', filters.level);
     if (filters?.price) params.append('price', filters.price);
     if (filters?.rating) params.append('rating', filters.rating.toString());
     if (filters?.search) params.append('search', filters.search);
@@ -470,21 +465,21 @@ export class CourseService {
       });
     }
     
-    // S'assurer que l'instructeur est correctement formaté
+    // S'assurer que le formateur est correctement formaté
     if (course.instructor) {
       const instructorAny = course.instructor as any;
       if (!instructorAny.name) {
         const firstName = instructorAny.first_name || instructorAny.firstName || '';
         const lastName = instructorAny.last_name || instructorAny.lastName || '';
-        instructorAny.name = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
+        instructorAny.name = [firstName, lastName].filter(Boolean).join(' ') || 'Formateur';
       }
     } else if (payload.course) {
-      // Si l'instructeur n'est pas dans course, vérifier dans payload
+      // Si le formateur n'est pas dans course, vérifier dans payload
       const coursePayload = payload.course as any;
       if (coursePayload.instructor_first_name || coursePayload.instructor_last_name) {
         course.instructor = {
           id: coursePayload.instructor_id || '',
-          name: [coursePayload.instructor_first_name, coursePayload.instructor_last_name].filter(Boolean).join(' ') || 'Instructeur',
+          name: [coursePayload.instructor_first_name, coursePayload.instructor_last_name].filter(Boolean).join(' ') || 'Formateur',
           avatar: coursePayload.instructor_profile_picture || coursePayload.instructor_avatar || undefined,
         };
       }
@@ -518,13 +513,13 @@ export class CourseService {
 
   /**
    * Alias pour compatibilité avec les composants qui attendent getStudentCourses.
-   * Retourne les mêmes données que getMyCourses (cours de l'étudiant connecté).
+   * Retourne les mêmes données que getMyCourses (cours de l'utilisateur connecté).
    */
   static async getStudentCourses(): Promise<Course[]> {
     return this.getMyCourses();
   }
 
-  // Récupérer les cours d'un instructeur
+  // Récupérer les cours d'un formateur
   static async getInstructorCourses(instructorId: string | number, params?: { status?: 'all' | 'published' | 'draft'; page?: number; limit?: number; }): Promise<Course[]> {
     const search = new URLSearchParams();
     if (params?.status && params.status !== 'all') search.append('status', params.status);
@@ -562,7 +557,7 @@ export class CourseService {
     });
   }
 
-  // Demander la suppression d'un cours publié (pour instructeur)
+  // Demander la suppression d'un cours publié (pour formateur)
   static async requestCourseDeletion(id: string, reason?: string): Promise<void> {
     await apiRequest(`/instructor/courses/${id}/request-deletion`, {
       method: 'POST',
@@ -806,7 +801,6 @@ export class CourseService {
     const params = new URLSearchParams();
     params.append('q', query);
     if (filters?.category) params.append('category', filters.category);
-    if (filters?.level) params.append('level', filters.level);
     if (filters?.price) params.append('price', filters.price);
     if (filters?.rating) params.append('rating', filters.rating.toString());
 
@@ -910,7 +904,7 @@ export class CourseService {
     return response.data;
   }
 
-  // Récupérer une leçon complète pour un étudiant (avec tous les contenus et médias)
+  // Récupérer une leçon complète pour un utilisateur (avec tous les contenus et médias)
   static async getLessonForStudent(courseId: string | number, lessonId: string | number): Promise<Lesson> {
     // Utiliser la route /student qui inclut les médias distribués automatiquement
     const response = await apiRequest(`/courses/${courseId}/lessons/${lessonId}/student`, {

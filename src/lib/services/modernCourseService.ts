@@ -188,13 +188,13 @@ export async function searchCourses(query: string, filters?: {
   return response;
 }
 
-// Récupérer les cours d'un instructeur
+// Récupérer les cours d'un formateur
 export async function getInstructorCourses(instructorId: string): Promise<Course[]> {
   const response = await fetchAPI<{ courses: Course[] }>(`/courses/instructor/${instructorId}`);
   return response.courses;
 }
 
-// Récupérer les cours d'un étudiant
+// Récupérer les cours d'un utilisateur
 export async function getStudentCourses(studentId: string): Promise<Course[]> {
   const response = await fetchAPI<{ courses: Course[] }>(`/courses/student/${studentId}`);
   return response.courses;

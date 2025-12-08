@@ -143,20 +143,6 @@ export default function CoursePreviewModal({
     );
   };
 
-  const getLevelBadge = () => {
-    const level = courseAny?.difficulty || course.level || 'beginner';
-    const levels: Record<string, { label: string; color: string }> = {
-      beginner: { label: 'Débutant', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-      intermediate: { label: 'Intermédiaire', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-      advanced: { label: 'Avancé', color: 'bg-red-100 text-red-700 border-red-200' },
-    };
-    const levelInfo = levels[level] || levels.beginner;
-    return (
-      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${levelInfo.color}`}>
-        {levelInfo.label}
-      </span>
-    );
-  };
 
   const handleCopyLink = () => {
     const courseUrl = `${window.location.origin}/courses/${course.id}`;
@@ -207,7 +193,6 @@ export default function CoursePreviewModal({
           <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
             <div className="flex items-center gap-2">
               {getStatusBadge()}
-              {getLevelBadge()}
             </div>
             <button
               onClick={onClose}
@@ -238,7 +223,7 @@ export default function CoursePreviewModal({
               <div className="text-2xl font-bold text-blue-900">
                 {course.totalStudents || 0}
               </div>
-              <div className="text-xs text-blue-700">Étudiants</div>
+              <div className="text-xs text-blue-700">Utilisateurs</div>
             </div>
 
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">

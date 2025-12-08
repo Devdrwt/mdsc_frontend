@@ -316,7 +316,7 @@ export default function InstructorDashboard() {
             })
           );
 
-          // Calculer la note moyenne globale à partir de TOUS les cours de l'instructeur
+          // Calculer la note moyenne globale à partir de TOUS les cours du formateur
           let averageRating = toNumber(ratingStats.average ?? statsData.average_rating ?? 0);
           
           // Si on a des cours dans coursesResult, charger leurs notes réelles
@@ -377,21 +377,21 @@ export default function InstructorDashboard() {
           setRecentEnrollments((dashboardData.recent_enrollments ?? []).map((item: InstructorRecentEnrollment, index) => ({
             id: item.enrollment_id ?? index,
             courseTitle: item.course_title ?? 'Cours',
-            studentName: item.student_name ?? 'Étudiant',
+            studentName: item.student_name ?? 'Utilisateur',
             enrolledAt: formatDateTime(item.enrolled_at),
           })));
 
           setRecentPayments((dashboardData.recent_payments ?? []).map((item: InstructorRecentPayment, index) => ({
             id: item.payment_id ?? index,
             courseTitle: item.course_title ?? 'Cours',
-            studentName: item.student_name ?? 'Étudiant',
+            studentName: item.student_name ?? 'Utilisateur',
             amount: toNumber(item.amount),
             currency: item.currency ?? 'XOF',
             paidAt: formatDateTime(item.paid_at),
           })));
         } else {
           const reason = dashboardResult.reason as Error | undefined;
-          setDashboardError(reason?.message ?? 'Impossible de charger le tableau de bord instructeur');
+          setDashboardError(reason?.message ?? 'Impossible de charger le tableau de bord formateur');
           setStats((prev) => ({
             ...prev,
             totalCourses: 0,
@@ -464,9 +464,9 @@ export default function InstructorDashboard() {
         }
       } catch (error) {
         if (!isMounted) return;
-        console.error('Erreur lors du chargement des données instructeur:', error);
+        console.error('Erreur lors du chargement des données formateur:', error);
         const message =
-          error instanceof Error ? error.message : 'Impossible de charger le tableau de bord instructeur';
+          error instanceof Error ? error.message : 'Impossible de charger le tableau de bord formateur';
         setDashboardError(message);
         setNotificationsError((prev) => prev ?? message);
       } finally {
@@ -553,7 +553,7 @@ export default function InstructorDashboard() {
                   </div>
                  
                   <p className="text-white/90 text-lg">
-                    Gérez vos cours et accompagnez vos étudiants vers la réussite.
+                    Gérez vos cours et accompagnez vos utilisateurs vers la réussite.
                   </p>
                 </div>
                 <div className="hidden md:block">
@@ -574,7 +574,7 @@ export default function InstructorDashboard() {
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Étudiants</p>
+                  <p className="text-sm font-medium text-gray-600 mb-1">Utilisateurs</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.totalStudents.toLocaleString()}</p>
                   <p className="text-xs text-green-600 mt-1">
                     Actifs : {stats.activeStudents.toLocaleString()}
@@ -674,7 +674,7 @@ export default function InstructorDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-sm text-gray-500">
-                      <span>{course.students} étudiants</span>
+                      <span>{course.students} utilisateurs</span>
                         <RatingStars
                           value={Number.isFinite(course.rating) ? course.rating : 0}
                           size="sm"
@@ -721,10 +721,10 @@ export default function InstructorDashboard() {
                   </div>
                 </div>
 
-                {/* Étudiants actifs */}
+                {/* Utilisateurs actifs */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-600">Étudiants Actifs</span>
+                    <span className="text-sm font-medium text-gray-600">Utilisateurs Actifs</span>
                     <span className="text-sm font-bold text-gray-900">{stats.activeStudents}</span>
                   </div>
                   <div className="bg-gray-200 rounded-full h-2">
@@ -788,8 +788,8 @@ export default function InstructorDashboard() {
                 },
                 {
                   icon: Users,
-                  title: 'Mes Étudiants',
-                  description: 'Gérer les étudiants',
+                  title: 'Mes Utilisateurs',
+                  description: 'Gérer les utilisateurs',
                   color: 'bg-green-500',
                   href: '/dashboard/instructor/students'
                 },

@@ -192,7 +192,7 @@ export default function CertificateManagementPanel() {
         toast.success('Certificat approuvé', 'Le certificat a été approuvé et sera émis.');
       } else {
         await certificateService.rejectCertificate(String(selectedCertificate.id), rejectionReason, comments);
-        toast.success('Certificat rejeté', 'Le certificat a été rejeté. L\'étudiant a été notifié.');
+        toast.success('Certificat rejeté', 'Le certificat a été rejeté. L\'utilisateur a été notifié.');
       }
       setShowApprovalModal(false);
       loadCertificates();
@@ -439,7 +439,7 @@ export default function CertificateManagementPanel() {
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Étudiant
+                    Utilisateur
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">
                     Cours
@@ -563,7 +563,7 @@ export default function CertificateManagementPanel() {
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Étudiant</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Utilisateur</label>
                 <p className="text-sm text-gray-900">
                   {[selectedCertificate.first_name, selectedCertificate.last_name].filter(Boolean).join(' ') || 'N/A'}
                 </p>
@@ -637,7 +637,7 @@ export default function CertificateManagementPanel() {
         {selectedCertificate && (
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-gray-900 mb-1">Étudiant</p>
+              <p className="text-sm font-medium text-gray-900 mb-1">Utilisateur</p>
               <p className="text-sm text-gray-600">
                 {[selectedCertificate.first_name, selectedCertificate.last_name].filter(Boolean).join(' ') || 'N/A'}
               </p>

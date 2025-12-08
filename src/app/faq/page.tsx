@@ -24,12 +24,12 @@ export default function FAQPage() {
   // Liste de 10 questions principales
   const faqItems: FAQItem[] = [
     {
-      question: 'Qu\'est-ce que la plateforme MdSC ?',
-      answer: 'La plateforme MdSC (Maison de la Société Civile) est une plateforme de formation en ligne (MOOC) dédiée au renforcement des capacités des acteurs de la société civile. Elle propose des cours certifiants dans divers domaines pour développer vos compétences professionnelles.'
+      question: 'Qu\'est-ce que la plateforme Maison de la Société Civile ?',
+      answer: 'La plateforme Maison de la Société Civile est une plateforme de formation en ligne (MOOC) dédiée au renforcement des capacités des acteurs de la société civile. Elle propose des cours certifiants dans divers domaines pour développer vos compétences professionnelles.'
     },
     {
       question: 'Comment puis-je m\'inscrire sur la plateforme ?',
-      answer: 'Pour vous inscrire, cliquez sur le bouton "S\'inscrire" en haut à droite de la page d\'accueil. Remplissez le formulaire avec vos informations personnelles, choisissez votre rôle (étudiant, formateur, etc.) et validez votre adresse email. Une fois votre compte créé, vous pourrez accéder à tous les cours disponibles.'
+      answer: 'Pour vous inscrire, cliquez sur le bouton "S\'inscrire" en haut à droite de la page d\'accueil. Remplissez le formulaire avec vos informations personnelles, choisissez votre rôle (utilisateur, formateur, etc.) et validez votre adresse email. Une fois votre compte créé, vous pourrez accéder à tous les cours disponibles.'
     },
     {
       question: 'La plateforme est-elle gratuite ?',
@@ -37,7 +37,7 @@ export default function FAQPage() {
     },
     {
       question: 'Comment m\'inscrire à un cours ?',
-      answer: 'Parcourez le catalogue de cours, cliquez sur le cours qui vous intéresse, puis sur "S\'inscrire" ou "Acheter" selon que le cours est gratuit ou payant. Une fois inscrit, le cours apparaîtra dans votre tableau de bord étudiant.'
+      answer: 'Parcourez le catalogue de cours, cliquez sur le cours qui vous intéresse, puis sur "S\'inscrire" ou "Acheter" selon que le cours est gratuit ou payant. Une fois inscrit, le cours apparaîtra dans votre tableau de bord utilisateur.'
     },
     {
       question: 'Comment obtenir une attestation ?',
@@ -125,11 +125,8 @@ export default function FAQPage() {
                 <HelpCircle className="h-8 w-8 text-white" />
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                Centre d'Aide
+                Foire aux questions
               </h1>
-              <p className="text-xl md:text-2xl text-white/90 mb-8 font-light">
-                Trouvez rapidement les réponses à vos questions
-              </p>
             </div>
           </div>
         </div>
@@ -248,9 +245,7 @@ export default function FAQPage() {
                       Notre équipe de support est disponible pour répondre à toutes vos questions. Contactez-nous et nous vous répondrons dans les plus brefs délais.
                     </p>
                     <a
-                      href="https://mdsc-website.webflow.io/contact-us"
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href="/contact"
                       className="inline-flex items-center px-8 py-4 bg-white text-mdsc-blue-primary rounded-lg hover:bg-gray-100 transition-all font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                       <Mail className="h-5 w-5 mr-2" />

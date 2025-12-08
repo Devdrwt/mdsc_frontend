@@ -74,7 +74,7 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
   // Si c'est une image locale (dans /public), la retourner telle quelle
   // Sinon, utiliser le proxy Next.js pour éviter les problèmes CORS
   if (rawUrl.startsWith('/') && !rawUrl.startsWith('/uploads/')) {
-    // Image locale (ex: /apprenant.png, /mdsc-logo.png)
+    // Image locale (ex: /utilisateur.png, /mdsc-logo.png)
     return rawUrl;
   }
   
@@ -83,7 +83,7 @@ export function resolveMediaUrl(rawUrl?: string | null): string | null {
   return `/api/media/${sanitizedPath}`;
 }
 
-export const DEFAULT_COURSE_IMAGE = '/apprenant.png';
+export const DEFAULT_COURSE_IMAGE = '/utilisateur.png';
 export const DEFAULT_INSTRUCTOR_AVATAR = '/mdsc-logo.png';
 
 /**

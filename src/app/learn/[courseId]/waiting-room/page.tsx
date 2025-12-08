@@ -295,7 +295,7 @@ export default function WaitingRoomPage() {
                 <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 mb-2">Aucun support de cours disponible pour le moment</p>
                 <p className="text-sm text-gray-500">
-                  L'instructeur peut ajouter des documents de support avant le début du cours
+                  Le formateur peut ajouter des documents de support avant le début du cours
                 </p>
               </div>
             ) : (

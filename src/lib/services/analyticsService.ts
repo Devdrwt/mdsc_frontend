@@ -545,7 +545,7 @@ export class AnalyticsService {
     return response.data;
   }
 
-  // Récupérer les analytics par instructeur
+  // Récupérer les analytics par formateur
   static async getAnalyticsByInstructor(instructorId: string): Promise<AnalyticsData> {
     const response = await apiRequest(`/analytics/instructor/${instructorId}`, {
       method: 'GET',

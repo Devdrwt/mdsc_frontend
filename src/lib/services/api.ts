@@ -353,16 +353,25 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       // Construire logData en filtrant les valeurs undefined pour éviter les objets vides
       const logData: Record<string, any> = {};
       
-      // Toujours inclure au moins l'URL et le status
-      const status = errorLog.status || response.status;
-      const statusText = errorLog.statusText || response.statusText;
+      // Toujours inclure au moins l'URL et le status avec des valeurs par défaut
+      const status = errorLog.status || response.status || 'unknown';
+      const statusText = errorLog.statusText || response.statusText || '';
       const url = errorLog.url || response.url || 'URL unknown';
       const message = errorLog.message || errorMessage || 'Erreur inconnue';
       
-      logData.status = status;
-      logData.statusText = statusText;
-      logData.url = url;
-      logData.message = message;
+      // N'ajouter que les propriétés qui ont des valeurs définies
+      if (status !== undefined && status !== null) {
+        logData.status = status;
+      }
+      if (statusText) {
+        logData.statusText = statusText;
+      }
+      if (url) {
+        logData.url = url;
+      }
+      if (message) {
+        logData.message = message;
+      }
       
       // Ajouter les données seulement si elles existent et ne sont pas vides
       if (errorLog.data && Object.keys(errorLog.data).length > 0) {
@@ -378,12 +387,8 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
         logData.responseText = responseTextToLog;
       }
       
-      // Ne logger que si on a au moins les informations de base
-      // Vérifier que logData contient au moins une propriété non-undefined
-      const hasValidLogData = Object.keys(logData).length > 0 && 
-                               Object.values(logData).some(val => val !== undefined && val !== null);
-      
-      if (hasValidLogData) {
+      // Toujours logger avec au moins les informations de base
+      if (Object.keys(logData).length > 0) {
         console.error('❌ API Error:', logData);
       } else {
         // Fallback si on n'a même pas les infos de base - toujours logger quelque chose

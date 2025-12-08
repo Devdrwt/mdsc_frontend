@@ -46,7 +46,7 @@ export default function EvaluationManagement() {
       const response = await EvaluationService.getInstructorFinalEvaluations();
       setEvaluations(response.evaluations);
     } catch (err: any) {
-      console.error('Erreur chargement évaluations finales instructeur:', err);
+      console.error('Erreur chargement évaluations finales formateur:', err);
       setEvaluations([]);
       setError(
         err?.message ||

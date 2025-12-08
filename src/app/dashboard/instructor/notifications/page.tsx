@@ -69,7 +69,7 @@ export default function InstructorNotificationsPage() {
         is_read: isReadFilter,
         upcoming: upcomingOnly,
       });
-      // Pour l'instructeur, on affiche toutes les notifications (y compris les notifications de modération de cours)
+      // Pour le formateur, on affiche toutes les notifications (y compris les notifications de modération de cours)
       setNotifications(data.notifications ?? []);
       setPagination(data.pagination);
     } catch (err: any) {

@@ -29,7 +29,7 @@ export default function FloatingChatButton({ courseId, courseTitle }: FloatingCh
       setLoading(true);
       const courseData = await courseService.getCourseById(courseId.toString());
       
-      // Chercher l'email de l'instructeur dans les données du cours
+      // Chercher l'email du formateur dans les données du cours
       // Le backend retourne instructor.email dans l'objet instructor formaté
       const email = 
         (courseData as any).instructor?.email ||
@@ -40,12 +40,12 @@ export default function FloatingChatButton({ courseId, courseTitle }: FloatingCh
         setInstructorEmail(email);
       } else {
         // Si pas d'email, permettre à l'utilisateur de saisir manuellement
-        console.warn('Email de l\'instructeur non trouvé dans les données du cours');
+        console.warn('Email du formateur non trouvé dans les données du cours');
         // On laisse l'utilisateur saisir l'email manuellement dans MessageComposer
         // Ne pas définir instructorEmail pour permettre la saisie manuelle
       }
     } catch (error: any) {
-      console.error('Erreur lors du chargement de l\'instructeur:', error);
+      console.error('Erreur lors du chargement du formateur:', error);
       // Ne pas afficher d'erreur, permettre à l'utilisateur de saisir l'email manuellement
     } finally {
       setLoading(false);

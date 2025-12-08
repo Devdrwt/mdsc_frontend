@@ -269,14 +269,6 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
                      'Non définie'}
                   </p>
                 </div>
-                <div>
-                  <span className="text-sm text-gray-600">Niveau :</span>
-                  <p className="font-medium text-gray-900">
-                    {course?.difficulty === 'beginner' ? 'Débutant' :
-                     course?.difficulty === 'intermediate' ? 'Intermédiaire' :
-                     course?.difficulty === 'advanced' ? 'Avancé' : course?.difficulty || 'Non défini'}
-                  </p>
-                </div>
               </div>
 
               {/* Dates et limites */}
@@ -312,7 +304,7 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
                 <div className="flex items-start space-x-2">
                   <Users className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <span className="text-sm text-gray-600">Nombre maximum d'étudiants :</span>
+                    <span className="text-sm text-gray-600">Nombre maximum d'utilisateurs :</span>
                     <p className="font-medium text-gray-900">
                       {course?.max_students || course?.maxStudents || 'Illimité'}
                     </p>
@@ -339,7 +331,7 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Support de cours (optionnel)</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Vous pouvez uploader des documents de support pour vos étudiants (PDF, Word, etc.)
+                  Vous pouvez uploader des documents de support pour vos utilisateurs (PDF, Word, etc.)
                 </p>
               </div>
             </div>
@@ -431,7 +423,7 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
             <div className="mb-4">
               <h3 className="text-lg font-bold text-gray-900">Création de l'évaluation finale</h3>
               <p className="text-sm text-gray-600 mt-1">
-                L'évaluation finale est <strong className="text-red-600">obligatoire</strong> pour permettre aux étudiants d'obtenir un certificat.
+                L'évaluation finale est <strong className="text-red-600">obligatoire</strong> pour permettre aux utilisateurs d'obtenir un certificat.
               </p>
             </div>
 
@@ -555,7 +547,7 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
                     <AlertCircle className="h-5 w-5 text-red-600" />
                   )}
                   <span className={course?.max_students || course?.maxStudents ? 'text-gray-700' : 'text-red-600'}>
-                    Nombre maximum d'étudiants défini
+                    Nombre maximum d'utilisateurs défini
                   </span>
                 </div>
 
@@ -602,7 +594,7 @@ export default function LiveCourseWorkflow({ courseId, course, onComplete, cours
                       <p className="text-xs text-green-700 mt-1">
                         {courseStatus === 'approved'
                           ? 'Le cours sera publié dès finalisation par l’équipe.'
-                          : 'Ce cours est disponible pour les étudiants.'}
+                          : 'Ce cours est disponible pour les utilisateurs.'}
                       </p>
                     </div>
                   </div>

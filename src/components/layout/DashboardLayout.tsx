@@ -330,7 +330,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               { name: "Sessions Live", href: `/dashboard/${userRole}/live-sessions`, icon: Video },
             ],
           },
-          { name: "Mes Étudiants", href: `/dashboard/${userRole}/students`, icon: Users },
+          { name: "Mes Utilisateurs", href: `/dashboard/${userRole}/students`, icon: Users },
           { name: "Analytics", href: `/dashboard/${userRole}/analytics`, icon: BarChart3 },
           { name: "Évaluations", href: `/dashboard/${userRole}/evaluations`, icon: FileText },
           { name: "Gamification", href: `/dashboard/${userRole}/gamification`, icon: Trophy },
@@ -700,7 +700,7 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
             <div className="flex items-center cursor-pointer" onClick={() => router.push("/")}>
               <img
                 src="/mdsc-logo1.png"
-                alt="MdSC Logo"
+                alt="Maison de la Société Civile Logo"
                 className="h-auto w-full"
                 style={{ maxWidth: "120px", height: "auto" }}
               />
@@ -725,14 +725,14 @@ export default function DashboardLayout({ children, userRole, pageTitle }: Dashb
               {sidebarCollapsed ? (
                 <img
                   src="/logo-mdsc-1.png"
-                  alt="MdSC Logo"
+                  alt="Maison de la Société Civile Logo"
                   className="h-auto w-full"
                   style={{ maxWidth: "50px", height: "auto" }}
                 />
               ) : (
                 <img
                   src="/mdsc-logo1.png"
-                  alt="MdSC Logo"
+                  alt="Maison de la Société Civile Logo"
                   className="h-auto w-full"
                   style={{ maxWidth: "140px", height: "auto" }}
                 />

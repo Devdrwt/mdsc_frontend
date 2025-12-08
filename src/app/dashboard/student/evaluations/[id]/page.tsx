@@ -716,7 +716,7 @@ export default function EvaluationSubmissionPage() {
             }}
             fullName={(user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
               ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
-              : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')}
+              : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Utilisateur(trice)')}
             courseTitle={(evaluation as any)?.courseName || (evaluation as any)?.course_name || 'Formation'}
             code={generatedCertificate?.certificate_code}
             issuedAt={generatedCertificate?.issued_at ? new Date(generatedCertificate.issued_at) : undefined}

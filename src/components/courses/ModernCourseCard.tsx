@@ -65,33 +65,7 @@ export default function ModernCourseCard({
     return `${price.toLocaleString()} FCFA`;
   };
 
-  // Normaliser le niveau depuis la base de données
-  const normalizedLevel = useMemo(() => {
-    const courseAny = course as any;
-    // Chercher dans toutes les variantes possibles de noms de champs
-    // Priorité: difficulty (valeur brute de la DB) > level (peut être formaté)
-    const rawLevel = 
-      courseAny.difficulty ||  // Valeur brute de la base de données (beginner, intermediate, advanced)
-      courseAny.difficulty_level ||
-      course.level || 
-      courseAny.level ||  // Peut être formaté (Débutant, Intermédiaire, Avancé)
-      courseAny.level_name ||
-      (course as any).difficulty ||
-      '';
-    
-    // Si c'est null, undefined, ou une chaîne vide, retourner une chaîne vide
-    if (!rawLevel || rawLevel === 'null' || rawLevel === 'undefined') {
-      return '';
-    }
-    
-    const levelStr = String(rawLevel).toLowerCase().trim();
-    
-    // Si la chaîne est vide après trim, retourner vide
-    if (!levelStr) {
-      return '';
-    }
-    
-    // Mapper toutes les variantes possibles (y compris les strings formatées)
+  // Le niveau n'est plus utilisé
     if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
       return 'debutant';
     }
@@ -106,50 +80,6 @@ export default function ModernCourseCard({
   }, [course]);
 
   // Formater le niveau pour l'affichage
-  const levelLabel = useMemo(() => {
-    // Si le niveau est vide, retourner "Non spécifié"
-    if (!normalizedLevel || normalizedLevel.trim() === '') {
-      return 'Non spécifié';
-    }
-    
-    switch (normalizedLevel) {
-      case 'beginner':
-      case 'debutant':
-      case 'débutant':
-        return 'Débutant';
-      case 'intermediate':
-      case 'intermediaire':
-      case 'intermédiaire':
-        return 'Intermédiaire';
-      case 'advanced':
-      case 'avance':
-      case 'avancé':
-        return 'Avancé';
-      default:
-        // Si c'est une autre valeur, capitaliser la première lettre
-        return normalizedLevel.charAt(0).toUpperCase() + normalizedLevel.slice(1);
-    }
-  }, [normalizedLevel]);
-
-  const getLevelColor = (level: string) => {
-    // Si le niveau est vide, retourner une couleur par défaut
-    if (!level || level.trim() === '') {
-      return 'bg-gray-100 text-gray-600';
-    }
-    
-    const normalized = String(level).toLowerCase().trim();
-    // Gérer toutes les variantes possibles
-    if (normalized === 'beginner' || normalized === 'debutant' || normalized === 'débutant') {
-      return 'bg-green-100 text-green-800';
-    }
-    if (normalized === 'intermediate' || normalized === 'intermediaire' || normalized === 'intermédiaire') {
-      return 'bg-yellow-100 text-yellow-800';
-    }
-    if (normalized === 'advanced' || normalized === 'avance' || normalized === 'avancé') {
-      return 'bg-red-100 text-red-800';
-    }
-    return 'bg-gray-100 text-gray-600';
-  };
 
   return (
     <div className={`
@@ -169,9 +99,6 @@ export default function ModernCourseCard({
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex space-x-2">
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(normalizedLevel)}`}>
-            {levelLabel}
-          </span>
           {course.price === 0 && (
             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
               Gratuit

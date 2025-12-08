@@ -201,8 +201,8 @@ export default function AdminStatisticsPanel() {
                 {safeNumber(userTotals?.total).toLocaleString()}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {safeNumber(userTotals?.students).toLocaleString()} étudiants •{' '}
-                {safeNumber(userTotals?.instructors).toLocaleString()} instructeurs
+                {safeNumber(userTotals?.students).toLocaleString()} utilisateurs •{' '}
+                {safeNumber(userTotals?.instructors).toLocaleString()} formateurs
               </p>
             </div>
             <div className="p-3 rounded-xl bg-blue-50 text-blue-600">
@@ -400,11 +400,11 @@ export default function AdminStatisticsPanel() {
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Top instructeurs</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Top formateurs</h3>
             <span className="text-xs text-gray-500">Classement par revenus et activité</span>
           </div>
           {topInstructors.length === 0 ? (
-            <p className="text-sm text-gray-500">Aucun instructeur à afficher.</p>
+            <p className="text-sm text-gray-500">Aucun formateur à afficher.</p>
           ) : (
             <div className="space-y-4">
               {topInstructors.map((instructor, index) => (
@@ -452,7 +452,7 @@ export default function AdminStatisticsPanel() {
             <p className="text-2xl font-bold text-gray-900">
               {safeNumber(overview?.totals?.enrollments?.active).toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">apprenants en cours de formation</p>
+            <p className="text-xs text-gray-500 mt-1">utilisateurs en cours de formation</p>
           </div>
         </div>
       </div>

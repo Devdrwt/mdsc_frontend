@@ -23,7 +23,7 @@ export default function ForumHeader({
   const forumTitle = forum?.title?.trim() || "Forum";
   const forumDescription =
     forum?.description?.trim() ||
-    "Partagez vos questions, vos retours d'expérience et vos bonnes pratiques avec les autres apprenants.";
+    "Partagez vos questions, vos retours d'expérience et vos bonnes pratiques avec les autres utilisateurs.";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

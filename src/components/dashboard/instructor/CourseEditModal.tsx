@@ -28,7 +28,6 @@ export default function CourseEditModal({
     description: '',
     shortDescription: '',
     category_id: '',
-    difficulty: 'beginner',
     duration_minutes: 0,
     price: 0,
     currency: 'XOF',
@@ -77,7 +76,6 @@ export default function CourseEditModal({
         category_id: typeof course.category === 'object' && course.category
           ? (course.category as any)?.id?.toString() || ''
           : '',
-        difficulty: course.level || courseAny.difficulty || 'beginner',
         duration_minutes: courseAny.duration_minutes || course.duration || 0,
         price: courseAny.price || course.price || 0,
         currency: courseAny.currency || 'XOF',
@@ -187,7 +185,6 @@ export default function CourseEditModal({
       title: trimmedTitle,
       description: formData.description.trim(),
       shortDescription: formData.shortDescription.trim(),
-      difficulty: formData.difficulty,
       duration_minutes: validDurationMinutes, // Utiliser la valeur validée
       price: formData.price || 0,
       currency: formData.currency,
@@ -282,20 +279,6 @@ export default function CourseEditModal({
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Niveau de difficulté
-          </label>
-          <select
-            value={formData.difficulty}
-            onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-mdsc-blue-primary"
-          >
-            <option value="beginner">Débutant</option>
-            <option value="intermediate">Intermédiaire</option>
-            <option value="advanced">Avancé</option>
-          </select>
-        </div>
       </div>
 
       {/* Configuration du cours */}
@@ -464,17 +447,17 @@ export default function CourseEditModal({
           </select>
           <p className="mt-1 text-xs text-gray-500">
             {formData.course_type === 'live' 
-              ? '⚠️ Les dates et le nombre maximum d\'étudiants sont obligatoires pour les cours en Live'
+              ? '⚠️ Les dates et le nombre maximum d\'utilisateurs sont obligatoires pour les cours en Live'
               : 'Les dates sont optionnelles pour les cours à la demande'
             }
           </p>
         </div>
 
-        {/* Nombre maximum d'étudiants (conditionnel pour Live) */}
+        {/* Nombre maximum d'utilisateurs (conditionnel pour Live) */}
         {formData.course_type === 'live' && (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nombre maximum d'étudiants <span className="text-red-500">*</span>
+              Nombre maximum d'utilisateurs <span className="text-red-500">*</span>
             </label>
             <input
               type="number"

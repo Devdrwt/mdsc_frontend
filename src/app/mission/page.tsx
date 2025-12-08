@@ -112,7 +112,7 @@ export default function MissionPage() {
                 <h2 className="text-3xl md:text-4xl font-bold">Notre Mission</h2>
               </div>
               <p className="text-xl md:text-2xl leading-relaxed opacity-95">
-                La Maison de la Société Civile (MdSC) a pour mission de renforcer les capacités 
+                La Maison de la Société Civile a pour mission de renforcer les capacités 
                 des organisations de la société civile (OSC) au Bénin, en leur fournissant les outils, 
                 les compétences et les ressources nécessaires pour accroître leur crédibilité, leur 
                 innovation et leur impact dans la promotion du développement durable et de la bonne gouvernance.

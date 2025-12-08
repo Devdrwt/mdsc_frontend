@@ -219,8 +219,8 @@ export default function FavoritesPage() {
       
       await testimonialService.createTestimonial({
         quote: testimonialForm.quote.trim(),
-        author: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Étudiant',
-        title: 'Apprenant',
+        author: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Utilisateur',
+        title: 'Utilisateur',
         avatar: user?.firstName?.[0] && user?.lastName?.[0] 
           ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
           : '',
@@ -465,7 +465,7 @@ export default function FavoritesPage() {
                       rows={6}
                       minLength={20}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-                      placeholder="Partagez votre expérience avec ce cours. Décrivez ce que vous avez appris, ce qui vous a plu, ou ce que vous recommanderiez à d'autres apprenants..."
+                      placeholder="Partagez votre expérience avec ce cours. Décrivez ce que vous avez appris, ce qui vous a plu, ou ce que vous recommanderiez à d'autres utilisateurs..."
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Minimum 20 caractères. {testimonialForm.quote.length} caractères saisis.

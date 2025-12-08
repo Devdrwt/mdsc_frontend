@@ -78,7 +78,7 @@ export default function RatingModal({
             <div>
               <p className="text-gray-600 mb-6">
                 Félicitations ! Vous avez complété ce cours. Partagez votre
-                expérience pour aider d'autres étudiants.
+                expérience pour aider d'autres utilisateurs.
               </p>
               <RatingForm
                 courseId={courseId}

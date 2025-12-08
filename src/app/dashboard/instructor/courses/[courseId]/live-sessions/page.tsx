@@ -30,7 +30,7 @@ export default function InstructorLiveSessionsPage() {
     try {
       setLoading(true);
       const courseData = await courseService.getCourseById(courseId);
-      // Vérifier que l'utilisateur est l'instructeur
+      // Vérifier que l'utilisateur est le formateur
       const courseAny = courseData as any;
       if (courseAny.instructor_id !== user?.id && courseAny.instructor?.id !== user?.id) {
         router.push('/dashboard');

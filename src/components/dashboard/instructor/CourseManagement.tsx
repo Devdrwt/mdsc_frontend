@@ -108,7 +108,6 @@ export default function CourseManagement() {
     thumbnail_url: '',
     video_url: '',
     duration_minutes: 0,
-    difficulty: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     language: 'fr',
     price: 0,
     currency: 'XOF',
@@ -136,7 +135,7 @@ export default function CourseManagement() {
       const publishedCourses = allCourses.filter((c: any) => c.status === 'published' || c.status === 'active').length;
       const draftCourses = allCourses.filter((c: any) => c.status === 'draft' || c.status === 'pending').length;
       
-      // Calculer le total d'étudiants et le taux de complétion moyen
+      // Calculer le total d'utilisateurs et le taux de complétion moyen
       let totalStudents = 0;
       let totalCompletionRate = 0;
       let coursesWithStats = 0;
@@ -339,7 +338,7 @@ export default function CourseManagement() {
     // Validation conditionnelle selon le type de cours
     if (createFormData.course_type === 'live') {
       if (!createFormData.enrollment_deadline || !createFormData.course_start_date || !createFormData.course_end_date || !createFormData.max_students || createFormData.max_students <= 0) {
-        toast.warning('Formulaire incomplet', 'Pour un cours en Live, les dates et le nombre maximum d\'étudiants sont obligatoires');
+        toast.warning('Formulaire incomplet', 'Pour un cours en Live, les dates et le nombre maximum d\'utilisateurs sont obligatoires');
         return;
       }
     }
@@ -390,7 +389,6 @@ export default function CourseManagement() {
         thumbnail_url: '',
         video_url: '',
         duration_minutes: 0,
-        difficulty: 'beginner',
         language: 'fr',
         price: 0,
         currency: 'XOF',
@@ -607,7 +605,7 @@ export default function CourseManagement() {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Total étudiants</p>
+              <p className="text-sm font-medium text-gray-600">Total utilisateurs</p>
               {statsLoading ? (
                 <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
               ) : (
@@ -693,7 +691,7 @@ export default function CourseManagement() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="h-4 w-4" />
-                          <span>{course.totalStudents || 0} étudiants</span>
+                          <span>{course.totalStudents || 0} utilisateurs</span>
                         </div>
                       </div>
 
@@ -948,20 +946,6 @@ export default function CourseManagement() {
                       </select>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Niveau de difficulté
-                      </label>
-                      <select
-                        value={createFormData.difficulty}
-                        onChange={(e) => setCreateFormData({ ...createFormData, difficulty: e.target.value as any })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-colors"
-                      >
-                        <option value="beginner">Débutant</option>
-                        <option value="intermediate">Intermédiaire</option>
-                        <option value="advanced">Avancé</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
               </div>

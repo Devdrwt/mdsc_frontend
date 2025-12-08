@@ -167,7 +167,7 @@ class TestimonialService {
   }
 
   /**
-   * Crée un nouveau témoignage (étudiant ou admin)
+   * Crée un nouveau témoignage (utilisateur ou admin)
    */
   async createTestimonial(data: Omit<Testimonial, 'id' | 'created_at' | 'updated_at'>): Promise<Testimonial> {
     try {

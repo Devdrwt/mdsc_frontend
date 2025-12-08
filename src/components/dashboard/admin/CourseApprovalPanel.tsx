@@ -204,7 +204,7 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
         toast.success('Cours approuvé', 'Le cours a été approuvé et est maintenant publié');
       } else {
         await adminService.rejectCourse(String(courseId), rejectionReason, comments);
-        toast.success('Cours rejeté', 'Le cours a été rejeté. L\'instructeur a été notifié.');
+        toast.success('Cours rejeté', 'Le cours a été rejeté. Le formateur a été notifié.');
       }
       setShowApprovalModal(false);
       loadPendingCourses();
@@ -274,17 +274,17 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                     </h3>
                   </div>
 
-                  {/* Informations de l'instructeur et date */}
+                  {/* Informations du formateur et date */}
                   <div className="bg-gray-50 rounded-lg p-4 mb-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Instructeur */}
+                      {/* Formateur */}
                       {(course.instructor_name || course.instructor_first_name || course.instructor_last_name) && (
                         <div className="flex items-center space-x-3">
                           <div className="p-2 bg-blue-100 rounded-lg">
                             <User className="h-5 w-5 text-blue-600" />
                           </div>
                           <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Instructeur</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Formateur</div>
                             <div className="text-sm font-semibold text-gray-900">
                               {course.instructor_name || 
                                `${course.instructor_first_name || ''} ${course.instructor_last_name || ''}`.trim() ||
@@ -421,21 +421,12 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <User className="h-5 w-5 text-gray-600" />
                     <div>
-                      <div className="text-xs text-gray-500 uppercase">Instructeur</div>
+                      <div className="text-xs text-gray-500 uppercase">Formateur</div>
                       <div className="text-sm font-medium text-gray-900">{selectedCourse.instructor_name}</div>
                     </div>
                   </div>
                 )}
 
-                {selectedCourse.level && (
-                  <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <BookOpen className="h-5 w-5 text-gray-600" />
-                    <div>
-                      <div className="text-xs text-gray-500 uppercase">Niveau</div>
-                      <div className="text-sm font-medium text-gray-900">{selectedCourse.level}</div>
-                    </div>
-                  </div>
-                )}
 
                 {selectedCourse.duration && (
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
@@ -847,7 +838,7 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={
                     approvalAction === 'approve'
-                      ? 'Commentaires pour l\'instructeur (optionnel)...'
+                      ? 'Commentaires pour le formateur (optionnel)...'
                       : 'Détails supplémentaires sur le rejet (optionnel)...'
                   }
                 />
@@ -862,7 +853,7 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                         Le cours sera publié et visible dans le catalogue
                       </p>
                       <p className="text-xs text-green-700 mt-1">
-                        L'instructeur recevra une notification de confirmation
+                        Le formateur recevra une notification de confirmation
                       </p>
                     </div>
                   </div>
@@ -878,7 +869,7 @@ export default function CourseApprovalPanel({ courseId }: CourseApprovalPanelPro
                         Le cours sera rejeté et retourné à l'état "Brouillon"
                       </p>
                       <p className="text-xs text-red-700 mt-1">
-                        L'instructeur recevra une notification avec les raisons du rejet
+                        Le formateur recevra une notification avec les raisons du rejet
                       </p>
                     </div>
                   </div>

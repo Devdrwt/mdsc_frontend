@@ -683,7 +683,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                     </div>
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900">Aperçu de la leçon</h4>
-                      <p className="text-sm text-gray-600">Voir comment la leçon apparaîtra aux étudiants</p>
+                      <p className="text-sm text-gray-600">Voir comment la leçon apparaîtra aux utilisateurs</p>
                     </div>
                   </div>
                   <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 shadow-sm">
@@ -850,7 +850,7 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
                     />
                     <div>
                       <div className="font-medium text-gray-900">Leçon obligatoire</div>
-                      <div className="text-sm text-gray-500">Les étudiants doivent la compléter</div>
+                      <div className="text-sm text-gray-500">Les utilisateurs doivent la compléter</div>
                     </div>
                   </label>
                 </div>

@@ -58,7 +58,7 @@ export default function CourseRatings({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Star className="h-6 w-6 text-yellow-400 fill-yellow-400" />
-          <h2 className="text-2xl font-bold text-gray-900">Avis des étudiants</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Avis des utilisateurs</h2>
         </div>
         {showRatingButton && enrollmentId && (
           <button

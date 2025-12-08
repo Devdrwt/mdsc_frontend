@@ -69,7 +69,7 @@ export default function CalendarPanel() {
         end: monthEnd.toISOString(),
       });
 
-      // Charger les cours de l'étudiant pour récupérer les plannings
+      // Charger les cours de l'utilisateur pour récupérer les plannings
       const studentCourses = await CourseService.getMyCourses();
       
       // Créer une map des cours pour accès rapide

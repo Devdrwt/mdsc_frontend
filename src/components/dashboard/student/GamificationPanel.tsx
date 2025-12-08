@@ -217,7 +217,7 @@ export default function GamificationPanel() {
           {/* Onglet Classement */}
           {activeTab === 'leaderboard' && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900">Classement des Apprenants</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Classement des Utilisateurs</h3>
               {leaderboard.length > 0 ? (
                 <div className="space-y-3">
                   {leaderboard.map((entry, index) => (

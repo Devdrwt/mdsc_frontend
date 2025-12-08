@@ -201,7 +201,7 @@ export default function AnalyticsPanel() {
         setTopCourses(coursesFromAnalytics.slice(0, 5));
         setCourseDetails(courses?.courses ?? []);
       } catch (error) {
-        console.error('Erreur lors du chargement des analytics instructeur :', error);
+        console.error('Erreur lors du chargement des analytics formateur :', error);
         setMetrics(null);
         setMonthlyStats([]);
         setWeeklyEngagement([]);
@@ -260,7 +260,7 @@ export default function AnalyticsPanel() {
 </h1>
 
             <p className="text-yellow-100">
-              Analysez les performances de vos cours et le comportement de vos étudiants.
+              Analysez les performances de vos cours et le comportement de vos utilisateurs.
             </p>
           </div>
           <button className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2">
@@ -277,7 +277,7 @@ export default function AnalyticsPanel() {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Étudiants</p>
+              <p className="text-sm font-medium text-gray-600">Total Utilisateurs</p>
               <p className="text-2xl font-bold text-gray-900">{metrics.totalStudents}</p>
             </div>
           </div>

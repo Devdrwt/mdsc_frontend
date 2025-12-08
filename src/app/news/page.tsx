@@ -20,7 +20,7 @@ interface NewsArticle {
 const sampleArticles: NewsArticle[] = [
   {
     id: '1',
-    title: 'Lancement de la plateforme MOOC MdSC',
+    title: 'Lancement de la plateforme MOOC Maison de la Société Civile',
     excerpt: 'La Maison de la Société Civile lance officiellement sa plateforme d\'apprentissage en ligne dédiée aux organisations de la société civile. Cette initiative vise à démocratiser l\'accès à la formation et à renforcer les capacités des acteurs du secteur.',
     category: 'Formations',
     date: '12 octobre 2025',
@@ -38,7 +38,7 @@ const sampleArticles: NewsArticle[] = [
   {
     id: '3',
     title: 'Partenariat avec l\'Université d\'Abomey-Calavi',
-    excerpt: 'La MdSC signe un partenariat stratégique avec l\'Université d\'Abomey-Calavi pour développer des programmes de formation certifiants et renforcer la recherche sur la société civile.',
+    excerpt: 'La Maison de la Société Civile signe un partenariat stratégique avec l\'Université d\'Abomey-Calavi pour développer des programmes de formation certifiants et renforcer la recherche sur la société civile.',
     category: 'Partenariats',
     date: '8 octobre 2025',
     image: '/apprenant.png'
@@ -116,7 +116,7 @@ export default function NewsPage() {
       <section className="bg-gradient-to-br from-mdsc-blue-dark to-mdsc-blue-primary py-16">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Actualités de la MdSC
+            Actualités de la Maison de la Société Civile
           </h1>
           <p className="text-xl text-white opacity-90 max-w-3xl mx-auto">
             Découvrez nos dernières initiatives, projets et événements autour de la société civile.

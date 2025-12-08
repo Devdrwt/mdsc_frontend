@@ -273,7 +273,7 @@ export default function ModuleQuizBuilder({
         toast.success('Quiz mis à jour', 'Le quiz du module a été mis à jour avec succès');
       } else {
         await quizService.createModuleQuiz(quizData);
-        toast.success('Quiz créé', 'Le quiz du module a été créé avec succès. Les étudiants pourront obtenir un badge en le réussissant.');
+        toast.success('Quiz créé', 'Le quiz du module a été créé avec succès. Les utilisateurs pourront obtenir un badge en le réussissant.');
       }
 
       onSave();
@@ -317,7 +317,7 @@ export default function ModuleQuizBuilder({
           <div>
             <h2 className="text-2xl font-bold mb-2">Quiz de Module</h2>
             <p className="text-purple-100">
-              ⭐ Quiz optionnel - Les étudiants peuvent obtenir un badge en le réussissant
+              ⭐ Quiz optionnel - Les utilisateurs peuvent obtenir un badge en le réussissant
             </p>
           </div>
           <Award className="h-8 w-8" />
@@ -697,7 +697,7 @@ export default function ModuleQuizBuilder({
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
         title="Confirmer la suppression"
-        message="Êtes-vous sûr de vouloir supprimer ce quiz ? Cette action est irréversible et les étudiants ne pourront plus le passer."
+        message="Êtes-vous sûr de vouloir supprimer ce quiz ? Cette action est irréversible et les utilisateurs ne pourront plus le passer."
         confirmText="Supprimer"
         cancelText="Annuler"
         isLoading={deleting}

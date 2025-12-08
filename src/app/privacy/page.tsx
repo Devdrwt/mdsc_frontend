@@ -48,7 +48,7 @@ export default function PrivacyPage() {
               <section className="mb-8">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Introduction</h2>
                 <p className="text-gray-700 mb-4">
-                  La Maison de la Société Civile (MdSC) s'engage à protéger votre vie privée et vos données personnelles. 
+                  La Maison de la Société Civile s'engage à protéger votre vie privée et vos données personnelles. 
                   Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos informations.
                 </p>
               </section>

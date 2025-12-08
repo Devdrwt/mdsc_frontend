@@ -418,21 +418,21 @@ export default function MyCourses() {
                 ) : null;
               })()}
               
-              {/* Nom de l'instructeur */}
+              {/* Nom du formateur */}
               {(() => {
                 const instructor = (courseToUnenroll as any).instructor;
                 let instructorName = '';
-                if (typeof instructor === 'string' && instructor && instructor !== 'Instructeur') {
+                if (typeof instructor === 'string' && instructor && instructor !== 'Formateur') {
                   instructorName = instructor;
                 } else if (instructor && typeof instructor === 'object') {
                   instructorName = instructor.name || [instructor.first_name, instructor.last_name].filter(Boolean).join(' ') || '';
                 } else if ((courseToUnenroll as any).instructor_first_name || (courseToUnenroll as any).instructor_last_name) {
                   instructorName = [(courseToUnenroll as any).instructor_first_name, (courseToUnenroll as any).instructor_last_name].filter(Boolean).join(' ') || '';
                 }
-                return instructorName && instructorName.trim() && instructorName !== 'Instructeur' ? (
+                return instructorName && instructorName.trim() && instructorName !== 'Formateur' ? (
                   <div className="flex items-center justify-center space-x-2 text-sm text-gray-700">
                     <User className="h-4 w-4 text-gray-600" />
-                    <span>Instructeur : {instructorName}</span>
+                    <span>Formateur : {instructorName}</span>
                   </div>
                 ) : null;
               })()}

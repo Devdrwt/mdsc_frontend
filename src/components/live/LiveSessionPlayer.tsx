@@ -78,12 +78,12 @@ export default function LiveSessionPlayer({
         // Vérifier le rôle avant de joindre
         const role = sessionData.instructor_id === user?.id ? 'instructor' : 'participant';
         
-        // Pour les étudiants, rediriger directement vers Jitsi (pas besoin de joinSession)
+        // Pour les utilisateurs, rediriger directement vers Jitsi (pas besoin de joinSession)
         if (role === 'participant') {
-          // Les étudiants sont redirigés directement vers Jitsi dans joinSession
+          // Les utilisateurs sont redirigés directement vers Jitsi dans joinSession
           await joinSession();
         } else {
-          // Pour l'instructeur, utiliser le composant React (appeler joinSession mais ne pas rediriger)
+          // Pour le formateur, utiliser le composant React (appeler joinSession mais ne pas rediriger)
           await joinSession();
         }
       }
@@ -101,13 +101,13 @@ export default function LiveSessionPlayer({
       const joinResponse = await liveSessionService.joinSession(sessionId);
       setJoined(true);
       
-      // Si c'est un étudiant (participant) et que la session est live, rediriger directement vers Jitsi
+      // Si c'est un utilisateur (participant) et que la session est live, rediriger directement vers Jitsi
       // Utiliser session ou sessionData pour déterminer le rôle
       const currentSession = session || (await liveSessionService.getSession(sessionId));
       const role = currentSession.instructor_id === user?.id ? 'instructor' : 'participant';
       
-      // IMPORTANT : Seulement pour les étudiants (participants), rediriger directement vers Jitsi
-      // Les instructeurs utilisent le composant React JitsiMeetPlayer
+      // IMPORTANT : Seulement pour les utilisateurs (participants), rediriger directement vers Jitsi
+      // Les formateurs utilisent le composant React JitsiMeetPlayer
       if (role === 'participant' && currentSession.status === 'live') {
         // Construire l'URL Jitsi à partir de la réponse ou des données de session
         let jitsiUrl = joinResponse?.jitsi_join_url;
@@ -150,7 +150,7 @@ export default function LiveSessionPlayer({
         }
       }
       
-      // Pour les instructeurs, ne pas rediriger - ils utilisent le composant React
+      // Pour les formateurs, ne pas rediriger - ils utilisent le composant React
       if (role === 'instructor') {
         console.log('👨‍🏫 [INSTRUCTEUR] Utilisation du composant React JitsiMeetPlayer');
       }
@@ -240,7 +240,7 @@ export default function LiveSessionPlayer({
       } else if (courseId) {
         router.push(`/courses/${courseId}/live-sessions`);
       } else {
-        // Déterminer si c'est un instructeur ou un étudiant pour la redirection
+        // Déterminer si c'est un formateur ou un utilisateur pour la redirection
         const role = session?.instructor_id === user?.id ? 'instructor' : 'student';
         if (role === 'instructor') {
           router.push('/dashboard/instructor/live-sessions');

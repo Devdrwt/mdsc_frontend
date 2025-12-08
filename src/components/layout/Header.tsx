@@ -20,7 +20,7 @@ export default function Header() {
   const navigation = [
     { name: 'Formations', href: '/courses' },
     { name: 'FAQ', href: '/faq' },
-    { name: 'Contacts', href: 'https://mdsc-website.webflow.io/contact-us' },
+    { name: 'Contacts', href: '/contact' },
   ];
 
   useEffect(() => {

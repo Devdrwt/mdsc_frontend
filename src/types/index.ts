@@ -24,7 +24,6 @@ export interface Course {
   description: string;
   shortDescription?: string;
   category: 'sante' | 'education' | 'gouvernance' | 'environnement' | 'economie' | string;
-  level: 'debutant' | 'intermediaire' | 'avance' | string;
   duration: number | string; // en minutes ou string "X semaines"
   language: string;
   thumbnail_url?: string;

@@ -26,7 +26,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google/callback`);
       const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
       
-      console.log('🔐 [GOOGLE AUTH] Rôle appliqué pour l\'inscription OAuth Google: apprenant');
+      console.log('🔐 [GOOGLE AUTH] Rôle appliqué pour l\'inscription OAuth Google: utilisateur');
       
       console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
       console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
@@ -126,7 +126,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             });
             
             if (!backendRole) {
-              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a rôle, fallback vers apprenant');
+              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a rôle, fallback vers utilisateur');
             }
             
             // Normaliser les données utilisateur en remplaçant undefined par null ou des valeurs par défaut
@@ -276,8 +276,8 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           }
           
           if (isUserNotFound) {
-            console.log('🔄 [GOOGLE AUTH] Utilisateur introuvable, redirection vers la page d\'inscription apprenant');
-            router.push('/register?from=google&message=' + encodeURIComponent('Compte Google non associé, créez votre profil apprenant pour continuer.'));
+            console.log('🔄 [GOOGLE AUTH] Utilisateur introuvable, redirection vers la page d\'inscription utilisateur');
+            router.push('/register?from=google&message=' + encodeURIComponent('Compte Google non associé, créez votre profil utilisateur pour continuer.'));
             return;
           }
           

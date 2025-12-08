@@ -182,10 +182,10 @@ export default function CoursePlayer({
 
   // Charger les quiz des modules et l'évaluation finale
   const loadCourseQuizzesAndEvaluation = async () => {
-    // Charger les quiz même sans enrollmentId (pour les instructeurs ou prévisualisation)
+    // Charger les quiz même sans enrollmentId (pour les formateurs ou prévisualisation)
     
     try {
-      // Charger l'évaluation finale pour l'étudiant (seulement si enrollmentId existe)
+      // Charger l'évaluation finale pour l'utilisateur (seulement si enrollmentId existe)
       if (enrollmentId) {
         try {
           const evalData = await evaluationService.getEnrollmentEvaluation(enrollmentId);
@@ -1384,7 +1384,7 @@ export default function CoursePlayer({
       // Préparer les données pour le modal de célébration
       const fullName = user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName)
         ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
-        : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)');
+        : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Utilisateur(trice)');
       
       // Utiliser certificate_number pour l'affichage (format MDSC-XXXXXX-BJ)
       // certificate_code est l'UUID utilisé pour la vérification/QR code, pas pour l'affichage
@@ -2092,7 +2092,7 @@ export default function CoursePlayer({
         fullName={
           (user && ((user as any).first_name || (user as any).firstName) && ((user as any).last_name || (user as any).lastName))
             ? `${(user as any).first_name || (user as any).firstName} ${(user as any).last_name || (user as any).lastName}`
-            : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Étudiant(e)')
+            : ((user as any)?.fullName || (user as any)?.name || (user as any)?.username || 'Utilisateur(trice)')
         }
         courseTitle={course.title || 'Formation'}
         code={(generatedCertificate as any)?.certificate_number || (generatedCertificate as any)?.certificateNumber || '—'}

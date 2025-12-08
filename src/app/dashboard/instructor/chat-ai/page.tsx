@@ -54,7 +54,7 @@ export default function InstructorChatIAPage() {
                 <h3 className="text-lg font-semibold text-gray-900">Analyse des Performances</h3>
               </div>
               <p className="text-gray-600 text-sm">
-                Analysez les données de vos étudiants, identifiez les points d'amélioration et optimisez vos cours.
+                Analysez les données de vos utilisateurs, identifiez les points d'amélioration et optimisez vos cours.
               </p>
             </div>
 
@@ -68,7 +68,7 @@ export default function InstructorChatIAPage() {
                 <h3 className="text-lg font-semibold text-gray-900">Optimisation Pédagogique</h3>
               </div>
               <p className="text-gray-600 text-sm">
-                Recevez des conseils personnalisés pour améliorer l'efficacité de vos cours et l'engagement des étudiants.
+                Recevez des conseils personnalisés pour améliorer l'efficacité de vos cours et l'engagement des utilisateurs.
               </p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default function InstructorChatIAPage() {
                 <h4 className="font-medium text-orange-800 mb-2">Analyse et optimisation :</h4>
                 <ul className="text-sm text-orange-700 space-y-1">
                   <li>• "Comment améliorer l'engagement ?"</li>
-                  <li>• "Analyse les performances de mes étudiants"</li>
+                  <li>• "Analyse les performances de mes utilisateurs"</li>
                   <li>• "Suggestions pour optimiser ce cours"</li>
                 </ul>
               </div>
