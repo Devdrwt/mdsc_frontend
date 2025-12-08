@@ -653,9 +653,23 @@ export default function InstructorCourseDetailPage() {
                           type="button"
                           onClick={async () => {
                             // Vérifier les conditions
-                            if (modules.length === 0) {
-                              notifyError?.('Conditions non remplies', 'Vous devez créer au moins un module pour ce cours');
-                              return;
+                            // Pour les cours en live, les modules/leçons ne sont pas obligatoires
+                            if (!isLiveCourse) {
+                              if (modules.length === 0) {
+                                notifyError?.('Conditions non remplies', 'Vous devez créer au moins un module pour ce cours');
+                                return;
+                              }
+                              // Vérifier qu'au moins un module a au moins une leçon publiée
+                              const hasPublishedLesson = modules.some(module => 
+                                module.lessons && module.lessons.length > 0 && 
+                                module.lessons.some((lesson: any) => 
+                                  lesson.is_published !== false && lesson.isPublished !== false
+                                )
+                              );
+                              if (!hasPublishedLesson) {
+                                notifyError?.('Conditions non remplies', 'Le cours doit contenir au moins un module avec au moins une leçon publiée');
+                                return;
+                              }
                             }
                             if (!evaluation) {
                               notifyError?.('Évaluation requise', 'Vous devez créer une évaluation finale avant de demander la publication');
@@ -701,17 +715,36 @@ export default function InstructorCourseDetailPage() {
                                 }
                               }
                               
+                              // Détecter spécifiquement l'erreur de modules/leçons pour les cours en live
+                              const isModuleLessonError = errorMessage.includes('module') && 
+                                                         (errorMessage.includes('leçon') || errorMessage.includes('leçon publiée'));
+                              
+                              if (isLiveCourse && isModuleLessonError) {
+                                errorMessage = '⚠️ Erreur de validation backend : Pour un cours en live, les modules et leçons ne sont normalement pas obligatoires. ' +
+                                              'Cette erreur indique que le backend applique une validation qui ne devrait pas s\'appliquer aux cours en live. ' +
+                                              'Veuillez contacter le support technique pour résoudre ce problème. ' +
+                                              'En attendant, assurez-vous que l\'évaluation finale est créée et que toutes les informations du cours sont complètes (dates, nombre maximum d\'étudiants, etc.).';
+                              }
+                              
                               // Messages d'erreur spécifiques selon le code d'erreur
                               if (error.code) {
                                 switch (error.code) {
                                   case 'COURSE_INCOMPLETE':
-                                    errorMessage = 'Le cours n\'est pas complet. Vérifiez que tous les modules ont des leçons et que l\'évaluation finale est créée.';
+                                    if (isLiveCourse && !isModuleLessonError) {
+                                      errorMessage = 'Le cours n\'est pas complet. Pour un cours en live, vérifiez que l\'évaluation finale est créée et que toutes les informations requises sont renseignées (dates, nombre maximum d\'étudiants, etc.).';
+                                    } else if (!isLiveCourse) {
+                                      errorMessage = 'Le cours n\'est pas complet. Vérifiez que tous les modules ont des leçons et que l\'évaluation finale est créée.';
+                                    }
                                     break;
                                   case 'MISSING_REQUIRED_FIELDS':
                                     errorMessage = 'Certains champs requis sont manquants. Vérifiez le titre, la description et tous les champs obligatoires.';
                                     break;
                                   case 'NO_MODULES':
-                                    errorMessage = 'Le cours doit contenir au moins un module avec des leçons pour être publié.';
+                                    if (isLiveCourse) {
+                                      errorMessage = '⚠️ Pour un cours en live, cette validation ne devrait pas s\'appliquer. Veuillez contacter le support si cette erreur persiste.';
+                                    } else {
+                                      errorMessage = 'Le cours doit contenir au moins un module avec au moins une leçon publiée pour être publié.';
+                                    }
                                     break;
                                   case 'NO_EVALUATION':
                                     errorMessage = 'L\'évaluation finale est obligatoire pour publier le cours.';
@@ -724,7 +757,11 @@ export default function InstructorCourseDetailPage() {
                               setRequestingPublication(false);
                             }
                           }}
-                          disabled={requestingPublication || modules.length === 0 || !evaluation}
+                          disabled={
+                            requestingPublication || 
+                            (!isLiveCourse && modules.length === 0) || 
+                            !evaluation
+                          }
                           className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"
                         >
                           {requestingPublication ? (

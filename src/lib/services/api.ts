@@ -379,14 +379,20 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       }
       
       // Ne logger que si on a au moins les informations de base
-      if (logData.status && logData.url) {
+      // Vérifier que logData contient au moins une propriété non-undefined
+      const hasValidLogData = Object.keys(logData).length > 0 && 
+                               Object.values(logData).some(val => val !== undefined && val !== null);
+      
+      if (hasValidLogData) {
         console.error('❌ API Error:', logData);
       } else {
-        // Fallback si on n'a même pas les infos de base
+        // Fallback si on n'a même pas les infos de base - toujours logger quelque chose
         console.error('❌ API Error:', {
           status: status || 'unknown',
-          url: url,
-          message: message,
+          url: url || 'URL unknown',
+          message: message || 'Erreur inconnue',
+          responseStatus: response.status,
+          responseStatusText: response.statusText,
         });
       }
     }
