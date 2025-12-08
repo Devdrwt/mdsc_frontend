@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
+import { createSanitizedHtml } from '../../../lib/utils/sanitizeHtml';
 import { 
   CheckCircle, 
   Play, 
