@@ -109,7 +109,7 @@ export class EvaluationService {
     return response.data;
   }
 
-  // Récupérer l'évaluation finale d'un cours (pour instructeur)
+  // Récupérer l'évaluation finale d'un cours (pour formateur)
   static async getCourseEvaluation(courseId: string): Promise<FinalEvaluation | null> {
     try {
       // Essayer d'abord l'endpoint /evaluations/courses/{courseId} qui retourne une liste
@@ -148,7 +148,7 @@ export class EvaluationService {
         // Les erreurs seront gérées silencieusement et on essaiera les autres endpoints
       }
       
-      // Essayer l'endpoint spécifique instructeur (peut ne pas exister)
+      // Essayer l'endpoint spécifique formateur (peut ne pas exister)
       try {
         const response = await apiRequest(`/instructor/courses/${courseId}/evaluation`, {
           method: 'GET',
@@ -199,7 +199,7 @@ export class EvaluationService {
     return response.data;
   }
 
-  // Récupérer l'évaluation finale pour un enrollment (étudiant)
+  // Récupérer l'évaluation finale pour un enrollment (utilisateur)
   static async getEnrollmentEvaluation(enrollmentId: number): Promise<{ evaluation: FinalEvaluation | null; previous_attempts: any[]; can_attempt: boolean } | null> {
     try {
       const response = await apiRequest(`/evaluations/enrollments/${enrollmentId}/evaluation`, {
@@ -392,7 +392,7 @@ export class EvaluationService {
     };
   }
 
-  // CRUD pour instructeurs
+  // CRUD pour formateurs
   // Créer une évaluation générique
   static async createGenericEvaluation(courseId: string, data: {
     title: string;

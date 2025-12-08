@@ -132,13 +132,33 @@ export default function ModuleQuizBuilder({
       return;
     }
 
-    if (questionForm.question_type === 'multiple_choice' && questionForm.options.filter(o => o.trim()).length < 2) {
-      toast.warning('Options insuffisantes', 'Veuillez fournir au moins 2 options pour une question à choix multiples');
-      return;
+    // Pour les questions QCM, filtrer les options vides et vérifier qu'il y en a au moins 2
+    let cleanedOptions = questionForm.options || [];
+    if (questionForm.question_type === 'multiple_choice') {
+      // Nettoyer strictement : trim chaque option et filtrer les vides
+      cleanedOptions = questionForm.options
+        .map((o: string) => String(o || '').trim())
+        .filter((o: string) => o.length > 0);
+      
+      if (cleanedOptions.length < 2) {
+        toast.warning('Options insuffisantes', 'Veuillez fournir au moins 2 options valides pour une question à choix multiples');
+        return;
+      }
+      // Nettoyer aussi la réponse correcte pour la comparaison
+      const trimmedCorrectAnswer = String(questionForm.correct_answer || '').trim();
+      if (!cleanedOptions.includes(trimmedCorrectAnswer)) {
+        toast.warning('Réponse incorrecte', 'La réponse correcte doit correspondre à l\'une des options valides');
+        return;
+      }
     }
 
     const newQuestion: QuizQuestion = {
       ...questionForm,
+      options: cleanedOptions,
+      // S'assurer que la réponse correcte est aussi nettoyée
+      correct_answer: questionForm.question_type === 'multiple_choice' 
+        ? String(questionForm.correct_answer || '').trim()
+        : questionForm.correct_answer, // Utiliser les options nettoyées
       id: editingQuestion?.id || `temp-${Date.now()}-${Math.random()}`, // ID temporaire unique si nouvelle question
       order_index: editingQuestion 
         ? editingQuestion.order_index 
@@ -185,6 +205,55 @@ export default function ModuleQuizBuilder({
       return;
     }
 
+    // Valider et nettoyer les questions avant l'envoi
+    const cleanedQuestions = formData.questions.map((q, idx) => {
+      // Pour les questions QCM, filtrer les options vides et vérifier qu'il y en a au moins 2
+      if (q.question_type === 'multiple_choice') {
+        // Nettoyer plus strictement : enlever les espaces en début/fin et filtrer les chaînes vides
+        const validOptions = (q.options || [])
+          .map((opt: any) => {
+            // Convertir en string et nettoyer
+            const str = String(opt || '').trim();
+            return str.length > 0 ? str : null;
+          })
+          .filter((opt: string | null): opt is string => opt !== null && opt.length > 0);
+        
+        if (validOptions.length < 2) {
+          throw new Error(`La question ${idx + 1} (QCM) doit avoir au moins 2 réponses valides (actuellement: ${validOptions.length})`);
+        }
+        // Vérifier que la réponse correcte est toujours dans les options valides
+        const trimmedCorrectAnswer = q.correct_answer ? String(q.correct_answer).trim() : '';
+        if (trimmedCorrectAnswer && !validOptions.includes(trimmedCorrectAnswer)) {
+          throw new Error(`La réponse correcte de la question ${idx + 1} ne correspond à aucune option valide`);
+        }
+        return {
+          ...q,
+          options: validOptions,
+        };
+      }
+      // Pour les autres types de questions, retourner telles quelles
+      return q;
+    });
+
+    // Validation finale : s'assurer que toutes les questions QCM ont au moins 2 options
+    for (let i = 0; i < cleanedQuestions.length; i++) {
+      const q = cleanedQuestions[i];
+      if (q.question_type === 'multiple_choice') {
+        const optionsCount = Array.isArray(q.options) ? q.options.length : 0;
+        if (optionsCount < 2) {
+          throw new Error(`La question ${i + 1} (QCM) doit avoir au moins 2 réponses. Actuellement: ${optionsCount} option(s)`);
+        }
+        // Vérifier que toutes les options sont des strings non vides
+        const validOptionsCount = q.options.filter((opt: any) => {
+          const str = String(opt || '').trim();
+          return str.length > 0;
+        }).length;
+        if (validOptionsCount < 2) {
+          throw new Error(`La question ${i + 1} (QCM) doit avoir au moins 2 réponses valides (non vides). Actuellement: ${validOptionsCount} option(s) valide(s)`);
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const quizData = {
@@ -194,8 +263,9 @@ export default function ModuleQuizBuilder({
         description: formData.description,
         passing_score: formData.passing_score,
         duration_minutes: formData.duration_minutes,
-        questions: formData.questions,
+        questions: cleanedQuestions,
       };
+      
 
       if (initialQuiz?.id) {
         // Pour la mise à jour, on utilise module_id au lieu de quizId
@@ -203,13 +273,18 @@ export default function ModuleQuizBuilder({
         toast.success('Quiz mis à jour', 'Le quiz du module a été mis à jour avec succès');
       } else {
         await quizService.createModuleQuiz(quizData);
-        toast.success('Quiz créé', 'Le quiz du module a été créé avec succès. Les étudiants pourront obtenir un badge en le réussissant.');
+        toast.success('Quiz créé', 'Le quiz du module a été créé avec succès. Les utilisateurs pourront obtenir un badge en le réussissant.');
       }
 
       onSave();
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde du quiz:', error);
-      toast.errorFromApi('Erreur de sauvegarde', error, 'Erreur lors de la sauvegarde du quiz');
+      // Si c'est une erreur de validation locale, afficher le message directement
+      if (error.message && !error.response) {
+        toast.error('Erreur de validation', error.message);
+      } else {
+        toast.errorFromApi('Erreur de sauvegarde', error, 'Erreur lors de la sauvegarde du quiz');
+      }
     } finally {
       setSaving(false);
     }
@@ -242,7 +317,7 @@ export default function ModuleQuizBuilder({
           <div>
             <h2 className="text-2xl font-bold mb-2">Quiz de Module</h2>
             <p className="text-purple-100">
-              ⭐ Quiz optionnel - Les étudiants peuvent obtenir un badge en le réussissant
+              ⭐ Quiz optionnel - Les utilisateurs peuvent obtenir un badge en le réussissant
             </p>
           </div>
           <Award className="h-8 w-8" />
@@ -622,7 +697,7 @@ export default function ModuleQuizBuilder({
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
         title="Confirmer la suppression"
-        message="Êtes-vous sûr de vouloir supprimer ce quiz ? Cette action est irréversible et les étudiants ne pourront plus le passer."
+        message="Êtes-vous sûr de vouloir supprimer ce quiz ? Cette action est irréversible et les utilisateurs ne pourront plus le passer."
         confirmText="Supprimer"
         cancelText="Annuler"
         isLoading={deleting}

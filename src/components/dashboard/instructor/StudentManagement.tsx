@@ -156,7 +156,7 @@ export default function StudentManagement() {
           );
         }
       } catch (e: any) {
-        console.error('Erreur chargement étudiants', e);
+        console.error('Erreur chargement utilisateurs', e);
         setStudents([]);
         setPagination({ page: 1, limit, total: 0, pages: 1 });
         setStats({
@@ -287,11 +287,11 @@ export default function StudentManagement() {
       <div className="bg-mdsc-gold rounded-lg p-6 text-white">
         <div className="flex items-center space-x-2 mb-2 group">
   <Users className="h-7 w-7 text-white/90 group-hover:text-white transition-colors duration-200" />
-  <h1 className="text-2xl font-bold">Gestion des Étudiants</h1>
+  <h1 className="text-2xl font-bold">Gestion des Utilisateurs</h1>
 </div>
 
         <p className="text-yellow-100">
-          Suivez la progression de vos étudiants et gérez leurs parcours d'apprentissage.
+          Suivez la progression de vos utilisateurs et gérez leurs parcours d'apprentissage.
         </p>
       </div>
 
@@ -302,7 +302,7 @@ export default function StudentManagement() {
               <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Total étudiants</p>
+              <p className="text-sm font-medium text-gray-600">Total utilisateurs</p>
               <p className="text-2xl font-bold text-gray-900">{stats.totalStudents || students.length}</p>
             </div>
           </div>
@@ -356,7 +356,7 @@ export default function StudentManagement() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Rechercher un étudiant..."
+                placeholder="Rechercher un utilisateur..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -396,7 +396,7 @@ export default function StudentManagement() {
                 }}
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-transparent"
               >
-                <option value="all">Tous les étudiants</option>
+                <option value="all">Tous les utilisateurs</option>
                 <option value="active">Actifs</option>
                 <option value="completed">Terminés</option>
                 <option value="inactive">Inactifs</option>
@@ -525,11 +525,11 @@ export default function StudentManagement() {
         ) : (
           <div className="text-center py-12">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun étudiant trouvé</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun utilisateur trouvé</h3>
             <p className="text-gray-500">
               {searchTerm || filterStatus !== 'all'
-                ? 'Aucun étudiant ne correspond à vos critères de recherche.'
-                : 'Vous n\'avez aucun étudiant inscrit à vos cours.'}
+                ? 'Aucun utilisateur ne correspond à vos critères de recherche.'
+                : 'Vous n\'avez aucun utilisateur inscrit à vos cours.'}
             </p>
           </div>
         )}
@@ -538,7 +538,7 @@ export default function StudentManagement() {
       {students.length > 0 && (
         <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="text-sm text-gray-600">
-            Page {page} / {totalPages} · {total} étudiants
+            Page {page} / {totalPages} · {total} utilisateurs
           </div>
           <div className="flex items-center space-x-2">
             <button

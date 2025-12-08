@@ -14,8 +14,8 @@ interface ModuleListProps {
   enrollmentId?: number;
   onModuleSelect?: (module: Module) => void;
   onReorder?: (modules: Module[]) => void;
-  onQuizClick?: (moduleId: string) => void; // Pour les instructeurs
-  onAddLessonClick?: (moduleId: number) => void; // Pour les instructeurs - créer une leçon pour un module
+  onQuizClick?: (moduleId: string) => void; // Pour les formateurs
+  onAddLessonClick?: (moduleId: number) => void; // Pour les formateurs - créer une leçon pour un module
   quizReloadTrigger?: number; // Clé pour forcer le rechargement des quiz
   className?: string;
 }
@@ -91,7 +91,7 @@ export default function ModuleList({
     };
 
     const loadModuleQuizzes = async () => {
-      if (!isInstructor) return; // Seulement pour les instructeurs
+      if (!isInstructor) return; // Seulement pour les formateurs
       try {
         const quizzesMap: Record<number, boolean> = {};
         // Charger les quiz pour chaque module

@@ -32,7 +32,7 @@ export default function AdminChatIA({ courseId, moduleId }: AdminChatIAProps) {
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'assistant',
-      content: `Bonjour ${adminName} ! 👑 Je suis votre assistant IA administrateur de la Maison de la Société Civile (MdSC). Je peux vous aider à gérer la plateforme MdSC, analyser les données système, surveiller les performances, modérer le contenu des formations et optimiser les ressources. Je suis spécialisé dans les sujets concernant MdSC et ses formations. Comment puis-je vous aider aujourd'hui ?`,
+      content: `Bonjour ${adminName} ! 👑 Je suis votre assistant IA administrateur de la Maison de la Société Civile. Je peux vous aider à gérer la plateforme Maison de la Société Civile, analyser les données système, surveiller les performances, modérer le contenu des formations et optimiser les ressources. Je suis spécialisé dans les sujets concernant Maison de la Société Civile et ses formations. Comment puis-je vous aider aujourd'hui ?`,
       timestamp: new Date(),
       context,
     };

@@ -103,7 +103,7 @@ export default function SystemSettings() {
       smtpUser: 'datainnovation12@gmail.com',
       smtpPassword: '••••••••••••••••',
       fromEmail: 'noreply@mdsc.ci',
-      fromName: 'MdSC Platform'
+      fromName: 'Maison de la Société Civile Platform'
     },
     security: {
       sessionTimeout: 30,

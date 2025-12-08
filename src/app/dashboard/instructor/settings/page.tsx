@@ -100,7 +100,7 @@ export default function InstructorSettingsPage() {
   const [deleteProcessing, setDeleteProcessing] = useState(false);
 
   const instructorEmail = useMemo(() => user?.email ?? '—', [user?.email]);
-  const instructorName = useMemo(() => `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Instructeur', [
+  const instructorName = useMemo(() => `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Formateur', [
     user?.firstName,
     user?.lastName,
   ]);
@@ -253,7 +253,7 @@ export default function InstructorSettingsPage() {
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-wide text-white/80">Centre de préférences</p>
-                  <h1 className="mt-2 text-3xl font-bold">Paramètres de votre espace instructeur</h1>
+                  <h1 className="mt-2 text-3xl font-bold">Paramètres de votre espace formateur</h1>
                   <p className="mt-2 max-w-2xl text-white/80">
                     Personnalisez vos préférences de communication, de sécurité et d'intégration pour gagner du temps et
                     rester informé.
@@ -270,7 +270,7 @@ export default function InstructorSettingsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-xs text-white/70">
                     <CheckCircle className="h-4 w-4" />
-                    Profil instructeur vérifié
+                    Profil formateur vérifié
                   </div>
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function InstructorSettingsPage() {
                 <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                   <p><strong>Nom complet :</strong> {instructorName}</p>
                   <p><strong>Adresse email :</strong> {instructorEmail}</p>
-                  <p><strong>Rôle :</strong> Instructeur</p>
+                  <p><strong>Rôle :</strong> Formateur</p>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <ShieldCheck className="h-4 w-4" />
                     Vos informations sont sécurisées et chiffrées.
@@ -378,14 +378,14 @@ export default function InstructorSettingsPage() {
                     onToggle={() => handleNotificationToggle('courseUpdates')}
                   />
                   <SettingToggle
-                    label="Activité des étudiants"
-                    description="Être informé lorsque vos étudiants déposent des travaux ou posent des questions."
+                    label="Activité des utilisateurs"
+                    description="Être informé lorsque vos utilisateurs déposent des travaux ou posent des questions."
                     enabled={notificationPreferences.studentActivity}
                     onToggle={() => handleNotificationToggle('studentActivity')}
                   />
                   <SettingToggle
                     label="Nouveautés plateforme"
-                    description="Recevoir les annonces produits, mises à jour et webinaires MDCS."
+                    description="Recevoir les annonces produits, mises à jour et webinaires Maison de la Société Civile."
                     enabled={notificationPreferences.platformNews}
                     onToggle={() => handleNotificationToggle('platformNews')}
                   />
@@ -461,7 +461,7 @@ export default function InstructorSettingsPage() {
                 <div className="border-b border-gray-100 px-6 py-5 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">Sécurité & confidentialité</h2>
-                    <p className="text-sm text-gray-500">Renforcez la sécurité de votre compte instructeur.</p>
+                    <p className="text-sm text-gray-500">Renforcez la sécurité de votre compte formateur.</p>
                   </div>
                   <ShieldCheck className="h-5 w-5 text-mdsc-blue-primary" />
                 </div>
@@ -602,7 +602,7 @@ export default function InstructorSettingsPage() {
                       onChange={(e) => setExportConfirm(e.target.checked)}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-mdsc-blue-primary focus:ring-mdsc-blue-primary"
                     />
-                    <span>J’autorise l’export de toutes mes données instructeur et je confirme être le détenteur du compte.</span>
+                    <span>J'autorise l'export de toutes mes données formateur et je confirme être le détenteur du compte.</span>
                   </label>
                 </div>
                 <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
@@ -633,7 +633,7 @@ export default function InstructorSettingsPage() {
                 <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
                   <div>
                     <h3 className="text-lg font-semibold text-red-600">Demande de suppression de compte</h3>
-                    <p className="text-xs text-gray-500">Cette opération est définitive après validation par l’équipe MDCS.</p>
+                    <p className="text-xs text-gray-500">Cette opération est définitive après validation par l'équipe Maison de la Société Civile.</p>
                   </div>
                   <button
                     type="button"

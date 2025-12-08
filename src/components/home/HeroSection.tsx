@@ -60,7 +60,7 @@ export default function HeroSection() {
               </h1>
               <p className="text-xl text-body-large text-white dark:text-white" style={{color: 'white'}}>
                 Accède à des cours exclusifs, des sessions live interactives et des certifications reconnues. 
-                Crée et partage tes contenus, anime des sessions live, évalue les apprenants et suis leurs 
+                Crée et partage tes contenus, anime des sessions live, évalue les utilisateurs et suis leurs 
                 progrès en temps réel. Ton expertise mérite une scène : fais-la briller ici.
               </p>
             </div>

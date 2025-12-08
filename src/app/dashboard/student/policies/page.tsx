@@ -73,10 +73,10 @@ export default function StudentPoliciesPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h1 className="text-3xl font-bold flex items-center gap-3">
-                  <ShieldCheck className="h-8 w-8" /> Règles & confidentialité étudiant
+                  <ShieldCheck className="h-8 w-8" /> Règles & confidentialité utilisateur
                 </h1>
                 <p className="mt-2 text-white/80 max-w-2xl">
-                  Ces règles définissent comment nous protégeons vos données, vos notes et vos échanges avec les instructeurs. L’acceptation est requise pour continuer à suivre vos cours.
+                  Ces règles définissent comment nous protégeons vos données, vos notes et vos échanges avec les formateurs. L'acceptation est requise pour continuer à suivre vos cours.
                 </p>
                 <p className="mt-2 text-xs uppercase tracking-wide text-white/60">Version effective {new Date(POLICIES_VERSION).toLocaleDateString('fr-FR')}</p>
               </div>
@@ -103,12 +103,12 @@ export default function StudentPoliciesPage() {
               </header>
               <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                 <p>
-                  Votre compte étudiant est personnel. Vous vous engagez à respecter les règles de conduite, à ne pas partager vos identifiants et à utiliser les ressources pédagogiques uniquement pour votre apprentissage.
+                  Votre compte utilisateur est personnel. Vous vous engagez à respecter les règles de conduite, à ne pas partager vos identifiants et à utiliser les ressources pédagogiques uniquement pour votre apprentissage.
                 </p>
                 <ul className="list-disc space-y-2 pl-5">
-                  <li>Respecter les autres apprenants et les instructeurs dans tous vos échanges.</li>
+                  <li>Respecter les autres utilisateurs et les formateurs dans tous vos échanges.</li>
                   <li>Ne pas diffuser ou revendre les contenus sans l’autorisation des auteurs.</li>
-                  <li>Signaler toute activité suspecte à l’équipe MDCS.</li>
+                  <li>Signaler toute activité suspecte à l'équipe Maison de la Société Civile.</li>
                 </ul>
               </div>
             </article>
@@ -125,7 +125,7 @@ export default function StudentPoliciesPage() {
                 </p>
                 <ul className="list-disc space-y-2 pl-5">
                   <li>Chiffrement des données sensibles en transit et au repos.</li>
-                  <li>Accès restreint aux instructeurs uniquement sur leurs cours.</li>
+                  <li>Accès restreint aux formateurs uniquement sur leurs cours.</li>
                   <li>Possibilité de demander un export/suppression selon le RGPD.</li>
                 </ul>
               </div>
@@ -139,7 +139,7 @@ export default function StudentPoliciesPage() {
               </header>
               <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                 <p>
-                  Les cours, quiz et ressources disponibles sur MDCS restent la propriété de leurs auteurs. Vous les utilisez dans le cadre de votre formation et vous engagez à respecter leur confidentialité.
+                  Les cours, quiz et ressources disponibles sur Maison de la Société Civile restent la propriété de leurs auteurs. Vous les utilisez dans le cadre de votre formation et vous engagez à respecter leur confidentialité.
                 </p>
                 <ul className="list-disc space-y-2 pl-5">
                   <li>Ne pas partager publiquement les supports sans autorisation.</li>

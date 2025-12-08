@@ -1,30 +1,46 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader } from 'lucide-react';
+import { useAuthStore } from '../../../../lib/stores/authStore';
 
 function GoogleCallbackContent() {
   const searchParams = useSearchParams();
+  const processedRef = useRef(false);
+  const { setUser, setTokens } = useAuthStore();
 
   useEffect(() => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+
     console.log('📥 [GOOGLE CALLBACK] Page loaded');
     console.log('📥 [GOOGLE CALLBACK] URL:', window.location.href);
-    console.log('📥 [GOOGLE CALLBACK] Has window.opener:', !!window.opener);
-    console.log('📥 [GOOGLE CALLBACK] Search params:', {
-      token: searchParams.get('token') ? 'present' : 'missing',
-      error: searchParams.get('error'),
-      user: searchParams.get('user') ? 'present' : 'missing',
-    });
+    
+    // ⚠️ CRITIQUE : Vérifier si c'est une popup AVANT TOUT
+    const isPopupFromOpener = !!(window.opener && !window.opener.closed);
+    const isPopupFromSession = typeof window !== 'undefined' && sessionStorage.getItem('google_oauth_is_popup') === 'true';
+    const isPopup = isPopupFromOpener || isPopupFromSession;
+    
+    console.log('📥 [GOOGLE CALLBACK] Is popup (opener):', isPopupFromOpener);
+    console.log('📥 [GOOGLE CALLBACK] Is popup (session):', isPopupFromSession);
+    console.log('📥 [GOOGLE CALLBACK] Is popup (final):', isPopup);
 
-    // Vérifier aussi dans le hash (certains backends utilisent le hash)
-    const hash = window.location.hash;
-    console.log('📥 [GOOGLE CALLBACK] Hash:', hash ? 'present' : 'missing');
+    // Extraire les paramètres de l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const userStr = urlParams.get('user');
+    const error = urlParams.get('error');
 
-    // Fonction pour envoyer un message au parent
-    const sendMessageToParent = (type: string, data: any) => {
-      if (window.opener && !window.opener.closed) {
-        console.log(`📤 [GOOGLE CALLBACK] Sending ${type} to parent`);
+    // Fonction pour envoyer un message à la fenêtre principale
+    const sendMessage = (type: string, data: any): boolean => {
+      if (!isPopup) {
+        console.warn('⚠️ [GOOGLE CALLBACK] Not a popup, cannot send message');
+        return false;
+      }
+
+      try {
+        console.log(`📤 [GOOGLE CALLBACK] Sending ${type} to parent window`);
         window.opener.postMessage(
           {
             type,
@@ -32,280 +48,244 @@ function GoogleCallbackContent() {
           },
           window.location.origin
         );
-        console.log(`✅ [GOOGLE CALLBACK] Message sent to parent`);
-      } else {
-        console.warn('⚠️ [GOOGLE CALLBACK] No window.opener or opener is closed');
+        console.log(`✅ [GOOGLE CALLBACK] Message sent successfully`);
+        return true;
+      } catch (e) {
+        console.error('❌ [GOOGLE CALLBACK] Error sending message:', e);
+        return false;
       }
     };
 
-    // Fonction pour fermer la popup
+    // Fonction pour fermer la popup de manière agressive
     const closePopup = () => {
-      console.log('🔒 [GOOGLE CALLBACK] Closing popup...');
-      // Essayer plusieurs fois de fermer (certains navigateurs bloquent)
+      if (!isPopup) {
+        console.log('⚠️ [GOOGLE CALLBACK] Not a popup, cannot close');
+        return;
+      }
+
+      console.log('🔒 [GOOGLE CALLBACK] Closing popup aggressively...');
+      
+      // ⚠️ CRITIQUE : Vider le body et empêcher tout rendu supplémentaire
       try {
+        if (document.body) {
+          document.body.innerHTML = '';
+          document.body.style.display = 'none';
+        }
+        // Supprimer tous les scripts sauf ceux marqués comme essentiels
+        if (document.head) {
+          const scripts = document.head.querySelectorAll('script:not([data-keep])');
+          scripts.forEach(script => {
+            try {
+              if (script.parentNode) {
+                script.parentNode.removeChild(script);
+              }
+            } catch (e) {
+              // Ignorer
+            }
+          });
+        }
+        // Empêcher toute navigation
+        window.stop();
+      } catch (e) {
+        // Ignorer
+      }
+
+      // Fermer la popup de manière agressive
+      try {
+        // Essayer de fermer immédiatement
         window.close();
-        // Si ça ne ferme pas, essayer après un délai
-        setTimeout(() => {
-          if (!window.closed) {
-            console.warn('⚠️ [GOOGLE CALLBACK] Popup did not close, trying again...');
-            window.close();
+        
+        // Si ça ne fonctionne pas, rediriger vers about:blank
+        let attempts = 0;
+        const closeInterval = setInterval(() => {
+          attempts++;
+          if (window.closed || attempts > 5) {
+            clearInterval(closeInterval);
+            if (!window.closed) {
+              console.warn('⚠️ [GOOGLE CALLBACK] Popup did not close, redirecting to about:blank');
+              try {
+                window.location.replace('about:blank');
+              } catch (e) {
+                // Ignorer
+              }
+            }
+          } else {
+            try {
+              window.close();
+            } catch (e) {
+              // Ignorer
+            }
           }
-        }, 1000);
+        }, 50);
       } catch (e) {
         console.error('❌ [GOOGLE CALLBACK] Error closing popup:', e);
+        try {
+          window.location.replace('about:blank');
+        } catch (e2) {
+          // Ignorer
+        }
       }
     };
 
-    // Vérifier si on a des données dans les query params (si le backend redirige avec des données)
-    const token = searchParams.get('token');
-    const error = searchParams.get('error');
-    const userStr = searchParams.get('user');
-
-    // Vérifier si l'URL contient des indicateurs d'erreur (comme "Unauthorized", "401", "403", etc.)
-    const currentUrl = window.location.href.toLowerCase();
-    const hasUnauthorizedError = currentUrl.includes('unauthorized') || 
-                                 currentUrl.includes('401') || 
-                                 currentUrl.includes('403') ||
-                                 currentUrl.includes('access_denied') ||
-                                 currentUrl.includes('error=access_denied');
-    
-    if (hasUnauthorizedError && !token && !error) {
-      // Le backend a probablement redirigé vers une page d'erreur
-      console.error('❌ [GOOGLE CALLBACK] Unauthorized error detected in URL');
-      console.error('❌ [GOOGLE CALLBACK] Full URL:', window.location.href);
-      console.error('❌ [GOOGLE CALLBACK] This might be a backend configuration issue:');
-      console.error('   - Check if the callback URL is correctly configured in Google Cloud Console');
-      console.error('   - Check if the backend has the correct GOOGLE_CALLBACK_URL environment variable');
-      console.error('   - Check if the oauth_role_tokens table exists and is accessible');
-      console.error('   - Check if the role token was correctly stored in the database');
+    // ⚠️ CRITIQUE : Si c'est une popup, NE PAS mettre à jour le store
+    // Le store pourrait déclencher des redirections automatiques
+    // On envoie juste le message et on ferme
+    if (isPopup) {
+      console.log('🔒 [GOOGLE CALLBACK] This is a popup - will send message and close, NO STORE UPDATE, NO REDIRECT');
       
-      sendMessageToParent('GOOGLE_AUTH_ERROR', {
-        error: 'Erreur d\'autorisation : le serveur n\'a pas pu traiter votre demande. Vérifiez la configuration du serveur.',
-      });
-      setTimeout(closePopup, 500);
-      return;
+      // Gestion des erreurs
+      if (error) {
+        const decodedError = decodeURIComponent(error);
+        console.error('❌ [GOOGLE CALLBACK] Error:', decodedError);
+        sendMessage('GOOGLE_AUTH_ERROR', { error: decodedError });
+        setTimeout(closePopup, 100);
+        return;
+      }
+
+      // Gestion du succès
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(decodeURIComponent(userStr));
+          
+          // Normaliser les données utilisateur
+          const normalizedUser = {
+            id: typeof user.id === 'number' ? user.id : (user.id ? parseInt(String(user.id), 10) : 0),
+            email: user.email || '',
+            firstName: user.firstName || user.first_name || '',
+            lastName: user.lastName || user.last_name || '',
+            role: (user.role || user.role_name || 'student') as 'student' | 'instructor' | 'admin',
+            phone: user.phone || null,
+            organization: user.organization || null,
+            country: user.country || null,
+            isEmailVerified: user.emailVerified ?? user.email_verified ?? true,
+            isActive: user.isActive ?? user.is_active ?? true,
+            createdAt: user.createdAt || user.created_at || new Date().toISOString(),
+            updatedAt: user.updatedAt || user.updated_at || new Date().toISOString()
+          };
+
+          console.log('✅ [GOOGLE CALLBACK] Success - User:', normalizedUser);
+          console.log('✅ [GOOGLE CALLBACK] Success - Token:', token ? 'present' : 'missing');
+
+          // ⚠️ CRITIQUE : NE PAS mettre à jour le store dans la popup
+          // Cela pourrait déclencher des redirections automatiques
+          // On envoie juste le message à la fenêtre principale
+
+          // Vider le body immédiatement pour éviter tout rendu
+          try {
+            if (document.body) {
+              document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Arial;color:#666;font-size:14px;">Fermeture...</div>';
+            }
+          } catch (e) {
+            // Ignorer
+          }
+
+          // Envoyer le message plusieurs fois pour s'assurer qu'il est reçu
+          let sentCount = 0;
+          for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+              if (window.opener && !window.opener.closed) {
+                const sent = sendMessage('GOOGLE_AUTH_SUCCESS', {
+                  user: normalizedUser,
+                  token,
+                });
+                if (sent) sentCount++;
+              }
+            }, i * 50);
+          }
+
+          // Fermer la popup IMMÉDIATEMENT après un très court délai
+          setTimeout(() => {
+            console.log('🔒 [GOOGLE CALLBACK] Closing popup IMMEDIATELY - NO REDIRECT IN POPUP');
+            closePopup();
+          }, 200); // Délai très court
+        } catch (parseError) {
+          console.error('❌ [GOOGLE CALLBACK] Error parsing user data:', parseError);
+          sendMessage('GOOGLE_AUTH_ERROR', {
+            error: 'Erreur lors du traitement des données',
+          });
+          setTimeout(closePopup, 100);
+        }
+      } else {
+        // Si aucune donnée n'est présente
+        console.warn('⚠️ [GOOGLE CALLBACK] No data in URL');
+        sendMessage('GOOGLE_AUTH_ERROR', {
+          error: 'Aucune donnée reçue du serveur',
+        });
+        setTimeout(closePopup, 100);
+      }
+      return; // ⚠️ CRITIQUE : Sortir immédiatement, ne pas continuer
     }
+
+    // Si ce n'est PAS une popup, traitement normal avec mise à jour du store
+    console.log('🔄 [GOOGLE CALLBACK] Not a popup, processing normally...');
 
     // Gestion des erreurs
     if (error) {
       const decodedError = decodeURIComponent(error);
-      console.error('❌ [GOOGLE CALLBACK] Error from query params:', decodedError);
-      console.error('❌ [GOOGLE CALLBACK] Full error details:', {
-        raw: error,
-        decoded: decodedError,
-        url: window.location.href,
-      });
-      
-      // Détecter si c'est une erreur de paramètres SQL undefined
-      if (decodedError.includes('Bind parameters must not contain undefined')) {
-        console.error('❌ [GOOGLE CALLBACK] SQL undefined parameter error detected');
-        console.error('❌ [GOOGLE CALLBACK] This is a backend issue - the backend is trying to insert undefined values into the database');
-        console.error('❌ [GOOGLE CALLBACK] The backend should convert undefined to null before database insertion');
-      }
-      
-      // Détecter les erreurs liées au rôle
-      if (decodedError.toLowerCase().includes('role') || decodedError.toLowerCase().includes('rôle')) {
-        console.error('❌ [GOOGLE CALLBACK] Role-related error detected');
-        console.error('❌ [GOOGLE CALLBACK] The role might not have been stored correctly in the database');
-        console.error('❌ [GOOGLE CALLBACK] Check if the oauth_role_tokens table is working correctly');
-      }
-      
-      sendMessageToParent('GOOGLE_AUTH_ERROR', {
-        error: decodedError,
-      });
-      setTimeout(closePopup, 500);
+      console.error('❌ [GOOGLE CALLBACK] Error:', decodedError);
+      window.location.replace(`/login?error=${encodeURIComponent(decodedError)}`);
       return;
     }
 
-    // Gestion du succès avec données dans query params
+    // Gestion du succès
     if (token && userStr) {
       try {
         const user = JSON.parse(decodeURIComponent(userStr));
-        console.log('✅ [GOOGLE CALLBACK] Success data from query params');
-        console.log('✅ [GOOGLE CALLBACK] User data:', user);
-        console.log('✅ [GOOGLE CALLBACK] Token:', token ? 'Token present' : 'Token missing');
-        console.log('✅ [GOOGLE CALLBACK] User role from backend:', user.role || user.role_name || 'NOT PROVIDED');
         
-        if (!user.role && !user.role_name) {
-          console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
-          user.role = 'student';
-        }
-        
-        // Vérifier que les données utilisateur ne contiennent pas d'undefined
-        const userKeys = Object.keys(user);
-        const undefinedKeys = userKeys.filter(key => user[key] === undefined);
-        if (undefinedKeys.length > 0) {
-          console.warn('⚠️ [GOOGLE CALLBACK] User data contains undefined values:', undefinedKeys);
-          console.warn('⚠️ [GOOGLE CALLBACK] This might cause issues. Normalizing data...');
-          
-          // Normaliser les valeurs undefined en null
-          undefinedKeys.forEach(key => {
-            user[key] = null;
-          });
-        }
-        
-        console.log('✅ [GOOGLE CALLBACK] Final user role to send:', user.role || user.role_name || 'NOT SET');
+        // Normaliser les données utilisateur
+        const normalizedUser = {
+          id: typeof user.id === 'number' ? user.id : (user.id ? parseInt(String(user.id), 10) : 0),
+          email: user.email || '',
+          firstName: user.firstName || user.first_name || '',
+          lastName: user.lastName || user.last_name || '',
+          role: (user.role || user.role_name || 'student') as 'student' | 'instructor' | 'admin',
+          phone: user.phone || null,
+          organization: user.organization || null,
+          country: user.country || null,
+          isEmailVerified: user.emailVerified ?? user.email_verified ?? true,
+          isActive: user.isActive ?? user.is_active ?? true,
+          createdAt: user.createdAt || user.created_at || new Date().toISOString(),
+          updatedAt: user.updatedAt || user.updated_at || new Date().toISOString()
+        };
 
-        sendMessageToParent('GOOGLE_AUTH_SUCCESS', {
-          user,
-          token,
-        });
+        console.log('✅ [GOOGLE CALLBACK] Success - User:', normalizedUser);
 
-        setTimeout(closePopup, 500);
-        return;
+        // Mettre à jour le store
+        setUser(normalizedUser);
+        setTokens(token, token);
+
+        // Stocker dans localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('authToken', token);
+          localStorage.setItem('user', JSON.stringify(normalizedUser));
+        }
+
+        // Rediriger vers le dashboard
+        const userRole = normalizedUser.role || 'student';
+        const dashboardPath = `/dashboard/${userRole}`;
+        console.log(`🔄 [GOOGLE CALLBACK] Redirecting to: ${dashboardPath}`);
+        setTimeout(() => {
+          window.location.replace(dashboardPath);
+        }, 300);
       } catch (parseError) {
         console.error('❌ [GOOGLE CALLBACK] Error parsing user data:', parseError);
-        sendMessageToParent('GOOGLE_AUTH_ERROR', {
-          error: 'Erreur lors du traitement des données',
-        });
-        setTimeout(closePopup, 500);
-        return;
+        window.location.replace('/login?error=parse_error');
       }
-    }
-
-    // Vérifier aussi dans le hash (format: #token=xxx&user=xxx)
-    if (hash && hash.startsWith('#')) {
-      console.log('🔍 [GOOGLE CALLBACK] Checking hash for data...');
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const hashToken = hashParams.get('token');
-      const hashError = hashParams.get('error');
-      const hashUserStr = hashParams.get('user');
-
-      if (hashError) {
-        console.error('❌ [GOOGLE CALLBACK] Error from hash:', hashError);
-        sendMessageToParent('GOOGLE_AUTH_ERROR', {
-          error: decodeURIComponent(hashError),
-        });
-        setTimeout(closePopup, 500);
-        return;
-      }
-
-      if (hashToken && hashUserStr) {
-        try {
-          const user = JSON.parse(decodeURIComponent(hashUserStr));
-          console.log('✅ [GOOGLE CALLBACK] Success data from hash');
-          console.log('✅ [GOOGLE CALLBACK] User role from backend:', user.role || user.role_name || 'NOT PROVIDED');
-          
-          if (!user.role && !user.role_name) {
-            console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
-            user.role = 'student';
-          }
-          
-          console.log('✅ [GOOGLE CALLBACK] Final user role to send:', user.role || user.role_name || 'NOT SET');
-          
-          sendMessageToParent('GOOGLE_AUTH_SUCCESS', {
-            user,
-            token: hashToken,
-          });
-          setTimeout(closePopup, 500);
-          return;
-        } catch (parseError) {
-          console.error('❌ [GOOGLE CALLBACK] Error parsing user data from hash:', parseError);
-        }
-      }
-    }
-
-    // Si on n'a pas de données dans les query params ni dans le hash, 
-    // le backend pourrait envoyer un message directement
-    console.log('⏳ [GOOGLE CALLBACK] No data in URL, waiting for message from backend...');
-    console.log('⏳ [GOOGLE CALLBACK] Current URL:', window.location.href);
-    console.log('⏳ [GOOGLE CALLBACK] This might indicate:');
-    console.log('   - The backend is processing the callback');
-    console.log('   - The backend will redirect with token/user data');
-    console.log('   - Or there might be an issue with the backend callback handler');
-    
-    // Vérifier si on est sur une page d'erreur du backend
-    const pageText = document.body?.innerText || document.body?.textContent || '';
-    if (pageText.includes('Unauthorized') || pageText.includes('401') || pageText.includes('403')) {
-      console.error('❌ [GOOGLE CALLBACK] Error page detected in body content');
-      sendMessageToParent('GOOGLE_AUTH_ERROR', {
-        error: 'Erreur d\'autorisation : le serveur n\'a pas pu traiter votre demande.',
-      });
-      setTimeout(closePopup, 500);
       return;
     }
 
-    // Écouter aussi les changements d'URL dans la popup (si le backend redirige après)
-    let lastUrl = window.location.href;
-    const urlCheckInterval = setInterval(() => {
-      if (window.location.href !== lastUrl) {
-        console.log('🔄 [GOOGLE CALLBACK] URL changed, reloading...');
-        lastUrl = window.location.href;
-        window.location.reload();
-      }
-    }, 500);
+    // Si aucune donnée n'est présente
+    console.warn('⚠️ [GOOGLE CALLBACK] No data in URL');
+    window.location.replace('/login?error=no_data');
+  }, [searchParams, setUser, setTokens]);
 
-    const messageListener = (event: MessageEvent) => {
-      console.log('📨 [GOOGLE CALLBACK] Message received:', {
-        origin: event.origin,
-        type: event.data?.type,
-        hasData: !!event.data,
-      });
-
-      // Accepter les messages depuis n'importe quelle origine pour cette page de callback
-      // (le backend pourrait être sur un autre domaine)
-      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
-        const { user, token } = event.data;
-        console.log('✅ [GOOGLE CALLBACK] Success message from backend');
-        console.log('✅ [GOOGLE CALLBACK] User:', user);
-        console.log('✅ [GOOGLE CALLBACK] Token:', token ? 'present' : 'missing');
-        console.log('✅ [GOOGLE CALLBACK] User role from backend:', user?.role || user?.role_name || 'NOT PROVIDED');
-        
-        if (user && !user.role && !user.role_name) {
-          console.warn('⚠️ [GOOGLE CALLBACK] Backend did not provide a role, fallback vers apprenant');
-          user.role = 'student';
-        }
-        
-        console.log('✅ [GOOGLE CALLBACK] Final user role to send:', user?.role || user?.role_name || 'NOT SET');
-
-        sendMessageToParent('GOOGLE_AUTH_SUCCESS', {
-          user,
-          token,
-        });
-
-        clearInterval(urlCheckInterval);
-        window.removeEventListener('message', messageListener);
-        setTimeout(closePopup, 500);
-      } else if (event.data?.type === 'GOOGLE_AUTH_ERROR') {
-        console.error('❌ [GOOGLE CALLBACK] Error message from backend:', event.data.error);
-        sendMessageToParent('GOOGLE_AUTH_ERROR', {
-          error: event.data.error || 'Erreur lors de la connexion',
-        });
-
-        clearInterval(urlCheckInterval);
-        window.removeEventListener('message', messageListener);
-        setTimeout(closePopup, 500);
-      }
-    };
-
-    window.addEventListener('message', messageListener);
-
-    // Timeout après 30 secondes
-    const timeout = setTimeout(() => {
-      console.warn('⚠️ [GOOGLE CALLBACK] Timeout waiting for message or data');
-      clearInterval(urlCheckInterval);
-      window.removeEventListener('message', messageListener);
-      sendMessageToParent('GOOGLE_AUTH_ERROR', {
-        error: 'Timeout : aucune réponse du serveur après 30 secondes',
-      });
-      setTimeout(closePopup, 500);
-    }, 30000);
-
-    return () => {
-      clearInterval(urlCheckInterval);
-      window.removeEventListener('message', messageListener);
-      clearTimeout(timeout);
-    };
-  }, [searchParams]);
-
-  // Afficher un loader pendant le traitement
+  // Afficher un loader
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
         <Loader className="h-12 w-12 text-teal-600 animate-spin mx-auto mb-4" />
         <p className="text-gray-600">Authentification en cours...</p>
         <p className="text-sm text-gray-500 mt-2">Veuillez patienter</p>
-        <p className="text-xs text-gray-400 mt-4">Ne fermez pas cette fenêtre</p>
       </div>
     </div>
   );
@@ -313,17 +293,124 @@ function GoogleCallbackContent() {
 
 export default function GoogleCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <Loader className="h-12 w-12 text-teal-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600">Chargement...</p>
+    <>
+      {/* Script inline pour envoyer le message immédiatement avant React */}
+      {/* ⚠️ CRITIQUE : Ce script doit s'exécuter AVANT React et empêcher tout rendu si c'est une popup */}
+      <script
+        data-keep
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const token = urlParams.get('token');
+                const userStr = urlParams.get('user');
+                const error = urlParams.get('error');
+                const isPopup = window.opener && !window.opener.closed;
+                
+                console.log('🚀 [GOOGLE CALLBACK INLINE] Script executing...', { isPopup, hasToken: !!token, hasUser: !!userStr, hasError: !!error });
+                
+                // ⚠️ CRITIQUE : Si c'est une popup, on envoie le message et on NE REDIRIGE JAMAIS
+                if (token && userStr && !error && isPopup) {
+                  console.log('🚀 [GOOGLE CALLBACK INLINE] This is a popup - sending message, NO REDIRECT, NO STORE UPDATE');
+                  try {
+                    const user = JSON.parse(decodeURIComponent(userStr));
+                    const normalizedUser = {
+                      id: typeof user.id === 'number' ? user.id : (user.id ? parseInt(String(user.id), 10) : 0),
+                      email: user.email || '',
+                      firstName: user.firstName || user.first_name || '',
+                      lastName: user.lastName || user.last_name || '',
+                      role: (user.role || user.role_name || 'student'),
+                      phone: user.phone || null,
+                      organization: user.organization || null,
+                      country: user.country || null,
+                      isEmailVerified: user.emailVerified ?? user.email_verified ?? true,
+                      isActive: user.isActive ?? user.is_active ?? true,
+                      createdAt: user.createdAt || user.created_at || new Date().toISOString(),
+                      updatedAt: user.updatedAt || user.updated_at || new Date().toISOString()
+                    };
+                    
+                    // Envoyer le message plusieurs fois pour s'assurer qu'il est reçu
+                    for (let i = 0; i < 5; i++) {
+                      setTimeout(() => {
+                        if (window.opener && !window.opener.closed) {
+                          window.opener.postMessage(
+                            {
+                              type: 'GOOGLE_AUTH_SUCCESS',
+                              user: normalizedUser,
+                              token: token
+                            },
+                            window.location.origin
+                          );
+                          console.log('✅ [GOOGLE CALLBACK INLINE] Message sent (attempt ' + (i + 1) + ')');
+                        }
+                      }, i * 50);
+                    }
+                    
+                    // Marquer dans sessionStorage pour éviter le double traitement
+                    sessionStorage.setItem('google_oauth_message_sent', 'true');
+                    sessionStorage.setItem('google_oauth_is_popup', 'true');
+                    
+                    // ⚠️ CRITIQUE : NE JAMAIS REDIRIGER ICI - La fenêtre principale le fera
+                    // ⚠️ CRITIQUE : NE PAS METTRE À JOUR LE STORE ICI - Cela pourrait déclencher des redirections
+                    console.log('✅ [GOOGLE CALLBACK INLINE] Message sent, popup will close - NO REDIRECT, NO STORE UPDATE');
+                    
+                    // Fermer la popup après un court délai
+                    setTimeout(() => {
+                      try {
+                        window.close();
+                      } catch (e) {
+                        // Ignorer
+                      }
+                    }, 300);
+                  } catch (e) {
+                    console.error('❌ [GOOGLE CALLBACK INLINE] Error:', e);
+                  }
+                } else if (error && isPopup) {
+                  console.log('🚀 [GOOGLE CALLBACK INLINE] Sending error message (popup)...');
+                  try {
+                    window.opener.postMessage(
+                      {
+                        type: 'GOOGLE_AUTH_ERROR',
+                        error: decodeURIComponent(error)
+                      },
+                      window.location.origin
+                    );
+                    sessionStorage.setItem('google_oauth_message_sent', 'true');
+                    sessionStorage.setItem('google_oauth_is_popup', 'true');
+                    setTimeout(() => {
+                      try {
+                        window.close();
+                      } catch (e) {
+                        // Ignorer
+                      }
+                    }, 300);
+                  } catch (e) {
+                    console.error('❌ [GOOGLE CALLBACK INLINE] Error sending error:', e);
+                  }
+                } else if (!isPopup && token && userStr) {
+                  // Si ce n'est pas une popup, on peut traiter normalement
+                  console.log('🔄 [GOOGLE CALLBACK INLINE] Not a popup, will process normally');
+                }
+              } catch (e) {
+                console.error('❌ [GOOGLE CALLBACK INLINE] Error in inline script:', e);
+              }
+            })();
+          `,
+        }}
+      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Loader className="h-12 w-12 text-teal-600 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600">Chargement...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <GoogleCallbackContent />
-    </Suspense>
+        }
+      >
+        <GoogleCallbackContent />
+      </Suspense>
+    </>
   );
 }

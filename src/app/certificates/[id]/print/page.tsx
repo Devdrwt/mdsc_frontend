@@ -34,11 +34,11 @@ export default function CertificatePrintPage() {
   }, [certId]);
 
   const fullName = useMemo(() => {
-    if (!certificate) return 'Étudiant(e)';
+    if (!certificate) return 'Utilisateur(trice)';
     const first = (certificate as any).first_name || (certificate as any).firstName || '';
     const last = (certificate as any).last_name || (certificate as any).lastName || '';
     const combined = `${first} ${last}`.trim();
-    return combined || 'Étudiant(e)';
+    return combined || 'Utilisateur(trice)';
   }, [certificate]);
 
   useEffect(() => {

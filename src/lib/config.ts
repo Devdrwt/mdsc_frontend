@@ -31,9 +31,9 @@ export const config = {
   
   // Configuration PWA
   pwa: {
-    name: 'MdSC MOOC',
-    shortName: 'MdSC',
-    description: 'Plateforme d\'apprentissage MdSC',
+    name: 'Maison de la Société Civile MOOC',
+    shortName: 'Maison de la Société Civile',
+    description: 'Plateforme d\'apprentissage Maison de la Société Civile',
     themeColor: '#1e3a8a',
     backgroundColor: '#ffffff',
   },

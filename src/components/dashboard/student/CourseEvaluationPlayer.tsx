@@ -162,13 +162,13 @@ export default function CourseEvaluationPlayer({
       let evalData: FinalEvaluation | null = null;
       
       if (enrollmentId) {
-        // Utiliser l'endpoint pour les étudiants avec enrollmentId
+        // Utiliser l'endpoint pour les utilisateurs avec enrollmentId
         const evalDataResult = await evaluationService.getEnrollmentEvaluation(enrollmentId);
         if (evalDataResult?.evaluation) {
           evalData = evalDataResult.evaluation as FinalEvaluation;
         }
       } else {
-        // Fallback : utiliser getCourseEvaluation (pour instructeurs)
+        // Fallback : utiliser getCourseEvaluation (pour formateurs)
         const evalDataResult = await evaluationService.getCourseEvaluation(courseId);
         if (evalDataResult) {
           evalData = { ...evalDataResult, id: evalDataResult.id || evaluationId } as FinalEvaluation;
@@ -217,17 +217,17 @@ export default function CourseEvaluationPlayer({
               const attemptsCount = evalDataResult.previous_attempts.length;
               setAttemptsUsed(attemptsCount);
               
-              // Vérifier si l'étudiant peut réessayer (pas réussi ET tentatives restantes)
+              // Vérifier si l'utilisateur peut réessayer (pas réussi ET tentatives restantes)
               const canRetry = !attemptResult.passed && attemptsCount < evalData.max_attempts;
               
               if (canRetry) {
-                // Si l'étudiant peut réessayer, ne pas marquer comme soumis pour permettre une nouvelle tentative
+                // Si l'utilisateur peut réessayer, ne pas marquer comme soumis pour permettre une nouvelle tentative
                 setIsSubmitted(false);
                 setResult(attemptResult);
                 setShowResults(true);
                 console.log('[CourseEvaluationPlayer] ⚠️ Évaluation non réussie, possibilité de réessayer:', { attemptsCount, maxAttempts: evalData.max_attempts });
               } else {
-                // Si l'étudiant a réussi ou n'a plus de tentatives, marquer comme soumis
+                // Si l'utilisateur a réussi ou n'a plus de tentatives, marquer comme soumis
                 setIsSubmitted(true);
                 setResult(attemptResult);
                 setShowResults(true);

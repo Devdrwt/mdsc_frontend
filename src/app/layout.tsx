@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MdSC MOOC",
+    title: "Maison de la Société Civile MOOC",
   },
   icons: {
     icon: [
@@ -123,10 +123,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch.png" />
         
         {/* Meta tags PWA */}
-        <meta name="application-name" content="MdSC MOOC" />
+        <meta name="application-name" content="Maison de la Société Civile MOOC" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="MdSC MOOC" />
+        <meta name="apple-mobile-web-app-title" content="Maison de la Société Civile MOOC" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
@@ -138,8 +138,9 @@ export default function RootLayout({
           httpEquiv="Permissions-Policy"
           content="speaker-selection=(self), microphone=(self), camera=(self), display-capture=(self), autoplay=(self), fullscreen=(self)"
         />
-        {/* Script Kkiapay SDK */}
+        {/* Script Kkiapay SDK - SuppressHydrationWarning pour éviter les erreurs d'hydratation */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -161,11 +162,14 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Script de thème - SuppressHydrationWarning pour éviter les erreurs d'hydratation */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
+                  if (typeof window === 'undefined') return;
                   var root = document.documentElement;
                   var storedTheme = localStorage.getItem('mdsc-theme');
                   var storedLanguage = localStorage.getItem('mdsc-language');

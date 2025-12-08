@@ -31,7 +31,7 @@ export class ModuleService {
   }
 
   /**
-   * Récupérer les leçons d'un module (pour instructeurs)
+   * Récupérer les leçons d'un module (pour formateurs)
    * Note: Le backend doit inclure les leçons dans la réponse de getModule ou getCourseModules
    * pour que cela fonctionne. Sinon, il faut créer un endpoint spécifique.
    */
@@ -48,7 +48,7 @@ export class ModuleService {
       
       // Si pas de leçons dans le module, retourner un tableau vide
       // Le backend doit être modifié pour inclure les leçons dans la réponse
-      console.warn('⚠️ Le module ne contient pas de leçons dans sa réponse. Le backend doit être modifié pour inclure les leçons pour les instructeurs.');
+      console.warn('⚠️ Le module ne contient pas de leçons dans sa réponse. Le backend doit être modifié pour inclure les leçons pour les formateurs.');
       return [];
     } catch (error: any) {
       console.error('Erreur lors de la récupération du module:', error);

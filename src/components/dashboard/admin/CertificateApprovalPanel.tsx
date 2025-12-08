@@ -132,7 +132,7 @@ export default function CertificateApprovalPanel() {
         toast.success('Certificat approuvé', 'Le certificat a été approuvé et sera émis.');
       } else {
         await certificateService.rejectCertificate(String(selectedCertificate.id), rejectionReason, comments);
-        toast.success('Certificat rejeté', 'Le certificat a été rejeté. L\'étudiant a été notifié.');
+        toast.success('Certificat rejeté', 'Le certificat a été rejeté. L\'utilisateur a été notifié.');
       }
       setShowApprovalModal(false);
       loadPendingCertificates();
@@ -155,7 +155,7 @@ export default function CertificateApprovalPanel() {
   const columns = [
     {
       key: 'student',
-      label: 'Étudiant',
+      label: 'Utilisateur',
       sortable: true,
       render: (_value: any, certificate: Certificate) => (
         <div className="flex items-center space-x-3">
@@ -356,7 +356,7 @@ export default function CertificateApprovalPanel() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-mdsc-gold transition-colors" />
               <input
                 type="text"
-                placeholder="Rechercher un étudiant, cours, email..."
+                placeholder="Rechercher un utilisateur, cours, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold transition-all w-full bg-gray-50 focus:bg-white"
@@ -424,7 +424,7 @@ export default function CertificateApprovalPanel() {
                   <p className="font-medium text-gray-900">{selectedCertificate.course_title || 'N/A'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Étudiant:</span>
+                  <span className="text-gray-600">Utilisateur:</span>
                   <p className="font-medium text-gray-900">
                     {[selectedCertificate.first_name, selectedCertificate.last_name].filter(Boolean).join(' ') || 'N/A'}
                   </p>
@@ -493,7 +493,7 @@ export default function CertificateApprovalPanel() {
                   <span className="font-medium text-gray-900">{selectedCertificate.course_title}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Étudiant:</span>
+                  <span className="text-gray-600">Utilisateur:</span>
                   <span className="font-medium text-gray-900">
                     {[selectedCertificate.first_name, selectedCertificate.last_name].filter(Boolean).join(' ') || 'N/A'}
                   </span>
@@ -542,7 +542,7 @@ export default function CertificateApprovalPanel() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-gold focus:border-mdsc-gold"
                 placeholder={
                   approvalAction === 'approve'
-                    ? 'Commentaires pour l\'étudiant (optionnel)...'
+                    ? 'Commentaires pour l\'utilisateur (optionnel)...'
                     : 'Détails supplémentaires sur le rejet (optionnel)...'
                 }
               />
@@ -554,10 +554,10 @@ export default function CertificateApprovalPanel() {
                   <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-green-900">
-                      Le certificat sera émis et envoyé à l'étudiant
+                      Le certificat sera émis et envoyé à l'utilisateur
                     </p>
                     <p className="text-xs text-green-700 mt-1">
-                      L'étudiant recevra une notification avec le certificat PDF
+                      L'utilisateur recevra une notification avec le certificat PDF
                     </p>
                   </div>
                 </div>
@@ -573,7 +573,7 @@ export default function CertificateApprovalPanel() {
                       Le certificat sera rejeté
                     </p>
                     <p className="text-xs text-red-700 mt-1">
-                      L'étudiant recevra une notification avec les raisons du rejet
+                      L'utilisateur recevra une notification avec les raisons du rejet
                     </p>
                   </div>
                 </div>

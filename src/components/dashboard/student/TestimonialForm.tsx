@@ -24,7 +24,7 @@ export default function TestimonialForm() {
   const loadMyTestimonials = async () => {
     try {
       setLoading(true);
-      // Récupérer les témoignages de l'étudiant connecté
+      // Récupérer les témoignages de l'utilisateur connecté
       const data = await testimonialService.getMyTestimonials();
       setMyTestimonials(data);
     } catch (error: any) {
@@ -82,8 +82,8 @@ export default function TestimonialForm() {
       // Créer le témoignage avec les informations de l'utilisateur
       await testimonialService.createTestimonial({
         quote: formData.quote.trim(),
-        author: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Étudiant',
-        title: user?.role === 'student' ? 'Apprenant' : '',
+        author: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Utilisateur',
+        title: user?.role === 'student' ? 'Utilisateur' : '',
         avatar: user?.firstName?.[0] && user?.lastName?.[0] 
           ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
           : '',
@@ -144,7 +144,7 @@ export default function TestimonialForm() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Mon Témoignage</h2>
           <p className="text-gray-600 mt-1">
-            Partagez votre expérience avec la plateforme MdSC
+            Partagez votre expérience avec la plateforme Maison de la Société Civile
           </p>
         </div>
         {myTestimonials.length === 0 && (
@@ -217,7 +217,7 @@ export default function TestimonialForm() {
             Aucun témoignage pour le moment
           </h3>
           <p className="text-gray-600 mb-6">
-            Partagez votre expérience avec la plateforme MdSC et aidez d'autres apprenants à découvrir nos formations.
+            Partagez votre expérience avec la plateforme Maison de la Société Civile et aidez d'autres utilisateurs à découvrir nos formations.
           </p>
           <button
             onClick={handleOpenForm}
@@ -256,7 +256,7 @@ export default function TestimonialForm() {
                   rows={6}
                   minLength={20}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-                  placeholder="Partagez votre expérience avec la plateforme MdSC. Décrivez comment nos formations vous ont aidé, ce que vous avez appris, ou ce que vous recommanderiez à d'autres apprenants..."
+                  placeholder="Partagez votre expérience avec la plateforme Maison de la Société Civile. Décrivez comment nos formations vous ont aidé, ce que vous avez appris, ou ce que vous recommanderiez à d'autres utilisateurs..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Minimum 20 caractères. {formData.quote.length} caractères saisis.

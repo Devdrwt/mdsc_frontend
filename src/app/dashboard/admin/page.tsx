@@ -907,7 +907,7 @@ export default function AdminDashboard() {
           setTopInstructors(topInstructorsResult.value ?? []);
         } else {
           const reason = topInstructorsResult.reason as Error | undefined;
-          setTopInstructorsError(reason?.message ?? 'Impossible de récupérer les meilleures performances instructeurs.');
+          setTopInstructorsError(reason?.message ?? 'Impossible de récupérer les meilleures performances formateurs.');
           setTopInstructors([]);
         }
 
@@ -1090,7 +1090,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <p className="text-white/90 text-base md:text-lg ml-16">
-                    Surveillez et gérez votre plateforme MdSC MOOC en temps réel
+                    Surveillez et gérez votre plateforme Maison de la Société Civile MOOC en temps réel
                   </p>
                 </div>
                 <div className="hidden lg:block">
@@ -1661,7 +1661,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Performance des cours et instructeurs */}
+          {/* Performance des cours et formateurs */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -1738,9 +1738,9 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Users className="h-5 w-5 text-mdsc-blue-primary" />
-                  Instructeurs Performants
+                  Formateurs Performants
                 </h3>
-                <span className="text-xs text-gray-400">Source : agrégations instructeurs</span>
+                <span className="text-xs text-gray-400">Source : agrégations formateurs</span>
               </div>
               {topInstructorsError ? (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -1748,7 +1748,7 @@ export default function AdminDashboard() {
                 </div>
               ) : topInstructors.length === 0 ? (
                 <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-4 text-center text-sm text-gray-600">
-                  Aucun instructeur à mettre en avant pour le moment.
+                  Aucun formateur à mettre en avant pour le moment.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2206,14 +2206,14 @@ export default function AdminDashboard() {
                                         )}
                                         {notification.metadata.instructor_id && (
                                           <div className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                                            <span className="text-gray-500 font-medium">Instructeur ID:</span>
+                                            <span className="text-gray-500 font-medium">Formateur ID:</span>
                                             <span className="font-bold text-gray-900">#{notification.metadata.instructor_id}</span>
                                           </div>
                                         )}
                                         {notification.metadata.instructor_name && (
                                           <div className="col-span-2 flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
                                             <User className="h-3.5 w-3.5 text-gray-400" />
-                                            <span className="text-gray-500 font-medium">Instructeur:</span>
+                                            <span className="text-gray-500 font-medium">Formateur:</span>
                                             <span className="font-bold text-gray-900">{notification.metadata.instructor_name}</span>
                                           </div>
                                         )}

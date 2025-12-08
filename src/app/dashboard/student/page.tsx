@@ -636,7 +636,7 @@ function StudentDashboardContent() {
         }
       } catch (error) {
         if (!isMounted) return;
-        console.error('Erreur lors du chargement du dashboard étudiant:', error);
+        console.error('Erreur lors du chargement du dashboard utilisateur:', error);
         const message =
           error instanceof Error ? error.message : 'Impossible de charger le tableau de bord';
         setStatsError((prev) => prev ?? message);

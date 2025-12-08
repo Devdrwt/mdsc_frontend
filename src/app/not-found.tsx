@@ -67,7 +67,7 @@ export default function NotFound() {
                 <li>
                   <Link href="/about" className="text-mdsc-gray hover:text-mdsc-blue transition-colors flex items-center">
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    À propos de MdSC
+                    À propos de Maison de la Société Civile
                   </Link>
                 </li>
                 <li>

@@ -3,7 +3,7 @@ import { CourseSchedule, ScheduleItem } from '../../types/schedule';
 
 export class ScheduleService {
   /**
-   * Récupère le planning d'un cours pour l'étudiant connecté
+   * Récupère le planning d'un cours pour l'utilisateur connecté
    * @param courseId ID du cours
    * @returns Planning du cours avec tous les items (leçons, quiz, milestones)
    */

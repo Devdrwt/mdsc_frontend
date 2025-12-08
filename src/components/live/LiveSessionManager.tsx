@@ -114,7 +114,7 @@ export default function LiveSessionManager({ courseId }: LiveSessionManagerProps
       await loadSessions();
       toast.success('Succès', 'Session démarrée');
       
-      // Rediriger automatiquement l'instructeur vers Jitsi
+      // Rediriger automatiquement le formateur vers Jitsi
       // Utiliser le slug du cours si disponible, sinon utiliser courseId
       const slug = courseSlug || `course-${courseId}`;
       router.push(`/courses/${slug}/live-sessions/${sessionId}/join`);

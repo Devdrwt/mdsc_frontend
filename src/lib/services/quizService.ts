@@ -12,7 +12,7 @@ export interface ModuleQuiz {
   max_attempts?: number;
   attempts_count?: number; // Nombre de tentatives déjà effectuées (depuis l'API)
   remaining_attempts?: number; // Nombre de tentatives restantes (calculé par l'API)
-  can_attempt?: boolean; // Indique si l'étudiant peut tenter le quiz
+  can_attempt?: boolean; // Indique si l'utilisateur peut tenter le quiz
 }
 
 export interface QuizQuestion {
@@ -57,14 +57,53 @@ export class QuizService {
         passing_score: data.passing_score,
         duration_minutes: data.duration_minutes,
         is_published: true, // Publier automatiquement le quiz
-        questions: data.questions.map((q, idx) => ({
-          question_text: q.question_text,
-          question_type: q.question_type,
-          options: q.options || [],
-          correct_answer: q.correct_answer,
-          points: q.points,
-          order_index: q.order_index || idx + 1,
-        })),
+        questions: data.questions.map((q, idx) => {
+          // Pour les questions QCM, filtrer les options vides de manière stricte
+          let cleanedOptions = q.options || [];
+          if (q.question_type === 'multiple_choice' && Array.isArray(cleanedOptions)) {
+            cleanedOptions = cleanedOptions
+              .map((opt: any) => {
+                const str = String(opt || '').trim();
+                return str.length > 0 ? str : null;
+              })
+              .filter((opt: string | null): opt is string => opt !== null && opt.length > 0);
+            
+            // Validation stricte : s'assurer qu'on a au moins 2 options
+            if (cleanedOptions.length < 2) {
+              throw new Error(`La question ${idx + 1} (QCM) doit avoir au moins 2 réponses valides (actuellement: ${cleanedOptions.length})`);
+            }
+          }
+          
+          // Normaliser correct_answer pour tous les types de questions
+          let normalizedCorrectAnswer = q.correct_answer;
+          if (q.question_type === 'true_false') {
+            // Normaliser pour true_false : accepter différents formats
+            const answer = String(q.correct_answer || '').trim().toLowerCase();
+            if (answer === 'vrai' || answer === 'true' || answer === '1' || answer === 'oui') {
+              normalizedCorrectAnswer = 'true';
+            } else if (answer === 'faux' || answer === 'false' || answer === '0' || answer === 'non') {
+              normalizedCorrectAnswer = 'false';
+            } else {
+              // Garder la valeur originale si elle est déjà "true" ou "false"
+              normalizedCorrectAnswer = (answer === 'true' || answer === 'false') ? answer : String(q.correct_answer || '').trim();
+            }
+          } else if (q.question_type === 'short_answer') {
+            // Pour short_answer, s'assurer que c'est une string
+            normalizedCorrectAnswer = String(q.correct_answer || '').trim();
+          } else if (q.question_type === 'multiple_choice') {
+            // Pour multiple_choice, trim la réponse correcte
+            normalizedCorrectAnswer = String(q.correct_answer || '').trim();
+          }
+          
+          return {
+            question_text: q.question_text,
+            question_type: q.question_type,
+            options: cleanedOptions,
+            correct_answer: normalizedCorrectAnswer,
+            points: q.points,
+            order_index: q.order_index || idx + 1,
+          };
+        }),
       }),
     });
     return response.data;
@@ -118,15 +157,54 @@ export class QuizService {
         passing_score: data.passing_score,
         duration_minutes: data.duration_minutes,
         is_published: true, // Maintenir le quiz publié lors de la mise à jour
-        questions: data.questions?.map((q, idx) => ({
-          id: q.id, // Inclure l'ID si la question existe déjà
-          question_text: q.question_text,
-          question_type: q.question_type,
-          options: q.options || [],
-          correct_answer: q.correct_answer,
-          points: q.points,
-          order_index: q.order_index || idx + 1,
-        })) || [],
+        questions: data.questions?.map((q, idx) => {
+          // Pour les questions QCM, filtrer les options vides de manière stricte
+          let cleanedOptions = q.options || [];
+          if (q.question_type === 'multiple_choice' && Array.isArray(cleanedOptions)) {
+            cleanedOptions = cleanedOptions
+              .map((opt: any) => {
+                const str = String(opt || '').trim();
+                return str.length > 0 ? str : null;
+              })
+              .filter((opt: string | null): opt is string => opt !== null && opt.length > 0);
+            
+            // Validation stricte : s'assurer qu'on a au moins 2 options
+            if (cleanedOptions.length < 2) {
+              throw new Error(`La question ${idx + 1} (QCM) doit avoir au moins 2 réponses valides (actuellement: ${cleanedOptions.length})`);
+            }
+          }
+          
+          // Normaliser correct_answer pour tous les types de questions
+          let normalizedCorrectAnswer = q.correct_answer;
+          if (q.question_type === 'true_false') {
+            // Normaliser pour true_false : accepter différents formats
+            const answer = String(q.correct_answer || '').trim().toLowerCase();
+            if (answer === 'vrai' || answer === 'true' || answer === '1' || answer === 'oui') {
+              normalizedCorrectAnswer = 'true';
+            } else if (answer === 'faux' || answer === 'false' || answer === '0' || answer === 'non') {
+              normalizedCorrectAnswer = 'false';
+            } else {
+              // Garder la valeur originale si elle est déjà "true" ou "false"
+              normalizedCorrectAnswer = (answer === 'true' || answer === 'false') ? answer : String(q.correct_answer || '').trim();
+            }
+          } else if (q.question_type === 'short_answer') {
+            // Pour short_answer, s'assurer que c'est une string
+            normalizedCorrectAnswer = String(q.correct_answer || '').trim();
+          } else if (q.question_type === 'multiple_choice') {
+            // Pour multiple_choice, trim la réponse correcte
+            normalizedCorrectAnswer = String(q.correct_answer || '').trim();
+          }
+          
+          return {
+            id: q.id, // Inclure l'ID si la question existe déjà
+            question_text: q.question_text,
+            question_type: q.question_type,
+            options: cleanedOptions,
+            correct_answer: normalizedCorrectAnswer,
+            points: q.points,
+            order_index: q.order_index || idx + 1,
+          };
+        }) || [],
       }),
     });
     return response.data;
@@ -140,7 +218,7 @@ export class QuizService {
     });
   }
 
-  // Soumettre un quiz (étudiant)
+  // Soumettre un quiz (utilisateur)
   static async submitQuiz(submission: QuizSubmission): Promise<QuizResult> {
     const response = await apiRequest(`/quizzes/${submission.quiz_id}/submit`, {
       method: 'POST',
@@ -149,7 +227,7 @@ export class QuizService {
     return response.data;
   }
 
-  // Récupérer un quiz pour un étudiant (sans les réponses)
+  // Récupérer un quiz pour un utilisateur (sans les réponses)
   static async getQuizForStudent(quizId: string): Promise<ModuleQuiz> {
     const response = await apiRequest(`/quizzes/${quizId}`, {
       method: 'GET',
@@ -157,7 +235,7 @@ export class QuizService {
     return response.data;
   }
 
-  // Récupérer le quiz d'un module pour un étudiant (via enrollmentId et moduleId)
+  // Récupérer le quiz d'un module pour un utilisateur (via enrollmentId et moduleId)
   static async getModuleQuizForStudent(enrollmentId: number, moduleId: string): Promise<ModuleQuiz | null> {
     try {
       const response = await apiRequest(`/enrollments/${enrollmentId}/modules/${moduleId}/quiz`, {
@@ -187,7 +265,7 @@ export class QuizService {
     }
   }
 
-  // Soumettre une tentative de quiz de module (étudiant)
+  // Soumettre une tentative de quiz de module (utilisateur)
   static async submitModuleQuizAttempt(
     enrollmentId: number,
     moduleId: string,

@@ -302,7 +302,7 @@ export default function PaymentForm({
         courseId,
         paymentMethod: 'gobipay',
         paymentProvider: 'gobipay',
-        customerFullname: fullname || 'Étudiant MdSC',
+        customerFullname: fullname || 'Utilisateur Maison de la Société Civile',
         customerEmail: email,
         customerPhone: trimmedPhone,
       };
@@ -384,7 +384,7 @@ export default function PaymentForm({
         courseId,
         paymentMethod: 'fedapay',
         paymentProvider: 'fedapay',
-        customerFullname: fullname || 'Étudiant MdSC',
+        customerFullname: fullname || 'Utilisateur Maison de la Société Civile',
         customerEmail: email,
         customerPhone: phone,
       };
@@ -433,9 +433,9 @@ export default function PaymentForm({
         : 'sandbox';
 
       // Séparer le prénom et le nom pour Fedapay
-      const nameParts = (fullname || 'Étudiant MdSC').split(' ');
-      const firstname = nameParts[0] || 'Étudiant';
-      const lastname = nameParts.slice(1).join(' ') || 'MdSC';
+      const nameParts = (fullname || 'Utilisateur Maison de la Société Civile').split(' ');
+      const firstname = nameParts[0] || 'Utilisateur';
+      const lastname = nameParts.slice(1).join(' ') || 'Maison de la Société Civile';
 
       console.log('[PaymentForm] Opening Fedapay widget', {
         amount,
@@ -1127,7 +1127,7 @@ export default function PaymentForm({
         courseId,
         paymentMethod: 'kkiapay',
         paymentProvider: 'kkiapay',
-        customerFullname: fullname || 'Étudiant MdSC',
+        customerFullname: fullname || 'Utilisateur Maison de la Société Civile',
         customerEmail: email,
         customerPhone: phone,
       };
@@ -1182,7 +1182,7 @@ export default function PaymentForm({
       const widgetOpened = openKkiapayWidget({
         amount: String(amount),
         position: 'center',
-        theme: '#3B7C8A', // Couleur principale de la plateforme MdSC
+        theme: '#3B7C8A', // Couleur principale de la plateforme Maison de la Société Civile
         key: publicKey,
         sandbox: sandbox,
         name: fullname || undefined,

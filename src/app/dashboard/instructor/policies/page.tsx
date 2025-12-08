@@ -89,7 +89,7 @@ export default function InstructorPoliciesPage() {
                   <ShieldCheck className="h-8 w-8" /> Règles & Confidentialité
                 </h1>
                 <p className="mt-2 text-white/80 max-w-2xl">
-                  Découvrez comment nous protégeons vos données, vos contenus et celles de vos étudiants. L’acceptation de ces règles est obligatoire pour continuer à utiliser l’espace instructeur.
+                  Découvrez comment nous protégeons vos données, vos contenus et celles de vos utilisateurs. L'acceptation de ces règles est obligatoire pour continuer à utiliser l'espace formateur.
                 </p>
                 <p className="mt-2 text-xs uppercase tracking-wide text-white/60">Version effective {new Date(POLICIES_VERSION).toLocaleDateString('fr-FR')}</p>
               </div>
@@ -117,11 +117,11 @@ export default function InstructorPoliciesPage() {
                 </header>
                 <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                   <p>
-                    En tant qu’instructeur MDCS, vous vous engagez à publier des contenus respectueux du cadre légal et à garantir la qualité pédagogique des formations proposées. Toute activité frauduleuse ou portant atteinte à l’intégrité de la plateforme est strictement interdite.
+                    En tant que formateur Maison de la Société Civile, vous vous engagez à publier des contenus respectueux du cadre légal et à garantir la qualité pédagogique des formations proposées. Toute activité frauduleuse ou portant atteinte à l'intégrité de la plateforme est strictement interdite.
                   </p>
                   <ul className="list-disc space-y-2 pl-5">
                     <li>Respecter les droits d’auteur et les licences applicables aux ressources partagées.</li>
-                    <li>Assurer un suivi professionnel des étudiants et répondre à leurs demandes dans un délai raisonnable.</li>
+                    <li>Assurer un suivi professionnel des utilisateurs et répondre à leurs demandes dans un délai raisonnable.</li>
                     <li>Ne pas utiliser la plateforme pour des communications abusives ou non sollicitées.</li>
                   </ul>
                 </div>
@@ -135,7 +135,7 @@ export default function InstructorPoliciesPage() {
                 </header>
                 <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                   <p>
-                    Nous mettons en œuvre des mesures de sécurité avancées pour protéger vos données et celles de vos apprenants. Vos informations personnelles sont stockées dans l’Union Européenne et ne sont utilisées que dans le cadre du service.
+                    Nous mettons en œuvre des mesures de sécurité avancées pour protéger vos données et celles de vos utilisateurs. Vos informations personnelles sont stockées dans l'Union Européenne et ne sont utilisées que dans le cadre du service.
                   </p>
                   <ul className="list-disc space-y-2 pl-5">
                     <li>Chiffrement des données sensibles et audits réguliers.</li>
@@ -148,16 +148,16 @@ export default function InstructorPoliciesPage() {
               <article className="rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <header className="border-b border-gray-100 px-6 py-4">
                   <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                    <Globe className="h-5 w-5 text-mdsc-blue-primary" /> Engagements envers les apprenants
+                    <Globe className="h-5 w-5 text-mdsc-blue-primary" /> Engagements envers les utilisateurs
                   </h2>
                 </header>
                 <div className="px-6 py-5 space-y-4 text-sm text-gray-600">
                   <p>
-                    Les données des apprenants doivent être traitées avec la plus grande confidentialité. Vous ne pouvez les utiliser qu’à des fins pédagogiques dans le cadre de MDCS.
+                    Les données des utilisateurs doivent être traitées avec la plus grande confidentialité. Vous ne pouvez les utiliser qu'à des fins pédagogiques dans le cadre de Maison de la Société Civile.
                   </p>
                   <ul className="list-disc space-y-2 pl-5">
                     <li>Ne pas exporter les informations personnelles pour un usage externe sans consentement.</li>
-                    <li>Informer MDCS en cas de suspicion de fuite ou d’accès non autorisé.</li>
+                    <li>Informer Maison de la Société Civile en cas de suspicion de fuite ou d'accès non autorisé.</li>
                     <li>Garantir la conformité de vos sous-traitants (ex. outils externes) avec le RGPD.</li>
                   </ul>
                 </div>
@@ -180,7 +180,7 @@ export default function InstructorPoliciesPage() {
                   </li>
                   <li>
                     <strong>Mon acceptation est-elle obligatoire ?</strong>
-                    <p>Oui, sans acceptation, l’accès complet à l’espace instructeur est bloqué.</p>
+                    <p>Oui, sans acceptation, l'accès complet à l'espace formateur est bloqué.</p>
                   </li>
                 </ul>
               </div>

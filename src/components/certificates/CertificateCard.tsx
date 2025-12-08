@@ -50,7 +50,7 @@ export default function CertificateCard({
             </h3>
             {certificate.course && (
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                {certificate.course.category} • {certificate.course.level}
+                {certificate.course.category}
               </p>
             )}
           </div>

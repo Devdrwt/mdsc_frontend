@@ -65,7 +65,7 @@ export class LiveSessionService {
   }
 
   /**
-   * Récupérer toutes les sessions live de l'instructeur (avec ou sans cours)
+   * Récupérer toutes les sessions live du formateur (avec ou sans cours)
    */
   static async getInstructorSessions(
     params?: { page?: number; limit?: number; status?: string }
@@ -145,7 +145,7 @@ export class LiveSessionService {
   }
 
   /**
-   * Démarrer une session (instructeur)
+   * Démarrer une session (formateur)
    */
   static async startSession(
     sessionId: number
@@ -157,7 +157,7 @@ export class LiveSessionService {
   }
 
   /**
-   * Terminer une session (instructeur)
+   * Terminer une session (formateur)
    */
   static async endSession(
     sessionId: number
@@ -169,7 +169,7 @@ export class LiveSessionService {
   }
 
   /**
-   * Rejoindre une session (étudiant)
+   * Rejoindre une session (utilisateur)
    */
   static async joinSession(
     sessionId: number,
@@ -207,7 +207,7 @@ export class LiveSessionService {
   }
 
   /**
-   * Récupérer les sessions live de l'étudiant connecté
+   * Récupérer les sessions live de l'utilisateur connecté
    */
   static async getStudentSessions(): Promise<StudentLiveSessions> {
     const response = await apiRequest("/student/live-sessions", {

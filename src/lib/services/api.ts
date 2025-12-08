@@ -257,7 +257,19 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     );
     
     // Considérer tous les 404 comme simples sauf s'ils ont des détails d'erreur importants
+    // Liste des endpoints où les 404 sont attendus et ne doivent pas être loggés comme erreurs
+    const expected404Endpoints = [
+      '/notifications',
+      '/messages/stats',
+      '/messages',
+      '/courses/',
+    ];
+    const isExpected404 = is404 && errorLog.url && expected404Endpoints.some(endpoint => 
+      errorLog.url.includes(endpoint)
+    );
+    
     const isSimple404 = is404 && (
+      isExpected404 ||
       !errorLog.data || 
       Object.keys(errorLog.data).length === 0 ||
       hasSimple404Message ||
@@ -298,18 +310,96 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     } else if (is403) {
       // Logger les 403 avec des détails importants (mais pas comme une erreur critique)
       console.warn('⚠️ Access forbidden (403) with details:', errorLog.url, errorLog.data);
+    } else if (response.status === 429) {
+      // Gérer les erreurs 429 (Too Many Requests) de manière gracieuse
+      // Ne pas logger comme une erreur critique car c'est une limitation de taux normale
+      const retryAfter = data?.retryAfter || errorLog.data?.retryAfter;
+      const url = errorLog.url || response.url || 'URL unknown';
+      
+      // Liste des endpoints où les erreurs 429 sont attendues et doivent être silencieuses
+      const silent429Endpoints = [
+        '/notifications',
+        '/messages/stats',
+        '/messages',
+        '/courses/', // Pour les requêtes de rafraîchissement automatique
+      ];
+      
+      const isSilentEndpoint = silent429Endpoints.some(endpoint => url.includes(endpoint));
+      
+      if (isSilentEndpoint) {
+        // Ne pas logger pour les endpoints automatiques - c'est normal
+        // Créer une erreur silencieuse qui ne sera pas affichée
+        // Note: enrichedDetails n'est pas encore défini ici, on le définira plus tard
+        const silentError = new ApiError(
+          'Trop de requêtes. Veuillez réessayer plus tard.',
+          response.status,
+          'RATE_LIMIT',
+          { url, isSilent: true, isRateLimit: true }
+        );
+        (silentError as any).isSilent = true;
+        (silentError as any).isRateLimit = true;
+        throw silentError;
+      } else {
+        // Logger seulement pour les autres endpoints
+        if (retryAfter) {
+          console.warn(`⚠️ Rate limit atteint (429). Réessayer après ${retryAfter}s:`, url);
+        } else {
+          console.warn('⚠️ Rate limit atteint (429). Réessayer plus tard:', url);
+        }
+      }
     } else {
       // Logger les autres erreurs (non-404, non-403) comme des erreurs critiques
       // S'assurer d'afficher toutes les informations disponibles
-      const logData = {
-        status: errorLog.status || response.status,
-        statusText: errorLog.statusText || response.statusText,
-        url: errorLog.url || 'URL unknown',
-        message: errorLog.message || errorMessage || 'Erreur inconnue',
-        data: errorLog.data || data,
-        responseText: errorLog.responseText || errorLog.responseTextPreview || (responseText && responseText.length < 500 ? responseText : undefined),
-      };
-      console.error('❌ API Error:', logData);
+      // Construire logData en filtrant les valeurs undefined pour éviter les objets vides
+      const logData: Record<string, any> = {};
+      
+      // Toujours inclure au moins l'URL et le status avec des valeurs par défaut
+      const status = errorLog.status || response.status || 'unknown';
+      const statusText = errorLog.statusText || response.statusText || '';
+      const url = errorLog.url || response.url || 'URL unknown';
+      const message = errorLog.message || errorMessage || 'Erreur inconnue';
+      
+      // N'ajouter que les propriétés qui ont des valeurs définies
+      if (status !== undefined && status !== null) {
+        logData.status = status;
+      }
+      if (statusText) {
+        logData.statusText = statusText;
+      }
+      if (url) {
+        logData.url = url;
+      }
+      if (message) {
+        logData.message = message;
+      }
+      
+      // Ajouter les données seulement si elles existent et ne sont pas vides
+      if (errorLog.data && Object.keys(errorLog.data).length > 0) {
+        logData.data = errorLog.data;
+      } else if (data && Object.keys(data).length > 0) {
+        logData.data = data;
+      }
+      
+      // Ajouter le responseText seulement s'il existe et n'est pas trop long
+      const responseTextToLog = errorLog.responseText || errorLog.responseTextPreview || 
+        (responseText && responseText.length < 500 ? responseText : undefined);
+      if (responseTextToLog) {
+        logData.responseText = responseTextToLog;
+      }
+      
+      // Toujours logger avec au moins les informations de base
+      if (Object.keys(logData).length > 0) {
+        console.error('❌ API Error:', logData);
+      } else {
+        // Fallback si on n'a même pas les infos de base - toujours logger quelque chose
+        console.error('❌ API Error:', {
+          status: status || 'unknown',
+          url: url || 'URL unknown',
+          message: message || 'Erreur inconnue',
+          responseStatus: response.status,
+          responseStatusText: response.statusText,
+        });
+      }
     }
     
     const errorCode = hasValidData ? (data.code ?? null) : null;
@@ -320,6 +410,15 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const responseUrl = response.url || errorLog.url || 'URL inconnue';
     if (response.status === 404) {
       finalErrorMessage = `Route non trouvée (404): ${responseUrl}. ${errorMessage || 'La ressource demandée n\'existe pas sur le serveur.'}`;
+    } else if (response.status === 429) {
+      // Message plus informatif pour les erreurs 429
+      const retryAfter = data?.retryAfter || errorLog.data?.retryAfter;
+      if (retryAfter) {
+        const minutes = Math.ceil(retryAfter / 60);
+        finalErrorMessage = `Trop de requêtes. Veuillez réessayer dans ${minutes} minute${minutes > 1 ? 's' : ''}.`;
+      } else {
+        finalErrorMessage = 'Trop de requêtes. Veuillez réessayer plus tard.';
+      }
     }
 
     // Extraire les détails d'erreur pour les messages plus informatifs
@@ -388,6 +487,23 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     if (response.status === 403 && errorMessage.toLowerCase().includes('token expiré')) {
       // Retourner une erreur spéciale pour indiquer qu'un rafraîchissement est nécessaire
       error.refreshToken = true;
+    }
+    
+    // Pour les erreurs 429 sur les endpoints automatiques, marquer comme silencieuse
+    if (response.status === 429) {
+      const url = errorLog.url || response.url || '';
+      const silent429Endpoints = [
+        '/notifications',
+        '/messages/stats',
+        '/messages',
+        '/courses/',
+      ];
+      const isSilentEndpoint = silent429Endpoints.some(endpoint => url.includes(endpoint));
+      if (isSilentEndpoint) {
+        // Marquer l'erreur comme silencieuse pour qu'elle ne soit pas affichée à l'utilisateur
+        (error as any).isSilent = true;
+        (error as any).isRateLimit = true;
+      }
     }
     
     throw error;

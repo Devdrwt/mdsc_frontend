@@ -39,12 +39,13 @@ export default function ServiceWorkerRegistration() {
             });
           }
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Ne pas afficher d'erreur si le fichier n'existe pas (développement)
-        if (error?.message?.includes('404') || error?.message?.includes('Failed to fetch')) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage?.includes('404') || errorMessage?.includes('Failed to fetch')) {
           console.log('[PWA] Service Worker non disponible (normal en développement)');
         } else {
-          console.error('[PWA] Erreur lors de l\'enregistrement:', error);
+          console.error('[PWA] Erreur lors de l\'enregistrement:', errorMessage || error);
         }
       }
     };

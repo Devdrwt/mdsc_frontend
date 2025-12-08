@@ -379,7 +379,7 @@ export default function UserManagement() {
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200 shadow-sm">
             <Users className="h-3.5 w-3.5 mr-1.5" />
-            Étudiant
+            Utilisateur
           </span>
         );
       default:
@@ -418,7 +418,7 @@ export default function UserManagement() {
       await AdminService.updateUserRole(user.id, nextRole);
       notifySuccessRef.current?.(
         'Rôle mis à jour',
-        `Le compte ${user.email} est désormais ${nextRole === 'instructor' ? 'formateur' : 'apprenant'}.`
+        `Le compte ${user.email} est désormais ${nextRole === 'instructor' ? 'formateur' : 'utilisateur'}.`
       );
       await loadUsers();
     } catch (err) {
@@ -618,7 +618,7 @@ export default function UserManagement() {
             }`}
             title={
               user.role === 'instructor'
-                ? 'Rebasculer en apprenant'
+                ? 'Rebasculer en utilisateur'
                 : 'Attribuer le rôle formateur'
             }
             disabled={roleUpdating[user.id] || user.role === 'admin'}
@@ -835,7 +835,7 @@ export default function UserManagement() {
                 className="bg-transparent border-none text-sm focus:outline-none focus:ring-0 cursor-pointer text-gray-700 font-medium"
               >
                 <option value="all">Tous les rôles</option>
-                <option value="student">Étudiants</option>
+                <option value="student">Utilisateurs</option>
                 <option value="instructor">Formateurs</option>
                 <option value="admin">Administrateurs</option>
               </select>
@@ -906,7 +906,7 @@ export default function UserManagement() {
               onChange={(e) => setInviteRole(e.target.value as any)}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:border-mdsc-blue-dark focus:ring-2 focus:ring-mdsc-blue-dark/20 transition"
             >
-              <option value="student">Étudiant</option>
+              <option value="student">Utilisateur</option>
               <option value="instructor">Formateur</option>
               <option value="admin">Administrateur</option>
             </select>

@@ -42,7 +42,6 @@ export default function LiveSessionForm({
     course_description: session?.course?.title ? '' : '',
     course_short_description: '',
     category_id: '',
-    difficulty: 'beginner' as 'beginner' | 'intermediate' | 'advanced',
     language: 'fr',
     duration_minutes: 60,
     price: 0,
@@ -231,7 +230,6 @@ export default function LiveSessionForm({
           description: formData.course_description.trim(),
           short_description: formData.course_short_description.trim(),
           category_id: Number(formData.category_id),
-          difficulty: formData.difficulty,
           language: formData.language || 'fr',
           duration_minutes: finalDurationMinutes,
           price: formData.price || 0,
@@ -409,20 +407,6 @@ export default function LiveSessionForm({
               {errors.category_id && <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Niveau de difficulté
-              </label>
-              <select
-                value={formData.difficulty}
-                onChange={e => setFormData({ ...formData, difficulty: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F4A53A] focus:border-transparent text-gray-900 bg-white transition-all"
-              >
-                <option value="beginner">Débutant</option>
-                <option value="intermediate">Intermédiaire</option>
-                <option value="advanced">Avancé</option>
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

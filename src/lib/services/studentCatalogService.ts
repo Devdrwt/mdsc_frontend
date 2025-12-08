@@ -1,12 +1,9 @@
 import { apiRequest } from './api';
 
 export type CatalogStatusFilter = 'all' | 'active' | 'inactive';
-export type CatalogLevelFilter = 'beginner' | 'intermediate' | 'advanced' | 'expert';
-
 export interface StudentCatalogFilters {
   search?: string;
   status?: CatalogStatusFilter;
-  level?: CatalogLevelFilter | 'all';
   onlyEnrolled?: boolean;
 }
 
@@ -25,7 +22,6 @@ export interface StudentCatalogCategory {
   icon: string | null;
   isActive: boolean;
   metrics: StudentCatalogCategoryMetrics;
-  levels: string[];
   lastCourseUpdate: string | null;
   sampleThumbnail: string | null;
 }
@@ -34,12 +30,10 @@ export interface StudentCatalogMeta {
   total: number;
   activeCount: number;
   enrolledCount: number;
-  availableLevels: string[];
   appliedFilters: {
     search: string;
     status: CatalogStatusFilter;
     onlyEnrolled: boolean;
-    level: CatalogLevelFilter | null;
   };
 }
 
@@ -62,10 +56,6 @@ export class StudentCatalogService {
       params.set('status', filters.status);
     }
 
-    if (filters.level && filters.level !== 'all') {
-      params.set('level', filters.level);
-    }
-
     if (filters.onlyEnrolled) {
       params.set('onlyEnrolled', String(filters.onlyEnrolled));
     }
@@ -83,14 +73,12 @@ export class StudentCatalogService {
         total: data.meta?.total ?? 0,
         activeCount: data.meta?.activeCount ?? 0,
         enrolledCount: data.meta?.enrolledCount ?? 0,
-        availableLevels: Array.isArray(data.meta?.availableLevels) ? data.meta.availableLevels : [],
         appliedFilters: {
           search: data.meta?.appliedFilters?.search ?? filters.search ?? '',
           status: data.meta?.appliedFilters?.status ?? filters.status ?? 'all',
           onlyEnrolled:
             data.meta?.appliedFilters?.onlyEnrolled ??
-            Boolean(filters.onlyEnrolled),
-          level: data.meta?.appliedFilters?.level ?? (filters.level && filters.level !== 'all' ? filters.level : null)
+            Boolean(filters.onlyEnrolled)
         }
       }
     };

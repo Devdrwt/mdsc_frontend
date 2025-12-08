@@ -280,7 +280,7 @@ export default function TestimonialsManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gestion des Témoignages</h2>
-          <p className="text-gray-600 mt-1">Modérez et gérez les témoignages des étudiants</p>
+          <p className="text-gray-600 mt-1">Modérez et gérez les témoignages des utilisateurs</p>
         </div>
         <button
           onClick={() => handleOpenForm()}
@@ -685,7 +685,7 @@ export default function TestimonialsManagement() {
                   placeholder="Expliquez pourquoi ce témoignage est rejeté..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Cette raison sera visible par l'étudiant
+                  Cette raison sera visible par l'utilisateur
                 </p>
               </div>
 

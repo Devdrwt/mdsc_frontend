@@ -2,7 +2,7 @@
 
 /* Charte graphique Maison de la Société Civile */
 :root {
-  /* Couleurs principales MdSC - Charte graphique officielle */
+  /* Couleurs principales Maison de la Société Civile - Charte graphique officielle */
   --mdsc-blue-primary: #006095;  /* Bleu principal (fond de section) */
   --mdsc-blue-dark: #0C3C5C;     /* Bleu foncé (boutons et textes) */
   --mdsc-gold: #F4A53A;          /* Jaune doré (bouton et cadre de l'image) */
@@ -138,7 +138,7 @@
   color: #ffffff !important;
 }
 
-/* Textes spécifiques MdSC en dark mode */
+/* Textes spécifiques Maison de la Société Civile en dark mode */
 .dark .text-mdsc-blue-primary {
   color: #60a5fa !important;
 }
@@ -270,7 +270,7 @@ select:focus {
   color: #ffffff !important;
 }
 
-/* Classes utilitaires MdSC - Charte graphique officielle */
+/* Classes utilitaires Maison de la Société Civile - Charte graphique officielle */
 
 /* Typographie moderne - Charte graphique */
 .text-display {
@@ -393,7 +393,7 @@ select:focus {
   background-color: #0C3C5C;
 }
 
-/* Boutons MdSC - Charte graphique officielle */
+/* Boutons Maison de la Société Civile - Charte graphique officielle */
 .btn-mdsc-primary {
   background-color: var(--mdsc-blue-dark);
   color: var(--mdsc-white);

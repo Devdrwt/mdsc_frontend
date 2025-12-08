@@ -15,7 +15,7 @@ export default function InstructorMessagesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold mb-2">Messages</h1>
-                <p className="text-white/90">Communiquez avec vos étudiants</p>
+                <p className="text-white/90">Communiquez avec vos utilisateurs</p>
               </div>
             </div>
           </div>

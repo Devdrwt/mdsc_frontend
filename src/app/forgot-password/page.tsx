@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Mot de passe oublié - Maison de la Société Civile',
-  description: 'Réinitialisez votre mot de passe MdSC en recevant un lien par email.',
+  description: 'Réinitialisez votre mot de passe Maison de la Société Civile en recevant un lien par email.',
 };
 
 export default function ForgotPasswordPage() {

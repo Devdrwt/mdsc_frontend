@@ -10,7 +10,8 @@ interface RecentCoursesProps {
 }
 
 export default function RecentCourses({ courses, onCourseClick }: RecentCoursesProps) {
-  const getLevelColor = (level: string) => {
+  // Le niveau n'est plus utilisé
+  const getLevelColor = (_level: string) => {
     switch (level) {
       case 'Débutant':
         return 'bg-green-100 text-green-800';
@@ -77,7 +78,7 @@ export default function RecentCourses({ courses, onCourseClick }: RecentCoursesP
                       {course.title}
                     </h4>
                     <p className="text-sm text-mdsc-gray mt-1">
-                      Par {typeof course.instructor === 'string' ? course.instructor : course.instructor?.name || 'Instructeur'}
+                      Par {typeof course.instructor === 'string' ? course.instructor : course.instructor?.name || 'Formateur'}
                     </p>
                     
                     {/* Métadonnées */}
@@ -97,12 +98,6 @@ export default function RecentCourses({ courses, onCourseClick }: RecentCoursesP
                     </div>
                   </div>
 
-                  {/* Badge niveau */}
-                  <div className="ml-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
-                      {course.level}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Barre de progression (simulée) */}

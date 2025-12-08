@@ -317,8 +317,6 @@ export interface Course {
   category_id: number;
   category_name?: string;
   category_color?: string;
-  level: 'debutant' | 'intermediaire' | 'avance';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
   duration_minutes: number;
   language: string;
   thumbnail_url?: string;
@@ -366,7 +364,6 @@ export interface CreateCourseData {
   title: string;
   description: string;
   category: 'sante' | 'education' | 'gouvernance' | 'environnement' | 'economie';
-  level: 'debutant' | 'intermediaire' | 'avance';
   duration: number;
   language?: string;
   thumbnailUrl?: string;
@@ -399,7 +396,6 @@ export interface UploadFileData {
 
 export interface CourseFilter {
   category?: string;
-  level?: string;
   search?: string;
   language?: string;
   sortBy?: 'popular' | 'recent' | 'rating' | 'duration';

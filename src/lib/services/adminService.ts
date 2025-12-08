@@ -807,7 +807,7 @@ export class AdminService {
       const firstName = item?.first_name ?? item?.firstName;
       const lastName = item?.last_name ?? item?.lastName;
       const fallbackName = [firstName, lastName].filter(Boolean).join(' ').trim();
-      const displayName = item?.name ?? (fallbackName || item?.email || `Instructeur ${index + 1}`);
+      const displayName = item?.name ?? (fallbackName || item?.email || `Formateur ${index + 1}`);
       return {
         id: item?.id ?? item?.instructor_id ?? index,
         instructor_id: item?.instructor_id ?? item?.id ?? index,

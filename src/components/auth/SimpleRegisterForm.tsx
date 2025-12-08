@@ -17,6 +17,7 @@ interface FormData {
   country: string;
   password: string;
   confirmPassword: string;
+  acceptTerms: boolean;
 }
 
 const SimpleRegisterForm = () => {
@@ -30,7 +31,8 @@ const SimpleRegisterForm = () => {
     organization: '',
     country: 'BJ', // Bénin par défaut
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    acceptTerms: false
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -91,10 +93,12 @@ const SimpleRegisterForm = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     
     // Calculer la robustesse du mot de passe
@@ -160,6 +164,11 @@ const SimpleRegisterForm = () => {
       errors.confirmPassword = 'La confirmation du mot de passe est requise';
     } else if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    }
+
+    // Validation acceptation des conditions
+    if (!formData.acceptTerms) {
+      errors.acceptTerms = 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité';
     }
 
     setFieldErrors(errors);
@@ -236,11 +245,11 @@ const SimpleRegisterForm = () => {
       <div className="text-center mb-8 space-y-2">
         <div className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-teal-50 to-cyan-50 text-teal-700 rounded-full text-sm font-semibold border border-teal-200/50 shadow-sm">
           <GraduationCap className="h-4 w-4 mr-2" />
-          Créez votre accès MdSC
+          Créez votre accès Maison de la Société Civile
         </div>
         <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
           <ShieldAlert className="h-4 w-4 text-gray-400" />
-          Les privilèges avancés sont attribués après validation par l'équipe MdSC.
+          Les privilèges avancés sont attribués après validation par l'équipe Maison de la Société Civile.
         </p>
       </div>
 
@@ -582,6 +591,48 @@ const SimpleRegisterForm = () => {
               </div>
             </div>
 
+            {/* Section : Acceptation des conditions */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={handleInputChange}
+                  className={`mt-1 w-5 h-5 rounded border-2 text-teal-600 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 cursor-pointer transition-all ${
+                    fieldErrors.acceptTerms ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                <label htmlFor="acceptTerms" className="flex-1 text-sm text-gray-700 cursor-pointer">
+                  <span className="font-semibold">J'accepte les{' '}</span>
+                  <a 
+                    href="/terms" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-teal-600 hover:text-teal-700 font-semibold underline transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Conditions d'utilisation
+                  </a>
+                  <span className="font-semibold">{' '}et la{' '}</span>
+                  <a 
+                    href="/privacy" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-teal-600 hover:text-teal-700 font-semibold underline transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Politique de confidentialité
+                  </a>
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+              </div>
+              {fieldErrors.acceptTerms && (
+                <p className="mt-2 text-sm text-red-600 font-medium">{fieldErrors.acceptTerms}</p>
+              )}
+            </div>
+
             {/* Bouton de soumission */}
             <div className="pt-4">
               <button
@@ -635,19 +686,6 @@ const SimpleRegisterForm = () => {
           </form>
         </div>
 
-        {/* Note de sécurité */}
-        <div className="text-center mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-gray-500">
-            En créant un compte, vous acceptez nos{' '}
-            <a href="/terms" className="text-teal-600 hover:text-teal-700 font-medium transition-colors">
-              Conditions d'utilisation
-            </a>{' '}
-            et notre{' '}
-            <a href="/privacy" className="text-teal-600 hover:text-teal-700 font-medium transition-colors">
-              Politique de confidentialité
-            </a>
-          </p>
-        </div>
     </div>
   );
 };

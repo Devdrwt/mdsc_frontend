@@ -145,7 +145,7 @@ const convertToDisplayCourse = (course: ExtendedCourse): DisplayCourse => {
     courseAny.instructor?.name ||
     courseAny.instructor_name ||
     [instructorFirstName, instructorLastName].filter(Boolean).join(" ") ||
-    "Instructeur"
+    "Formateur"
 
   const instructorAvatarRaw =
     courseAny.instructor?.avatar || courseAny.instructor_avatar || courseAny.instructorAvatar || null
@@ -278,7 +278,6 @@ export default function ModuleCatalog() {
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set())
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
-  const [selectedLevel, setSelectedLevel] = useState<DifficultyFilter>("all")
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -383,15 +382,9 @@ export default function ModuleCatalog() {
       })
     }
 
-    if (selectedLevel !== "all") {
-      current = current.filter((course) => {
-        const { key } = resolveLevelInfo(course)
-        return key === selectedLevel
-      })
-    }
 
     setFilteredCourses(current)
-  }, [courses, searchTerm, selectedCategory, selectedLevel])
+  }, [courses, searchTerm, selectedCategory])
 
   const categories = useMemo(() => {
     const names = new Set<string>()
@@ -542,19 +535,6 @@ export default function ModuleCatalog() {
                   </select>
                 </div>
 
-                <div className="min-w-[180px]">
-                  <select
-                    value={selectedLevel}
-                    onChange={(event) => setSelectedLevel(event.target.value as DifficultyFilter)}
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-                  >
-                    <option value="all">Tous les niveaux</option>
-                    <option value="beginner">Débutant</option>
-                    <option value="intermediate">Intermédiaire</option>
-                    <option value="advanced">Avancé</option>
-                    <option value="expert">Expert</option>
-                  </select>
-                </div>
               </div>
             </div>
           </div>

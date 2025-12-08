@@ -34,7 +34,6 @@ interface Course {
   instructor: string;
   instructorEmail: string;
   category: string;
-  level: 'Débutant' | 'Intermédiaire' | 'Avancé';
   status: 'draft' | 'pending' | 'approved' | 'rejected' | 'published';
   createdAt: string;
   updatedAt: string;
@@ -49,24 +48,6 @@ interface Course {
   hasCertificate: boolean;
 }
 
-const toDisplayLevel = (raw?: string): 'Débutant' | 'Intermédiaire' | 'Avancé' => {
-  if (!raw) return 'Débutant';
-  const value = raw.toLowerCase();
-  if (['intermediate', 'intermédiaire'].includes(value)) return 'Intermédiaire';
-  if (['advanced', 'avancé'].includes(value)) return 'Avancé';
-  return 'Débutant';
-};
-
-const toApiLevel = (display: 'Débutant' | 'Intermédiaire' | 'Avancé'): string => {
-  switch (display) {
-    case 'Intermédiaire':
-      return 'intermediate';
-    case 'Avancé':
-      return 'advanced';
-    default:
-      return 'beginner';
-  }
-};
 
 export default function CourseModeration() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -74,7 +55,6 @@ export default function CourseModeration() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'pending' | 'approved' | 'rejected' | 'published'>('all');
-  const [filterLevel, setFilterLevel] = useState<'all' | 'Débutant' | 'Intermédiaire' | 'Avancé'>('all');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [viewCourse, setViewCourse] = useState<Course | null>(null);
 const [editCourse, setEditCourse] = useState<Course | null>(null);
@@ -82,7 +62,6 @@ const [editForm, setEditForm] = useState({
   title: '',
   shortDescription: '',
   description: '',
-  level: 'Débutant' as 'Débutant' | 'Intermédiaire' | 'Avancé',
   price: 0,
   isPublished: false,
 });
@@ -203,15 +182,14 @@ const loadCourses = useCallback(async () => {
         course.instructor_name ||
         (course.instructor_first_name && course.instructor_last_name
           ? `${course.instructor_first_name} ${course.instructor_last_name}`
-          : course.instructor || 'Instructeur inconnu'),
+          : course.instructor || 'Formateur inconnu'),
       instructorEmail: course.instructor_email || course.instructorEmail || '',
       category: course.category_name || course.category || 'Non catégorisé',
-      level: toDisplayLevel(course.level || course.course_type || course.difficulty),
       status: course.status || 'draft',
       createdAt: course.created_at || course.createdAt || new Date().toISOString(),
       updatedAt: course.updated_at || course.updatedAt || course.created_at || new Date().toISOString(),
       studentsEnrolled: (() => {
-        // Vérifier toutes les variantes possibles du nombre d'étudiants inscrits
+        // Vérifier toutes les variantes possibles du nombre d'utilisateurs inscrits
         const enrolledValue = course.students_enrolled || 
                              course.enrollment_count || 
                              course.enrollments_count ||
@@ -310,10 +288,6 @@ useEffect(() => {
       filtered = filtered.filter(course => course.status === filterStatus);
     }
 
-    // Filtrage par niveau
-    if (filterLevel !== 'all') {
-      filtered = filtered.filter(course => course.level === filterLevel);
-    }
 
     // Filtrage par recherche
     if (searchTerm) {
@@ -329,7 +303,7 @@ useEffect(() => {
     setSelectedCourses((prev) =>
       prev.filter((id) => filtered.some((course) => course.id === id))
     );
-  }, [courses, searchTerm, filterStatus, filterLevel]);
+  }, [courses, searchTerm, filterStatus]);
 
   const toggleCourseSelection = (courseId: string) => {
     setSelectedCourses((prev) =>
@@ -350,11 +324,10 @@ useEffect(() => {
     const headers = [
       'ID',
       'Titre',
-      'Instructeur',
-      'Email instructeur',
+      'Formateur',
+      'Email formateur',
       'Catégorie',
       'Statut',
-      'Niveau',
       'Inscrits',
       'Note moyenne',
       'Prix',
@@ -366,7 +339,6 @@ useEffect(() => {
       `"${course.instructorEmail}"`,
       `"${course.category}"`,
       course.status,
-      course.level,
       course.studentsEnrolled ?? 0,
       course.averageRating ?? 0,
       course.price ?? 0,
@@ -459,30 +431,6 @@ useEffect(() => {
     }
   };
 
-  const getLevelBadge = (level: string) => {
-    switch (level) {
-      case 'Débutant':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200 shadow-sm">
-            Débutant
-          </span>
-        );
-      case 'Intermédiaire':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-50 to-amber-50 text-yellow-700 border border-yellow-200 shadow-sm">
-            Intermédiaire
-          </span>
-        );
-      case 'Avancé':
-        return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border border-red-200 shadow-sm">
-            Avancé
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
 
 const handleCourseAction = async (courseId: string, action: string) => {
   const course = courses.find((c) => c.id === courseId);
@@ -501,7 +449,6 @@ const handleCourseAction = async (courseId: string, action: string) => {
           title: details.title || course.title,
           shortDescription: details.short_description || details.shortDescription || course.description || '',
           description: details.description || course.description || '',
-          level: toDisplayLevel(details.level || details.difficulty || course.level),
           price: Number(details.price ?? course.price ?? 0),
           isPublished:
             details.is_published !== undefined
@@ -547,7 +494,6 @@ const handleCloseEditModal = () => {
     title: '',
     shortDescription: '',
     description: '',
-    level: 'Débutant',
     price: 0,
     isPublished: false,
   });
@@ -561,7 +507,6 @@ const handleSaveEdit = async () => {
       title: editForm.title,
       shortDescription: editForm.shortDescription,
       description: editForm.description,
-      level: toApiLevel(editForm.level),
       price: Number.isFinite(editForm.price) ? editForm.price : 0,
       isPublished: editForm.isPublished,
     };
@@ -633,12 +578,6 @@ const cancelDeleteCourse = () => {
           {course.title}
         </div>
       )
-    },
-    {
-      key: 'level',
-      label: 'Niveau',
-      sortable: true,
-      render: (value: any, course: Course) => getLevelBadge(course.level)
     },
     {
       key: 'status',
@@ -911,7 +850,7 @@ const cancelDeleteCourse = () => {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-mdsc-blue-dark transition-colors" />
               <input
                 type="text"
-                placeholder="Rechercher un cours, instructeur, catégorie..."
+                placeholder="Rechercher un cours, formateur, catégorie..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-mdsc-blue-dark transition-all w-full bg-gray-50 focus:bg-white"
@@ -933,18 +872,6 @@ const cancelDeleteCourse = () => {
                 <option value="published">Publiés</option>
                 <option value="draft">Brouillons</option>
                 <option value="rejected">Rejetés</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value as any)}
-                className="bg-transparent border-none text-sm focus:outline-none focus:ring-0 cursor-pointer text-gray-700 font-medium"
-              >
-                <option value="all">Tous les niveaux</option>
-                <option value="Débutant">Débutant</option>
-                <option value="Intermédiaire">Intermédiaire</option>
-                <option value="Avancé">Avancé</option>
               </select>
             </div>
           </div>
@@ -988,10 +915,6 @@ const cancelDeleteCourse = () => {
                 </p>
               </div>
               <div className="rounded-lg border border-gray-200 p-4 bg-gray-50 space-y-2 text-sm text-gray-600">
-                <div className="flex items-center justify-between">
-                  <span>Niveau</span>
-                  {getLevelBadge(viewCourse.level)}
-                </div>
                 <div className="flex items-center justify-between">
                   <span>Statut</span>
                   {getStatusBadge(viewCourse.status)}
@@ -1087,20 +1010,6 @@ const cancelDeleteCourse = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Niveau
-                  </label>
-                  <select
-                    value={editForm.level}
-                    onChange={(e) =>
-                      setEditForm((prev) => ({ ...prev, level: e.target.value as typeof prev.level }))
-                    }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-mdsc-blue-dark focus:border-transparent"
-                  >
-                    <option value="Débutant">Débutant</option>
-                    <option value="Intermédiaire">Intermédiaire</option>
-                    <option value="Avancé">Avancé</option>
-                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1151,7 +1060,7 @@ const cancelDeleteCourse = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">Publication</p>
                   <p className="text-xs text-gray-500">
-                    Permettre aux apprenants de voir ce cours dans le catalogue.
+                    Permettre aux utilisateurs de voir ce cours dans le catalogue.
                   </p>
                 </div>
                 <button
@@ -1225,7 +1134,7 @@ const cancelDeleteCourse = () => {
                     <ul className="text-sm text-red-700 space-y-1.5 list-disc list-inside">
                       <li>Le cours et toutes ses informations</li>
                       <li>Toutes les leçons et modules associés</li>
-                      <li>Toutes les inscriptions des étudiants</li>
+                      <li>Toutes les inscriptions des utilisateurs</li>
                       <li>Toutes les progressions et statistiques</li>
                       <li>Les certificats délivrés pour ce cours</li>
                       <li>Les évaluations et quiz associés</li>

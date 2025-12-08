@@ -260,7 +260,7 @@ export default function EvaluationBuilder({
           <div>
             <h2 className="text-2xl font-bold mb-2">Évaluation Finale</h2>
             <p className="text-blue-100">
-              ⚠️ Cette évaluation est obligatoire pour permettre aux étudiants d'obtenir un certificat
+              ⚠️ Cette évaluation est obligatoire pour permettre aux utilisateurs d'obtenir un certificat
             </p>
           </div>
         </div>

@@ -48,13 +48,28 @@ interface PdfViewerProps {
 export default function PdfViewer({ url, filename }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const scale = 0.7; // Fixé à 70% comme demandé
+  const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [error, setError] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [workerReady, setWorkerReady] = useState(false);
   const documentRef = useRef<any>(null);
+
+  // Détecter si on est sur mobile et ajuster le zoom en conséquence
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth < 768; // Breakpoint md de Tailwind
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Zoom adaptatif : plus petit sur mobile pour un meilleur rendu
+  const scale = isMobile ? 0.5 : 0.7; // 50% sur mobile, 70% sur desktop
 
   // Vérifier que le worker est prêt
   useEffect(() => {
@@ -111,7 +126,7 @@ export default function PdfViewer({ url, filename }: PdfViewerProps) {
   return (
     <div className="w-full flex flex-col h-full">
       {/* Zone d'affichage PDF */}
-      <div className="flex-1 overflow-auto bg-gray-50 p-4 flex justify-center relative">
+      <div className={`flex-1 overflow-auto bg-gray-50 flex justify-center relative ${isMobile ? 'p-2' : 'p-4'}`}>
         {error ? (
           <div className="flex flex-col items-center justify-center">
             <AlertCircle className="h-16 w-16 text-gray-400 mb-4" />
@@ -194,25 +209,25 @@ export default function PdfViewer({ url, filename }: PdfViewerProps) {
       </div>
 
       {/* Barre de contrôles en bas */}
-      <div className="bg-gray-100 px-4 py-3 border-t border-gray-200 flex flex-wrap items-center justify-center gap-3">
+      <div className={`bg-gray-100 border-t border-gray-200 flex flex-wrap items-center justify-center ${isMobile ? 'px-2 py-2 gap-2' : 'px-4 py-3 gap-3'}`}>
         <button
           onClick={() => setPageNumber(prev => Math.max(1, prev - 1))}
           disabled={pageNumber <= 1 || isLoading}
-          className="p-2 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${isMobile ? 'p-1.5' : 'p-2'}`}
           title="Page précédente"
         >
-          <ChevronLeft className="h-5 w-5 text-gray-700" />
+          <ChevronLeft className={`text-gray-700 ${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
         </button>
-        <span className="text-sm font-medium text-gray-700 min-w-[100px] text-center">
+        <span className={`font-medium text-gray-700 text-center ${isMobile ? 'text-xs min-w-[80px]' : 'text-sm min-w-[100px]'}`}>
           {numPages ? `Page ${pageNumber} / ${numPages}` : 'Chargement...'}
         </span>
         <button
           onClick={() => setPageNumber(prev => Math.min(numPages || 1, prev + 1))}
           disabled={!numPages || pageNumber >= numPages || isLoading}
-          className="p-2 rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`rounded-lg bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${isMobile ? 'p-1.5' : 'p-2'}`}
           title="Page suivante"
         >
-          <ChevronRight className="h-5 w-5 text-gray-700" />
+          <ChevronRight className={`text-gray-700 ${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
         </button>
       </div>
     </div>

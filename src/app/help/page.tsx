@@ -63,11 +63,11 @@ export default function HelpPage() {
             <span className="flex items-center justify-center space-x-2">
               <span>Accueil</span>
               <ArrowRight className="h-4 w-4" />
-              <span>Centre d'aide</span>
+              <span>Foire aux questions</span>
             </span>
           </nav>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Centre d'Aide
+            Foire aux questions
           </h1>
           <p className="text-xl text-white opacity-90 max-w-3xl mx-auto">
             Trouvez rapidement l'aide dont vous avez besoin

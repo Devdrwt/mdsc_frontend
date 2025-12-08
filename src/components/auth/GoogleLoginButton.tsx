@@ -26,7 +26,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
       const callbackUrl = encodeURIComponent(`${window.location.origin}/auth/google/callback`);
       const googleAuthUrl = `${apiUrl}/auth/google?role=${selectedRole}&callback=${callbackUrl}`;
       
-      console.log('🔐 [GOOGLE AUTH] Rôle appliqué pour l\'inscription OAuth Google: apprenant');
+      console.log('🔐 [GOOGLE AUTH] Rôle appliqué pour l\'inscription OAuth Google: utilisateur');
       
       console.log('🔐 [GOOGLE AUTH] Opening popup with URL:', googleAuthUrl);
       console.log('🔐 [GOOGLE AUTH] Callback URL:', callbackUrl);
@@ -90,6 +90,11 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
         }
 
         if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+          console.log('✅ [GOOGLE AUTH] ========== MESSAGE RECEIVED IN MAIN WINDOW ==========');
+          console.log('✅ [GOOGLE AUTH] Message type:', event.data.type);
+          console.log('✅ [GOOGLE AUTH] Message origin:', event.origin);
+          console.log('✅ [GOOGLE AUTH] Expected origin:', frontendOrigin);
+          
           messageReceived = true;
           const { user, token } = event.data;
           
@@ -121,7 +126,7 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             });
             
             if (!backendRole) {
-              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a rôle, fallback vers apprenant');
+              console.warn('⚠️ [GOOGLE AUTH] Backend did not return a rôle, fallback vers utilisateur');
             }
             
             // Normaliser les données utilisateur en remplaçant undefined par null ou des valeurs par défaut
@@ -147,20 +152,56 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             
             console.log('💾 [GOOGLE AUTH] Setting user in store:', userData);
             console.log('💾 [GOOGLE AUTH] User role in store:', userData.role);
+            
+            // Stocker le token dans localStorage pour compatibilité avec api.ts
+            // Le store Zustand le stockera aussi via persist, mais api.ts cherche aussi 'authToken'
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('authToken', token);
+              localStorage.setItem('user', JSON.stringify(userData));
+              console.log('💾 [GOOGLE AUTH] Token stored in localStorage');
+            }
+            
             setUser(userData);
             setTokens(token, token); // Utiliser le même token pour refresh token temporairement
             
             console.log('✅ [GOOGLE AUTH] Store updated successfully with role:', finalRole);
             
-            // Fermer la popup
-            if (popup) {
-              popup.close();
-            }
-            
-            // Nettoyer le listener et l'interval
+            // Nettoyer le listener et l'interval AVANT de fermer la popup
             window.removeEventListener('message', messageListener);
             if (checkPopupClosed) {
               clearInterval(checkPopupClosed);
+            }
+            
+            // Fermer la popup de manière agressive
+            if (popup && !popup.closed) {
+              console.log('🔒 [GOOGLE AUTH] Closing popup from main window...');
+              try {
+                popup.close();
+                // Essayer plusieurs fois si nécessaire
+                let attempts = 0;
+                const closeInterval = setInterval(() => {
+                  attempts++;
+                  if (popup.closed || attempts > 5) {
+                    clearInterval(closeInterval);
+                    if (!popup.closed) {
+                      console.warn('⚠️ [GOOGLE AUTH] Popup did not close, trying to redirect it to about:blank');
+                      try {
+                        popup.location.href = 'about:blank';
+                      } catch (e) {
+                        // Cross-origin, on ne peut pas modifier l'URL
+                      }
+                    }
+                  } else {
+                    try {
+                      popup.close();
+                    } catch (e) {
+                      // Ignorer
+                    }
+                  }
+                }, 100);
+              } catch (e) {
+                console.warn('⚠️ [GOOGLE AUTH] Could not close popup:', e);
+              }
             }
             
             // Callback de succès
@@ -170,11 +211,15 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
             
             setIsLoading(false);
             
-            // Attendre un peu pour que le store soit mis à jour
-            setTimeout(() => {
-              console.log('🔄 [GOOGLE AUTH] Redirecting to dashboard...');
-              router.push('/dashboard');
-            }, 100);
+            // ⚠️ CRITIQUE : Rediriger immédiatement vers le dashboard dans la fenêtre principale
+            // Utiliser window.location.replace pour éviter d'ajouter une entrée dans l'historique
+            const userRole = userData.role || 'student';
+            const dashboardPath = `/dashboard/${userRole}`;
+            console.log(`🔄 [GOOGLE AUTH] Redirecting main window to dashboard: ${dashboardPath}`);
+            console.log(`🔄 [GOOGLE AUTH] Current URL: ${window.location.href}`);
+            
+            // Rediriger immédiatement (pas de setTimeout pour éviter les problèmes)
+            window.location.replace(dashboardPath);
             
           } catch (error) {
             console.error('❌ [GOOGLE AUTH] Error updating store:', error);
@@ -231,8 +276,8 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
           }
           
           if (isUserNotFound) {
-            console.log('🔄 [GOOGLE AUTH] Utilisateur introuvable, redirection vers la page d\'inscription apprenant');
-            router.push('/register?from=google&message=' + encodeURIComponent('Compte Google non associé, créez votre profil apprenant pour continuer.'));
+            console.log('🔄 [GOOGLE AUTH] Utilisateur introuvable, redirection vers la page d\'inscription utilisateur');
+            router.push('/register?from=google&message=' + encodeURIComponent('Compte Google non associé, créez votre profil utilisateur pour continuer.'));
             return;
           }
           
@@ -253,129 +298,19 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
         }
 
         if (popup.closed) {
-          console.log('🔒 [GOOGLE AUTH] Popup closed');
-          clearInterval(checkPopupClosed!);
-          window.removeEventListener('message', messageListener);
-          setIsLoading(false);
-          
-          // Ne pas afficher d'erreur immédiatement, la page de callback peut avoir fermé la popup
-          // Attendre un peu pour voir si un message arrive
+          console.log('🔒 [GOOGLE AUTH] Popup closed detected');
+          // Ne pas nettoyer immédiatement, attendre un peu pour voir si un message arrive
+          // La page de callback peut avoir fermé la popup après avoir envoyé le message
           setTimeout(() => {
-            // Si on n'a pas reçu de message après 2 secondes, c'est que l'utilisateur a fermé manuellement
-            console.log('⏱️ [GOOGLE AUTH] Popup closed and no message received');
-          }, 2000);
+            // Si on n'a pas reçu de message après 3 secondes, nettoyer
+            if (!messageReceived) {
+              console.log('⏱️ [GOOGLE AUTH] Popup closed and no message received after 3 seconds');
+              clearInterval(checkPopupClosed!);
+              window.removeEventListener('message', messageListener);
+              setIsLoading(false);
+            }
+          }, 3000);
           return;
-        }
-
-        // Vérifier si l'URL de la popup contient notre callback
-        try {
-          if (popup.location && popup.location.href) {
-            const popupUrl = popup.location.href;
-            console.log('🔍 [GOOGLE AUTH] Popup URL:', popupUrl);
-            
-            if (popupUrl.includes('/auth/google/callback')) {
-              console.log('✅ [GOOGLE AUTH] Popup navigated to callback page:', popupUrl);
-              // La popup est sur la page de callback, elle va envoyer un message
-            }
-            
-            // Vérifier si l'URL contient des données de succès (backend pourrait rediriger directement)
-            if (popupUrl.includes('token=') || popupUrl.includes('success=true')) {
-              console.log('✅ [GOOGLE AUTH] Popup URL contains success data');
-              // Extraire les données de l'URL si possible
-              try {
-                const url = new URL(popupUrl);
-                const token = url.searchParams.get('token');
-                const userStr = url.searchParams.get('user');
-                
-                if (token && userStr && !messageReceived) {
-                  console.log('✅ [GOOGLE AUTH] Found data in popup URL');
-                  const user = JSON.parse(decodeURIComponent(userStr));
-                  
-                  // Traiter les données comme un message de succès
-                  const syntheticEvent = {
-                    origin: window.location.origin,
-                    data: {
-                      type: 'GOOGLE_AUTH_SUCCESS',
-                      user,
-                      token
-                    }
-                  };
-                  messageListener(syntheticEvent as MessageEvent);
-                }
-              } catch (parseError) {
-                console.warn('⚠️ [GOOGLE AUTH] Could not parse data from URL:', parseError);
-              }
-            }
-            
-            // Détecter si le backend affiche un message de succès
-            try {
-              // Essayer de lire le contenu de la page (peut échouer si cross-origin)
-              const popupDoc = popup.document;
-              if (popupDoc && popupDoc.body) {
-                const bodyText = popupDoc.body.innerText || popupDoc.body.textContent || '';
-                if (bodyText.includes('Authentification réussie') || bodyText.includes('success')) {
-                  console.log('✅ [GOOGLE AUTH] Detected success message in popup content');
-                  
-                  // Si on n'a pas encore reçu de message, attendre un peu et vérifier l'URL
-                  if (!messageReceived) {
-                    setTimeout(() => {
-                      try {
-                        const currentUrl = popup.location.href;
-                        const url = new URL(currentUrl);
-                        const token = url.searchParams.get('token');
-                        const userStr = url.searchParams.get('user');
-                        
-                        if (token && userStr) {
-                          const user = JSON.parse(decodeURIComponent(userStr));
-                          const syntheticEvent = {
-                            origin: window.location.origin,
-                            data: {
-                              type: 'GOOGLE_AUTH_SUCCESS',
-                              user,
-                              token
-                            }
-                          };
-                          messageListener(syntheticEvent as MessageEvent);
-                        } else {
-                          // Essayer de récupérer les données depuis le backend via une API
-                          console.log('🔍 [GOOGLE AUTH] Trying to fetch user data from backend...');
-                          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/me`, {
-                            credentials: 'include'
-                          })
-                          .then(res => res.json())
-                          .then(data => {
-                            if (data.success && data.data && data.token) {
-                              console.log('✅ [GOOGLE AUTH] Retrieved user data from backend API');
-                              const syntheticEvent = {
-                                origin: window.location.origin,
-                                data: {
-                                  type: 'GOOGLE_AUTH_SUCCESS',
-                                  user: data.data,
-                                  token: data.token
-                                }
-                              };
-                              messageListener(syntheticEvent as MessageEvent);
-                            }
-                          })
-                          .catch(err => {
-                            console.error('❌ [GOOGLE AUTH] Failed to fetch user data:', err);
-                          });
-                        }
-                      } catch (e) {
-                        console.error('❌ [GOOGLE AUTH] Error processing success message:', e);
-                      }
-                    }, 1000);
-                  }
-                }
-              }
-            } catch (e) {
-              // Cross-origin error, c'est normal
-              // Le backend doit rediriger vers notre page de callback
-            }
-          }
-        } catch (e) {
-          // Cross-origin error, c'est normal quand la popup est sur Google ou le backend
-          // Ignorer cette erreur
         }
       }, 500);
 
@@ -416,4 +351,3 @@ export default function GoogleLoginButton({ onSuccess, onError }: GoogleLoginBut
     </button>
   );
 }
-

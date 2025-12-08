@@ -10,7 +10,7 @@ export default function DevCertificatePreviewPage() {
   const { user } = useAuthStore();
 
   const fullName = useMemo(() => {
-    if (!user) return 'Étudiant(e)';
+    if (!user) return 'Utilisateur(trice)';
     const u: any = user;
     const candidates = [
       { first: u.first_name, last: u.last_name },
@@ -36,7 +36,7 @@ export default function DevCertificatePreviewPage() {
         return c.full;
       }
     }
-    return u.username || 'Étudiant(e)';
+    return u.username || 'Utilisateur(trice)';
   }, [user]);
 
   // Optionnel: restreindre à l'environnement de dev
@@ -57,7 +57,7 @@ export default function DevCertificatePreviewPage() {
               courseTitle="Développement Web Full-Stack"
               location="Cotonou, Bénin"
               issuedAt={new Date()}
-              code="Mdsc-23974999-Bj"
+              code="Maison-de-la-Societe-Civile-23974999-Bj"
             />
           </div>
         </div>

@@ -63,20 +63,26 @@ export default function Testimonials() {
     };
   }, [testimonials.length]);
 
-  // Scroll vers le témoignage actuel
+  // Scroll horizontal uniquement dans le conteneur (sans affecter le scroll de la page)
   useEffect(() => {
-    if (scrollContainerRef.current) {
+    if (scrollContainerRef.current && testimonials.length > 1) {
       const container = scrollContainerRef.current;
       const testimonialElement = container.children[currentIndex] as HTMLElement;
       if (testimonialElement) {
-        testimonialElement.scrollIntoView({
+        // Calculer la position de scroll pour centrer l'élément dans le conteneur
+        const containerWidth = container.clientWidth;
+        const elementLeft = testimonialElement.offsetLeft;
+        const elementWidth = testimonialElement.clientWidth;
+        const scrollPosition = elementLeft - (containerWidth / 2) + (elementWidth / 2);
+        
+        // Faire défiler uniquement le conteneur horizontal, pas la page
+        container.scrollTo({
+          left: scrollPosition,
           behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center',
         });
       }
     }
-  }, [currentIndex]);
+  }, [currentIndex, testimonials.length]);
 
   // Générer les initiales pour l'avatar
   const getInitials = (name: string): string => {
@@ -112,7 +118,7 @@ export default function Testimonials() {
             Témoignages
           </div>
           <h2 className="text-3xl md:text-4xl text-display mb-4">
-            Ce que disent nos apprenants
+            Ce que disent nos utilisateurs
           </h2>
         </div>
 

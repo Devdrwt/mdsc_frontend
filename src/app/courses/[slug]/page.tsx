@@ -186,7 +186,7 @@ export default function CourseDetailPage() {
         });
         // ⚠️ IMPORTANT : L'avatar se trouve dans course.instructor.avatar
         const instructor = (courseData as any)?.instructor;
-        console.log('Donnees de linstructeur (selon guide backend):', {
+        console.log('Donnees du formateur (selon guide backend):', {
           'course.instructor': instructor,
           'course.instructor.avatar': instructor?.avatar,
           'course.instructor.first_name': instructor?.first_name,
@@ -222,12 +222,12 @@ export default function CourseDetailPage() {
         }
       }
       
-      // ⚠️ IMPORTANT : L'avatar de l'instructeur se trouve dans course.instructor.avatar (URL complète)
+      // ⚠️ IMPORTANT : L'avatar du formateur se trouve dans course.instructor.avatar (URL complète)
       // Selon le guide backend, l'avatar est déjà une URL complète et se trouve uniquement ici
       const instructor = courseAny?.instructor;
       
       if (process.env.NODE_ENV === 'development' && instructor) {
-        console.log('Verification de lavatar de linstructeur:', {
+        console.log('Verification de lavatar du formateur:', {
           'course.instructor.avatar': instructor.avatar,
           'course.instructor': instructor,
         });
@@ -480,7 +480,7 @@ export default function CourseDetailPage() {
   const instructorInfo = useMemo(() => {
     const instructor = courseAny?.instructor;
 
-    // Debug: Vérifier la structure de l'instructeur
+    // Debug: Vérifier la structure du formateur
     if (courseAny && process.env.NODE_ENV === 'development') {
       console.log('🔍 Structure complète de course:', courseAny);
       console.log('👤 Objet instructor:', instructor);
@@ -500,7 +500,7 @@ export default function CourseDetailPage() {
 
     if (!instructor) {
       return {
-        name: 'Instructeur',
+        name: 'Formateur',
         title: '',
         organization: '',
         email: '',
@@ -517,7 +517,7 @@ export default function CourseDetailPage() {
     // ou relative (ex: /uploads/profiles/image.jpg)
     const firstName = instructor.first_name || '';
     const lastName = instructor.last_name || '';
-    const name = [firstName, lastName].filter(Boolean).join(' ') || 'Instructeur';
+    const name = [firstName, lastName].filter(Boolean).join(' ') || 'Formateur';
 
     // Récupérer l'avatar depuis course.instructor.avatar
     // Le backend retourne déjà l'image avec la bonne priorité (uploadée > Google)
@@ -550,7 +550,7 @@ export default function CourseDetailPage() {
     
     // Log pour debug
     if (process.env.NODE_ENV === 'development') {
-      console.log('🖼️ Avatar de l\'instructeur (selon documentation backend):', {
+      console.log('🖼️ Avatar du formateur (selon documentation backend):', {
         'course.instructor.avatar': avatarRaw,
         resolvedAvatar: avatar,
         instructor: {
@@ -741,7 +741,7 @@ export default function CourseDetailPage() {
   // isEnrolled est maintenant un état géré par checkEnrollmentStatus
   
   // Utiliser instructorInfo qui est déjà calculé avec useMemo plus haut
-  // Il contient toutes les informations de l'instructeur de manière optimisée
+  // Il contient toutes les informations du formateur de manière optimisée
   
   const categoryLabels: { [key: string]: string } = {
     sante: 'Santé',
@@ -967,19 +967,6 @@ export default function CourseDetailPage() {
               {/* Informations principales */}
               <div className="lg:col-span-2 space-y-6">
                 <div>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      {getCategoryLabel(course.category)}
-                    </span>
-                    <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium">
-                      {getLevelLabel(course.level, courseAny)}
-                    </span>
-                    {price === 0 && (
-                      <span className="inline-block px-3 py-1 bg-green-500/80 rounded-full text-sm font-medium">
-                        Gratuit
-                      </span>
-                    )}
-                  </div>
                   <h1 className="text-4xl md:text-5xl font-bold mb-4">{course.title}</h1>
                   <p className="text-xl text-white/90 leading-relaxed">
                     {shortDescription}
@@ -991,7 +978,7 @@ export default function CourseDetailPage() {
                   <div className="flex items-center space-x-2">
                     <User className="h-5 w-5 text-white/80" />
                     <div>
-                      <p className="text-sm text-white/70">Instructeur</p>
+                      <p className="text-sm text-white/70">Formateur</p>
                       <p className="font-semibold">{instructorInfo.name}</p>
                     </div>
                   </div>
@@ -1126,7 +1113,7 @@ export default function CourseDetailPage() {
                     <div className="text-2xl font-bold text-mdsc-blue-primary mb-1">
                       {course.totalStudents || 0}
                     </div>
-                    <div className="text-sm text-gray-600">Étudiant{(course.totalStudents || 0) > 1 ? 's' : ''}</div>
+                    <div className="text-sm text-gray-600">Utilisateur{(course.totalStudents || 0) > 1 ? 's' : ''}</div>
                   </div>
                 </div>
               </div>
@@ -1168,9 +1155,6 @@ export default function CourseDetailPage() {
                                 {module.description && (
                                   <p className="text-sm text-gray-600 mt-1">{module.description}</p>
                                 )}
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {lessons.length} leçon{lessons.length > 1 ? 's' : ''}
-                                </p>
                               </div>
                             </div>
                             <div className="flex-shrink-0">
@@ -1282,14 +1266,14 @@ export default function CourseDetailPage() {
                 </div>
               )}
 
-              {/* Informations sur l'instructeur 
+              {/* Informations sur le formateur 
               {courseAny?.instructor && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-gradient-to-br from-mdsc-blue-primary to-mdsc-blue-dark rounded-lg">
                     <User className="h-6 w-6 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900">Votre instructeur</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">Votre formateur</h2>
                 </div>
                 <div className="flex items-start space-x-6">
                   <div className="flex-shrink-0">
@@ -1390,14 +1374,14 @@ export default function CourseDetailPage() {
             {/* Sidebar avec informations pratiques */}
             <div className="lg:col-span-1">
               <div className="space-y-6">
-                {/* Informations sur l'instructeur */}
+                {/* Informations sur le formateur */}
                 {courseAny?.instructor && (
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-1.5 bg-mdsc-blue-primary/10 rounded-lg">
                         <User className="h-5 w-5 text-mdsc-blue-primary" />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900">Votre instructeur</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Votre formateur</h3>
                     </div>
                     <div className="text-center">
                       <div className="flex justify-center mb-4">
@@ -1585,7 +1569,7 @@ export default function CourseDetailPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600 flex items-center">
                         <Users className="h-4 w-4 mr-2" />
-                        Étudiants
+                        Utilisateurs
                       </span>
                       <span className="font-medium">{course.totalStudents || 0}</span>
                     </div>

@@ -150,7 +150,7 @@ export default function FinalEvaluationsManagement() {
               {evaluation.course?.title || 'Cours sans titre'}
             </div>
             <div className="text-xs text-gray-500">
-              {(evaluation.course as any)?.instructor_name || 'Instructeur inconnu'}
+              {(evaluation.course as any)?.instructor_name || 'Formateur inconnu'}
             </div>
           </div>
         </div>
@@ -313,7 +313,7 @@ export default function FinalEvaluationsManagement() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-mdsc-blue-dark transition-colors" />
               <input
                 type="text"
-                placeholder="Rechercher un cours, évaluation, instructeur..."
+                placeholder="Rechercher un cours, évaluation, formateur..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-mdsc-blue-dark focus:border-mdsc-blue-dark transition-all w-full bg-gray-50 focus:bg-white"
@@ -370,7 +370,7 @@ export default function FinalEvaluationsManagement() {
                   <p className="font-medium text-gray-900">{selectedEvaluation.course?.title || 'N/A'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Instructeur:</span>
+                  <span className="text-gray-600">Formateur:</span>
                   <p className="font-medium text-gray-900">{(selectedEvaluation.course as any)?.instructor_name || 'N/A'}</p>
                 </div>
                 <div>

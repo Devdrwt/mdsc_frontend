@@ -9,7 +9,7 @@ export const config = {
   googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
   
   // App Configuration
-  appName: 'MdSC MOOC Platform',
+  appName: 'Maison de la Société Civile MOOC Platform',
   appVersion: '1.0.0',
   
   // Features

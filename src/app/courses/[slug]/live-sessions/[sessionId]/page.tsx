@@ -139,7 +139,7 @@ export default function LiveSessionDetailPage() {
           </div>
         </div>
 
-        {/* Instructeur */}
+        {/* Formateur */}
         {session.instructor && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Formateur</p>

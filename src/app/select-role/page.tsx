@@ -20,7 +20,7 @@ function RedirectContent() {
       <div className="text-center space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-dark mx-auto" />
         <p className="text-gray-600 text-sm">
-          Redirection vers la page d&apos;inscription apprenant...
+          Redirection vers la page d&apos;inscription utilisateur...
         </p>
       </div>
     </div>
@@ -35,7 +35,7 @@ export default function SelectRolePage() {
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-dark mx-auto" />
             <p className="text-gray-600 text-sm">
-              Redirection vers la page d&apos;inscription apprenant...
+              Redirection vers la page d&apos;inscription utilisateur...
             </p>
           </div>
         </div>

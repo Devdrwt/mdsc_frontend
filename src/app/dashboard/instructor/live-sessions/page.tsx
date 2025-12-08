@@ -38,7 +38,7 @@ export default function InstructorLiveSessionsPage() {
       setLoading(true);
       setError(null);
 
-      // Charger tous les cours de l'instructeur
+      // Charger tous les cours du formateur
       const coursesResponse = await InstructorService.getCourses({ limit: 1000 });
       const allCourses = coursesResponse.courses || [];
 

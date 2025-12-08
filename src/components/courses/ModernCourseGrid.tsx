@@ -131,7 +131,7 @@ export default function ModernCourseGrid({
               <option value="title">Titre</option>
               <option value="rating">Note</option>
               <option value="price">Prix</option>
-              <option value="students">Étudiants</option>
+              <option value="students">Utilisateurs</option>
               <option value="createdAt">Date</option>
             </select>
             <button

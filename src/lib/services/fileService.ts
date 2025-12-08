@@ -557,7 +557,7 @@ export class FileService {
     return response.data;
   }
 
-  // Upload de pièce d'identité (pour instructeurs)
+  // Upload de pièce d'identité (pour formateurs)
   static async uploadIdentityDocument(file: File): Promise<FileUpload> {
     const formData = new FormData();
     formData.append('file', file);

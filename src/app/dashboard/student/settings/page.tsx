@@ -106,7 +106,7 @@ export default function StudentSettingsPage() {
   const [deleteProcessing, setDeleteProcessing] = useState(false);
 
   const studentName = useMemo(
-    () => `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Étudiant',
+    () => `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || 'Utilisateur',
     [user?.firstName, user?.lastName]
   );
 
@@ -227,7 +227,7 @@ export default function StudentSettingsPage() {
   const submitAccountDeletion = async () => {
     try {
       setDeleteProcessing(true);
-      toast.warning('Demande envoyée', 'Un conseiller MDCS vous contactera pour valider la suppression.');
+      toast.warning('Demande envoyée', 'Un conseiller Maison de la Société Civile vous contactera pour valider la suppression.');
       setIsDeleteModalOpen(false);
     } finally {
       setDeleteProcessing(false);
@@ -241,7 +241,7 @@ export default function StudentSettingsPage() {
           <div className="rounded-2xl bg-mdsc-blue-primary p-8 text-white shadow-lg">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-white/70">Espace étudiant</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-white/70">Espace utilisateur</p>
                 <h1 className="mt-2 text-3xl font-bold flex items-center gap-2">
                   <Settings className="h-7 w-7" /> Paramètres & préférences personnelles
                 </h1>
@@ -366,7 +366,7 @@ export default function StudentSettingsPage() {
                   />
                   <SettingToggle
                     label="Nouveaux messages"
-                    description="Notification instantanée lorsqu’un instructeur vous écrit."
+                    description="Notification instantanée lorsqu'un formateur vous écrit."
                     enabled={notificationPreferences.newMessages}
                     onToggle={() =>
                       setNotificationPreferences((prev) => ({ ...prev, newMessages: !prev.newMessages }))
