@@ -24,6 +24,9 @@ interface FormData {
   
   // Étape 3 - Documents (optionnel pour l'instant)
   documents: File[];
+  
+  // Acceptation des conditions
+  acceptTerms: boolean;
 }
 
 const MultiStepRegisterForm = () => {
@@ -39,7 +42,8 @@ const MultiStepRegisterForm = () => {
     country: 'AF', // Afghanistan par défaut
     password: '',
     confirmPassword: '',
-    documents: []
+    documents: [],
+    acceptTerms: false
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -49,10 +53,12 @@ const MultiStepRegisterForm = () => {
   const [showEmailVerification, setShowEmailVerification] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -133,6 +139,13 @@ const MultiStepRegisterForm = () => {
 
   const handleSubmit = async () => {
     setError(null);
+    
+    // Validation de l'acceptation des conditions
+    if (!formData.acceptTerms) {
+      setError('Vous devez accepter les conditions d\'utilisation et la politique de confidentialité pour créer un compte.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -544,6 +557,45 @@ const MultiStepRegisterForm = () => {
                   <li>• Justificatif de domicile (facultatif)</li>
                   <li>• Diplômes (si applicable)</li>
                 </ul>
+              </div>
+
+              {/* Acceptation des conditions */}
+              <div className="mt-6 flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="acceptTerms"
+                    name="acceptTerms"
+                    type="checkbox"
+                    checked={formData.acceptTerms}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-mdsc-blue focus:ring-mdsc-blue border-gray-300 rounded"
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label htmlFor="acceptTerms" className="text-gray-700 cursor-pointer">
+                    J'accepte les{' '}
+                    <a 
+                      href="/terms" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-mdsc-blue hover:text-blue-700 underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Conditions d'utilisation
+                    </a>
+                    {' '}et la{' '}
+                    <a 
+                      href="/privacy" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-medium text-mdsc-blue hover:text-blue-700 underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Politique de confidentialité
+                    </a>
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>

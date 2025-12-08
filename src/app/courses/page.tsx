@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import CourseCard from '../../components/courses/CourseCard';
 import Button from '../../components/ui/Button';
-import { Search, Clock, Users } from 'lucide-react';
+import { Search, Clock, Users, Award, AlertCircle, X } from 'lucide-react';
 import { Course } from '../../types';
 import { CourseService, Course as ServiceCourse } from '../../lib/services/courseService';
 import { useAuthStore } from '../../lib/stores/authStore';
@@ -20,13 +20,6 @@ const categories = [
   'Technologie',
   'Pédagogie',
   'E-learning'
-];
-
-const levels = [
-  'Tous les niveaux',
-  'Débutant',
-  'Intermédiaire',
-  'Avancé'
 ];
 
 // Fonction utilitaire pour convertir en nombre
@@ -110,7 +103,7 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     courseAny.instructor?.name ||
     courseAny.instructor_name ||
     [instructorFirstName, instructorLastName].filter(Boolean).join(' ') ||
-    'Instructeur';
+    'Formateur';
 
   const instructorAvatarRaw =
     courseAny.instructor?.avatar ||
@@ -267,10 +260,55 @@ export default function CoursesPage() {
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Toutes les catégories');
-  const [selectedLevel, setSelectedLevel] = useState('Tous les niveaux');
   const [isLoading, setIsLoading] = useState(true);
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<number>>(new Set());
   const [loadingEnrollments, setLoadingEnrollments] = useState(true);
+  
+  // État pour la vérification de certificat
+  const [certificateCode, setCertificateCode] = useState('');
+  const [certificateError, setCertificateError] = useState<string | null>(null);
+  const certificateInputRef = useRef<HTMLInputElement>(null);
+  
+  // Faire disparaître le message d'erreur après 5 secondes
+  useEffect(() => {
+    if (certificateError) {
+      const timer = setTimeout(() => {
+        setCertificateError(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [certificateError]);
+  
+  const handleCertificateVerify = () => {
+    const code = certificateCode.trim().toUpperCase();
+    if (code && code.length > 0) {
+      // Valider le format du code (MDSC-XXXXXXXXX-BJ ou Maison-de-la-Societe-Civile-XXXXXXXXX-BJ)
+      const codePattern = /^(MDSC|Maison-de-la-Societe-Civile)-\d+-BJ$/;
+      if (!codePattern.test(code)) {
+        setCertificateError('Format de code invalide. Utilisez le format MDSC-XXXXXXXXX-BJ ou Maison-de-la-Societe-Civile-XXXXXXXXX-BJ');
+        certificateInputRef.current?.focus();
+        return;
+      }
+      router.push(`/verify-certificate/${encodeURIComponent(code)}`);
+    } else {
+      setCertificateError('Veuillez saisir un code de vérification de certificat');
+      certificateInputRef.current?.focus();
+    }
+  };
+  
+  const handleCertificateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setCertificateCode(value);
+    if (certificateError) {
+      setCertificateError(null);
+    }
+  };
+  
+  const handleCertificateKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleCertificateVerify();
+    }
+  };
 
   // Charger les cours depuis l'API
   useEffect(() => {
@@ -355,13 +393,8 @@ export default function CoursesPage() {
       filtered = filtered.filter(course => course.category === selectedCategory);
     }
 
-    // Filtre par niveau
-    if (selectedLevel !== 'Tous les niveaux') {
-      filtered = filtered.filter(course => course.level === selectedLevel);
-    }
-
     setFilteredCourses(filtered);
-  }, [courses, searchQuery, selectedCategory, selectedLevel]);
+  }, [courses, searchQuery, selectedCategory]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -416,6 +449,70 @@ export default function CoursesPage() {
       <main className="py-8 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
+          {/* Vérification d'attestation */}
+          <div className="mb-6 -mt-8 relative z-10">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="p-2 bg-mdsc-blue-primary/10 rounded-lg">
+                    <Award className="h-5 w-5 text-mdsc-blue-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      Vérifier l'authenticité d'un certificat
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Saisissez le code de vérification
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                  <div className="flex-1 sm:w-80">
+                    <input
+                      ref={certificateInputRef}
+                      type="text"
+                      placeholder="Ex: MDSC-23974999-BJ"
+                      value={certificateCode}
+                      onChange={handleCertificateInputChange}
+                      onKeyPress={handleCertificateKeyPress}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent text-gray-900 placeholder:text-gray-400 uppercase transition-colors ${
+                        certificateError 
+                          ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300'
+                      }`}
+                      style={{ textTransform: 'uppercase' }}
+                    />
+                  </div>
+                  <button
+                    onClick={handleCertificateVerify}
+                    className="px-5 py-2.5 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium whitespace-nowrap"
+                  >
+                    Vérifier
+                  </button>
+                </div>
+              </div>
+              
+              {/* Message d'erreur */}
+              {certificateError && (
+                <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-red-900">
+                      {certificateError}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCertificateError(null)}
+                    className="flex-shrink-0 p-1 hover:bg-red-100 rounded-full transition-colors"
+                    aria-label="Fermer le message"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Barre de recherche et filtres */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-8 -mt-8 relative z-10">
             <div className="flex flex-col lg:flex-row gap-4 items-center">
@@ -447,21 +544,6 @@ export default function CoursesPage() {
                     {categories.map((category) => (
                       <option key={category} value={category}>
                         {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Filtre niveau */}
-                <div className="w-full sm:min-w-[150px]">
-                  <select
-                    value={selectedLevel}
-                    onChange={(e) => setSelectedLevel(e.target.value)}
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent"
-                  >
-                    {levels.map((level) => (
-                      <option key={level} value={level}>
-                        {level}
                       </option>
                     ))}
                   </select>

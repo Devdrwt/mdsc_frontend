@@ -8,17 +8,15 @@ export default function Footer() {
   const footerLinks = {
     formation: [
       { name: 'Catalogue des cours', href: '/courses' },
-      { name: 'Attestations', href: '/courses' },
+      { name: 'Vérification d\'attestation', href: '/courses' },
     ],
     organisation: [
-      { name: 'À propos de MdSC', href: 'https://mdsc-website.webflow.io/about-us' },
-      { name: 'Notre mission', href: 'https://mdsc-website.webflow.io/about-us' },
-      { name: 'Équipe', href: 'https://mdsc-website.webflow.io/notre-equipe' },
-      { name: 'Partenaires', href: 'https://mdsc-website.webflow.io/' },
+      { name: "Conditions d'utilisation", href: '/terms' },
+      { name: 'Guide utilisateurs', href: '/about' },
     ],
     support: [
       { name: 'FAQ', href: '/faq' },
-      { name: 'Contact', href: 'https://mdsc-website.webflow.io/contact-us' },
+      { name: 'Contact', href: '/contact' },
     ],
   };
 
@@ -33,7 +31,7 @@ export default function Footer() {
             <div className="mb-4">
               <img
   src="/logo-mdsc.png"
-  alt="Logo MdSC"
+  alt="Logo Maison de la Société Civile"
   className="h-14 w-auto object-contain"
   loading="lazy"
 />
@@ -47,13 +45,12 @@ export default function Footer() {
 
           {/* Formation */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Formation</h3>
             <ul className="space-y-2">
               {footerLinks.formation.map((link) => (
                 <li key={link.name}>
                   <a
                     href={link.href}
-                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-white/80 text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -64,7 +61,6 @@ export default function Footer() {
 
           {/* Organisation */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Organisation</h3>
             <ul className="space-y-2">
               {footerLinks.organisation.map((link) => (
                 <li key={link.name}>
@@ -72,7 +68,7 @@ export default function Footer() {
                     href={link.href}
                     target={link.href.startsWith('http') ? '_blank' : undefined}
                     rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-white/80 text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -83,7 +79,6 @@ export default function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white">Support</h3>
             <ul className="space-y-2">
               {footerLinks.support.map((link) => (
                 <li key={link.name}>
@@ -91,7 +86,7 @@ export default function Footer() {
                     href={link.href}
                     target={link.href.startsWith('http') ? '_blank' : undefined}
                     rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm transition-colors duration-200"
+                    className="text-white hover:text-white/80 text-sm transition-colors duration-200"
                   >
                     {link.name}
                   </a>
@@ -132,8 +127,8 @@ export default function Footer() {
               © {currentYear} Maison de la Société Civile. Tous droits réservés.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="/privacy" className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm">Politique de confidentialité</a>
-              <a href="/terms" className="text-white hover:text-mdsc-orange dark:text-mdsc-orange dark:hover:text-mdsc-orange text-sm">Conditions d'utilisation</a>
+              <a href="/privacy" className="text-white hover:text-white/80 text-sm transition-colors duration-200">Politique de confidentialité</a>
+              <a href="/terms" className="text-white hover:text-white/80 text-sm transition-colors duration-200">Conditions d'utilisation</a>
             </div>
           </div>
         </div>
