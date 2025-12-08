@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { AuthGuard } from "../../../../lib/middleware/auth";
 import DashboardLayout from "../../../../components/layout/DashboardLayout";
 import { forumService } from "../../../../lib/services/forumService";
+import { CourseService } from "../../../../lib/services/courseService";
 import type { CourseForum } from "../../../../types/forum";
 import ForumHeader from "../../../../components/forum/ForumHeader";
 import TopicList from "../../../../components/forum/TopicList";
@@ -14,22 +15,42 @@ import toast from "../../../../lib/utils/toast";
 
 export default function CourseForumPage() {
   const params = useParams();
-  const courseId = parseInt(params.slug as string, 10);
+  const slug = params.slug as string;
   const [forum, setForum] = useState<CourseForum | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTopicForm, setShowTopicForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    loadForum();
-  }, [courseId]);
+    if (slug) {
+      loadForum();
+    }
+  }, [slug]);
 
   const loadForum = async () => {
     try {
       setLoading(true);
+      
+      // Charger le cours par slug pour obtenir son ID numérique
+      const isNumeric = !isNaN(Number(slug));
+      const courseData = isNumeric 
+        ? await CourseService.getCourseById(slug)
+        : await CourseService.getCourseBySlug(slug);
+      
+      // Extraire l'ID numérique du cours
+      const courseId = typeof courseData.id === 'string' 
+        ? parseInt(courseData.id, 10) 
+        : courseData.id;
+      
+      if (!courseId || isNaN(courseId)) {
+        throw new Error("Impossible de déterminer l'ID du cours");
+      }
+      
+      // Charger le forum avec l'ID numérique
       const data = await forumService.getCourseForum(courseId);
       setForum(data);
     } catch (error: any) {
+      console.error("Erreur lors du chargement du forum:", error);
       toast.error("Erreur", "Impossible de charger le forum");
     } finally {
       setLoading(false);
@@ -88,7 +109,7 @@ export default function CourseForumPage() {
               />
             </div>
           ) : (
-            <TopicList forumId={forum.id} searchQuery={searchQuery} />
+            <TopicList forumId={forum.id} searchQuery={searchQuery} courseSlug={slug} />
           )}
         </div>
       </DashboardLayout>
