@@ -10,9 +10,10 @@ import toast from "../../lib/utils/toast";
 interface TopicListProps {
   forumId: number;
   searchQuery?: string;
+  courseSlug?: string;
 }
 
-export default function TopicList({ forumId, searchQuery }: TopicListProps) {
+export default function TopicList({ forumId, searchQuery, courseSlug }: TopicListProps) {
   const [topics, setTopics] = useState<ForumTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<"recent" | "popular" | "pinned">("recent");
@@ -107,7 +108,7 @@ export default function TopicList({ forumId, searchQuery }: TopicListProps) {
       {/* Liste des commentaires */}
       <div className="grid gap-4">
         {topics.map((topic) => (
-          <TopicCard key={topic.id} topic={topic} />
+          <TopicCard key={topic.id} topic={topic} courseSlug={courseSlug} />
         ))}
       </div>
 

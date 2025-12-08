@@ -8,10 +8,13 @@ import { fr } from "date-fns/locale";
 
 interface TopicCardProps {
   topic: ForumTopic;
+  courseSlug?: string;
 }
 
-export default function TopicCard({ topic }: TopicCardProps) {
-  const topicLink = `/courses/${topic.forum_id}/forum/${topic.id}`;
+export default function TopicCard({ topic, courseSlug }: TopicCardProps) {
+  // Utiliser le slug du cours si fourni, sinon fallback sur forum_id (pour compatibilité)
+  const courseIdentifier = courseSlug || topic.forum_id;
+  const topicLink = `/courses/${courseIdentifier}/forum/${topic.id}`;
 
   const authorName = [topic.first_name, topic.last_name]
     .filter((part): part is string => Boolean(part && part.trim()))
