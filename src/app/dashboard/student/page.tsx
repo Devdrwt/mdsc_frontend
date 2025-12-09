@@ -29,6 +29,9 @@ import {
   FileText,
   XCircle,
 } from 'lucide-react';
+import { useOnboarding } from '../../../hooks/useOnboarding';
+import { studentTourSteps } from '../../../components/onboarding/tours/studentTour';
+import OnboardingTour from '../../../components/onboarding/OnboardingTour';
 
 interface DashboardStats {
   totalCourses: number;
@@ -164,6 +167,23 @@ function StudentDashboardContent() {
   const user = authStore.user;
   const authLoading = authStore.isLoading ?? false;
   const hasHydrated = authStore.hasHydrated ?? false;
+
+  // Tour guidé d'onboarding
+  const onboarding = useOnboarding({
+    tourId: 'student-dashboard',
+    steps: studentTourSteps,
+  });
+
+  // Démarrer le tour automatiquement si c'est la première visite
+  useEffect(() => {
+    if (hasHydrated && !authLoading && user && !onboarding.isCompleted && !onboarding.isActive) {
+      // Attendre un peu pour que le DOM soit prêt
+      const timer = setTimeout(() => {
+        onboarding.startTour();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasHydrated, authLoading, user, onboarding.isCompleted, onboarding.isActive, onboarding]);
 
   // Gérer les redirections GobiPay après paiement
   useEffect(() => {
@@ -682,8 +702,23 @@ function StudentDashboardContent() {
 
   return (
     <div className="space-y-8">
+          {/* Tour guidé d'onboarding */}
+          <OnboardingTour
+            isActive={onboarding.isActive}
+            currentStep={onboarding.currentStepData}
+            totalSteps={studentTourSteps.length}
+            currentStepIndex={onboarding.currentStep}
+            onNext={onboarding.nextStep}
+            onPrevious={onboarding.previousStep}
+            onSkip={onboarding.skipTour}
+            onClose={onboarding.completeTour}
+          />
+
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-mdsc-blue-primary rounded-2xl p-8 text-white">
+          <div 
+            data-onboarding="welcome-section"
+            className="relative overflow-hidden bg-mdsc-blue-primary rounded-2xl p-8 text-white"
+          >
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
@@ -708,7 +743,10 @@ function StudentDashboardContent() {
           </div>
 
           {/* Statistiques principales avec animations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div 
+            data-onboarding="stats-section"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
@@ -741,7 +779,10 @@ function StudentDashboardContent() {
           </div>
 
           {/* Progression des cours */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div 
+            data-onboarding="courses-progress"
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+          >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
@@ -797,7 +838,10 @@ function StudentDashboardContent() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div 
+            data-onboarding="quick-actions"
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+          >
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Actions Rapides</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
