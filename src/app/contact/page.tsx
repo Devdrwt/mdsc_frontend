@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { Mail, Phone, MapPin, Send, ArrowRight } from 'lucide-react';
+import { ContactService } from '../../lib/services/contactService';
+import toast from '../../lib/utils/toast';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -52,23 +54,35 @@ export default function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Intégrer avec l'API d'envoi d'email
-      // Pour l'instant, simulation d'envoi
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setIsSuccess(true);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: ''
+      // Envoyer le message via l'API
+      const response = await ContactService.sendContactMessage({
+        name: trimmedName,
+        email: trimmedEmail,
+        phone: formData.phone?.trim() || undefined,
+        subject: trimmedSubject,
+        message: trimmedMessage,
       });
+      
+      if (response.success) {
+        setIsSuccess(true);
+        toast.success('Message envoyé', 'Votre message a été envoyé avec succès. Nous vous répondrons dans les plus brefs délais.');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: ''
+        });
 
-      setTimeout(() => setIsSuccess(false), 5000);
-    } catch (err) {
+        setTimeout(() => setIsSuccess(false), 5000);
+      } else {
+        setError(response.message || 'Une erreur est survenue lors de l\'envoi du message.');
+      }
+    } catch (err: any) {
       console.error('Contact form error:', err);
-      setError('Une erreur est survenue lors de l\'envoi du message. Veuillez réessayer.');
+      const errorMessage = err?.message || err?.errors?.[0]?.message || 'Une erreur est survenue lors de l\'envoi du message. Veuillez réessayer.';
+      setError(errorMessage);
+      toast.error('Erreur', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
