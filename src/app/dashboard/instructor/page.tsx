@@ -811,10 +811,7 @@ export default function InstructorDashboard() {
           </div>
 
           {/* Notifications personnelles */}
-          <div 
-            data-onboarding="notifications"
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">

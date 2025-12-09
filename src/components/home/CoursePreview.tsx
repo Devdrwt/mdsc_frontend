@@ -35,12 +35,6 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
           <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mb-4">
             Formations populaires
           </div>
-                 <h2 className="text-3xl md:text-4xl text-display mb-4">
-                   Nos formations les plus demandées
-                 </h2>
-                 <p className="text-lg text-body max-w-2xl mx-auto">
-            Découvrez nos cours les plus appréciés par notre communauté d'utilisateurs
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">

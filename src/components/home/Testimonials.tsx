@@ -117,9 +117,6 @@ export default function Testimonials() {
           <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-mdsc-orange text-white mb-4">
             Témoignages
           </div>
-          <h2 className="text-3xl md:text-4xl text-display mb-4">
-            Ce que disent nos utilisateurs
-          </h2>
         </div>
 
         {/* Container avec défilement horizontal */}
