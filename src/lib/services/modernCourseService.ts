@@ -293,8 +293,21 @@ export async function getCourseCategories(): Promise<string[]> {
 
 // Récupérer les cours populaires
 export async function getPopularCourses(limit: number = 6): Promise<Course[]> {
-  const response = await fetchAPI<{ courses: Course[] }>(`/courses/popular?limit=${limit}`);
-  return response.courses;
+  try {
+    const response = await fetchAPI<any>(`/courses/popular?limit=${limit}`);
+    // Gérer les deux formats possibles : { courses: Course[] } ou Course[]
+    if (Array.isArray(response)) {
+      return response;
+    } else if (response && Array.isArray(response.courses)) {
+      return response.courses;
+    } else if (response && Array.isArray(response.data)) {
+      return response.data;
+    }
+    return [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des cours populaires:', error);
+    return [];
+  }
 }
 
 // Récupérer les cours récents
