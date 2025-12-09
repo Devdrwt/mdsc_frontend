@@ -49,3 +49,8 @@ next-env.d.ts
 /public/workbox-*.js.map
 /public/fallback-*.js
 /public/fallback-*.js.map
+
+# Documentation files (except README.md)
+docs/*.md
+*.md
+!README.md
