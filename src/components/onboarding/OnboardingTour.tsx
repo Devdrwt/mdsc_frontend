@@ -52,7 +52,7 @@ export default function OnboardingTour({
 
         let top = 0;
         let left = 0;
-        let side: 'top' | 'bottom' | 'left' | 'right' = currentStep.position || 'bottom';
+        let side: 'top' | 'bottom' | 'left' | 'right' = (currentStep.position && currentStep.position !== 'center' ? currentStep.position : 'bottom') || 'bottom';
 
         // Calculer la position selon le côté préféré
         switch (side) {
