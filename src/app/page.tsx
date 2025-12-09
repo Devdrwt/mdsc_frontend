@@ -18,7 +18,8 @@ export default function HomePage() {
       try {
         setLoadingCourses(true);
         const courses = await getPopularCourses(6); // Récupérer les 6 cours les plus populaires
-        setPopularCourses(courses || []);
+        console.log('Cours populaires reçus:', courses);
+        setPopularCourses(Array.isArray(courses) ? courses : []);
       } catch (error) {
         console.error('Erreur lors du chargement des cours populaires:', error);
         setPopularCourses([]);
@@ -59,8 +60,21 @@ export default function HomePage() {
       </div>
       <main>
         {/* Section des cours les plus demandés */}
-        {!loadingCourses && transformedCourses.length > 0 && (
+        {loadingCourses ? (
+          <section className="section-mdsc bg-white">
+            <div className="max-w-7xl mx-auto text-center py-16">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-mdsc-blue-primary"></div>
+              <p className="mt-4 text-gray-600">Chargement des cours populaires...</p>
+            </div>
+          </section>
+        ) : transformedCourses.length > 0 ? (
           <CoursePreview courses={transformedCourses} />
+        ) : (
+          <section className="section-mdsc bg-white">
+            <div className="max-w-7xl mx-auto text-center py-16">
+              <p className="text-gray-600">Aucun cours populaire disponible pour le moment.</p>
+            </div>
+          </section>
         )}
 
         {/* Call to Action */}
