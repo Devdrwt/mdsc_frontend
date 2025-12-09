@@ -159,6 +159,7 @@ const MultiStepRegisterForm = () => {
         phone: formData.phone,
         organization: formData.organization,
         country: formData.country,
+        acceptTerms: formData.acceptTerms
       });
 
       if (response.success) {

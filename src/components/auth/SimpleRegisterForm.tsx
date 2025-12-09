@@ -194,7 +194,8 @@ const SimpleRegisterForm = () => {
         phone: formData.phone || undefined,
         organization: formData.organization || undefined,
         country: formData.country,
-        role: 'student'
+        role: 'student',
+        acceptTerms: formData.acceptTerms
       });
 
       // Récupérer le token de vérification en mode dev

@@ -13,6 +13,7 @@ interface RegisterData {
   organization?: string;
   country?: string;
   role?: string;
+  acceptTerms?: boolean;
 }
 
 interface LoginData {
