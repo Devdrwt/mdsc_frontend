@@ -65,22 +65,6 @@ export default function ModernCourseCard({
     return `${price.toLocaleString()} FCFA`;
   };
 
-  // Le niveau n'est plus utilisé
-    if (levelStr === 'beginner' || levelStr === 'debutant' || levelStr === 'débutant') {
-      return 'debutant';
-    }
-    if (levelStr === 'intermediate' || levelStr === 'intermediaire' || levelStr === 'intermédiaire') {
-      return 'intermediaire';
-    }
-    if (levelStr === 'advanced' || levelStr === 'avance' || levelStr === 'avancé') {
-      return 'avance';
-    }
-    // Si c'est une autre valeur, la retourner telle quelle (normalisée)
-    return levelStr;
-  }, [course]);
-
-  // Formater le niveau pour l'affichage
-
   return (
     <div className={`
       group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden

@@ -1596,15 +1596,6 @@ export default function CourseDetailPage() {
                       </span>
                       <span className="font-medium">{language}</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 flex items-center">
-                        <Award className="h-4 w-4 mr-2" />
-                        Niveau
-                      </span>
-                      <span className="font-medium">
-                        {getLevelLabel(course.level, courseAny)}
-                      </span>
-                    </div>
                   </div>
                 </div>
 

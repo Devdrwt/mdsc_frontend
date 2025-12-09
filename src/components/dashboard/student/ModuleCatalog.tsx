@@ -240,7 +240,6 @@ const convertToDisplayCourse = (course: ExtendedCourse): DisplayCourse => {
     description: course.description || "",
     shortDescription: course.shortDescription || "",
     category: categoryValue,
-    level: levelLabel,
     duration: durationLabel,
     language: "fr",
     thumbnail_url: courseImage,

@@ -12,7 +12,7 @@ interface RecentCoursesProps {
 export default function RecentCourses({ courses, onCourseClick }: RecentCoursesProps) {
   // Le niveau n'est plus utilisé
   const getLevelColor = (_level: string) => {
-    switch (level) {
+    switch (_level) {
       case 'Débutant':
         return 'bg-green-100 text-green-800';
       case 'Intermédiaire':
