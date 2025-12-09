@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DashboardLayout from '../../../../components/layout/DashboardLayout';
 import { AuthGuard } from '../../../../lib/middleware/auth';
 import StudentService, { StudentPreferences } from '../../../../lib/services/studentService';
+import { getProfile } from '../../../../lib/services/authService';
 import toast from '../../../../lib/utils/toast';
 import { ShieldCheck, FileText, AlertTriangle, CheckCircle, Lock, BookOpen } from 'lucide-react';
 
@@ -14,20 +15,98 @@ export default function StudentPoliciesPage() {
   const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState<StudentPreferences | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [checkingRegistration, setCheckingRegistration] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    const loadPreferences = async () => {
+    const loadPreferencesAndCheckRegistration = async () => {
       try {
+        // Charger les préférences
         const prefs = await StudentService.getPreferences();
         if (mounted) setPreferences(prefs ?? {});
+        
+        // Si les politiques ne sont pas encore acceptées dans les préférences,
+        // vérifier si l'utilisateur a accepté lors de l'inscription
+        if (!prefs?.policies?.accepted) {
+          try {
+            const profileResponse = await getProfile();
+            if (profileResponse.success && profileResponse.data) {
+              const userData = profileResponse.data.user || profileResponse.data;
+              const userDataAny = userData as any;
+              
+              // Vérifier si l'utilisateur a accepté lors de l'inscription
+              // Le backend peut stocker cela dans termsAcceptedAt, policiesAcceptedAt, acceptTerms, ou dans les préférences
+              const registrationAcceptance = 
+                userDataAny.termsAcceptedAt || 
+                userDataAny.policiesAcceptedAt || 
+                userDataAny.acceptTermsAt ||
+                userDataAny.terms_accepted_at ||
+                userDataAny.policies_accepted_at ||
+                userDataAny.acceptTerms ||
+                (userDataAny.preferences && userDataAny.preferences.policies?.accepted_at);
+              
+              // Vérifier aussi dans les préférences retournées par le profil
+              const profilePreferences = profileResponse.data.preferences || userDataAny.preferences;
+              const profilePoliciesAccepted = profilePreferences?.policies?.accepted_at || profilePreferences?.policies?.accepted;
+              
+              if (registrationAcceptance || profilePoliciesAccepted) {
+                // L'utilisateur a accepté lors de l'inscription, mettre à jour les préférences
+                try {
+                  const updated = await StudentService.acknowledgePolicies(POLICIES_VERSION);
+                  if (mounted) {
+                    setPreferences((prev) => ({ ...prev, ...updated }));
+                    toast.success('Synchronisation', 'Votre acceptation lors de l\'inscription a été enregistrée.');
+                  }
+                } catch (error) {
+                  console.error('Error syncing registration acceptance:', error);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error checking registration acceptance:', error);
+          }
+        } else {
+          // Les politiques sont déjà acceptées, vérifier si la date d'acceptation correspond à l'inscription
+          // et mettre à jour si nécessaire
+          const acceptedAt = prefs.policies.accepted_at;
+          if (acceptedAt) {
+            try {
+              const profileResponse = await getProfile();
+              if (profileResponse.success && profileResponse.data) {
+                const userData = profileResponse.data.user || profileResponse.data;
+                const userDataAny = userData as any;
+                const createdAt = userData.createdAt || userDataAny.created_at;
+                
+                // Si la date d'acceptation est proche de la date de création du compte,
+                // cela signifie que l'acceptation a été faite lors de l'inscription
+                if (createdAt && acceptedAt) {
+                  const createdDate = new Date(createdAt);
+                  const acceptedDate = new Date(acceptedAt);
+                  const diffDays = Math.abs((acceptedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+                  
+                  // Si l'acceptation a été faite dans les 7 jours suivant l'inscription,
+                  // considérer que c'est l'acceptation de l'inscription
+                  if (diffDays <= 7 && acceptedDate >= createdDate) {
+                    // Tout est déjà synchronisé
+                    console.log('Policies already synced with registration acceptance');
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error verifying acceptance date:', error);
+            }
+          }
+        }
       } catch (error) {
         toast.error('Impossible de récupérer vos préférences', (error as Error)?.message);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setCheckingRegistration(false);
+        }
       }
     };
-    loadPreferences();
+    loadPreferencesAndCheckRegistration();
     return () => {
       mounted = false;
     };
