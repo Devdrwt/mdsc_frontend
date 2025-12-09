@@ -331,26 +331,6 @@ export default function LessonPlayer({
             <span>Précédent</span>
           </Button>
 
-          {!isCompleted && (
-            <Button
-              variant="primary"
-              onClick={handleMarkAsCompleted}
-              disabled={!canComplete() || isCompleting}
-              className="flex items-center space-x-2"
-            >
-              {isCompleting ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span>En cours...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Marquer comme complété</span>
-                </>
-              )}
-            </Button>
-          )}
 
           {isCompleted && (
             <div className="flex items-center space-x-2 text-green-600">

@@ -8,7 +8,6 @@ import InstructorService, {
   InstructorCourseEntry,
   InstructorDashboardResponse,
   InstructorEnrollmentsTrendPoint,
-  InstructorRecentActivityEntry,
   InstructorRecentEnrollment,
   InstructorRecentPayment,
   InstructorTopCourse,
@@ -29,7 +28,6 @@ import {
   Target,
   ArrowUp,
   ArrowDown,
-  Activity,
   Zap,
   Star,
   Calendar,
@@ -40,6 +38,9 @@ import {
   Bell,
   AlertTriangle,
 } from 'lucide-react';
+import { useOnboarding } from '../../../hooks/useOnboarding';
+import { instructorTourSteps } from '../../../components/onboarding/tours/instructorTour';
+import OnboardingTour from '../../../components/onboarding/OnboardingTour';
 import RatingStars from '../../../components/ui/RatingStars';
 
 interface InstructorStats {
@@ -66,17 +67,6 @@ interface CoursePerformance {
   views: number;
 }
 
-interface RecentActivity {
-  id: string | number;
-  type: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  icon: React.ComponentType<any>;
-  color: string;
-  priority: 'low' | 'medium' | 'high';
-}
-
 interface RecentEnrollmentItem {
   id: string | number;
   courseTitle: string;
@@ -95,6 +85,23 @@ interface RecentPaymentItem {
 
 export default function InstructorDashboard() {
   const { user } = useAuthStore();
+
+  // Tour guidé d'onboarding
+  const onboarding = useOnboarding({
+    tourId: 'instructor-dashboard',
+    steps: instructorTourSteps,
+  });
+
+  // Démarrer le tour automatiquement si c'est la première visite
+  useEffect(() => {
+    if (user && !onboarding.isCompleted && !onboarding.isActive) {
+      // Attendre un peu pour que le DOM soit prêt
+      const timer = setTimeout(() => {
+        onboarding.startTour();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, onboarding.isCompleted, onboarding.isActive, onboarding]);
   const [courses, setCourses] = useState<InstructorCourseEntry[]>([]);
   const [stats, setStats] = useState<InstructorStats>({
     totalCourses: 0,
@@ -109,7 +116,6 @@ export default function InstructorDashboard() {
     totalViews: 0,
   });
   const [coursePerformance, setCoursePerformance] = useState<CoursePerformance[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [recentEnrollments, setRecentEnrollments] = useState<RecentEnrollmentItem[]>([]);
   const [recentPayments, setRecentPayments] = useState<RecentPaymentItem[]>([]);
   const [unreadMessages, setUnreadMessages] = useState<number>(0);
@@ -143,64 +149,6 @@ export default function InstructorDashboard() {
       dateStyle: 'short',
       timeStyle: 'short',
     });
-  };
-
-  const mapActivityEntry = (entry: InstructorRecentActivityEntry): RecentActivity => {
-    const configMap: Record<string, { icon: React.ComponentType<any>; color: string; title: string; priority: 'low' | 'medium' | 'high' }> = {
-      student_enrolled: {
-        icon: Users,
-        color: 'text-blue-500',
-        title: 'Nouvelle inscription',
-        priority: 'low',
-      },
-      course_created: {
-        icon: BookOpen,
-        color: 'text-green-500',
-        title: 'Cours publié',
-        priority: 'medium',
-      },
-      course_updated: {
-        icon: FileText,
-        color: 'text-indigo-500',
-        title: 'Cours mis à jour',
-        priority: 'low',
-      },
-      review_received: {
-        icon: Star,
-        color: 'text-yellow-500',
-        title: 'Nouvel avis reçu',
-        priority: 'medium',
-      },
-      payment_received: {
-        icon: DollarSign,
-        color: 'text-emerald-500',
-        title: 'Paiement reçu',
-        priority: 'low',
-      },
-    };
-
-    const config = configMap[entry.type] ?? {
-      icon: Activity,
-      color: 'text-gray-500',
-      title: 'Événement',
-      priority: 'low' as const,
-    };
-
-    let description = entry.description;
-    if (!description && entry.metadata && typeof entry.metadata === 'object') {
-      description = entry.metadata.message || entry.metadata.description || '';
-    }
-
-    return {
-      id: entry.id,
-      type: entry.type,
-      title: config.title,
-      description: description || 'Activité enregistrée',
-      timestamp: formatDateTime(entry.created_at),
-      icon: config.icon,
-      color: config.color,
-      priority: config.priority,
-    };
   };
 
   const toNumber = (value: any): number => {
@@ -256,11 +204,10 @@ export default function InstructorDashboard() {
       setNotificationsLoading(true);
 
       try {
-        const [dashboardResult, coursesResult, trendResult, activityResult, unreadResult, notificationsResult] = await Promise.allSettled([
+        const [dashboardResult, coursesResult, trendResult, unreadResult, notificationsResult] = await Promise.allSettled([
           InstructorService.getDashboard(),
           InstructorService.getCourses({ limit: 100 }), // Augmenter la limite pour avoir tous les cours pour le calcul de la moyenne
           InstructorService.getEnrollmentsTrend('90d'),
-          InstructorService.getRecentActivity(20),
           InstructorService.getUnreadMessagesCount(),
           InstructorService.getNotifications({ limit: 20 }),
         ]);
@@ -427,13 +374,6 @@ export default function InstructorDashboard() {
           setWeeklyEnrollments([]);
         }
 
-        if (activityResult.status === 'fulfilled') {
-          const entries = activityResult.value ?? [];
-          setRecentActivity(entries.map(mapActivityEntry));
-        } else {
-          setRecentActivity([]);
-        }
-
         if (unreadResult.status === 'fulfilled') {
           setUnreadMessages(unreadResult.value ?? 0);
         } else {
@@ -521,6 +461,18 @@ export default function InstructorDashboard() {
     <AuthGuard requiredRole="instructor">
       <DashboardLayout userRole="instructor">
         <div className="space-y-8">
+          {/* Tour guidé d'onboarding */}
+          <OnboardingTour
+            isActive={onboarding.isActive}
+            currentStep={onboarding.currentStepData}
+            totalSteps={instructorTourSteps.length}
+            currentStepIndex={onboarding.currentStep}
+            onNext={onboarding.nextStep}
+            onPrevious={onboarding.previousStep}
+            onSkip={onboarding.skipTour}
+            onClose={onboarding.completeTour}
+          />
+          
           {!policiesAccepted && (
             <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -540,7 +492,10 @@ export default function InstructorDashboard() {
           )}
 
           {/* En-tête de bienvenue moderne */}
-          <div className="relative overflow-hidden bg-mdsc-gold rounded-2xl p-8 text-white">
+          <div 
+            data-onboarding="welcome-section"
+            className="relative overflow-hidden bg-mdsc-gold rounded-2xl p-8 text-white"
+          >
             <div className="absolute inset-0 "></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
@@ -570,7 +525,10 @@ export default function InstructorDashboard() {
           </div>
 
           {/* Statistiques principales avec animations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div 
+            data-onboarding="stats-section"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
@@ -647,7 +605,10 @@ export default function InstructorDashboard() {
           {/* Performance des cours et statistiques */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Performance des cours */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div 
+              data-onboarding="course-performance"
+              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+            >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <BarChart3 className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
@@ -768,7 +729,10 @@ export default function InstructorDashboard() {
           </div>
 
           {/* Actions rapides modernes */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div 
+            data-onboarding="quick-actions"
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+          >
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Actions Rapides</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
@@ -847,7 +811,10 @@ export default function InstructorDashboard() {
           </div>
 
           {/* Notifications personnelles */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div 
+            data-onboarding="notifications"
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+          >
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -935,28 +902,6 @@ export default function InstructorDashboard() {
                 ))}
               </ul>
             )}
-          </div>
-
-          {/* Activité récente */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-              <Activity className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-              Activité Récente
-            </h3>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                  <div className={`${activity.color} p-2 rounded-lg`}>
-                    <activity.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </DashboardLayout>

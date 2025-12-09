@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { CheckCircle, PlayCircle, FileText, Video, Headphones, File, ExternalLink, AlertCircle, Clock, Loader2 } from 'lucide-react';
+import { PlayCircle, FileText, Video, Headphones, File, ExternalLink, AlertCircle, Clock } from 'lucide-react';
 import { Lesson, MediaFile } from '../../types/course';
 import QuizComponent from './QuizComponent';
 import Button from '../ui/Button';
@@ -509,65 +509,10 @@ export default function LessonContent({
   );
 
   const registerMediaProgress = useCallback((timeInSeconds: number, mediaElement?: HTMLMediaElement) => {
-    // Tolérance plus large pour éviter les faux positifs (2 secondes au lieu de 0.3)
-    // Cela permet à la vidéo de progresser normalement même avec de petits délais de mise à jour
-    const toleranceSeconds = 2.0;
-    
-    // Vérifier si la vidéo est en cours de lecture (pas en pause)
-    const isPlaying = mediaElement && !mediaElement.paused && !mediaElement.ended;
-    
-    // Si la vidéo est en lecture normale, mettre à jour la position sans restriction stricte
-    if (isPlaying && timeInSeconds >= lastTrustedPlaybackPositionRef.current) {
-      // Progression normale, mettre à jour la position
-      lastTrustedPlaybackPositionRef.current = timeInSeconds;
-      return;
-    }
-    
-    // Seulement vérifier les sauts si la vidéo n'est pas en lecture normale
-    // et si le saut est vraiment important (plus de 2 secondes)
-    if (!isPlaying && timeInSeconds > lastTrustedPlaybackPositionRef.current + toleranceSeconds) {
-      // Saut important détecté (probablement un saut manuel), revenir à la position autorisée
-      if (mediaElement) {
-        console.warn('[LessonContent] ⛔ Saut important détecté dans onTimeUpdate – correction', {
-          attempted: timeInSeconds,
-          allowed: lastTrustedPlaybackPositionRef.current,
-          jump: timeInSeconds - lastTrustedPlaybackPositionRef.current,
-          isPlaying: mediaElement.paused ? 'paused' : 'playing'
-        });
-        const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
-        mediaElement.currentTime = targetTime;
-      }
-    } else if (timeInSeconds >= lastTrustedPlaybackPositionRef.current) {
-      // Progression normale ou légèrement en avance, mettre à jour la position
-      lastTrustedPlaybackPositionRef.current = timeInSeconds;
-    }
+    // Permettre le défilement libre - mettre à jour la position sans restriction
+    lastTrustedPlaybackPositionRef.current = timeInSeconds;
   }, []);
 
-  const preventForwardSeeking = useCallback((mediaElement: HTMLMediaElement) => {
-    // Tolérance plus large (2 secondes) pour éviter les faux positifs
-    // Seuls les sauts vraiment importants seront bloqués
-    const toleranceSeconds = 2.0;
-    const forwardJump = mediaElement.currentTime - lastTrustedPlaybackPositionRef.current;
-
-    // Ne bloquer que les sauts vraiment importants (plus de 2 secondes)
-    // Les petits sauts peuvent être dus à des buffering ou des ajustements normaux du navigateur
-    if (forwardJump > toleranceSeconds) {
-      console.warn('[LessonContent] ⛔ Saut important détecté – retour à la dernière position valide', {
-        attempted: mediaElement.currentTime,
-        allowed: lastTrustedPlaybackPositionRef.current,
-        jump: forwardJump
-      });
-      // Forcer le retour à la position autorisée
-      const targetTime = Math.max(lastTrustedPlaybackPositionRef.current, 0);
-      mediaElement.currentTime = targetTime;
-      
-      // Ne pas vérifier à nouveau immédiatement pour éviter les boucles infinies
-      // Laisser le navigateur gérer la position
-    } else if (forwardJump > 0 && forwardJump <= toleranceSeconds) {
-      // Petit saut autorisé (buffering, ajustements normaux), mettre à jour la position
-      lastTrustedPlaybackPositionRef.current = mediaElement.currentTime;
-    }
-  }, []);
 
   useEffect(() => {
     autoCompletionInFlightRef.current = false;
@@ -856,13 +801,6 @@ export default function LessonContent({
                 onTimeUpdate={(e) => {
                   registerMediaProgress(e.currentTarget.currentTime, e.currentTarget);
                 }}
-                onSeeking={(e) => {
-                  preventForwardSeeking(e.currentTarget);
-                }}
-                onSeeked={(e) => {
-                  // Vérifier aussi après que le saut soit terminé
-                  preventForwardSeeking(e.currentTarget);
-                }}
                 onLoadedMetadata={(e) => {
                   // Restaurer la position de lecture si disponible
                   const video = e.currentTarget;
@@ -936,31 +874,6 @@ export default function LessonContent({
                 </div>
               </div>
             </div>
-            
-            {/* Bouton "Marquer comme terminé" */}
-            {enrollmentId && !isCompleted && (
-              <div className="px-4 pb-4 sm:px-6 sm:pb-6 bg-gray-50">
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleMarkComplete}
-                    disabled={isMarkingComplete}
-                    className="inline-flex items-center px-6 py-3 bg-mdsc-blue-primary text-white rounded-lg hover:bg-mdsc-blue-dark transition-colors font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isMarkingComplete ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        <span>Marquage en cours...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                        <span>Marquer comme terminé</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         );
       }
@@ -1050,13 +963,6 @@ export default function LessonContent({
                 }}
                 onTimeUpdate={(e) => {
                   registerMediaProgress(e.currentTarget.currentTime, e.currentTarget);
-                }}
-                onSeeking={(e) => {
-                  preventForwardSeeking(e.currentTarget);
-                }}
-                onSeeked={(e) => {
-                  // Vérifier aussi après que le saut soit terminé
-                  preventForwardSeeking(e.currentTarget);
                 }}
                 onLoadedMetadata={(e) => {
                   const audio = e.currentTarget;
