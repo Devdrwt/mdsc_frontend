@@ -19,7 +19,7 @@ export default function OnboardingSpotlight({
 }: OnboardingSpotlightProps) {
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (!isActive) {
