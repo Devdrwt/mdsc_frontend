@@ -28,7 +28,6 @@ import {
   FileText,
   BarChart3,
   CreditCard,
-  Certificate,
   Zap,
   Target,
   Lightbulb,

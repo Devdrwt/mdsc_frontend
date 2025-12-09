@@ -14,23 +14,17 @@ import StudentService, {
 import { courseService } from '../../../lib/services/courseService';
 import { 
   BookOpen, 
-  Trophy, 
-  Award, 
-  Clock, 
+  Trophy,
+  Award,
+  Clock,
   TrendingUp, 
-  Calendar,
   MessageSquare,
   Brain,
-  Target,
   Play,
   CheckCircle,
   Star,
-  Flame,
   ArrowRight,
   Bookmark,
-  Bell,
-  ChevronDown,
-  ChevronUp,
   Send,
   FileText,
   XCircle,
@@ -714,7 +708,7 @@ function StudentDashboardContent() {
           </div>
 
           {/* Statistiques principales avec animations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg-grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
@@ -730,13 +724,13 @@ function StudentDashboardContent() {
               </div>
             </div>
 
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all durée-300">
+            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">Terminés</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.completedCourses}</p>
                   <p className="text-xs text-green-600 mt-1">
-                    {stats.totalCertificates} attestations obtenues
+                    {stats.totalCertificates} attestation{stats.totalCertificates > 1 ? 's' : ''} obtenue{stats.totalCertificates > 1 ? 's' : ''}
                   </p>
                 </div>
                 <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
@@ -744,159 +738,62 @@ function StudentDashboardContent() {
                 </div>
               </div>
             </div>
-
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all durée-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Points</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalPoints}</p>
-                  <p className="text-xs text-orange-600 mt-1">Niveau : {stats.currentLevel}</p>
-                </div>
-                <div className="bg-orange-100 p-3 rounded-full group-hover:bg-orange-200 transition-colors">
-                  <Trophy className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-lg hover:scale-105 transition-all durée-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Badges</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalBadges}</p>
-                  <p className="text-xs text-red-600 mt-1">Série : {stats.streak} jours</p>
-                </div>
-                <div className="bg-red-100 p-3 rounded-full group-hover:bg-red-200 transition-colors">
-                  <Flame className="h-6 w-6 text-red-600" />
-                </div>
-              </div>
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Notifications</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalNotifications}</p>
-                <p className="text-xs text-mdsc-blue-primary mt-1">
-                  {stats.unreadNotifications} non lue{stats.unreadNotifications !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <Bell className="h-6 w-6 text-blue-600" />
-              </div>
+          {/* Progression des cours */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
+                Progression des Cours
+              </h3>
+              <span className="text-sm text-gray-500">{courseCards.length} cours suivis</span>
             </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Évènements à venir</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.upcomingEvents}</p>
-                <p className="text-xs text-purple-600 mt-1">
-                  Pensez à consulter votre calendrier
-                </p>
+            {coursesError && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {coursesError}
               </div>
-              <div className="bg-purple-100 p-3 rounded-full">
-                <Calendar className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Progression et objectifs */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                  Progression des Cours
-                </h3>
-                <span className="text-sm text-gray-500">{courseCards.length} cours suivis</span>
-              </div>
-              {coursesError && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {coursesError}
-              </div>
-              )}
-              <div className="space-y-4">
-                {courseCards.slice(0, 3).map((course) => (
-                    <div key={course.id} className="group">
-                      <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <h4 className="font-medium text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">
-                          {course.title}
-                        </h4>
-                        {course.instructorName && (
-                          <p className="text-xs text-gray-500">Avec {course.instructorName}</p>
-                        )}
-                      </div>
-                      <span className="text-sm font-medium text-gray-600">{course.progress}%</span>
-                      </div>
-                      <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark h-2 rounded-full transition-all duration-500 ease-out shadow-sm"
-                        style={{ width: `${course.progress}%` }}
-                        ></div>
-                      </div>
-                    <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                      <span>{course.nextLesson ? `Prochaine leçon : ${course.nextLesson}` : 'À jour'}</span>
-                      {course.certificateAvailable && (
-                        <span className="text-green-600 font-medium flex items-center space-x-1">
-                          <CheckCircle className="h-3 w-3" />
-                          <span>Attestation disponible</span>
-                        </span>
+            )}
+            <div className="space-y-4">
+              {courseCards.slice(0, 3).map((course) => (
+                  <div key={course.id} className="group">
+                    <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <h4 className="font-medium text-gray-900 group-hover:text-mdsc-blue-primary transition-colors">
+                        {course.title}
+                      </h4>
+                      {course.instructorName && (
+                        <p className="text-xs text-gray-500">Avec {course.instructorName}</p>
                       )}
-                      </div>
                     </div>
-                ))}
-                {courseCards.length > 3 && (
-                  <a 
-                    href="/dashboard/student/courses"
-                    className="w-full text-center py-2 text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors flex items-center justify-center space-x-1"
-                  >
-                    <span>Voir tous les cours ({courseCards.length})</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-mdsc-gold" />
-                  Objectif Hebdomadaire
-                </h3>
-                <span className="text-sm text-gray-500">
-                  {stats.weeklyProgress}/{stats.weeklyGoal}
-                </span>
-              </div>
-              <div className="relative w-32 h-32 mx-auto mb-4">
-                <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-gray-200"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="text-mdsc-gold"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeDasharray={`${stats.weeklyGoal ? Math.min((stats.weeklyProgress / stats.weeklyGoal) * 100, 100) : 0}, 100`}
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {stats.weeklyGoal ? Math.round((stats.weeklyProgress / stats.weeklyGoal) * 100) : 0}%
-                  </span>
-                </div>
-              </div>
-              <p className="text-center text-sm text-gray-600">
-                {stats.weeklyGoal - stats.weeklyProgress > 0
-                  ? `${stats.weeklyGoal - stats.weeklyProgress} cours restants cette semaine`
-                  : 'Objectif atteint pour cette semaine 🎉'}
-              </p>
+                    <span className="text-sm font-medium text-gray-600">{course.progress}%</span>
+                    </div>
+                    <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-mdsc-blue-primary to-mdsc-blue-dark h-2 rounded-full transition-all duration-500 ease-out shadow-sm"
+                      style={{ width: `${course.progress}%` }}
+                      ></div>
+                    </div>
+                  <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                    <span>{course.nextLesson ? `Prochaine leçon : ${course.nextLesson}` : 'À jour'}</span>
+                    {course.certificateAvailable && (
+                      <span className="text-green-600 font-medium flex items-center space-x-1">
+                        <CheckCircle className="h-3 w-3" />
+                        <span>Attestation disponible</span>
+                      </span>
+                    )}
+                    </div>
+                  </div>
+              ))}
+              {courseCards.length > 3 && (
+                <a 
+                  href="/dashboard/student/courses"
+                  className="w-full text-center py-2 text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark transition-colors flex items-center justify-center space-x-1"
+                >
+                  <span>Voir tous les cours ({courseCards.length})</span>
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              )}
             </div>
           </div>
 
@@ -951,135 +848,6 @@ function StudentDashboardContent() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Clock className="h-5 w-5 mr-2 text-mdsc-blue-primary" />
-                Activité Récente
-              </h3>
-              {recentActivity.length > 5 && (
-                <button
-                  onClick={() => setIsActivitiesExpanded(!isActivitiesExpanded)}
-                  className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark flex items-center space-x-1 transition-colors"
-                >
-                  <span>{isActivitiesExpanded ? 'Réduire' : `Voir tout (${recentActivity.length})`}</span>
-                  {isActivitiesExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-              )}
-            </div>
-            {activityError && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                {activityError}
-              </div>
-            )}
-            {recentActivity.length > 0 ? (
-            <div className="space-y-4">
-              {(isActivitiesExpanded ? recentActivity : recentActivity.slice(0, 5)).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                  >
-                  <div className={`${activity.color} p-2 rounded-lg`}>
-                    <activity.icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{activity.title}</h4>
-                    <p className="text-sm text-gray-600">{activity.description}</p>
-                      {typeof activity.points === 'number' && (
-                        <p className="text-xs text-green-600 mt-1">+{activity.points} points</p>
-                      )}
-                    <p className="text-xs text-gray-500 mt-1">{activity.timestamp}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            ) : !activityError ? (
-              <div className="text-center py-8">
-                <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 mb-2">Aucune activité récente</p>
-                <p className="text-sm text-gray-400">Reprenez un cours pour voir votre progression ici.</p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Trophy className="h-6 w-6 text-mdsc-gold" />
-                  <h3 className="text-lg font-semibold text-gray-900">Badges récents</h3>
-                </div>
-                <button
-                  onClick={() => window.location.href = '/dashboard/student/gamification'}
-                  className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark flex items-center space-x-1 transition-colors"
-                >
-                  <span>Voir tout</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              {badgesError && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {badgesError}
-                </div>
-              )}
-              {badges.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {badges.slice(0, 4).map((badge) => (
-                    <div key={badge.id} className="rounded-lg border border-gray-200 p-3 bg-gray-50">
-                      <p className="font-medium text-gray-900 mb-1">{badge.name}</p>
-                      <p className="text-xs text-gray-500">{badge.description}</p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Gagné le {badge.earned_at ? new Date(badge.earned_at).toLocaleDateString('fr-FR') : '—'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : !badgesError ? (
-                <div className="text-center py-8">
-                  <Trophy className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-2">Aucun badge obtenu pour le moment</p>
-                  <p className="text-sm text-gray-400">Complétez des cours pour débloquer votre premier badge.</p>
-                </div>
-              ) : null}
-          </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Award className="h-6 w-6 text-mdsc-blue-primary" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Mes attestations</h3>
-                    <p className="text-sm text-gray-500">
-                      {certificates.length} attestation{certificates.length > 1 ? 's' : ''} obtenue{certificates.length > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => window.location.href = '/dashboard/student/certificates'}
-                  className="text-sm text-mdsc-blue-primary hover:text-mdsc-blue-dark flex items-center space-x-1 transition-colors"
-                >
-                  <span>Voir tout</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-              {certificatesError && (
-                <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {certificatesError}
-                </div>
-              )}
-              {!certificatesError && certificates.length === 0 && (
-                <div className="text-center py-8">
-                  <Award className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-2">Aucune attestation obtenue</p>
-                  <p className="text-sm text-gray-400">Terminez un cours pour générer votre première attestation.</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
   );
 }

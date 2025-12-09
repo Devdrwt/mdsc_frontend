@@ -82,7 +82,6 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     courseAny.difficulty ||
     courseAny.course_type ||
     courseAny.courseType ||
-    serviceCourse.level ||
     'beginner';
   const levelString = difficultyRaw === 'beginner' || difficultyRaw === 'debutant' ? 'Débutant' 
     : difficultyRaw === 'intermediate' || difficultyRaw === 'intermediaire' ? 'Intermédiaire' 
@@ -218,7 +217,7 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
   });
 
   // Récupérer le niveau/difficulty depuis les données brutes de l'API
-  const rawDifficulty = courseAny.difficulty || serviceCourse.level || courseAny.level || '';
+  const rawDifficulty = courseAny.difficulty || courseAny.level || '';
   
   return {
     id: serviceCourse.id,
@@ -229,7 +228,7 @@ const convertToCourse = (serviceCourse: ServiceCourse): any => {
     category: categoryValue,
     level: levelString, // Pour CourseCard
     difficulty: difficultyRaw, // Valeur brute de la base de données (beginner, intermediate, advanced)
-    level_database: serviceCourse.level === 'beginner' ? 'debutant' : serviceCourse.level === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
+    level_database: difficultyRaw === 'beginner' ? 'debutant' : difficultyRaw === 'intermediate' ? 'intermediaire' : 'avance', // Pour le type
     duration: durationString, // String pour CourseCard
     language: 'fr',
     thumbnail_url: courseImage,
