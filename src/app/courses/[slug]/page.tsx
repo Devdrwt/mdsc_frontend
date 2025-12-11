@@ -308,35 +308,6 @@ export default function CourseDetailPage() {
       const courseId = typeof course.id === 'string' ? parseInt(course.id, 10) : course.id;
       await EnrollmentService.enrollInCourse(courseId);
       
-      // Si c'est un cours live, ajouter au calendrier
-      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
-      if (isLiveCourse) {
-        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
-        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
-        
-        if (courseStartDate) {
-          try {
-            const { addToCalendar } = await import('../../../lib/utils/calendar');
-            const startDate = new Date(courseStartDate);
-            const endDate = courseEndDate ? new Date(courseEndDate) : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // Par défaut 2h après le début
-            
-            addToCalendar({
-              title: course.title || 'Cours en live',
-              description: course.description || course.shortDescription || '',
-              startDate,
-              endDate,
-              location: 'En ligne',
-              url: `${window.location.origin}/learn/${course.id}`,
-            });
-            
-            toast.success('Inscription réussie', 'Vous êtes inscrit au cours. L\'événement a été créé dans votre calendrier interne et un fichier .ics a été téléchargé pour votre calendrier externe.');
-          } catch (calendarError) {
-            console.error('Erreur ajout calendrier:', calendarError);
-            // Ne pas bloquer l'inscription si l'ajout au calendrier échoue
-          }
-        }
-      }
-      
       toast.success('Inscription réussie', 'Vous êtes maintenant inscrit à ce cours !');
       // Mettre à jour l'état d'inscription
       if (checkEnrollmentStatus) {

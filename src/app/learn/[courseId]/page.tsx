@@ -18,6 +18,7 @@ export default function LearnCoursePage() {
   const courseId = params?.courseId as string;
   const moduleId = searchParams?.get('module') || undefined;
   const lessonId = searchParams?.get('lesson') || undefined;
+  const showEvaluation = searchParams?.get('evaluation') === 'true';
 
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +114,8 @@ export default function LearnCoursePage() {
   
   // Fonction pour vérifier et rediriger vers une session live si elle est en cours
   const checkAndRedirectToLiveSession = useCallback(async () => {
+    // Si on vient explicitement pour passer l'évaluation, ne pas bloquer sur l'état live/fin
+    if (showEvaluation) return;
     if (!course || !isLiveCourse) return;
     
     try {
@@ -173,9 +176,8 @@ export default function LearnCoursePage() {
         const now = new Date();
         
         if (now > endDate) {
-          // Le cours est terminé
-          toast.info('Cours terminé', 'Ce cours live est terminé. Vous pouvez consulter les enregistrements si disponibles.');
-          setError('Ce cours live est terminé.');
+          // Le cours est terminé - ne pas bloquer l'accès (évaluation, replays)
+          // On ne fixe plus d'erreur ici pour permettre l'accès à l'évaluation
           return;
         }
       }
@@ -190,6 +192,42 @@ export default function LearnCoursePage() {
           // Le cours n'a pas encore démarré, rediriger vers la salle d'attente
           router.push(`/learn/${courseId}/waiting-room`);
           return;
+        }
+        
+        // Si le cours a démarré, chercher une session live et rediriger vers Jitsi
+        if (now >= startDate && sessions.length > 0) {
+          // Chercher une session disponible (live ou programmée dont l'heure est passée)
+          const availableSession = sessions.find((session: LiveSession) => {
+            const sessionStart = new Date(session.scheduled_start_at);
+            return session.status === 'live' || 
+                   (session.status === 'scheduled' && now >= sessionStart) ||
+                   !session.status;
+          }) || sessions[0];
+          
+          if (availableSession && availableSession.jitsi_room_name) {
+            // Construire l'URL Jitsi directement
+            const jitsiDomain = availableSession.jitsi_server_url
+              ? (() => {
+                  try {
+                    return new URL(availableSession.jitsi_server_url).hostname;
+                  } catch {
+                    return availableSession.jitsi_server_url.replace('https://', '').replace('http://', '').split('/')[0];
+                  }
+                })()
+              : 'meet.jit.si';
+            
+            const urlParams = new URLSearchParams();
+            if (availableSession.jitsi_room_password) {
+              urlParams.append('pwd', availableSession.jitsi_room_password);
+            }
+            
+            const queryString = urlParams.toString();
+            const jitsiUrl = `https://${jitsiDomain}/${availableSession.jitsi_room_name}${queryString ? `?${queryString}` : ''}`;
+            
+            toast.success('Cours démarré', 'Redirection vers la session Jitsi...');
+            window.location.href = jitsiUrl;
+            return;
+          }
         }
       }
     } catch (err: any) {

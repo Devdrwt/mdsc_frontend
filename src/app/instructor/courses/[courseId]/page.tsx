@@ -652,25 +652,7 @@ export default function InstructorCourseDetailPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            // Vérifier les conditions
-                            // Pour les cours en live, les modules/leçons ne sont pas obligatoires
-                            if (!isLiveCourse) {
-                              if (modules.length === 0) {
-                                notifyError?.('Conditions non remplies', 'Vous devez créer au moins un module pour ce cours');
-                                return;
-                              }
-                              // Vérifier qu'au moins un module a au moins une leçon publiée
-                              const hasPublishedLesson = modules.some(module => 
-                                module.lessons && module.lessons.length > 0 && 
-                                module.lessons.some((lesson: any) => 
-                                  lesson.is_published !== false && lesson.isPublished !== false
-                                )
-                              );
-                              if (!hasPublishedLesson) {
-                                notifyError?.('Conditions non remplies', 'Le cours doit contenir au moins un module avec au moins une leçon publiée');
-                                return;
-                              }
-                            }
+                          // Vérifier les conditions principales (sans imposer module/leçon publiée côté frontend)
                             if (!evaluation) {
                               notifyError?.('Évaluation requise', 'Vous devez créer une évaluation finale avant de demander la publication');
                               changeTab('evaluations');
@@ -698,7 +680,14 @@ export default function InstructorCourseDetailPage() {
                               console.error('Erreur lors de la demande de publication:', error);
                               
                               // Extraire un message d'erreur plus détaillé
-                              let errorMessage = error.message || 'Impossible d\'envoyer la demande de publication';
+                            let errorMessage = error.message || 'Impossible d\'envoyer la demande de publication';
+                            
+                            // Normalisation : si le message backend parle de module/leçon publiée, on affiche un message générique
+                            const rawMessage = (error.details && (typeof error.details === 'string' ? error.details : '')) || error.message || '';
+                            const mentionsModuleLesson = /module/i.test(rawMessage) && /le(ç|c)on/i.test(rawMessage);
+                            if (mentionsModuleLesson) {
+                              errorMessage = 'Le cours n\'est pas complet. Ajoutez des modules/leçons si nécessaire, puis réessayez.';
+                            }
                               
                               // Si l'erreur contient des détails, les utiliser
                               if (error.details) {
@@ -740,11 +729,8 @@ export default function InstructorCourseDetailPage() {
                                     errorMessage = 'Certains champs requis sont manquants. Vérifiez le titre, la description et tous les champs obligatoires.';
                                     break;
                                   case 'NO_MODULES':
-                                    if (isLiveCourse) {
-                                      errorMessage = '⚠️ Pour un cours en live, cette validation ne devrait pas s\'appliquer. Veuillez contacter le support si cette erreur persiste.';
-                                    } else {
-                                      errorMessage = 'Le cours doit contenir au moins un module avec au moins une leçon publiée pour être publié.';
-                                    }
+                                    // On ne bloque plus côté frontend : message générique
+                                    errorMessage = 'Le cours n\'est pas complet. Ajoutez des modules et leçons si nécessaire.';
                                     break;
                                   case 'NO_EVALUATION':
                                     errorMessage = 'L\'évaluation finale est obligatoire pour publier le cours.';
@@ -759,7 +745,6 @@ export default function InstructorCourseDetailPage() {
                           }}
                           disabled={
                             requestingPublication || 
-                            (!isLiveCourse && modules.length === 0) || 
                             !evaluation
                           }
                           className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 font-medium"

@@ -9,7 +9,7 @@ import CourseEvaluationPlayer from '../dashboard/student/CourseEvaluationPlayer'
 import { progressService } from '../../lib/services/progressService';
 import { quizService } from '../../lib/services/quizService';
 import { evaluationService } from '../../lib/services/evaluationService';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Modal from '../ui/Modal';
@@ -36,6 +36,8 @@ export default function CoursePlayer({
   className = '',
 }: CoursePlayerProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const showEvaluationParam = searchParams?.get('evaluation') === 'true';
 
   // Le thème est géré par ThemeContext (comme dans DashboardLayout), pas besoin de l'importer ici
   const [selectedModuleId, setSelectedModuleId] = useState<number | null>(
@@ -107,52 +109,6 @@ export default function CoursePlayer({
     [course.modules]
   );
 
-  useEffect(() => {
-    loadProgress();
-  }, [course.id]);
-
-  useEffect(() => {
-    if (enrollmentId) {
-      loadCourseQuizzesAndEvaluation().then(() => {
-        // Recharger la progression après avoir chargé l'évaluation finale
-        // pour ajuster le pourcentage si nécessaire
-        loadProgress();
-      });
-    }
-  }, [enrollmentId, course.id]);
-
-  // Recharger la progression périodiquement pour maintenir la synchronisation avec le backend
-  // Cela garantit que la progression affichée dans le header reste à jour
-  useEffect(() => {
-    if (!enrollmentId) return;
-    
-    const interval = setInterval(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement périodique de la progression (toutes les 15s)');
-      await loadProgress();
-    }, 15000); // Recharger toutes les 15 secondes pour une meilleure synchronisation
-    
-    return () => clearInterval(interval);
-  }, [enrollmentId]);
-
-  // Recalculer la progression quand l'évaluation finale ou ses tentatives changent
-  // MAIS seulement si la progression actuelle n'est pas déjà à 100% depuis l'API
-  useEffect(() => {
-    if (enrollmentId) {
-      // Attendre un peu pour s'assurer que finalEvaluation et finalEvaluationAttempts sont à jour
-      const timer = setTimeout(() => {
-        // Ne recharger que si la progression n'est pas déjà à 100%
-        // Si elle est à 100%, c'est que le backend a confirmé que l'évaluation est complétée
-        // On ne veut pas risquer de la réduire à 90% avec une vérification qui pourrait échouer
-        if (courseProgress < 100) {
-          console.log('[CoursePlayer] 🔄 Recalcul de la progression (actuellement < 100%)');
-          loadProgress();
-        } else {
-          console.log('[CoursePlayer] ⏭️ Progression déjà à 100%, pas de recalcul nécessaire');
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [finalEvaluation, finalEvaluationAttempts.length, enrollmentId, courseProgress]);
 
   useEffect(() => {
     if (!course.modules) {
@@ -673,6 +629,128 @@ export default function CoursePlayer({
     setUnlockedLessons((prev) => new Set([...prev, ...unlockedSet]));
   };
 
+  // Vérifier et mettre à jour la progression pour les cours live
+  // Si la date de fin est passée, mettre la progression à 70%
+  const checkAndUpdateLiveCourseProgress = useCallback(async () => {
+    if (!course || !enrollmentId) return;
+    
+    const courseAny = course as any;
+    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+    
+    if (!isLiveCourse) return;
+    
+    try {
+      const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+      if (!courseEndDate) return;
+      
+      const now = new Date();
+      const endDate = new Date(courseEndDate);
+      
+      // Si la date de fin est passée et que la progression est < 70%
+      if (now >= endDate && courseProgress < 70) {
+        console.log('[CoursePlayer] 📅 Date de fin du cours live passée, mise à jour progression à 70%');
+        // Le backend devrait gérer cela automatiquement lors du chargement de la progression
+        // On recharge simplement la progression pour obtenir la valeur mise à jour
+        await loadProgress();
+      }
+    } catch (error) {
+      console.warn('[CoursePlayer] Erreur lors de la vérification de la date de fin:', error);
+    }
+  }, [course, enrollmentId, courseProgress, loadProgress]);
+
+  // useEffect qui utilisent loadProgress - doivent être déclarés après loadProgress
+  useEffect(() => {
+    loadProgress();
+  }, [course.id, loadProgress]);
+
+  useEffect(() => {
+    if (enrollmentId) {
+      loadCourseQuizzesAndEvaluation().then(() => {
+        // Recharger la progression après avoir chargé l'évaluation finale
+        // pour ajuster le pourcentage si nécessaire
+        loadProgress();
+
+        const courseAny = course as any;
+        const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+
+        // 1) Si paramètre evaluation=true : ouvrir dès que possible
+        if (showEvaluationParam && (finalEvaluation || evaluationId)) {
+          const evalId = finalEvaluation?.id ? String(finalEvaluation.id) : evaluationId;
+          if (evalId) {
+            setSelectedEvaluationId(evalId);
+            setViewMode('evaluation');
+            return;
+          }
+        }
+
+        // 2) Pour les cours live terminés : ouvrir si évaluation existe et non validée
+        if (isLiveCourse && courseEndDate && finalEvaluation) {
+          const now = new Date();
+          const endDate = new Date(courseEndDate);
+          if (now >= endDate) {
+            const hasPassedAttempt = finalEvaluationAttempts.some((attempt: any) => 
+              attempt.is_passed === true || attempt.is_passed === 1
+            );
+            if (!hasPassedAttempt) {
+              const evalId = finalEvaluation.id ? String(finalEvaluation.id) : evaluationId;
+              if (evalId) {
+                setSelectedEvaluationId(evalId);
+                setViewMode('evaluation');
+              }
+            }
+          }
+        }
+      });
+    }
+  }, [enrollmentId, course.id, loadProgress, loadCourseQuizzesAndEvaluation, course, finalEvaluation, finalEvaluationAttempts, evaluationId, showEvaluationParam]);
+
+  // Si le paramètre est présent et que l'évaluation se charge plus tard, ouvrir dès qu'elle apparaît
+  useEffect(() => {
+    if (showEvaluationParam && finalEvaluation && enrollmentId) {
+      const evalId = finalEvaluation.id ? String(finalEvaluation.id) : evaluationId;
+      if (evalId) {
+        setSelectedEvaluationId(evalId);
+        setViewMode('evaluation');
+      }
+    }
+  }, [showEvaluationParam, finalEvaluation, evaluationId, enrollmentId]);
+
+  // Recharger la progression périodiquement pour maintenir la synchronisation avec le backend
+  // Cela garantit que la progression affichée dans le header reste à jour
+  useEffect(() => {
+    if (!enrollmentId) return;
+    
+    const interval = setInterval(async () => {
+      console.log('[CoursePlayer] 🔄 Rechargement périodique de la progression (toutes les 15s)');
+      await loadProgress();
+      // Vérifier aussi la progression pour les cours live
+      await checkAndUpdateLiveCourseProgress();
+    }, 15000); // Recharger toutes les 15 secondes pour une meilleure synchronisation
+    
+    return () => clearInterval(interval);
+  }, [enrollmentId, loadProgress, checkAndUpdateLiveCourseProgress]);
+
+  // Recalculer la progression quand l'évaluation finale ou ses tentatives changent
+  // MAIS seulement si la progression actuelle n'est pas déjà à 100% depuis l'API
+  useEffect(() => {
+    if (enrollmentId) {
+      // Attendre un peu pour s'assurer que finalEvaluation et finalEvaluationAttempts sont à jour
+      const timer = setTimeout(() => {
+        // Ne recharger que si la progression n'est pas déjà à 100%
+        // Si elle est à 100%, c'est que le backend a confirmé que l'évaluation est complétée
+        // On ne veut pas risquer de la réduire à 90% avec une vérification qui pourrait échouer
+        if (courseProgress < 100) {
+          console.log('[CoursePlayer] 🔄 Recalcul de la progression (actuellement < 100%)');
+          loadProgress();
+        } else {
+          console.log('[CoursePlayer] ⏭️ Progression déjà à 100%, pas de recalcul nécessaire');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [finalEvaluation, finalEvaluationAttempts.length, enrollmentId, courseProgress, loadProgress]);
+
   const selectedModule = course.modules?.find((m) => m.id === selectedModuleId);
   const selectedLesson = selectedModule?.lessons?.find((l) => l.id === selectedLessonId);
 
@@ -1141,13 +1219,20 @@ export default function CoursePlayer({
 
   // Vérifier si l'évaluation finale peut être activée
   const canActivateFinalEvaluation = useMemo(() => {
+    const courseAny = course as any;
+    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+    const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+    
     const debugInfo = {
       hasFinalEvaluation: !!finalEvaluation,
       hasEnrollmentId: !!enrollmentId,
       allModulesCompleted,
       courseProgress,
       finalEvaluationId: finalEvaluation?.id,
-      enrollmentIdValue: enrollmentId
+      enrollmentIdValue: enrollmentId,
+      isLiveCourse,
+      courseEndDate,
+      isEndDatePassed: courseEndDate ? new Date() >= new Date(courseEndDate) : false
     };
     
     if (!finalEvaluation || !enrollmentId) {
@@ -1158,7 +1243,20 @@ export default function CoursePlayer({
       return false;
     }
     
-    // Tous les modules doivent être complétés
+    // Pour les cours en live : si la date de fin est atteinte, permettre l'accès à l'évaluation même si tous les modules ne sont pas complétés
+    if (isLiveCourse && courseEndDate) {
+      const now = new Date();
+      const endDate = new Date(courseEndDate);
+      if (now >= endDate) {
+        console.log('[CoursePlayer] ✅ Évaluation finale débloquée (cours live, date de fin atteinte):', {
+          ...debugInfo,
+          note: 'Cours en live - date de fin atteinte, évaluation finale accessible'
+        });
+        return true;
+      }
+    }
+    
+    // Tous les modules doivent être complétés (pour les cours non-live ou cours live avant la date de fin)
     if (!allModulesCompleted) {
       console.log('[CoursePlayer] 🔒 Évaluation finale verrouillée:', {
         ...debugInfo,
@@ -1176,7 +1274,7 @@ export default function CoursePlayer({
       note: 'Tous les modules sont complétés, évaluation finale accessible'
     });
     return true;
-  }, [finalEvaluation, allModulesCompleted, courseProgress, enrollmentId]);
+  }, [finalEvaluation, allModulesCompleted, courseProgress, enrollmentId, course]);
 
   // Mettre à jour le statut de complétion des modules
   useEffect(() => {
@@ -1634,22 +1732,31 @@ export default function CoursePlayer({
               <span>{formatDuration(totalDurationMinutes)}</span>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span>Progression</span>
-              <span>{Math.round(courseProgress)}%</span>
-            </div>
-            <div className="w-full bg-white/20 rounded-full h-2">
-              <div
-                className="bg-mdsc-orange h-2 rounded-full transition-all durée-300"
-                style={{ width: `${courseProgress}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-white/70 mt-1">
-              <span>{formatDuration(completedDurationMinutes)} suivies</span>
-              <span>{formatDuration(totalDurationMinutes)} au total</span>
-            </div>
-          </div>
+          {/* Masquer la progression pour les cours en live */}
+          {(() => {
+            const courseAny = course as any;
+            const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+            if (isLiveCourse) return null;
+            
+            return (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span>Progression</span>
+                  <span>{Math.round(courseProgress)}%</span>
+                </div>
+                <div className="w-full bg-white/20 rounded-full h-2">
+                  <div
+                    className="bg-mdsc-orange h-2 rounded-full transition-all durée-300"
+                    style={{ width: `${courseProgress}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-white/70 mt-1">
+                  <span>{formatDuration(completedDurationMinutes)} suivies</span>
+                  <span>{formatDuration(totalDurationMinutes)} au total</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Bouton fermer sur mobile */}
@@ -1694,12 +1801,21 @@ export default function CoursePlayer({
                     <p className="text-xs text-gray-500 mb-2">
                       {module.lessons?.length || 0} leçons • {module.lessons?.reduce((sum, l) => sum + getLessonDurationMinutes(l), 0) || 0} min
                     </p>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-mdsc-blue-primary h-1.5 rounded-full transition-all"
-                        style={{ width: `${moduleProgress}%` }}
-                      />
-                    </div>
+                    {/* Masquer la barre de progression des modules pour les cours en live */}
+                    {(() => {
+                      const courseAny = course as any;
+                      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+                      if (isLiveCourse) return null;
+                      
+                      return (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-mdsc-blue-primary h-1.5 rounded-full transition-all"
+                            style={{ width: `${moduleProgress}%` }}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
                   <ChevronRight
                     className={`h-5 w-5 text-gray-400 transition-transform ${
@@ -1949,13 +2065,21 @@ export default function CoursePlayer({
                 </div>
               )}
             </div>
-            {/* Jauge de progression au milieu */}
-            <div className="order-2 flex items-center justify-center text-xs sm:text-sm text-gray-600">
-              <div className="flex items-center">
-                <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
-                <span className="ml-1 hidden sm:inline">complété</span>
-              </div>
-            </div>
+            {/* Jauge de progression au milieu - Masquée pour les cours en live */}
+            {(() => {
+              const courseAny = course as any;
+              const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+              if (isLiveCourse) return null;
+              
+              return (
+                <div className="order-2 flex items-center justify-center text-xs sm:text-sm text-gray-600">
+                  <div className="flex items-center">
+                    <span className="font-semibold text-gray-900">{Math.round(courseProgress)}%</span>
+                    <span className="ml-1 hidden sm:inline">complété</span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
         <div className="flex-1 overflow-y-auto w-full">

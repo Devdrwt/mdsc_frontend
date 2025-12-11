@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { CourseService } from '../../../../lib/services/courseService';
 import { mediaService } from '../../../../lib/services/mediaService';
 import { LiveSessionService } from '../../../../lib/services/liveSessionService';
+import { ModuleService } from '../../../../lib/services/moduleService';
 import { Course } from '../../../../types/course';
+import { Module, Lesson } from '../../../../types/course';
 import { MediaFile } from '../../../../types/course';
 import { LiveSession } from '../../../../types/liveSession';
-import { Loader2, FileText, Download, Clock, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
+import { Loader2, FileText, Download, Clock, Calendar, BookOpen, ArrowLeft, Video, Music, Presentation, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import toast from '../../../../lib/utils/toast';
@@ -24,9 +26,11 @@ export default function WaitingRoomPage() {
   
   const [course, setCourse] = useState<Course | null>(null);
   const [supportFiles, setSupportFiles] = useState<MediaFile[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (courseId) {
@@ -58,6 +62,43 @@ export default function WaitingRoomPage() {
       } catch (mediaError) {
         console.warn('Impossible de charger les fichiers de support:', mediaError);
         setSupportFiles([]);
+      }
+
+      // Charger les modules et leçons du cours
+      try {
+        const courseAny = courseData as any;
+        const courseIdNum = courseAny.id || courseAny.course_id || parseInt(courseId, 10);
+        if (courseIdNum) {
+          const courseModules = await ModuleService.getCourseModules(courseIdNum);
+          // Le cours peut déjà contenir les modules avec les leçons
+          const courseWithModules = courseAny.modules || courseAny.Modules || [];
+          const modulesWithLessons = courseWithModules.length > 0 
+            ? courseWithModules 
+            : courseModules;
+          
+          // Si les modules n'ont pas de leçons, essayer de les charger depuis le cours complet
+          const enrichedModules = await Promise.all(
+            modulesWithLessons.map(async (module: Module) => {
+              if (module.lessons && module.lessons.length > 0) {
+                return module;
+              }
+              // Essayer de récupérer les leçons depuis le cours complet
+              const courseAny = courseData as any;
+              const allModules = courseAny.modules || courseAny.Modules || [];
+              const moduleWithLessons = allModules.find((m: any) => m.id === module.id);
+              return moduleWithLessons || module;
+            })
+          );
+          
+          setModules(enrichedModules);
+          // Ouvrir le premier module par défaut
+          if (enrichedModules.length > 0) {
+            setExpandedModules(new Set([enrichedModules[0].id]));
+          }
+        }
+      } catch (moduleError) {
+        console.warn('Impossible de charger les modules:', moduleError);
+        setModules([]);
       }
       
       // Charger les sessions live du cours après avoir chargé le cours
@@ -107,12 +148,31 @@ export default function WaitingRoomPage() {
       // Mettre à jour le state avec les dernières sessions
       setLiveSessions(sessions);
       
-      // Chercher une session avec le statut "live"
-      const liveSession = sessions.find(
+      // Vérifier si la date de début du cours est atteinte
+      const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+      const now = new Date();
+      const isCourseStarted = courseStartDate ? now >= new Date(courseStartDate) : false;
+      
+      // Chercher d'abord une session avec le statut "live"
+      let liveSession = sessions.find(
         (session: LiveSession) => 
           session.status === 'live' || 
           (session as any).session_status === 'live'
       );
+      
+      // Si pas de session "live" mais que le cours a démarré, chercher la première session disponible
+      if (!liveSession && isCourseStarted && sessions.length > 0) {
+        // Chercher une session programmée dont l'heure de début est passée
+        liveSession = sessions.find((session: LiveSession) => {
+          const sessionStart = new Date(session.scheduled_start_at);
+          return (session.status === 'scheduled' || !session.status) && now >= sessionStart;
+        });
+        
+        // Si toujours pas trouvé, prendre la première session disponible
+        if (!liveSession) {
+          liveSession = sessions[0];
+        }
+      }
       
       return liveSession || null;
     } catch (error) {
@@ -121,29 +181,76 @@ export default function WaitingRoomPage() {
     }
   };
 
+  const redirectToJitsi = (session: LiveSession) => {
+    try {
+      // Construire l'URL Jitsi directement
+      const jitsiDomain = session.jitsi_server_url
+        ? (() => {
+            try {
+              return new URL(session.jitsi_server_url).hostname;
+            } catch {
+              return session.jitsi_server_url.replace('https://', '').replace('http://', '').split('/')[0];
+            }
+          })()
+        : 'meet.jit.si';
+      
+      const urlParams = new URLSearchParams();
+      
+      // Ajouter le mot de passe si disponible
+      if (session.jitsi_room_password) {
+        urlParams.append('pwd', session.jitsi_room_password);
+      }
+      
+      const queryString = urlParams.toString();
+      const jitsiUrl = `https://${jitsiDomain}/${session.jitsi_room_name}${queryString ? `?${queryString}` : ''}`;
+      
+      // Rediriger directement vers Jitsi
+      window.location.href = jitsiUrl;
+    } catch (error) {
+      console.error('Erreur lors de la redirection vers Jitsi:', error);
+      toast.error('Erreur', 'Impossible de rediriger vers la session live');
+    }
+  };
+
   useEffect(() => {
     // Vérifier périodiquement si le cours a démarré ou si une session live a démarré
     if (course) {
       const interval = setInterval(async () => {
-        // Vérifier d'abord si une session live a démarré (priorité)
-        const liveSession = await checkIfLiveSessionStarted();
-        if (liveSession) {
-          // Afficher un message avant la redirection
-          toast.success('Session live démarrée', 'Redirection vers la session en cours...');
+        // Vérifier si la date de début est atteinte
+        const courseAny = course as any;
+        const courseStartDate = courseAny.course_start_date || courseAny.courseStartDate;
+        
+        if (courseStartDate) {
+          const startDate = new Date(courseStartDate);
+          const now = new Date();
           
-          // Rediriger vers la session live
-          const courseAny = course as any;
-          const courseSlug = courseAny.slug || `course-${courseAny.id || courseAny.course_id || courseId}`;
-          
-          // Utiliser replace pour éviter de revenir à la salle d'attente avec le bouton retour
-          router.replace(`/courses/${courseSlug}/live-sessions/${liveSession.id}/join`);
-          return;
+          // Si la date de début est atteinte, chercher une session live et rediriger vers Jitsi
+          if (now >= startDate) {
+            const liveSession = await checkIfLiveSessionStarted();
+            if (liveSession && liveSession.jitsi_room_name) {
+              // Afficher un message avant la redirection
+              toast.success('Cours démarré', 'Redirection vers la session Jitsi...');
+              
+              // Rediriger directement vers Jitsi
+              redirectToJitsi(liveSession);
+              return;
+            }
+            
+            // Si pas de session trouvée mais que le cours a démarré, rediriger vers la page du cours
+            router.push(`/learn/${courseId}`);
+            return;
+          }
         }
         
-        // Sinon, vérifier si le cours a démarré (date de début)
-        if (checkIfSessionStarted()) {
-          // Rediriger vers la page du cours
-          router.push(`/learn/${courseId}`);
+        // Vérifier aussi si une session live a démarré (même si la date de début n'est pas encore atteinte)
+        const liveSession = await checkIfLiveSessionStarted();
+        if (liveSession && (liveSession.status === 'live' || (liveSession as any).session_status === 'live')) {
+          // Afficher un message avant la redirection
+          toast.success('Session live démarrée', 'Redirection vers la session Jitsi...');
+          
+          // Rediriger directement vers Jitsi
+          redirectToJitsi(liveSession);
+          return;
         }
       }, 5000); // Vérifier toutes les 5 secondes pour une meilleure réactivité
       
@@ -164,6 +271,60 @@ export default function WaitingRoomPage() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const toggleModule = (moduleId: number) => {
+    setExpandedModules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moduleId)) {
+        newSet.delete(moduleId);
+      } else {
+        newSet.add(moduleId);
+      }
+      return newSet;
+    });
+  };
+
+  const getLessonMediaIcon = (contentType?: string) => {
+    switch (contentType) {
+      case 'video':
+        return <Video className="h-5 w-5 text-red-600" />;
+      case 'audio':
+        return <Music className="h-5 w-5 text-purple-600" />;
+      case 'presentation':
+        return <Presentation className="h-5 w-5 text-orange-600" />;
+      case 'document':
+        return <FileText className="h-5 w-5 text-blue-600" />;
+      default:
+        return <FileText className="h-5 w-5 text-gray-600" />;
+    }
+  };
+
+  const getLessonDownloadUrl = (lesson: Lesson): string | null => {
+    const lessonAny = lesson as any;
+    // Priorité 1: mediaFile avec URL
+    if (lessonAny.mediaFile?.url) {
+      return lessonAny.mediaFile.url;
+    }
+    // Priorité 2: media avec URL
+    if (lessonAny.media) {
+      if (Array.isArray(lessonAny.media) && lessonAny.media.length > 0 && lessonAny.media[0]?.url) {
+        return lessonAny.media[0].url;
+      }
+      if (lessonAny.media.url) {
+        return lessonAny.media.url;
+      }
+    }
+    // Priorité 3: content_url
+    if (lesson.content_url || lessonAny.contentUrl) {
+      return lesson.content_url || lessonAny.contentUrl;
+    }
+    // Priorité 4: media_file_id avec service
+    if (lesson.media_file_id || lessonAny.mediaFileId) {
+      const mediaId = String(lesson.media_file_id || lessonAny.mediaFileId);
+      return mediaService.getDownloadUrl(mediaId);
+    }
+    return null;
   };
 
   if (loading) {
@@ -283,17 +444,124 @@ export default function WaitingRoomPage() {
             )}
           </div>
 
+          {/* Contenu du cours (Modules et Leçons) */}
+          {modules.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 mb-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <BookOpen className="h-6 w-6 text-blue-600" />
+                <h2 className="text-2xl font-bold text-gray-900">Contenu du cours</h2>
+              </div>
+
+              <div className="space-y-4">
+                {modules.map((module) => {
+                  const lessons = module.lessons || [];
+                  const isExpanded = expandedModules.has(module.id);
+                  const hasLessons = lessons.length > 0;
+
+                  return (
+                    <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => toggleModule(module.id)}
+                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        disabled={!hasLessons}
+                      >
+                        <div className="flex items-center space-x-3 flex-1 text-left">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <BookOpen className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{module.title}</h3>
+                            {module.description && (
+                              <p className="text-sm text-gray-600 mt-1">{module.description}</p>
+                            )}
+                            {hasLessons && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {lessons.length} leçon{lessons.length > 1 ? 's' : ''}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {hasLessons && (
+                          <div className="ml-4">
+                            {isExpanded ? (
+                              <ChevronUp className="h-5 w-5 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-500" />
+                            )}
+                          </div>
+                        )}
+                      </button>
+
+                      {isExpanded && hasLessons && (
+                        <div className="p-4 bg-white border-t border-gray-200">
+                          <div className="space-y-3">
+                            {lessons.map((lesson) => {
+                              const lessonAny = lesson as any;
+                              const downloadUrl = getLessonDownloadUrl(lesson);
+                              const hasDownloadableContent = !!downloadUrl;
+
+                              return (
+                                <div
+                                  key={lesson.id}
+                                  className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <div className="p-2 bg-gray-100 rounded-lg">
+                                      {getLessonMediaIcon(lesson.content_type)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-medium text-gray-900 mb-1">{lesson.title}</h4>
+                                      {lesson.description && (
+                                        <p className="text-sm text-gray-600 mb-2">{lesson.description}</p>
+                                      )}
+                                      {lesson.content_type && (
+                                        <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded mb-2">
+                                          {lesson.content_type}
+                                        </span>
+                                      )}
+                                      {hasDownloadableContent && (
+                                        <a
+                                          href={downloadUrl || '#'}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          download
+                                          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium mt-2"
+                                        >
+                                          <Download className="h-4 w-4 mr-1" />
+                                          Télécharger le contenu
+                                        </a>
+                                      )}
+                                      {!hasDownloadableContent && (
+                                        <p className="text-xs text-gray-500 mt-2">
+                                          Aucun contenu téléchargeable disponible
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Support du cours */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
             <div className="flex items-center space-x-3 mb-6">
-              <BookOpen className="h-6 w-6 text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Support du cours</h2>
+              <FileText className="h-6 w-6 text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Documents de support</h2>
             </div>
 
             {supportFiles.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg">
                 <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Aucun support de cours disponible pour le moment</p>
+                <p className="text-gray-600 mb-2">Aucun document de support disponible pour le moment</p>
                 <p className="text-sm text-gray-500">
                   Le formateur peut ajouter des documents de support avant le début du cours
                 </p>

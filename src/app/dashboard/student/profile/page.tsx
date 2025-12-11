@@ -27,9 +27,7 @@ import {
   Globe,
   Briefcase,
   UserCheck,
-  Clock,
-  Info,
-  Hash
+  Info
 } from 'lucide-react';
 import toast from '../../../../lib/utils/toast';
 
@@ -128,7 +126,6 @@ function ProfileContent() {
     website: '',
     organization: user?.organization || '',
     country: user?.country || '',
-    npi: user?.npi || '',
   });
   
   const [profileInfo, setProfileInfo] = useState<any>({
@@ -160,13 +157,6 @@ function ProfileContent() {
                             user?.phone || 
                             '';
           
-          // Récupérer le NPI avec plusieurs variantes possibles
-          const npiValue = userData.npi || 
-                          userDataAny.npi_number ||
-                          userDataAny.npiNumber ||
-                          user?.npi || 
-                          '';
-          
           setFormData({
             firstName: userData.firstName || user?.firstName || '',
             lastName: userData.lastName || user?.lastName || '',
@@ -177,7 +167,6 @@ function ProfileContent() {
             website: userData.website || '',
             organization: userData.organization || user?.organization || '',
             country: userData.country || user?.country || '',
-            npi: npiValue,
           });
           
           // Stocker les informations supplémentaires
@@ -487,17 +476,6 @@ function ProfileContent() {
                       </div>
                     </div>
                   )}
-                  {formData.npi && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                        NPI
-                      </label>
-                      <div className="flex items-center text-gray-900">
-                        <Hash className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{formData.npi}</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
                 
                 {/* Informations supplémentaires */}
@@ -524,57 +502,8 @@ function ProfileContent() {
                         </span>
                       </div>
                     )}
-                    {profileInfo.lastLoginAt && (
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-600">
-                          Dernière connexion : {new Date(profileInfo.lastLoginAt).toLocaleDateString('fr-FR')}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
-                
-                {/* Statistiques si disponibles */}
-                {statistics && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">Statistiques</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {statistics.enrollments && (
-                        <>
-                          <div className="text-center p-3 bg-blue-50 rounded-lg">
-                            <p className="text-2xl font-bold text-blue-600">{statistics.enrollments.total || 0}</p>
-                            <p className="text-xs text-gray-600 mt-1">Cours inscrits</p>
-                          </div>
-                          <div className="text-center p-3 bg-green-50 rounded-lg">
-                            <p className="text-2xl font-bold text-green-600">{statistics.enrollments.completed || 0}</p>
-                            <p className="text-xs text-gray-600 mt-1">Cours terminés</p>
-                          </div>
-                          <div className="text-center p-3 bg-yellow-50 rounded-lg">
-                            <p className="text-2xl font-bold text-yellow-600">{statistics.enrollments.active || 0}</p>
-                            <p className="text-xs text-gray-600 mt-1">Cours actifs</p>
-                          </div>
-                          <div className="text-center p-3 bg-purple-50 rounded-lg">
-                            <p className="text-2xl font-bold text-purple-600">{Math.round(statistics.enrollments.averageProgress || 0)}%</p>
-                            <p className="text-xs text-gray-600 mt-1">Progression moyenne</p>
-                          </div>
-                        </>
-                      )}
-                      {statistics.badges && (
-                        <div className="text-center p-3 bg-orange-50 rounded-lg">
-                          <p className="text-2xl font-bold text-orange-600">{statistics.badges.total || 0}</p>
-                          <p className="text-xs text-gray-600 mt-1">Badges obtenus</p>
-                        </div>
-                      )}
-                      {statistics.certificates && (
-                        <div className="text-center p-3 bg-indigo-50 rounded-lg">
-                          <p className="text-2xl font-bold text-indigo-600">{statistics.certificates.total || 0}</p>
-                          <p className="text-xs text-gray-600 mt-1">Certificats</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -646,18 +575,6 @@ function ProfileContent() {
                       type="text"
                       value={formData.country}
                       onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      NPI
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.npi}
-                      onChange={(e) => setFormData({ ...formData, npi: e.target.value })}
-                      placeholder="Numéro d'identification professionnel"
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-mdsc-blue-primary focus:border-transparent transition-all"
                     />
                   </div>

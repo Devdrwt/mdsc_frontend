@@ -109,6 +109,7 @@ export default function InstructorLiveSessionsPage() {
   const handleCreateSession = async (data: CreateLiveSessionData, courseData?: any) => {
     try {
       let courseId: number | null = null;
+      let sessionAlreadyCreated = false;
       
       // Si courseData est fourni, créer le cours d'abord
       if (courseData) {
@@ -132,6 +133,14 @@ export default function InstructorLiveSessionsPage() {
             }
             
             console.log('✅ [CreateSession] ID du cours converti:', courseId, '(type:', typeof courseId, ')');
+            
+            // Vérifier si le backend a déjà créé une session live automatiquement
+            const courseAny = course as any;
+            if (courseAny.live_session || courseAny.liveSession) {
+              const liveSession = courseAny.live_session || courseAny.liveSession;
+              console.log('✅ [CreateSession] Session live déjà créée automatiquement par le backend:', liveSession);
+              sessionAlreadyCreated = true;
+            }
           } else {
             console.error('❌ [CreateSession] Aucun ID retourné par le backend');
             console.error('   Objet course:', course);
@@ -143,19 +152,23 @@ export default function InstructorLiveSessionsPage() {
         }
       }
       
-      // Créer la session (toujours avec courseId maintenant car on crée toujours un cours)
-      if (courseId) {
+      // Créer la session seulement si elle n'a pas déjà été créée par le backend
+      if (courseId && !sessionAlreadyCreated) {
         console.log('📤 Création de la session pour le cours:', courseId);
         await liveSessionService.createSession(courseId, data);
         console.log('✅ Session créée avec succès');
-      } else {
+      } else if (courseId && sessionAlreadyCreated) {
+        console.log('ℹ️ [CreateSession] Session déjà créée par le backend, pas besoin de créer une nouvelle session');
+      } else if (!courseId) {
         // Ce cas ne devrait plus arriver car on crée toujours un cours
         throw new Error('Impossible de créer la session : aucun cours associé');
       }
       
       await loadAllSessions();
       setShowCreateForm(false);
-      toast.success('Succès', 'Cours et session live créés avec succès');
+      toast.success('Succès', sessionAlreadyCreated 
+        ? 'Cours et session live créés avec succès (session configurée automatiquement)'
+        : 'Cours et session live créés avec succès');
     } catch (err: any) {
       console.error('❌ Erreur création session:', err);
       const errorMessage = err.message || 'Impossible de créer la session live';

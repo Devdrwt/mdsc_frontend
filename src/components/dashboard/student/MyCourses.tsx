@@ -5,8 +5,10 @@ import Link from 'next/link';
 import { BookOpen, Clock, Play, CheckCircle, Award, Filter, Search, X, Trash2, AlertTriangle, Users, User, MessageCircle } from 'lucide-react';
 import { courseService, Course } from '../../../lib/services/courseService';
 import { useAuthStore } from '../../../lib/stores/authStore';
+import { evaluationService } from '../../../lib/services/evaluationService';
 import DataTable from '../shared/DataTable';
 import toast from '../../../lib/utils/toast';
+import { resolveMediaUrl } from '../../../lib/utils/media';
 // import { BookOpen } from "heroicons-react" ;
 
 type StudentCourse = Course & {
@@ -25,6 +27,7 @@ export default function MyCourses() {
   const [unenrollingCourse, setUnenrollingCourse] = useState<string | number | null>(null);
   const [showUnenrollModal, setShowUnenrollModal] = useState(false);
   const [courseToUnenroll, setCourseToUnenroll] = useState<StudentCourse | null>(null);
+  const [evaluationStatuses, setEvaluationStatuses] = useState<Map<number, { hasEvaluation: boolean; isPassed: boolean }>>(new Map());
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -54,6 +57,78 @@ export default function MyCourses() {
 
         setCourses(normalizedCourses);
         setFilteredCourses(normalizedCourses);
+
+        // Charger les statuts d'évaluation pour les cours en live avec date de fin passée
+        const evaluationStatusMap = new Map<number, { hasEvaluation: boolean; isPassed: boolean }>();
+        
+        for (const course of normalizedCourses) {
+          const courseAny = course as any;
+          const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+          const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+          const enrollmentId = courseAny.enrollment?.id || courseAny.enrollment_id || courseAny.enrollmentId;
+          const courseIdNum = typeof course.id === 'number' ? course.id : Number(course.id);
+          
+          // Vérifier l'évaluation seulement pour les cours en live avec date de fin passée
+          if (isLiveCourse && courseEndDate) {
+            const now = new Date();
+            const endDate = new Date(courseEndDate);
+            const isEndDatePassed = now >= endDate;
+            
+            // Si la date de fin est passée, vérifier l'évaluation
+            if (isEndDatePassed && enrollmentId) {
+              try {
+                const evalData = await evaluationService.getEnrollmentEvaluation(Number(enrollmentId));
+                if (evalData?.evaluation) {
+                  // Vérifier si au moins une tentative est réussie (validée)
+                  const hasPassedAttempt = evalData.previous_attempts?.some((attempt: any) => 
+                    attempt.is_passed === true || attempt.is_passed === 1
+                  ) || false;
+                  evaluationStatusMap.set(courseIdNum, {
+                    hasEvaluation: true,
+                    isPassed: hasPassedAttempt
+                  });
+                  console.log(`[MyCourses] Évaluation trouvée pour le cours ${courseIdNum}:`, {
+                    hasEvaluation: true,
+                    isPassed: hasPassedAttempt,
+                    attemptsCount: evalData.previous_attempts?.length || 0
+                  });
+                } else {
+                  // Pas d'évaluation trouvée
+                  evaluationStatusMap.set(courseIdNum, {
+                    hasEvaluation: false,
+                    isPassed: false
+                  });
+                  console.log(`[MyCourses] Pas d'évaluation pour le cours ${courseIdNum}`);
+                }
+              } catch (error: any) {
+                // 404 est attendu si l'évaluation n'existe pas
+                if (error?.status === 404 || error?.response?.status === 404) {
+                  evaluationStatusMap.set(courseIdNum, {
+                    hasEvaluation: false,
+                    isPassed: false
+                  });
+                  console.log(`[MyCourses] Pas d'évaluation pour le cours ${courseIdNum} (404)`);
+                } else {
+                  console.warn(`[MyCourses] Erreur lors du chargement de l'évaluation pour le cours ${courseIdNum}:`, error);
+                  // En cas d'erreur, considérer qu'il n'y a pas d'évaluation
+                  evaluationStatusMap.set(courseIdNum, {
+                    hasEvaluation: false,
+                    isPassed: false
+                  });
+                }
+              }
+            } else if (isEndDatePassed && !enrollmentId) {
+              // Date de fin passée mais pas d'enrollmentId : considérer qu'il n'y a pas d'évaluation
+              console.warn(`[MyCourses] Cours ${courseIdNum} en live avec date de fin passée mais sans enrollmentId`);
+              evaluationStatusMap.set(courseIdNum, {
+                hasEvaluation: false,
+                isPassed: false
+              });
+            }
+          }
+        }
+        
+        setEvaluationStatuses(evaluationStatusMap);
       } catch (error) {
         console.error('Erreur lors du chargement des cours:', error);
         setCourses([]);
@@ -96,6 +171,13 @@ export default function MyCourses() {
   }, [courses, searchTerm, filterStatus]);
 
   const getStatusBadge = (course: StudentCourse) => {
+    const courseAny = course as any;
+    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+    // Ne pas afficher le badge "Non commencé" pour les cours live
+    if (isLiveCourse && course.progressValue === 0) {
+      return null;
+    }
+
     if (course.progressValue === 100) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -144,6 +226,69 @@ export default function MyCourses() {
       return 'Autre';
     }
     return String(category);
+  };
+
+  // Fonction pour déterminer le texte et l'URL du bouton pour les cours en live
+  const getLiveCourseButtonInfo = (course: StudentCourse): { text: string; href: string } => {
+    const courseAny = course as any;
+    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+    const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+    
+    if (!isLiveCourse || !courseEndDate) {
+      // Cours normal : utiliser la logique standard
+      return {
+        text: course.progressValue === 100 ? 'Revoir' : course.progressValue > 0 ? 'Continuer' : 'Commencer',
+        href: `/learn/${course.id}`
+      };
+    }
+    
+    // Vérifier si la date de fin est passée
+    const now = new Date();
+    const endDate = new Date(courseEndDate);
+    const isEndDatePassed = now >= endDate;
+    
+    if (!isEndDatePassed) {
+      // Date de fin pas encore passée : logique standard
+      return {
+        text: course.progressValue === 100 ? 'Revoir' : course.progressValue > 0 ? 'Continuer' : 'Commencer',
+        href: `/learn/${course.id}`
+      };
+    }
+    
+    // Si la progression est à 100% (backend a marqué complété), afficher terminé
+    if (course.progressValue >= 100) {
+      return {
+        text: 'Live terminé',
+        href: `/learn/${course.id}`
+      };
+    }
+
+    // Date de fin passée : vérifier l'évaluation
+    const courseIdNum = typeof course.id === 'number' ? course.id : Number(course.id);
+    const evalStatus = evaluationStatuses.get(courseIdNum);
+
+    // Cas 1 : évaluation validée
+    if (evalStatus?.isPassed) {
+      return {
+        text: 'Live terminé',
+        href: `/learn/${course.id}`
+      };
+    }
+
+    // Cas 2 : évaluation existe et non validée
+    if (evalStatus?.hasEvaluation === true && evalStatus.isPassed === false) {
+      return {
+        text: "Passer à l'évaluation",
+        href: `/learn/${course.id}?evaluation=true`
+      };
+    }
+
+    // Cas 3 : évaluation non détectée (pas dans le map ou hasEvaluation === false)
+    // On laisse l'accès pour que le joueur de cours vérifie et affiche l'évaluation si elle existe
+    return {
+      text: "Passer à l'évaluation",
+      href: `/learn/${course.id}?evaluation=true`
+    };
   };
 
   const handleUnenroll = async () => {
@@ -324,32 +469,88 @@ export default function MyCourses() {
                         <MessageCircle className="h-4 w-4" />
                         <span>Forum</span>
                       </Link>
+                      {(() => {
+                        const courseAny = course as any;
+                        const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+                        const downloadUrlRaw =
+                          courseAny.course_material_url ||
+                          courseAny.material_url ||
+                          courseAny.materials_url ||
+                          courseAny.content_url ||
+                          courseAny.materials ||
+                          null;
+                        if (!isLiveCourse || !downloadUrlRaw) return null;
+                        const downloadUrl = resolveMediaUrl(downloadUrlRaw) || downloadUrlRaw;
+                        return (
+                          <a
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors"
+                          >
+                            <BookOpen className="h-4 w-4" />
+                            <span>Télécharger le contenu</span>
+                          </a>
+                        );
+                      })()}
                     </div>
                   </div>
                   
                   <div className="ml-6 flex flex-col items-end space-y-3">
-                    {/* Barre de progression */}
-                    <div className="w-32">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Progression</span>
-                        <span>{course.progressValue}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(course.progressValue)}`}
-                          style={{ width: `${course.progressValue}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    {/* Barre de progression - Masquée pour les cours en live */}
+                    {(() => {
+                      const courseAny = course as any;
+                      const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+                      
+                      if (isLiveCourse) {
+                        return (
+                          <div className="w-32 text-center">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Cours en live
+                            </span>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="w-32">
+                          <div className="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Progression</span>
+                            <span>{course.progressValue}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(course.progressValue)}`}
+                              style={{ width: `${course.progressValue}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     
                     <div className="flex flex-col items-end space-y-2">
                       {/* Bouton d'action */}
-                      <a
-                        href={`/learn/${course.id}`}
-                        className="btn-mdsc-primary text-sm"
-                      >
-                        {course.progressValue === 100 ? 'Revoir' : course.progressValue > 0 ? 'Continuer' : 'Commencer'}
-                      </a>
+                      {(() => {
+                        const buttonInfo = getLiveCourseButtonInfo(course);
+                        const isLiveTerminated = buttonInfo.text === 'Live terminé';
+                        
+                        if (isLiveTerminated) {
+                          return (
+                            <span className="btn-mdsc-primary text-sm opacity-60 cursor-not-allowed inline-block">
+                              {buttonInfo.text}
+                            </span>
+                          );
+                        }
+                        
+                        return (
+                          <a
+                            href={buttonInfo.href}
+                            className="btn-mdsc-primary text-sm"
+                          >
+                            {buttonInfo.text}
+                          </a>
+                        );
+                      })()}
                       
                       {/* Bouton de désinscription */}
                       <button
