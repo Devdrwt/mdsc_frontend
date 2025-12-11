@@ -154,15 +154,23 @@ const nextConfig: NextConfig = {
   // Proxy dev: /api -> backend local sur 5000
   // Note: Les routes API Next.js dans src/app/api/* ont automatiquement la priorité sur les rewrites
   async rewrites() {
+    const metricsRewrite = [
+      {
+        source: '/metrics',
+        destination: '/api/metrics',
+      },
+    ];
+
     // Si NEXT_PUBLIC_API_URL est défini, ne pas utiliser de rewrites
     // (les appels API iront directement vers l'URL configurée)
     if (process.env.NEXT_PUBLIC_API_URL) {
-      return [];
+      return metricsRewrite;
     }
     
     // Rewrite pour toutes les routes API
     // Les routes API Next.js (comme /api/media/*) seront appelées en premier
     return [
+      ...metricsRewrite,
       {
         source: '/api/:path*',
         destination: 'http://localhost:5000/api/:path*',
