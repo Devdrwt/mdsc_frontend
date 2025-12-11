@@ -448,55 +448,55 @@ export default function MyCourses() {
 </div>
 
       {/* Statistiques rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg mr-4">
-              <BookOpen className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-blue-100 rounded-lg mr-3 md:mr-4 flex-shrink-0">
+              <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total des cours</p>
-              <p className="text-2xl font-bold text-gray-900">{courses.length}</p>
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Total des cours</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900">{courses.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg mr-4">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="p-2 bg-green-100 rounded-lg mr-3 md:mr-4 flex-shrink-0">
+              <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Terminés</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Terminés</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900">
                 {courses.filter(c => c.progressValue === 100).length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg mr-4">
-              <Play className="h-6 w-6 text-yellow-600" />
+            <div className="p-2 bg-yellow-100 rounded-lg mr-3 md:mr-4 flex-shrink-0">
+              <Play className="h-5 w-5 md:h-6 md:w-6 text-yellow-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">En cours</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm font-medium text-gray-600">En cours</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900">
                 {courses.filter(c => c.progressValue > 0 && c.progressValue < 100).length}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg mr-4">
-              <Award className="h-6 w-6 text-purple-600" />
+            <div className="p-2 bg-purple-100 rounded-lg mr-3 md:mr-4 flex-shrink-0">
+              <Award className="h-5 w-5 md:h-6 md:w-6 text-purple-600" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Progression moyenne</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <p className="text-xs md:text-sm font-medium text-gray-600">Progression moyenne</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900">
                 {courses.length > 0 
                   ? Math.round(courses.reduce((acc, c) => acc + c.progressValue, 0) / courses.length)
                   : 0}%
@@ -547,12 +547,12 @@ export default function MyCourses() {
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                className="p-6 transition-colors bg-white hover:bg-gray-100"
+                className="p-4 md:p-6 transition-colors bg-white hover:bg-gray-100"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 mb-2 gap-2">
+                      <h3 className="text-base md:text-lg font-semibold text-gray-900 break-words">{course.title}</h3>
                       {getStatusBadge(course)}
                     </div>
                     
@@ -560,7 +560,7 @@ export default function MyCourses() {
                       {course.description || 'Aucune description disponible'}
                     </p>
                     
-                    <div className="flex items-center space-x-6 text-sm text-gray-500">
+                    <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-gray-500">
                       <div className="flex items-center space-x-1">
                         <BookOpen className="h-4 w-4" />
                         <span>{course.categoryLabel || getCategoryLabel((course as any).category)}</span>
@@ -573,9 +573,9 @@ export default function MyCourses() {
                       </div>
                       <Link
                         href={`/courses/${course.id}/forum`}
-                        className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors"
+                        className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors text-xs md:text-sm"
                       >
-                        <MessageCircle className="h-4 w-4" />
+                        <MessageCircle className="h-3 w-3 md:h-4 md:w-4" />
                         <span>Forum</span>
                       </Link>
                       {(() => {
@@ -650,17 +650,18 @@ export default function MyCourses() {
                             href={downloadUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors"
+                            className="inline-flex items-center space-x-1 text-mdsc-blue-primary hover:text-mdsc-blue-dark font-semibold transition-colors text-xs md:text-sm"
                           >
-                            <BookOpen className="h-4 w-4" />
-                            <span>Télécharger le contenu</span>
+                            <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden sm:inline">Télécharger le contenu</span>
+                            <span className="sm:hidden">Télécharger</span>
                           </a>
                         );
                       })()}
                     </div>
                   </div>
                   
-                  <div className="ml-6 flex flex-col items-end space-y-3">
+                  <div className="md:ml-6 flex flex-col md:items-end space-y-3 w-full md:w-auto">
                     {/* Barre de progression - Masquée pour les cours en live */}
                     {(() => {
                       const courseAny = course as any;
@@ -668,7 +669,7 @@ export default function MyCourses() {
                       
                       if (isLiveCourse) {
                         return (
-                          <div className="w-32 text-center">
+                          <div className="w-full md:w-32 text-center md:text-right">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               Cours en live
                             </span>
@@ -677,7 +678,7 @@ export default function MyCourses() {
                       }
                       
                       return (
-                        <div className="w-32">
+                        <div className="w-full md:w-32">
                           <div className="flex justify-between text-xs text-gray-600 mb-1">
                             <span>Progression</span>
                             <span>{course.progressValue}%</span>
@@ -692,7 +693,7 @@ export default function MyCourses() {
                       );
                     })()}
                     
-                    <div className="flex flex-col items-end space-y-2">
+                    <div className="flex flex-col md:items-end space-y-2 w-full md:w-auto">
                       {/* Bouton d'action */}
                       {(() => {
                         const buttonInfo = getLiveCourseButtonInfo(course);
@@ -700,7 +701,7 @@ export default function MyCourses() {
                         
                         if (isLiveTerminated) {
                           return (
-                            <span className="btn-mdsc-primary text-sm opacity-60 cursor-not-allowed inline-block">
+                            <span className="btn-mdsc-primary text-xs md:text-sm opacity-60 cursor-not-allowed inline-block w-full md:w-auto text-center">
                               {buttonInfo.text}
                             </span>
                           );
@@ -709,7 +710,7 @@ export default function MyCourses() {
                         return (
                           <a
                             href={buttonInfo.href}
-                            className="btn-mdsc-primary text-sm"
+                            className="btn-mdsc-primary text-xs md:text-sm w-full md:w-auto text-center"
                           >
                             {buttonInfo.text}
                           </a>
@@ -719,10 +720,10 @@ export default function MyCourses() {
                       {/* Bouton de désinscription */}
                       <button
                         onClick={() => openUnenrollModal(course)}
-                        className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                        className="flex items-center justify-center md:justify-start space-x-1 text-xs md:text-sm text-red-600 hover:text-red-700 transition-colors w-full md:w-auto"
                         disabled={unenrollingCourse === course.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                         <span>Se désinscrire</span>
                       </button>
                     </div>
