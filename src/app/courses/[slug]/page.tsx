@@ -1139,14 +1139,17 @@ export default function CourseDetailPage() {
                           
                           {isExpanded && (
                             <div className="border-t border-gray-200 bg-gray-50">
-                              <div className="divide-y divide-gray-200">
+                              <ul className="divide-y divide-gray-200">
                                 {lessons.map((lesson: any, lessonIndex: number) => {
                                   const ContentIcon = lesson.content_type === 'video' ? Video :
                                                     lesson.content_type === 'quiz' ? FileText :
                                                     lesson.content_type === 'assignment' ? FileText :
                                                     BookOpen;
                                   return (
-                                    <div key={lesson.id} className="p-4 flex items-center space-x-4">
+                                    <li key={lesson.id} className="p-4 flex items-center space-x-4 list-none">
+                                      <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-mdsc-blue-primary"></span>
+                                      </div>
                                       <div className="flex-shrink-0">
                                         <ContentIcon className="h-5 w-5 text-gray-400" />
                                       </div>
@@ -1161,10 +1164,10 @@ export default function CourseDetailPage() {
                                         )}
                                       </div>
                                       <Lock className="h-4 w-4 text-gray-400" />
-                                    </div>
+                                    </li>
                                   );
                                 })}
-                              </div>
+                              </ul>
                             </div>
                           )}
                         </div>
@@ -1204,7 +1207,7 @@ export default function CourseDetailPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  <ul className="space-y-3">
                     {course.lessons.map((lesson, lessonIndex) => {
                       const lessonAny = lesson as any;
                       const contentIcon = lessonAny.content_type === 'video' ? Video :
@@ -1212,7 +1215,10 @@ export default function CourseDetailPage() {
                                         lessonAny.content_type === 'assignment' ? FileText :
                                         BookOpen;
                       return (
-                        <div key={lesson.id} className="flex items-center space-x-4 p-3 border border-gray-200 rounded-lg">
+                        <li key={lesson.id} className="flex items-center space-x-4 p-3 border border-gray-200 rounded-lg list-none">
+                          <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-mdsc-blue-primary"></span>
+                          </div>
                           <div className="flex-shrink-0 w-8 h-8 bg-mdsc-blue-primary/10 rounded-full flex items-center justify-center">
                             <span className="text-sm font-medium text-mdsc-blue-primary">
                               {lessonIndex + 1}
@@ -1230,10 +1236,10 @@ export default function CourseDetailPage() {
                             )}
                           </div>
                           <Lock className="h-5 w-5 text-gray-400" />
-                        </div>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 </div>
               )}
 

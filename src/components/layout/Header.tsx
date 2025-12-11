@@ -110,7 +110,7 @@ export default function Header() {
       className={`fixed top-2 md:top-4 left-0 z-50 w-full transition-all duration-300 bg-transparent`}>
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-20">
         {/* Capsule container */}
-        <div className="flex justify-between items-center h-20 md:h-24 bg-white/95 backdrop-blur rounded-[24px] md:rounded-[36px] shadow-md border border-gray-200 px-3 md:px-6">
+        <div className="flex justify-between items-center h-16 md:h-24 bg-white/95 backdrop-blur rounded-[20px] md:rounded-[36px] shadow-md border border-gray-200 px-2 md:px-6">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Logo size="sm" />
@@ -193,8 +193,33 @@ export default function Header() {
             )}
           </div>
 
-          {/* Bouton menu mobile */}
-          <div className="md:hidden">
+          {/* Bouton menu mobile + actions rapides */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* Actions rapides pour utilisateur connecté */}
+            {isAuthenticated && user && (
+              <>
+                <a 
+                  href={`/dashboard/${user.role}`}
+                  className="p-2 text-mdsc-blue-dark hover:text-[#F4A53A] transition-all duration-200 rounded-lg hover:bg-gray-100"
+                  title="Dashboard"
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                </a>
+                <button
+                  onClick={handleThemeToggle}
+                  className="p-2 text-mdsc-blue-dark hover:text-[#F4A53A] transition-all duration-200 rounded-lg hover:bg-gray-100"
+                  aria-label={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+                  title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </button>
+              </>
+            )}
+            {/* Bouton menu hamburger */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 text-mdsc-blue-dark dark:text-gray-300 hover:text-[#F4A53A] focus:outline-none focus:ring-2 focus:ring-[#F4A53A] rounded-lg transition-all duration-200"
@@ -216,10 +241,10 @@ export default function Header() {
         </div>
 
         {/* Menu mobile */}
-        <div className={`md:hidden mt-2 transition-all duration-300 ease-in-out ${
-          isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        <div className={`md:hidden mt-2 transition-all duration-300 ease-in-out overflow-hidden ${
+          isMenuOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}>
-          <div className="bg-white/95 backdrop-blur rounded-[24px] shadow-md border border-gray-200 px-4 py-4 space-y-2">
+          <div className="bg-white/95 backdrop-blur rounded-[20px] shadow-md border border-gray-200 px-3 py-3 space-y-1">
             {navigation.map((item, index) => {
               const isExternal = item.href.startsWith('http');
               return (
@@ -228,74 +253,66 @@ export default function Header() {
                   href={item.href}
                   {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                   onClick={() => setIsMenuOpen(false)}
-                  className="block px-4 py-3 text-mdsc-blue-dark hover:text-[#F4A53A] hover:bg-gray-200 rounded-lg transition-all duration-200 font-medium"
+                  className="block px-3 py-2.5 text-sm text-mdsc-blue-dark hover:text-[#F4A53A] hover:bg-gray-100 rounded-lg transition-all duration-200 font-medium"
                   style={{ 
-                    animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.1}s both` : 'none'
+                    animation: isMenuOpen ? `fadeInUp 0.3s ease-out ${index * 0.05}s both` : 'none'
                   }}
                 >
                   {item.name}
                 </a>
               );
             })}
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
-              <button 
-                onClick={handleThemeToggle}
-                className="w-full px-4 py-3 text-left text-mdsc-blue-dark dark:text-gray-300 hover:text-[#F4A53A] rounded-lg hover:bg-orange-200 dark:hover:bg-gray-700 transition-all duration-200 flex items-center gap-3"
-              >
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="h-5 w-5" />
-                    Mode clair
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-5 w-5" />
-                    Mode sombre
-                  </>
-                )}
-              </button>
+            <div className="pt-2 border-t border-gray-200 space-y-1">
               {isAuthenticated && user ? (
                 <>
                   <a 
-                    href={`/dashboard/${user.role}`}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 text-left rounded-lg bg-[#3380AA] text-white hover:bg-[#2A6A8F] transition-all duration-200 font-medium flex items-center gap-3"
-                  >
-                    <LayoutDashboard className="h-5 w-5" />
-                    Dashboard
-                  </a>
-                  <a 
                     href={`/dashboard/${user.role}/profile`}
                     onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 text-left rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium flex items-center gap-3"
+                    className="block px-3 py-2.5 text-sm text-left rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-100 hover:text-mdsc-blue-dark transition-all duration-200 font-medium flex items-center gap-2"
                   >
-                    <User className="h-5 w-5" />
-                    {user.firstName} {user.lastName}
+                    <User className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{user.firstName} {user.lastName}</span>
                   </a>
                   <button
                     onClick={() => {
                       setIsMenuOpen(false);
                       handleLogout();
                     }}
-                    className="w-full px-4 py-3 text-center rounded-lg bg-[#F4A53A] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium flex items-center justify-center gap-3"
+                    className="w-full px-3 py-2.5 text-sm text-center rounded-lg bg-[#F4A53A] text-white hover:bg-[#e6942a] transition-all duration-200 font-medium flex items-center justify-center gap-2"
                   >
-                    <LogOut className="h-5 w-5" />
+                    <LogOut className="h-4 w-4" />
                     Déconnexion
                   </button>
                 </>
               ) : (
                 <>
+                  <button 
+                    onClick={handleThemeToggle}
+                    className="w-full px-3 py-2.5 text-sm text-left text-mdsc-blue-dark hover:text-[#F4A53A] rounded-lg hover:bg-orange-100 transition-all duration-200 flex items-center gap-2"
+                  >
+                    {theme === 'dark' ? (
+                      <>
+                        <Sun className="h-4 w-4" />
+                        Mode clair
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="h-4 w-4" />
+                        Mode sombre
+                      </>
+                    )}
+                  </button>
                   <a 
                     href="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 text-center rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-200 hover:text-mdsc-blue-dark transition-all duration-200 font-medium"
+                    className="block px-3 py-2.5 text-sm text-center rounded-lg border border-mdsc-blue-dark text-mdsc-blue-dark bg-transparent hover:bg-orange-100 hover:text-mdsc-blue-dark transition-all duration-200 font-medium"
                   >
                     Connexion
                   </a>
                   <a 
                     href="/register"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block px-4 py-3 text-center rounded-lg bg-[#F4A53A] text-white hover:bg-white/20 hover:text-white transition-all duration-200 font-medium"
+                    className="block px-3 py-2.5 text-sm text-center rounded-lg bg-[#F4A53A] text-white hover:bg-[#e6942a] transition-all duration-200 font-medium"
                   >
                     S'inscrire
                   </a>
