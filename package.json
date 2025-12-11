@@ -39,6 +39,7 @@
     "next-intl": "^4.3.12",
     "pdfjs-dist": "^5.4.449",
     "pptx-preview": "^1.0.7",
+    "prom-client": "^15.1.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-icons": "^5.5.0",
