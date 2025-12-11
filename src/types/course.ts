@@ -333,6 +333,7 @@ export interface Course {
   enrollment_deadline?: string;
   course_start_date?: string;
   course_end_date?: string;
+  course_type?: 'live' | 'on_demand' | 'self_paced';
   enrollment_count: number;
   rating: number;
   average_rating?: number;

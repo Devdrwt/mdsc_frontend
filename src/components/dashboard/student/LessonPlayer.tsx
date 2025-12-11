@@ -266,11 +266,6 @@ export default function LessonPlayer({
               <span className="text-sm font-medium text-gray-500 capitalize">
                 {lesson.content_type}
               </span>
-              {lesson.is_required && (
-                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
-                  Obligatoire
-                </span>
-              )}
               {isCompleted && (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               )}

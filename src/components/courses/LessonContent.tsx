@@ -1207,11 +1207,6 @@ export default function LessonContent({
                       <span>Durée: {lessonDuration} min</span>
                     </div>
                   )}
-                  {lesson.is_required && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
-                      Obligatoire
-                    </span>
-                  )}
                 </div>
               </div>
             </div>

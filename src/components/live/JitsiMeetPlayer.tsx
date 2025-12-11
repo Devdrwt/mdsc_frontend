@@ -16,7 +16,7 @@ declare global {
 
 interface JitsiMeetPlayerProps {
   session: LiveSession;
-  role: 'instructor' | 'participant';
+  role: 'instructor' | 'participant' | 'moderator';
   onLeave?: () => void;
   onError?: (error: Error) => void;
   onJoined?: () => void;
@@ -85,11 +85,13 @@ export default function JitsiMeetPlayer({
         // Seulement essayer d'obtenir un token si ce n'est pas le serveur public
         if (jitsiDomainForToken !== 'meet.jit.si') {
           try {
-            const tokenResponse = await liveSessionService.getJitsiToken(session.id, role);
+            // Si c'est l'instructeur, utiliser le rôle 'moderator' pour avoir les droits de modération
+            const tokenRole = role === 'instructor' ? 'moderator' : role;
+            const tokenResponse = await liveSessionService.getJitsiToken(session.id, tokenRole as 'instructor' | 'participant' | 'moderator');
             token = tokenResponse.jwt;
             setJitsiToken(token);
             useToken = !!token;
-            console.log('✅ Token Jitsi obtenu pour serveur auto-hébergé:', { hasToken: !!token, tokenLength: token?.length || 0 });
+            console.log('✅ Token Jitsi obtenu pour serveur auto-hébergé:', { hasToken: !!token, tokenLength: token?.length || 0, role: tokenRole });
           } catch (err: any) {
             const errorMessage = err?.message || err?.toString() || '';
             const isParticipationError = errorMessage.includes('Participation non trouvée') || 
