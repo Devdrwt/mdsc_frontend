@@ -28,6 +28,7 @@ export default function MyCourses() {
   const [showUnenrollModal, setShowUnenrollModal] = useState(false);
   const [courseToUnenroll, setCourseToUnenroll] = useState<StudentCourse | null>(null);
   const [evaluationStatuses, setEvaluationStatuses] = useState<Map<number, { hasEvaluation: boolean; isPassed: boolean }>>(new Map());
+  const [courseMaterialUrls, setCourseMaterialUrls] = useState<Map<number, string>>(new Map());
 
   useEffect(() => {
     const loadCourses = async () => {
@@ -57,6 +58,114 @@ export default function MyCourses() {
 
         setCourses(normalizedCourses);
         setFilteredCourses(normalizedCourses);
+
+        // Charger les URLs de contenu pour les cours live en parallèle
+        const liveCourses = normalizedCourses.filter((course: any) => 
+          course.course_type === 'live' || course.courseType === 'live'
+        );
+        
+        // Charger les URLs de contenu pour les cours live (en parallèle)
+        const materialUrlPromises = liveCourses.map(async (course) => {
+          const courseIdNum = typeof course.id === 'number' ? course.id : Number(course.id);
+          if (!courseIdNum || isNaN(courseIdNum)) return null;
+          
+          try {
+            // Essayer d'abord de récupérer les médias du cours (fichiers uploadés directement pour le cours)
+            try {
+              const { MediaService } = await import('../../../lib/services/mediaService');
+              const courseMedia = await MediaService.getCourseMedia(String(courseIdNum));
+              console.log(`[MyCourses] 🔍 Médias du cours ${courseIdNum}:`, courseMedia);
+              
+              // Chercher un média de type "document" uploadé directement pour le cours (sans lesson_id)
+              const courseDocument = courseMedia.find((m: any) => 
+                (m.file_category === 'document' || m.fileCategory === 'document') &&
+                (!m.lesson_id && !m.lessonId) &&
+                m.url
+              );
+              
+              if (courseDocument) {
+                const materialUrl = courseDocument.url;
+                console.log(`[MyCourses] ✅ URL de contenu trouvée dans les médias du cours ${courseIdNum}:`, materialUrl);
+                return { courseId: courseIdNum, url: materialUrl };
+              }
+            } catch (mediaError) {
+              console.warn(`[MyCourses] Erreur lors du chargement des médias du cours ${courseIdNum}:`, mediaError);
+            }
+            
+            // Essayer ensuite de récupérer les ressources du cours
+            try {
+              const { getCourseResources } = await import('../../../lib/services/modernCourseService');
+              const resources = await getCourseResources(String(courseIdNum));
+              console.log(`[MyCourses] 🔍 Ressources du cours ${courseIdNum}:`, resources);
+              
+              // Chercher une ressource de type "document" qui pourrait être le contenu téléchargeable
+              const documentResource = resources.find((r: any) => 
+                r.type === 'document' || 
+                r.type === 'link' ||
+                (r.url || r.filePath)
+              );
+              
+              if (documentResource) {
+                const materialUrl = documentResource.url || documentResource.filePath;
+                if (materialUrl) {
+                  console.log(`[MyCourses] ✅ URL de contenu trouvée dans les ressources du cours ${courseIdNum}:`, materialUrl);
+                  return { courseId: courseIdNum, url: materialUrl };
+                }
+              }
+            } catch (resourcesError) {
+              console.warn(`[MyCourses] Erreur lors du chargement des ressources du cours ${courseIdNum}:`, resourcesError);
+            }
+            
+            // Essayer ensuite de récupérer les détails complets du cours
+            const courseDetails = await courseService.getCourseById(courseIdNum);
+            const courseDetailsAny = courseDetails as any;
+            
+            // Chercher l'URL du contenu dans les détails complets
+            const materialUrl = 
+              courseDetailsAny.course_material_url ||
+              courseDetailsAny.courseMaterialUrl ||
+              courseDetailsAny.material_url ||
+              courseDetailsAny.materialUrl ||
+              courseDetailsAny.materials_url ||
+              courseDetailsAny.materialsUrl ||
+              courseDetailsAny.content_url ||
+              courseDetailsAny.contentUrl ||
+              courseDetailsAny.materials ||
+              courseDetailsAny.course_materials ||
+              courseDetailsAny.courseMaterials ||
+              courseDetailsAny.material_file_url ||
+              courseDetailsAny.materialFileUrl ||
+              courseDetailsAny.document_url ||
+              courseDetailsAny.documentUrl ||
+              courseDetailsAny.file_url ||
+              courseDetailsAny.fileUrl ||
+              courseDetailsAny.resource_url ||
+              courseDetailsAny.resourceUrl ||
+              null;
+            
+            if (materialUrl) {
+              console.log(`[MyCourses] ✅ URL de contenu trouvée dans les détails du cours live ${courseIdNum}:`, materialUrl);
+              return { courseId: courseIdNum, url: materialUrl };
+            } else {
+              console.log(`[MyCourses] ⚠️ Aucune URL de contenu trouvée pour le cours live ${courseIdNum}`);
+              return null;
+            }
+          } catch (error) {
+            console.warn(`[MyCourses] Erreur lors du chargement des détails du cours live ${courseIdNum}:`, error);
+            return null;
+          }
+        });
+        
+        // Attendre tous les chargements en parallèle
+        const materialUrlResults = await Promise.all(materialUrlPromises);
+        const materialUrlMap = new Map<number, string>();
+        materialUrlResults.forEach((result) => {
+          if (result) {
+            materialUrlMap.set(result.courseId, result.url);
+          }
+        });
+        
+        setCourseMaterialUrls(materialUrlMap);
 
         // Charger les statuts d'évaluation pour les cours en live avec date de fin passée
         const evaluationStatusMap = new Map<number, { hasEvaluation: boolean; isPassed: boolean }>();
@@ -471,15 +580,70 @@ export default function MyCourses() {
                       </Link>
                       {(() => {
                         const courseAny = course as any;
-                        const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
-                        const downloadUrlRaw =
-                          courseAny.course_material_url ||
-                          courseAny.material_url ||
-                          courseAny.materials_url ||
-                          courseAny.content_url ||
-                          courseAny.materials ||
-                          null;
-                        if (!isLiveCourse || !downloadUrlRaw) return null;
+                        // Vérifier si c'est un cours live avec plusieurs variantes possibles
+                        const isLiveCourse = 
+                          courseAny.course_type === 'live' || 
+                          courseAny.courseType === 'live' ||
+                          courseAny.is_live === true ||
+                          courseAny.isLive === true;
+                        
+                        if (!isLiveCourse) return null;
+                        
+                        const courseIdNum = typeof course.id === 'number' ? course.id : Number(course.id);
+                        
+                        // Chercher l'URL du contenu d'abord dans l'état (chargée depuis getCourseById)
+                        let downloadUrlRaw = courseMaterialUrls.get(courseIdNum) || null;
+                        
+                        // Si pas trouvée dans l'état, chercher dans les données du cours
+                        if (!downloadUrlRaw) {
+                          downloadUrlRaw =
+                            courseAny.course_material_url ||
+                            courseAny.courseMaterialUrl ||
+                            courseAny.material_url ||
+                            courseAny.materialUrl ||
+                            courseAny.materials_url ||
+                            courseAny.materialsUrl ||
+                            courseAny.content_url ||
+                            courseAny.contentUrl ||
+                            courseAny.materials ||
+                            courseAny.course_materials ||
+                            courseAny.courseMaterials ||
+                            courseAny.material_file_url ||
+                            courseAny.materialFileUrl ||
+                            courseAny.document_url ||
+                            courseAny.documentUrl ||
+                            courseAny.file_url ||
+                            courseAny.fileUrl ||
+                            courseAny.resource_url ||
+                            courseAny.resourceUrl ||
+                            courseAny.recording_url ||
+                            courseAny.recordingUrl ||
+                            courseAny.session_materials ||
+                            courseAny.sessionMaterials ||
+                            null;
+                        }
+                        
+                        if (!downloadUrlRaw) {
+                          // Si pas d'URL trouvée, logger pour débogage
+                          console.log(`[MyCourses] ⚠️ Cours live ${courseIdNum} - Aucune URL de contenu trouvée (ni dans courseMaterialUrls ni dans courseAny)`);
+                          console.log(`[MyCourses] 🔍 courseMaterialUrls contient:`, Array.from(courseMaterialUrls.entries()));
+                          console.log(`[MyCourses] 🔍 Toutes les clés de courseAny pour cours ${courseIdNum}:`, Object.keys(courseAny));
+                          // Afficher toutes les clés qui contiennent "url", "material", "content", "file", "document"
+                          const relevantKeys = Object.keys(courseAny).filter(key => 
+                            key.toLowerCase().includes('url') || 
+                            key.toLowerCase().includes('material') || 
+                            key.toLowerCase().includes('content') ||
+                            key.toLowerCase().includes('file') ||
+                            key.toLowerCase().includes('document') ||
+                            key.toLowerCase().includes('resource')
+                          );
+                          console.log(`[MyCourses] 🔍 Clés pertinentes du cours ${courseIdNum}:`, relevantKeys);
+                          relevantKeys.forEach(key => {
+                            console.log(`[MyCourses]   - ${key}:`, courseAny[key]);
+                          });
+                          return null;
+                        }
+                        
                         const downloadUrl = resolveMediaUrl(downloadUrlRaw) || downloadUrlRaw;
                         return (
                           <a
