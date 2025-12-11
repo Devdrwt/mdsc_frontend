@@ -84,8 +84,8 @@ export default function CertificatePreview({
               alt="Badge"
               className="absolute right-4 sm:right-8 lg:right-16 -top-12 sm:-top-14 lg:-top-16 xl:-top-18 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 object-contain z-0 pointer-events-none select-none opacity-100"
             />
-            <div className="relative z-20">
-              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-700 uppercase tracking-[0.1em] sm:tracking-[0.15em] lg:tracking-[0.2em] whitespace-nowrap">
+            <div className="relative z-20 px-2">
+              <h3 className="text-base sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-extrabold text-gray-700 uppercase tracking-[0.05em] sm:tracking-[0.1em] md:tracking-[0.15em] lg:tracking-[0.2em] break-words leading-tight sm:leading-normal">
                 ATTESTATION DE FORMATION
               </h3>
             </div>
