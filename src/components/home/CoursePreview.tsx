@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
-import { Clock, Users, BookOpen, ArrowRight } from 'lucide-react';
+import { Users, BookOpen, ArrowRight } from 'lucide-react';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
 
 interface Course {
@@ -26,7 +26,6 @@ interface CoursePreviewProps {
 
 export default function CoursePreview({ courses }: CoursePreviewProps) {
   const router = useRouter();
-  
 
   return (
     <section className="section-mdsc bg-white">
@@ -74,10 +73,6 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                 </div>
 
                 <div className="flex items-center flex-wrap gap-3 text-small">
-                  <div className="flex items-center space-x-1">
-                    <Clock className="h-4 w-4" />
-                    <span>{course.duration}</span>
-                  </div>
                   <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4" />
                     <span>{course.students} inscrit{course.students > 1 ? 's' : ''}</span>

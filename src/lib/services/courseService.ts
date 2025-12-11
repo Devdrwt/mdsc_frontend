@@ -856,9 +856,15 @@ export class CourseService {
 
   // Créer une leçon
   static async createLesson(courseId: string | number, data: CreateLessonData): Promise<Lesson> {
+    // Forcer la publication par défaut si non fournie (aligné avec la logique backend)
+    const payload: CreateLessonData = {
+      ...data,
+      is_published: (data as any).is_published ?? (data as any).isPublished ?? true,
+    };
+
     const response = await apiRequest(`/courses/${courseId}/lessons`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     
     // Normaliser la réponse pour s'assurer que tous les champs sont présents
@@ -897,9 +903,15 @@ export class CourseService {
 
   // Mettre à jour une leçon (alignement backend)
   static async updateLesson(courseId: string | number, lessonId: string | number, data: UpdateLessonData): Promise<Lesson> {
+    // Forcer la publication à true si non fournie pour éviter un brouillon involontaire
+    const payload: UpdateLessonData = {
+      ...data,
+      is_published: (data as any).is_published ?? (data as any).isPublished ?? true,
+    };
+
     const response = await apiRequest(`/courses/${courseId}/lessons/${lessonId}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
     return response.data;
   }

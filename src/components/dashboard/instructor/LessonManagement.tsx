@@ -279,6 +279,18 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
 
     setDeletingLesson(lessonToDelete);
     try {
+      // Supprimer d'abord les médias associés à la leçon pour éviter les fichiers orphelins
+      try {
+        const medias = await MediaService.getLessonMedia(lessonToDelete);
+        await Promise.allSettled(
+          medias
+            .filter((m) => m?.id)
+            .map((m) => MediaService.deleteMediaFile(String(m.id)))
+        );
+      } catch (mediaError) {
+        console.warn('Suppression des médias de la leçon échouée ou incomplète :', mediaError);
+      }
+
       await courseService.deleteLesson(courseId, lessonToDelete);
       toast.success('Leçon supprimée', 'La leçon a été supprimée avec succès');
       await loadData();

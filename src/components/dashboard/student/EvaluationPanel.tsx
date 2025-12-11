@@ -35,6 +35,8 @@ export default function EvaluationPanel() {
   const [selectedEvaluationResult, setSelectedEvaluationResult] = useState<any>(null);
   // Carte des verrous dérivés côté client pour les évaluations finales
   const [derivedLocks, setDerivedLocks] = useState<Record<string, boolean>>({});
+  // Messages de verrouillage pour les évaluations finales
+  const [lockMessages, setLockMessages] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadEvaluations = async () => {
@@ -71,7 +73,8 @@ export default function EvaluationPanel() {
         });
 
         // Calculer côté client le verrouillage des évaluations finales
-        // Règle: Verrouillé si (progression du cours < 90%) OU (au moins un quiz de module non réussi)
+        // Pour cours live: Verrouillé si date de fin pas passée OU progression < 70%
+        // Pour cours on-demand: Verrouillé si (progression < 90%) OU (au moins un quiz de module non réussi)
         const finals = (userEvaluations || []).filter((ev: any) => {
           const courseIdNormalized = ev?.courseId ?? (ev as any)?.course_id;
           return ev && (ev as any).is_final && courseIdNormalized;
@@ -81,28 +84,71 @@ export default function EvaluationPanel() {
             finals.map(async (ev: any) => {
               try {
                 const courseIdNormalized = ev?.courseId ?? (ev as any)?.course_id;
-                const progress = await progressService.getCourseProgress(Number(courseIdNormalized));
-                const progressPercentage =
-                  typeof (progress as any)?.progress_percentage === 'number'
-                    ? (progress as any).progress_percentage
-                    : Number((progress as any)?.progress || 0);
-                // Verrouiller si progression < 90
-                const isLockedByProgress = progressPercentage < 90;
-                // Verrouiller si quiz de module non réussi détecté pour ce cours
-                const hasPendingModuleQuiz = !!pendingModuleQuizByCourseId[String(courseIdNormalized)];
-                const shouldLock = isLockedByProgress || hasPendingModuleQuiz;
-                return [String(ev.id), shouldLock] as [string, boolean];
+                
+                // Récupérer les informations du cours pour vérifier si c'est un cours live
+                const courseService = (await import('../../../lib/services/courseService')).courseService;
+                const course = await courseService.getCourseById(Number(courseIdNormalized));
+                const courseAny = course as any;
+                const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+                
+                if (isLiveCourse) {
+                  // Pour les cours live: vérifier si la date de fin est passée
+                  const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+                  const now = new Date();
+                  const endDate = courseEndDate ? new Date(courseEndDate) : null;
+                  
+                  // Verrouiller si la date de fin n'est pas encore passée
+                  const isLockedByDate = endDate ? now < endDate : false;
+                  
+                  // Vérifier aussi la progression (doit être >= 70% pour cours live)
+                  const progress = await progressService.getCourseProgress(Number(courseIdNormalized));
+                  const progressPercentage =
+                    typeof (progress as any)?.progress_percentage === 'number'
+                      ? (progress as any).progress_percentage
+                      : Number((progress as any)?.progress || 0);
+                  const isLockedByProgress = progressPercentage < 70;
+                  
+                  // Pour cours live, verrouiller si date pas passée OU progression < 70%
+                  const shouldLock = isLockedByDate || isLockedByProgress;
+                  
+                  // Déterminer le message de verrouillage
+                  let lockMessage = "Complétez tous les modules de la formation pour déverrouiller cette évaluation";
+                  if (isLockedByDate) {
+                    lockMessage = "L'évaluation finale sera disponible après la fin du cours en live";
+                  } else if (isLockedByProgress) {
+                    lockMessage = "Votre progression doit être d'au moins 70% pour accéder à l'évaluation finale";
+                  }
+                  
+                  return [String(ev.id), shouldLock, lockMessage] as [string, boolean, string];
+                } else {
+                  // Pour cours on-demand: logique normale
+                  const progress = await progressService.getCourseProgress(Number(courseIdNormalized));
+                  const progressPercentage =
+                    typeof (progress as any)?.progress_percentage === 'number'
+                      ? (progress as any).progress_percentage
+                      : Number((progress as any)?.progress || 0);
+                  // Verrouiller si progression < 90
+                  const isLockedByProgress = progressPercentage < 90;
+                  // Verrouiller si quiz de module non réussi détecté pour ce cours
+                  const hasPendingModuleQuiz = !!pendingModuleQuizByCourseId[String(courseIdNormalized)];
+                  const shouldLock = isLockedByProgress || hasPendingModuleQuiz;
+                  const lockMessage = "Complétez tous les modules de la formation pour déverrouiller cette évaluation";
+                  return [String(ev.id), shouldLock, lockMessage] as [string, boolean, string];
+                }
               } catch {
                 // En cas d'erreur, ne verrouille pas par défaut (ne pas bloquer inutilement)
-                return [String(ev.id), false] as [string, boolean];
+                return [String(ev.id), false, "Complétez tous les modules de la formation pour déverrouiller cette évaluation"] as [string, boolean, string];
               }
             })
           );
           const lockMap: Record<string, boolean> = {};
-          lockEntries.forEach(([id, locked]) => {
+          const messageMap: Record<string, string> = {};
+          lockEntries.forEach(([id, locked, message]) => {
             lockMap[id] = locked;
+            messageMap[id] = message;
           });
           setDerivedLocks(lockMap);
+          setLockMessages(messageMap);
         } else {
           setDerivedLocks({});
         }
@@ -614,7 +660,7 @@ export default function EvaluationPanel() {
                           <button
                             disabled
                             className="px-6 py-3 bg-gray-300 text-gray-500 font-semibold rounded-xl shadow-sm cursor-not-allowed text-sm whitespace-nowrap"
-                            title="Complétez tous les modules de la formation pour déverrouiller cette évaluation"
+                            title={lockMessages[String(evaluation.id)] || "Complétez tous les modules de la formation pour déverrouiller cette évaluation"}
                           >
                             Verrouillé
                           </button>

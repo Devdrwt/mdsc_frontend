@@ -85,12 +85,9 @@ export default function CertificatePreview({
               className="absolute right-4 sm:right-8 lg:right-16 -top-12 sm:-top-14 lg:-top-16 xl:-top-18 w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 object-contain z-0 pointer-events-none select-none opacity-100"
             />
             <div className="relative z-20">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-700 uppercase tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.32em]">
-                ATTESTATION
-              </h1>
-              <p className="mt-1 sm:mt-2 uppercase tracking-[0.1em] sm:tracking-[0.15em] lg:tracking-[0.22em] text-gray-600 text-sm sm:text-base md:text-lg lg:text-xl font-semibold">
-                DE FORMATION
-              </p>
+              <h3 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-700 uppercase tracking-[0.1em] sm:tracking-[0.15em] lg:tracking-[0.2em] whitespace-nowrap">
+                ATTESTATION DE FORMATION
+              </h3>
             </div>
             <p className="mt-4 sm:mt-5 lg:mt-7 text-sm sm:text-base text-mdsc-blue-primary">La Maison de la Société Civile atteste que :</p>
             <p className="mt-4 sm:mt-5 lg:mt-7 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-semibold text-gray-700 break-words px-2">
@@ -100,7 +97,7 @@ export default function CertificatePreview({
 
           {/* Paragraphe */}
           <div className="max-w-3xl mx-auto mt-6 sm:mt-8 lg:mt-10 text-gray-600 text-xs sm:text-sm md:text-[15px] leading-5 sm:leading-6 text-center px-2 sm:px-4">
-            a suivi et validé le cursus de formation entièrement à distance en&nbsp;
+            a suivi et validé le cursus de formation entièrement à distance sur&nbsp;
             <span className="font-semibold text-gray-700">« {courseTitle} »</span>.
             En foi de quoi, nous décernons la présente attestation pour faire valoir ce que de droit.
           </div>
@@ -109,13 +106,13 @@ export default function CertificatePreview({
           <div className="mt-6 sm:mt-8 lg:mt-10 flex flex-row items-end justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 flex-wrap">
             <div className="flex items-baseline gap-1.5 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap flex-shrink-0">Fait à :</span>
-              <div className="border-b border-gray-300 flex items-center min-w-[120px] sm:min-w-[140px] md:min-w-[160px] lg:min-w-[180px] max-w-[200px] px-1 sm:px-2">
+              <div className="flex items-center min-w-[120px] sm:min-w-[140px] md:min-w-[160px] lg:min-w-[180px] max-w-[200px] px-1 sm:px-2">
                 <span className="text-xs sm:text-sm md:text-base whitespace-nowrap overflow-hidden text-ellipsis">{location}</span>
               </div>
             </div>
             <div className="flex items-baseline gap-1.5 sm:gap-2">
               <span className="text-xs sm:text-sm text-gray-500 whitespace-nowrap flex-shrink-0">Le :</span>
-              <div className="border-b border-gray-300 flex items-center min-w-[120px] sm:min-w-[140px] md:min-w-[160px] lg:min-w-[180px] max-w-[200px] px-1 sm:px-2">
+              <div className="flex items-center min-w-[120px] sm:min-w-[140px] md:min-w-[160px] lg:min-w-[180px] max-w-[200px] px-1 sm:px-2">
                 <span className="text-xs sm:text-sm md:text-base whitespace-nowrap">
                   {issuedAt.toLocaleDateString('fr-FR', {
                     day: '2-digit',

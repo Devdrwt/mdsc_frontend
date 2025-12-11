@@ -106,6 +106,30 @@ export class EvaluationService {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    
+    // Normaliser les questions vrai/faux dans la réponse (similaire à QuizBuilder)
+    if (response.data?.questions) {
+      response.data.questions = response.data.questions.map((q: any) => {
+        if (q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false') {
+          const originalAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer;
+          let normalizedAnswer = '';
+          
+          if (typeof originalAnswer === 'boolean') {
+            normalizedAnswer = originalAnswer ? 'true' : 'false';
+          } else {
+            const stringValue = String(originalAnswer).toLowerCase().trim();
+            normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+          }
+          
+          return {
+            ...q,
+            correct_answer: normalizedAnswer
+          };
+        }
+        return q;
+      });
+    }
+    
     return response.data;
   }
 
@@ -126,6 +150,27 @@ export class EvaluationService {
           
           // Convertir au format FinalEvaluation si nécessaire
           if (finalEval) {
+            // Normaliser les questions pour s'assurer que correct_answer est toujours une string pour les questions vrai/faux
+            const normalizedQuestions = (finalEval.questions || []).map((q: any) => {
+              if (q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false') {
+                const originalAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer;
+                let normalizedAnswer = '';
+                
+                if (typeof originalAnswer === 'boolean') {
+                  normalizedAnswer = originalAnswer ? 'true' : 'false';
+                } else {
+                  const stringValue = String(originalAnswer).toLowerCase().trim();
+                  normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+                }
+                
+                return {
+                  ...q,
+                  correct_answer: normalizedAnswer
+                };
+              }
+              return q;
+            });
+            
             return {
               id: String(finalEval.id),
               course_id: String(finalEval.courseId || finalEval.course_id || courseId),
@@ -134,7 +179,7 @@ export class EvaluationService {
               passing_score: finalEval.passing_score || finalEval.passingScore || 70,
               duration_minutes: finalEval.duration_minutes || finalEval.durationMinutes,
               max_attempts: finalEval.max_attempts || finalEval.maxAttempts || 1,
-              questions: finalEval.questions || [],
+              questions: normalizedQuestions,
             };
           }
         }
@@ -153,6 +198,75 @@ export class EvaluationService {
         const response = await apiRequest(`/instructor/courses/${courseId}/evaluation`, {
           method: 'GET',
         });
+        
+        console.log('[EvaluationService] 📥 Réponse backend getCourseEvaluation (RAW):', JSON.stringify(response.data, null, 2));
+        console.log('[EvaluationService] 📥 Réponse backend getCourseEvaluation:', {
+          hasQuestions: !!response.data?.questions,
+          questionsCount: response.data?.questions?.length || 0,
+          questions: response.data?.questions?.map((q: any) => ({
+            id: q.id,
+            type: q.question_type || q.questionType || q.type,
+            correct_answer: q.correct_answer,
+            correctAnswer: q.correctAnswer,
+            answer: q.answer,
+            allKeys: Object.keys(q),
+            correct_answer_type: typeof q.correct_answer,
+            correctAnswer_type: typeof q.correctAnswer,
+            answer_type: typeof q.answer,
+            fullQuestion: q
+          }))
+        });
+        
+        // Normaliser les questions dans la réponse
+        if (response.data?.questions) {
+          response.data.questions = response.data.questions.map((q: any) => {
+            if (q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false') {
+              const originalAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer;
+              let normalizedAnswer = '';
+              
+              console.log('[EvaluationService] 🔍 Analyse question vrai/faux (getCourseEvaluation):', {
+                questionId: q.id,
+                question_text: q.question_text?.substring(0, 50),
+                correct_answer: q.correct_answer,
+                correctAnswer: q.correctAnswer,
+                answer: q.answer,
+                originalAnswer: originalAnswer,
+                originalAnswerType: typeof originalAnswer,
+                allKeys: Object.keys(q)
+              });
+              
+              if (typeof originalAnswer === 'boolean') {
+                normalizedAnswer = originalAnswer ? 'true' : 'false';
+              } else {
+                const stringValue = String(originalAnswer).toLowerCase().trim();
+                normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+              }
+              
+              console.log('[EvaluationService] 🔄 Normalisation getCourseEvaluation:', {
+                questionId: q.id,
+                original: originalAnswer,
+                originalType: typeof originalAnswer,
+                normalized: normalizedAnswer
+              });
+              
+              return {
+                ...q,
+                correct_answer: normalizedAnswer
+              };
+            }
+            return q;
+          });
+        }
+        
+        console.log('[EvaluationService] ✅ Données finales après normalisation (getCourseEvaluation):', {
+          questions: response.data?.questions?.map((q: any) => ({
+            id: q.id,
+            type: q.question_type,
+            correct_answer: q.correct_answer,
+            correct_answer_type: typeof q.correct_answer
+          }))
+        });
+        
         return response.data;
       } catch (instructorError: any) {
         // 404 est attendu si l'endpoint n'existe pas ou s'il n'y a pas d'évaluation
@@ -188,6 +302,30 @@ export class EvaluationService {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+    
+    // Normaliser les questions vrai/faux dans la réponse (similaire à QuizBuilder)
+    if (response.data?.questions) {
+      response.data.questions = response.data.questions.map((q: any) => {
+        if (q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false') {
+          const originalAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer;
+          let normalizedAnswer = '';
+          
+          if (typeof originalAnswer === 'boolean') {
+            normalizedAnswer = originalAnswer ? 'true' : 'false';
+          } else {
+            const stringValue = String(originalAnswer).toLowerCase().trim();
+            normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+          }
+          
+          return {
+            ...q,
+            correct_answer: normalizedAnswer
+          };
+        }
+        return q;
+      });
+    }
+    
     return response.data;
   }
 
@@ -229,6 +367,30 @@ export class EvaluationService {
     const response = await apiRequest(`/evaluations/${evaluationId}`, {
       method: 'GET',
     });
+    
+    // Normaliser les questions après récupération
+    if (response.data?.questions) {
+      response.data.questions = response.data.questions.map((q: any) => {
+        if (q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false') {
+          const originalAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer;
+          let normalizedAnswer = '';
+          
+          if (typeof originalAnswer === 'boolean') {
+            normalizedAnswer = originalAnswer ? 'true' : 'false';
+          } else {
+            const stringValue = String(originalAnswer).toLowerCase().trim();
+            normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+          }
+          
+          return {
+            ...q,
+            correct_answer: normalizedAnswer
+          };
+        }
+        return q;
+      });
+    }
+    
     return response.data;
   }
 

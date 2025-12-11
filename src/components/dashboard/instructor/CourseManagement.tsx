@@ -378,7 +378,49 @@ export default function CourseManagement() {
       // Logger les données envoyées pour debug
       console.log('📤 Envoi des données du cours:', cleanedData);
       const newCourse = await courseService.createCourse(cleanedData);
-      toast.success('Cours créé', 'Votre cours a été créé avec succès !');
+      
+      // Le backend crée automatiquement une session live pour les cours en live
+      // Vérifier si la réponse inclut les informations de la session créée
+      const courseAny = newCourse as any;
+      if (createFormData.course_type === 'live') {
+        // Le backend peut retourner la session dans data.live_session ou directement dans l'objet
+        const liveSession = courseAny.live_session || courseAny.liveSession || courseAny.data?.live_session;
+        const sessionCreatedAuto = courseAny.session_created_automatically || courseAny.data?.session_created_automatically;
+        
+        if (liveSession) {
+          console.log('✅ Session live créée automatiquement par le backend:', liveSession);
+          const message = sessionCreatedAuto 
+            ? 'Votre cours en live a été créé avec succès ! Une session Jitsi a été automatiquement configurée.'
+            : 'Votre cours en live a été créé avec succès !';
+          toast.success('Cours créé', message);
+        } else {
+          // Si pas de session dans la réponse, vérifier si une session existe déjà
+          try {
+            // Le backend peut retourner course_id ou id
+            const courseIdValue = courseAny.course_id || courseAny.id || courseAny.data?.course_id || courseAny.data?.id;
+            const courseIdNum = typeof courseIdValue === 'string' ? parseInt(courseIdValue, 10) : courseIdValue;
+            
+            if (courseIdNum) {
+              const { LiveSessionService } = await import('../../../lib/services/liveSessionService');
+              const sessionsResponse = await LiveSessionService.getCourseSessions(courseIdNum);
+              if (sessionsResponse.data && sessionsResponse.data.length > 0) {
+                console.log('✅ Session live trouvée:', sessionsResponse.data[0]);
+                toast.success('Cours créé', 'Votre cours en live a été créé avec succès ! Une session Jitsi a été automatiquement configurée.');
+              } else {
+                toast.success('Cours créé', 'Votre cours en live a été créé avec succès !');
+              }
+            } else {
+              toast.success('Cours créé', 'Votre cours en live a été créé avec succès !');
+            }
+          } catch (checkError) {
+            console.warn('⚠️ Impossible de vérifier la session live:', checkError);
+            toast.success('Cours créé', 'Votre cours en live a été créé avec succès !');
+          }
+        }
+      } else {
+        toast.success('Cours créé', 'Votre cours a été créé avec succès !');
+      }
+      
       setShowCreateModal(false);
       // Réinitialiser le formulaire
       setCreateFormData({
@@ -1289,8 +1331,47 @@ export default function CourseManagement() {
             onSave={async (updatedData) => {
               setUpdating(true);
               try {
-                await courseService.updateCourse(String(editCourse.id), updatedData);
-                toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                const courseId = String(editCourse.id);
+                
+                // Le backend crée automatiquement une session live si nécessaire lors de la mise à jour
+                const updatedCourse = await courseService.updateCourse(courseId, updatedData);
+                
+                // Vérifier si la réponse inclut les informations de la session créée
+                const courseAny = updatedCourse as any;
+                const isLiveCourse = updatedData.course_type === 'live';
+                
+                if (isLiveCourse) {
+                  // Le backend peut retourner la session dans data.live_session ou directement dans l'objet
+                  const liveSession = courseAny.live_session || courseAny.liveSession || courseAny.data?.live_session;
+                  const sessionCreatedAuto = courseAny.session_created_automatically || courseAny.data?.session_created_automatically;
+                  
+                  if (liveSession) {
+                    console.log('✅ Session live créée automatiquement par le backend:', liveSession);
+                    const message = sessionCreatedAuto 
+                      ? 'Les modifications ont été enregistrées. Une session Jitsi a été automatiquement configurée.'
+                      : 'Les modifications ont été enregistrées avec succès.';
+                    toast.success('Cours mis à jour', message);
+                  } else {
+                    // Si pas de session dans la réponse, vérifier si une session existe déjà
+                    try {
+                      const courseIdNum = parseInt(courseId, 10);
+                      const { LiveSessionService } = await import('../../../lib/services/liveSessionService');
+                      const sessionsResponse = await LiveSessionService.getCourseSessions(courseIdNum);
+                      if (sessionsResponse.data && sessionsResponse.data.length > 0) {
+                        console.log('✅ Session live trouvée:', sessionsResponse.data[0]);
+                        toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                      } else {
+                        toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                      }
+                    } catch (checkError) {
+                      console.warn('⚠️ Impossible de vérifier la session live:', checkError);
+                      toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                    }
+                  }
+                } else {
+                  toast.success('Cours mis à jour', 'Les modifications ont été enregistrées avec succès');
+                }
+                
                 setShowEditModal(false);
                 setEditCourse(null);
                 // Recharger les cours

@@ -42,13 +42,10 @@ export default function EvaluationBuilder({
   // Normaliser les questions pour s'assurer qu'elles ont le bon format
   const normalizeQuestions = React.useCallback((questions: any[]): EvaluationQuestion[] => {
     if (!questions || !Array.isArray(questions)) {
-      console.log('⚠️ [EvaluationBuilder] Pas de questions ou format invalide:', questions);
       return [];
     }
     
-    console.log('📋 [EvaluationBuilder] Normalisation de', questions.length, 'questions');
-    
-    const normalized = questions.map((q, idx) => {
+    return questions.map((q, idx) => {
       // Normaliser les options (peuvent être des objets ou des strings)
       let options: string[] = [];
       if (Array.isArray(q.options)) {
@@ -57,29 +54,31 @@ export default function EvaluationBuilder({
         options = q.answers.map((ans: any) => typeof ans === 'string' ? ans : (ans.text || ans.label || ans.answer || String(ans)));
       }
       
-      // Normaliser les noms de champs (peuvent venir de l'API avec des noms différents)
-      const normalized: EvaluationQuestion = {
+      // Normaliser correct_answer pour les questions vrai/faux (comme dans QuizBuilder)
+      let correctAnswer = q.correct_answer ?? q.correctAnswer ?? q.answer ?? '';
+      const isTrueFalse = q.question_type === 'true_false' || q.questionType === 'true_false' || q.type === 'true_false';
+      
+      if (isTrueFalse) {
+        // Convertir les booléens en strings "true"/"false"
+        if (typeof correctAnswer === 'boolean') {
+          correctAnswer = correctAnswer ? 'true' : 'false';
+        } else {
+          // S'assurer que c'est "true" ou "false" (string)
+          const stringValue = String(correctAnswer).toLowerCase().trim();
+          correctAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+        }
+      }
+
+      return {
         id: q.id || q.questionId || `temp-${Date.now()}-${idx}-${Math.random()}`,
         question_text: q.question_text || q.questionText || q.question || '',
         question_type: (q.question_type || q.questionType || q.type || 'multiple_choice') as 'multiple_choice' | 'true_false' | 'short_answer',
         options: options,
-        correct_answer: q.correct_answer || q.correctAnswer || q.answer || '',
+        correct_answer: correctAnswer,
         points: typeof q.points === 'number' ? q.points : (typeof q.point === 'number' ? q.point : 1),
         order_index: q.order_index !== undefined ? q.order_index : (q.orderIndex !== undefined ? q.orderIndex : idx + 1),
       };
-      
-      console.log(`  ✓ Question ${idx + 1}:`, {
-        id: normalized.id,
-        text: normalized.question_text.substring(0, 50) + '...',
-        type: normalized.question_type,
-        optionsCount: normalized.options.length,
-      });
-      
-      return normalized;
     });
-    
-    console.log('✅ [EvaluationBuilder]', normalized.length, 'questions normalisées');
-    return normalized;
   }, []);
 
   const [formData, setFormData] = useState<Omit<Evaluation, 'course_id'>>({
@@ -91,18 +90,39 @@ export default function EvaluationBuilder({
     questions: normalizeQuestions(initialEvaluation?.questions || []),
   });
 
+  // État pour suivre si l'utilisateur a fait des modifications locales
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
+
   // Mettre à jour les questions quand initialEvaluation change
+  // MAIS seulement si l'utilisateur n'a pas fait de modifications locales
   useEffect(() => {
+    // Si l'utilisateur a fait des modifications locales, ne pas écraser avec initialEvaluation
+    if (hasLocalChanges) {
+      console.log('⚠️ [EvaluationBuilder] Modifications locales détectées, ne pas écraser avec initialEvaluation');
+      return;
+    }
+
     console.log('🔄 [EvaluationBuilder] initialEvaluation changé:', {
       hasEvaluation: !!initialEvaluation,
       hasQuestions: !!(initialEvaluation?.questions),
       questionsCount: initialEvaluation?.questions?.length || 0,
-      questions: initialEvaluation?.questions,
+      questions: initialEvaluation?.questions?.map((q: any) => ({
+        id: q.id,
+        type: q.question_type || q.questionType || q.type,
+        correct_answer: q.correct_answer ?? q.correctAnswer ?? q.answer,
+        correct_answer_type: typeof (q.correct_answer ?? q.correctAnswer ?? q.answer)
+      })),
     });
     
     if (initialEvaluation) {
       const normalizedQuestions = normalizeQuestions(initialEvaluation.questions || []);
       console.log('📝 [EvaluationBuilder] Mise à jour du formulaire avec', normalizedQuestions.length, 'questions');
+      console.log('📝 [EvaluationBuilder] Questions normalisées:', normalizedQuestions.map(q => ({
+        id: q.id,
+        type: q.question_type,
+        correct_answer: q.correct_answer,
+        correct_answer_type: typeof q.correct_answer
+      })));
       setFormData(prev => ({
         ...prev,
         title: initialEvaluation.title || prev.title,
@@ -112,8 +132,10 @@ export default function EvaluationBuilder({
         max_attempts: initialEvaluation.max_attempts || prev.max_attempts,
         questions: normalizedQuestions,
       }));
+      // Réinitialiser le flag après avoir chargé les données initiales
+      setHasLocalChanges(false);
     }
-  }, [initialEvaluation, normalizeQuestions]);
+  }, [initialEvaluation, normalizeQuestions, hasLocalChanges]);
   
   // Log pour vérifier l'état actuel des questions
   useEffect(() => {
@@ -152,11 +174,24 @@ export default function EvaluationBuilder({
 
   const handleEditQuestion = (question: EvaluationQuestion) => {
     setEditingQuestion(question);
+    
+    // Pour les questions vrai/faux, s'assurer que correct_answer est "true" ou "false" (string)
+    let correctAnswer = question.correct_answer || '';
+    if (question.question_type === 'true_false') {
+      // Convertir en string et normaliser
+      if (typeof correctAnswer === 'boolean') {
+        correctAnswer = correctAnswer ? 'true' : 'false';
+      } else {
+        const stringValue = String(correctAnswer).toLowerCase().trim();
+        correctAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+      }
+    }
+    
     setQuestionForm({
       question_text: question.question_text,
       question_type: question.question_type,
       options: question.options || ['', '', '', ''],
-      correct_answer: question.correct_answer,
+      correct_answer: correctAnswer,
       points: question.points,
     });
     setShowQuestionModal(true);
@@ -173,9 +208,26 @@ export default function EvaluationBuilder({
       return;
     }
 
+    // Pour les questions vrai/faux, s'assurer que correct_answer est "true" ou "false" (string)
+    // Comme dans QuizBuilder, on utilise directement la valeur du formulaire
+    let finalCorrectAnswer = questionForm.correct_answer;
+    if (questionForm.question_type === 'true_false') {
+      // Les radio buttons garantissent déjà "true" ou "false", mais on vérifie quand même
+      if (finalCorrectAnswer !== 'true' && finalCorrectAnswer !== 'false') {
+        // Si ce n'est pas déjà "true" ou "false", convertir
+        if (typeof finalCorrectAnswer === 'boolean') {
+          finalCorrectAnswer = finalCorrectAnswer ? 'true' : 'false';
+        } else {
+          const stringValue = String(finalCorrectAnswer).toLowerCase().trim();
+          finalCorrectAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+        }
+      }
+    }
+
     const newQuestion: EvaluationQuestion = {
       ...questionForm,
-      id: editingQuestion?.id || `temp-${Date.now()}-${Math.random()}`, // ID temporaire unique si nouvelle question
+      correct_answer: finalCorrectAnswer,
+      id: editingQuestion?.id || `temp-${Date.now()}-${Math.random()}`,
       order_index: editingQuestion 
         ? editingQuestion.order_index 
         : formData.questions.length + 1,
@@ -204,15 +256,39 @@ export default function EvaluationBuilder({
       correct_answer: '',
       points: 1,
     });
+    
+    // Marquer qu'il y a des modifications locales
+    setHasLocalChanges(true);
   };
 
   const handleDeleteQuestion = (questionId: string | undefined, orderIndex: number) => {
+    console.log('[EvaluationBuilder] 🗑️ Suppression question:', {
+      questionId,
+      orderIndex,
+      questionsAvant: formData.questions.length,
+      questionToDelete: formData.questions.find(q => q.id === questionId || q.order_index === orderIndex)
+    });
+    
+    const updatedQuestions = formData.questions
+      .filter(q => q.id !== questionId && q.order_index !== orderIndex)
+      .map((q, idx) => ({ ...q, order_index: idx + 1 }));
+    
+    console.log('[EvaluationBuilder] ✅ Questions après suppression:', {
+      questionsApres: updatedQuestions.length,
+      questions: updatedQuestions.map(q => ({
+        id: q.id,
+        type: q.question_type,
+        order_index: q.order_index
+      }))
+    });
+    
     setFormData({
       ...formData,
-      questions: formData.questions
-        .filter(q => q.id !== questionId && q.order_index !== orderIndex)
-        .map((q, idx) => ({ ...q, order_index: idx + 1 })),
+      questions: updatedQuestions,
     });
+    
+    // Marquer qu'il y a des modifications locales
+    setHasLocalChanges(true);
   };
 
   const handleSave = async () => {
@@ -223,6 +299,25 @@ export default function EvaluationBuilder({
 
     setSaving(true);
     try {
+      // Normaliser les questions vrai/faux avant l'envoi (similaire à QuizBuilder)
+      const normalizedQuestions = formData.questions.map(q => {
+        if (q.question_type === 'true_false') {
+          // S'assurer que correct_answer est "true" ou "false" (string)
+          let normalizedAnswer = q.correct_answer;
+          if (typeof normalizedAnswer === 'boolean') {
+            normalizedAnswer = normalizedAnswer ? 'true' : 'false';
+          } else {
+            const stringValue = String(normalizedAnswer).toLowerCase().trim();
+            normalizedAnswer = (stringValue === 'true' || stringValue === '1') ? 'true' : 'false';
+          }
+          return {
+            ...q,
+            correct_answer: normalizedAnswer
+          };
+        }
+        return q;
+      });
+
       const evaluationData = {
         course_id: courseId,
         title: formData.title,
@@ -230,17 +325,47 @@ export default function EvaluationBuilder({
         passing_score: formData.passing_score,
         duration_minutes: formData.duration_minutes,
         max_attempts: formData.max_attempts,
-        questions: formData.questions,
+        questions: normalizedQuestions, // Utiliser les questions finales vérifiées
       };
+      
+      // Log du JSON qui sera envoyé pour vérifier la sérialisation
+      const jsonPayload = JSON.stringify(evaluationData);
+      console.log('[EvaluationBuilder] 📦 JSON payload complet:', jsonPayload);
+      const parsedPayload = JSON.parse(jsonPayload);
+      console.log('[EvaluationBuilder] 🔍 Questions dans le JSON parsé:', parsedPayload.questions?.map((q: any) => ({
+        id: q.id,
+        type: q.question_type,
+        correct_answer: q.correct_answer,
+        correct_answer_type: typeof q.correct_answer
+      })));
 
+      let savedEvaluation: any;
       if (initialEvaluation?.id) {
-        await evaluationService.updateEvaluation(initialEvaluation.id, evaluationData);
+        savedEvaluation = await evaluationService.updateEvaluation(initialEvaluation.id, evaluationData);
+        console.log('[EvaluationBuilder] ✅ Évaluation mise à jour, réponse backend:', {
+          questions: savedEvaluation?.questions?.map((q: any) => ({
+            id: q.id,
+            type: q.question_type || q.questionType || q.type,
+            correct_answer: q.correct_answer ?? q.correctAnswer ?? q.answer,
+            correct_answer_type: typeof (q.correct_answer ?? q.correctAnswer ?? q.answer)
+          }))
+        });
         toast.success('Évaluation mise à jour', 'L\'évaluation finale a été mise à jour avec succès');
       } else {
-        await evaluationService.createEvaluation(evaluationData);
+        savedEvaluation = await evaluationService.createEvaluation(evaluationData);
+        console.log('[EvaluationBuilder] ✅ Évaluation créée, réponse backend:', {
+          questions: savedEvaluation?.questions?.map((q: any) => ({
+            id: q.id,
+            type: q.question_type || q.questionType || q.type,
+            correct_answer: q.correct_answer ?? q.correctAnswer ?? q.answer,
+            correct_answer_type: typeof (q.correct_answer ?? q.correctAnswer ?? q.answer)
+          }))
+        });
         toast.success('Évaluation créée', 'L\'évaluation finale a été créée avec succès');
       }
 
+      // Réinitialiser le flag de modifications locales après sauvegarde réussie
+      setHasLocalChanges(false);
       onSave();
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde de l\'évaluation:', error);
@@ -398,7 +523,18 @@ export default function EvaluationBuilder({
                         )}
                         {question.question_type === 'true_false' && (
                           <p className="text-sm text-gray-600">
-                            Réponse correcte: <span className="font-medium text-green-600">{question.correct_answer}</span>
+                            Réponse correcte: <span className="font-medium text-green-600">
+                              {(() => {
+                                const answer = question.correct_answer;
+                                console.log('[EvaluationBuilder] 🎨 Affichage réponse correcte:', {
+                                  questionId: question.id,
+                                  correct_answer: answer,
+                                  correct_answer_type: typeof answer,
+                                  willDisplay: answer
+                                });
+                                return answer;
+                              })()}
+                            </span>
                           </p>
                         )}
                       </div>
@@ -564,14 +700,30 @@ export default function EvaluationBuilder({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Réponse correcte <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={questionForm.correct_answer}
-                    onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="true">Vrai</option>
-                    <option value="false">Faux</option>
-                  </select>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="correct_answer_tf"
+                        value="true"
+                        checked={questionForm.correct_answer === 'true'}
+                        onChange={() => setQuestionForm({ ...questionForm, correct_answer: 'true' })}
+                        className="w-4 h-4 text-green-500 focus:ring-green-500"
+                      />
+                      <span className="text-green-700 font-medium">Vrai</span>
+                    </label>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="correct_answer_tf"
+                        value="false"
+                        checked={questionForm.correct_answer === 'false'}
+                        onChange={() => setQuestionForm({ ...questionForm, correct_answer: 'false' })}
+                        className="w-4 h-4 text-red-500 focus:ring-red-500"
+                      />
+                      <span className="text-red-700 font-medium">Faux</span>
+                    </label>
+                  </div>
                 </div>
               )}
 
