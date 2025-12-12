@@ -387,7 +387,7 @@ export default function MyCourses() {
     // Cas 2 : évaluation existe et non validée
     if (evalStatus?.hasEvaluation === true && evalStatus.isPassed === false) {
       return {
-        text: "Passer à l'évaluation",
+        text: 'Passer l\'évaluation',
         href: `/learn/${course.id}?evaluation=true`
       };
     }
@@ -395,7 +395,7 @@ export default function MyCourses() {
     // Cas 3 : évaluation non détectée (pas dans le map ou hasEvaluation === false)
     // On laisse l'accès pour que le joueur de cours vérifie et affiche l'évaluation si elle existe
     return {
-      text: "Passer à l'évaluation",
+      text: 'Passer l\'évaluation',
       href: `/learn/${course.id}?evaluation=true`
     };
   };

@@ -2,19 +2,16 @@
 
 import LoginForm from '../../components/auth/LoginForm';
 import { BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 export default function LoginPage() {
-  const t = useTranslations('home.hero');
-  const tNav = useTranslations('common');
   const slide = {
-    title: t('welcomeTitle'),
-    subtitle: t('welcomeSubtitle'),
+    title: 'Bienvenue sur la Plateforme Maison de la Société Civile',
+    subtitle: 'Renforcez vos compétences avec nos formations certifiantes',
     features: [
-      { text: t('featureAccessCourses'), icon: BookOpen },
-      { text: t('featureCertifications'), icon: Award },
-      { text: t('featureAIAssistant'), icon: Sparkles },
-      { text: t('featureProgressTracking'), icon: TrendingUp }
+      { text: 'Accédez à des centaines de cours de qualité', icon: BookOpen },
+      { text: 'Obtenez des certifications reconnues', icon: Award },
+      { text: 'Bénéficiez d\'un assistant IA personnel', icon: Sparkles },
+      { text: 'Suivez votre progression en temps réel', icon: TrendingUp }
     ]
   };
 
@@ -28,7 +25,7 @@ export default function LoginPage() {
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        <span className="font-medium">{tNav('backToHome') || 'Retour à l\'accueil'}</span>
+        <span className="font-medium">Retour à l'accueil</span>
       </a>
       
       {/* Colonne gauche - Image de fond avec texte */}

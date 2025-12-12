@@ -4,23 +4,20 @@ import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
-import { useTranslations } from 'next-intl';
 
 function RegisterContent() {
-  const t = useTranslations('home.hero');
-  const tNav = useTranslations('nav');
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
   
   const content = {
     image: '/Colleagues.png',
-    title: t('welcomeTitle'),
-    subtitle: t('welcomeSubtitleRegister'),
+    title: 'Bienvenue sur la Plateforme Maison de la Société Civile',
+    subtitle: 'Créez votre compte et commencez votre parcours d\'apprentissage',
     features: [
-      { text: t('featureAccessCourses'), icon: BookOpen },
-      { text: t('featureCertifications'), icon: Award },
-      { text: t('featureAIAssistant'), icon: Sparkles },
-      { text: t('featureProgressTracking'), icon: TrendingUp }
+      { text: 'Accédez à des centaines de cours de qualité', icon: BookOpen },
+      { text: 'Obtenez des certifications reconnues', icon: Award },
+      { text: 'Bénéficiez d\'un assistant IA personnel', icon: Sparkles },
+      { text: 'Suivez votre progression en temps réel', icon: TrendingUp }
     ],
   };
 
@@ -34,7 +31,7 @@ function RegisterContent() {
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        <span className="font-medium">{tNav('backToHome')}</span>
+        <span className="font-medium">Retour à l'accueil</span>
       </a>
 
       {/* Colonne gauche - Image de fond avec texte */}

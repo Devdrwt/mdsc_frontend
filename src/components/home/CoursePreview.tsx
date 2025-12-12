@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Button from '../ui/Button';
 import { Users, BookOpen, ArrowRight } from 'lucide-react';
 import { resolveMediaUrl, DEFAULT_COURSE_IMAGE } from '../../lib/utils/media';
-import { useTranslations } from 'next-intl';
 
 interface Course {
   id: string;
@@ -27,7 +26,6 @@ interface CoursePreviewProps {
 
 export default function CoursePreview({ courses }: CoursePreviewProps) {
   const router = useRouter();
-  const t = useTranslations('home.courses');
 
   return (
     <section className="section-mdsc bg-white">
@@ -77,21 +75,21 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                 <div className="flex items-center flex-wrap gap-3 text-small">
                   <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4" />
-                    <span>{course.students} {t('students')}</span>
+                    <span>{course.students} apprenant{course.students > 1 ? 's' : ''}</span>
                   </div>
                   {course.total_lessons && course.total_lessons > 0 && (
                     <div className="flex items-center space-x-1">
                       <BookOpen className="h-4 w-4" />
-                      <span>{course.total_lessons} {t('lessons')}</span>
+                      <span>{course.total_lessons} leçon{course.total_lessons > 1 ? 's' : ''}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-end justify-between pt-4 border-t border-gray-100 mt-auto">
                   <div>
-                    <p className="text-small">{t('instructor')}: {course.instructor}</p>
+                    <p className="text-small">Formateur : {course.instructor}</p>
                     <p className="text-lg text-heading">
-                      {course.price === 0 ? t('free') : `${course.price} FCFA`}
+                      {course.price === 0 ? 'Gratuit' : `${course.price} FCFA`}
                     </p>
                   </div>
                   <Button 
@@ -101,7 +99,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                       router.push(`/courses/${slug}`);
                     }}
                   >
-                    {t('viewCourse')}
+                    Voir le cours
                   </Button>
                 </div>
               </div>
@@ -116,7 +114,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
             className="group"
             onClick={() => router.push('/courses')}
           >
-            {t('viewAllCourses')}
+            Voir tous les cours
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>

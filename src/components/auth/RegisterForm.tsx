@@ -59,19 +59,19 @@ export default function RegisterForm() {
     const trimmedLastName = formData.lastName.trim();
     
     if (!trimmedEmail || !formData.password || !trimmedFirstName || !trimmedLastName) {
-      return 'Tous les champs obligatoires doivent être remplis.';
+      return 'Tous les champs requis doivent être remplis';
     }
 
     if (formData.password.length < 8) {
-      return 'Le mot de passe doit contenir au moins 8 caractères.';
+      return 'Le mot de passe doit contenir au moins 8 caractères';
     }
 
     if (formData.password !== formData.confirmPassword) {
-      return 'Les mots de passe ne correspondent pas.';
+      return 'Les mots de passe ne correspondent pas';
     }
 
     if (!formData.acceptTerms) {
-      return 'Vous devez accepter les conditions d\'utilisation.';
+      return 'Vous devez accepter les conditions d\'utilisation';
     }
 
     return null;
