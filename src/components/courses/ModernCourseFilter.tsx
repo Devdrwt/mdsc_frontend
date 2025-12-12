@@ -27,7 +27,7 @@ interface ModernCourseFilterProps {
 
 export default function ModernCourseFilter({
   onFilterChange,
-  categories = ['Toutes les catégories', 'Management', 'Communication', 'Gestion de projet', 'Technologie', 'Pédagogie'],
+  categories = ['Toutes les catégories', 'Formations thématiques', 'Renforcement organisationnel et institutionnel', 'Autres'],
   levels = ['Tous les niveaux', 'Débutant', 'Intermédiaire', 'Avancé'],
   durations = ['Toutes les durées', 'Court (< 4h)', 'Moyen (4-8h)', 'Long (> 8h)'],
   className = ''

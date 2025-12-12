@@ -14,12 +14,9 @@ import { DEFAULT_COURSE_IMAGE, resolveMediaUrl } from '../../lib/utils/media';
 
 const categories = [
   'Toutes les catégories',
-  'Management',
-  'Communication',
-  'Gestion de projet',
-  'Technologie',
-  'Pédagogie',
-  'E-learning'
+  'Formations thématiques',
+  'Renforcement organisationnel et institutionnel',
+  'Autres'
 ];
 
 // Fonction utilitaire pour convertir en nombre

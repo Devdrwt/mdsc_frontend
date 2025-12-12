@@ -130,15 +130,9 @@ export default function ContactPage() {
               {/* Formulaire de contact */}
               <div>
                 <div className="mb-6">
-                  <span className="inline-block bg-mdsc-blue-primary text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
-                    Envoyez-nous un message
-                  </span>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     Formulaire de contact
                   </h2>
-                  <p className="text-gray-600">
-                    Remplissez ce formulaire et nous vous répondrons dans les plus brefs délais.
-                  </p>
                 </div>
 
                 {isSuccess && (
@@ -266,15 +260,9 @@ export default function ContactPage() {
               {/* Informations de contact */}
               <div>
                 <div className="mb-6">
-                  <span className="inline-block bg-mdsc-gold text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
-                    Informations de contact
-                  </span>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     Nos coordonnées
                   </h2>
-                  <p className="text-gray-600">
-                    Contactez-nous directement par téléphone ou email, ou visitez nos bureaux.
-                  </p>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 space-y-6">
