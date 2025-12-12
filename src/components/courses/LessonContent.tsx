@@ -1108,6 +1108,12 @@ export default function LessonContent({
                   fileUrl={documentUrl}
                   filename={lesson.title}
                   fileType={effectiveMediaFile.fileType}
+                  onDocumentComplete={() => {
+                    // Quand l'utilisateur atteint la fin du document (dernière page PDF, etc.)
+                    // déclencher l'auto-complétion de la leçon
+                    console.log('[LessonContent] 📄 Document terminé, déclenchement de la complétion');
+                    requestAutoCompletion('document-complete');
+                  }}
                 />
               </div>
             </div>

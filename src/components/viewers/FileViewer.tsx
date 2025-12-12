@@ -26,13 +26,14 @@ interface FileViewerProps {
   fileUrl: string;
   fileType?: string;
   filename?: string;
+  onDocumentComplete?: () => void;
 }
 
 /**
  * Composant universel de visualisation de fichiers
  * Détecte automatiquement le type de fichier et affiche le viewer approprié
  */
-export default function FileViewer({ fileUrl, fileType, filename }: FileViewerProps) {
+export default function FileViewer({ fileUrl, fileType, filename, onDocumentComplete }: FileViewerProps) {
   if (!fileUrl) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-gray-50 min-h-[600px]">
@@ -68,13 +69,13 @@ export default function FileViewer({ fileUrl, fileType, filename }: FileViewerPr
   // Afficher le viewer approprié
   switch (detectedType) {
     case 'pdf':
-      return <PdfViewer url={fileUrl} filename={filename} />;
+      return <PdfViewer url={fileUrl} filename={filename} onLastPageReached={onDocumentComplete} />;
 
     case 'pptx':
-      return <PptxViewer url={fileUrl} filename={filename} />;
+      return <PptxViewer url={fileUrl} filename={filename} onLastSlideReached={onDocumentComplete} />;
 
     case 'docx':
-      return <DocxViewer url={fileUrl} filename={filename} />;
+      return <DocxViewer url={fileUrl} filename={filename} onDocumentRead={onDocumentComplete} />;
 
     case 'xlsx':
       return <XlsxViewer url={fileUrl} filename={filename} />;

@@ -7,15 +7,17 @@ import { init } from 'pptx-preview';
 interface PptxViewerProps {
   url: string;
   filename?: string;
+  onLastSlideReached?: () => void;
 }
 
-export default function PptxViewer({ url, filename }: PptxViewerProps) {
+export default function PptxViewer({ url, filename, onLastSlideReached }: PptxViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [totalSlides, setTotalSlides] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const previewerRef = useRef<any>(null);
+  const hasReachedLastSlideRef = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current || !url) return;
@@ -95,6 +97,7 @@ export default function PptxViewer({ url, filename }: PptxViewerProps) {
     };
 
     loadAndRenderPptx();
+    hasReachedLastSlideRef.current = false; // Reset quand l'URL change
 
     // Cleanup
     return () => {
@@ -104,6 +107,15 @@ export default function PptxViewer({ url, filename }: PptxViewerProps) {
       previewerRef.current = null;
     };
   }, [url]);
+
+  // Détecter quand l'utilisateur atteint la dernière slide
+  useEffect(() => {
+    if (totalSlides > 0 && currentSlide === totalSlides - 1 && !hasReachedLastSlideRef.current && !isLoading) {
+      hasReachedLastSlideRef.current = true;
+      console.log('[PptxViewer] ✅ Dernière slide atteinte, notification de complétion');
+      onLastSlideReached?.();
+    }
+  }, [currentSlide, totalSlides, isLoading, onLastSlideReached]);
 
   return (
     <div className="w-full flex flex-col h-full">

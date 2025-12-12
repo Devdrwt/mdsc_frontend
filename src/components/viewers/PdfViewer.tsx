@@ -43,11 +43,13 @@ if (typeof window !== 'undefined') {
 interface PdfViewerProps {
   url: string;
   filename?: string;
+  onLastPageReached?: () => void;
 }
 
-export default function PdfViewer({ url, filename }: PdfViewerProps) {
+export default function PdfViewer({ url, filename, onLastPageReached }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const hasReachedLastPageRef = React.useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -102,7 +104,17 @@ export default function PdfViewer({ url, filename }: PdfViewerProps) {
     setLoadingProgress(0);
     setNumPages(null);
     setPageNumber(1);
+    hasReachedLastPageRef.current = false; // Reset quand l'URL change
   }, [url]);
+
+  // Détecter quand l'utilisateur atteint la dernière page
+  useEffect(() => {
+    if (numPages && pageNumber === numPages && !hasReachedLastPageRef.current && !isLoadingPage) {
+      hasReachedLastPageRef.current = true;
+      console.log('[PdfViewer] ✅ Dernière page atteinte, notification de complétion');
+      onLastPageReached?.();
+    }
+  }, [pageNumber, numPages, isLoadingPage, onLastPageReached]);
 
   // Fonction pour gérer le chargement progressif
   const handleDocumentLoadProgress = ({ loaded, total }: { loaded: number; total: number }) => {

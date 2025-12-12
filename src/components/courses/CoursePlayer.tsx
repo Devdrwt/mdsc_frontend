@@ -74,6 +74,9 @@ export default function CoursePlayer({
   const [pendingCertificateAfterRating, setPendingCertificateAfterRating] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Pour mobile
   const [savedScrollPosition, setSavedScrollPosition] = useState<number | null>(null);
+  
+  // Ref pour éviter les appels multiples de handleLessonComplete sur la même leçon
+  const completingLessonRef = React.useRef<number | null>(null);
 
   const getOrderedLessons = useCallback((): Lesson[] => {
     const lessons: Lesson[] = [];
@@ -649,9 +652,14 @@ export default function CoursePlayer({
       unlockedSet.add(orderedLessons[0].id);
     }
 
-    // IMPORTANT: Remplacer les sets au lieu de les cumuler pour éviter les faux positifs
-    // On garde seulement les leçons complétées depuis l'API, pas les anciennes valeurs locales
-    setCompletedLessons(completedSet);
+    // IMPORTANT: Fusionner les leçons complétées localement avec celles de l'API
+    // On garde les leçons complétées localement (optimistic updates) ET celles confirmées par l'API
+    // Cela évite que les leçons récemment validées soient "effacées" avant confirmation du backend
+    setCompletedLessons((prev) => {
+      const merged = new Set([...prev, ...completedSet]);
+      return merged;
+    });
+    
     setUnlockedLessons((prev) => {
       // Pour les unlocked, on garde les anciennes + les nouvelles car une leçon déverrouillée reste déverrouillée
       const merged = new Set([...prev, ...unlockedSet]);
@@ -833,23 +841,8 @@ export default function CoursePlayer({
     // Mettre à jour l'URL
     router.replace(`/learn/${course.id}?module=${lessonModuleId || selectedModuleId}&lesson=${lesson.id}`);
     
-    // Recharger la progression pour s'assurer qu'elle est synchronisée avec le backend
-    // Cela garantit que la progression affichée dans le header est à jour
-    if (enrollmentId) {
-      // Recharger immédiatement
-      loadProgress();
-      
-      // Recharger après plusieurs délais pour garantir la synchronisation
-      setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement de la progression après sélection de leçon (délai 300ms)');
-        await loadProgress();
-      }, 300);
-      
-      setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement de la progression après sélection de leçon (délai 1s)');
-        await loadProgress();
-      }, 1000);
-    }
+    // Note: Ne pas recharger la progression ici car cela peut écraser les complétions locales
+    // La progression est rechargée uniquement après complétion d'une leçon
   };
 
   // Fonction pour naviguer vers la leçon suivante
@@ -921,6 +914,21 @@ export default function CoursePlayer({
     }
 
     const lessonId = selectedLessonId;
+    
+    // Éviter les appels multiples pour la même leçon
+    if (completingLessonRef.current === lessonId) {
+      console.log('[CoursePlayer] ⏭️ Complétion de leçon déjà en cours pour', lessonId);
+      return;
+    }
+    
+    // Vérifier si la leçon est déjà complétée
+    if (completedLessons.has(lessonId)) {
+      console.log('[CoursePlayer] ⏭️ Leçon déjà complétée', lessonId);
+      return;
+    }
+    
+    completingLessonRef.current = lessonId;
+    console.log('[CoursePlayer] 🎯 Début de la complétion de la leçon', lessonId);
     const orderedLessons = getOrderedLessons();
     const lessonIndex = orderedLessons.findIndex((lesson) => lesson.id === lessonId);
     const currentLesson = lessonIndex !== -1 ? orderedLessons[lessonIndex] : selectedLesson;
@@ -1015,19 +1023,25 @@ export default function CoursePlayer({
         setUnlockedLessons((prev) => new Set([...prev, result.unlockedLessonId!]));
       }
 
-      // Recharger la progression UNE SEULE FOIS après un court délai
+      // Recharger la progression UNE SEULE FOIS après un délai plus long
       // pour laisser le temps au backend de traiter la mise à jour
       // IMPORTANT: Éviter les appels multiples qui causent des vibrations
       setTimeout(async () => {
         console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon');
         await loadProgress();
-      }, 1000);
+        // Réinitialiser la ref après le rechargement
+        completingLessonRef.current = null;
+      }, 2000); // Délai augmenté à 2 secondes pour laisser plus de temps au backend
+      
+      console.log('[CoursePlayer] ✅ Leçon complétée avec succès', lessonId);
     } catch (error) {
       console.error('Erreur lors de la complétion de la leçon:', error);
       setCompletedLessons(previousCompleted);
       setUnlockedLessons(previousUnlocked);
       setCourseProgress(previousCourseProgress);
       setModuleProgressMap(previousModuleProgressMap);
+      // Réinitialiser la ref en cas d'erreur
+      completingLessonRef.current = null;
     }
   };
 
@@ -1281,21 +1295,15 @@ export default function CoursePlayer({
         return newSet;
       });
     }
-    // Recharger la progression après complétion du quiz
-    await loadProgress();
+    
     // Recharger les quiz pour mettre à jour les statuts
     await loadCourseQuizzesAndEvaluation();
     
-    // Recharger la progression après plusieurs délais pour s'assurer que le backend a mis à jour
+    // Recharger la progression UNE SEULE FOIS après un délai
     setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de quiz (délai 500ms)');
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de quiz');
       await loadProgress();
-    }, 500);
-    
-    setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de quiz (délai 2s)');
-      await loadProgress();
-    }, 2000);
+    }, 1500);
     
     // Retourner aux leçons
     handleBackToLesson();
@@ -1326,36 +1334,16 @@ export default function CoursePlayer({
       console.log('[CoursePlayer] 🔄 Rechargement des quiz et évaluation...');
       await loadCourseQuizzesAndEvaluation();
       console.log('[CoursePlayer] ✅ Quiz et évaluation rechargés');
-      
-      // Attendre un peu pour s'assurer que les données sont bien chargées
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Recharger la progression après complétion de l'évaluation
-    // La progression devrait maintenant être à 100% car l'évaluation est complétée
-    console.log('[CoursePlayer] 🔄 Rechargement de la progression...');
-    await loadProgress();
-    console.log('[CoursePlayer] ✅ Progression rechargée');
-    
-    // Recharger plusieurs fois avec des délais croissants pour s'assurer que le backend a bien mis à jour
+    // Recharger la progression UNE SEULE FOIS après un délai suffisant
+    // pour laisser le temps au backend de traiter
     setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion d\'évaluation (délai 500ms)');
+      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion d\'évaluation');
       await loadCourseQuizzesAndEvaluation();
       await loadProgress();
-    }, 500);
-    
-    setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion d\'évaluation (délai 1.5s)');
-      await loadCourseQuizzesAndEvaluation();
-      await loadProgress();
-    }, 1500);
-    
-    setTimeout(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement final de la progression après complétion d\'évaluation (délai 3s)');
-      await loadCourseQuizzesAndEvaluation();
-      await loadProgress();
-      console.log('[CoursePlayer] ✅ Rechargement final terminé');
-    }, 3000);
+      console.log('[CoursePlayer] ✅ Progression rechargée');
+    }, 2000);
   };
 
   const isRatingRequiredError = (error: any): boolean => {

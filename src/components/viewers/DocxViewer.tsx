@@ -1,20 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader, AlertCircle } from 'lucide-react';
 import { createSanitizedHtml } from '../../lib/utils/sanitizeHtml';
 
 interface DocxViewerProps {
   url: string;
   filename?: string;
+  onDocumentRead?: () => void;
 }
 
-export default function DocxViewer({ url, filename }: DocxViewerProps) {
+export default function DocxViewer({ url, filename, onDocumentRead }: DocxViewerProps) {
   const [html, setHtml] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasNotifiedRef = useRef(false);
 
   useEffect(() => {
+    hasNotifiedRef.current = false; // Reset quand l'URL change
+    
     const loadDocument = async () => {
       setIsLoading(true);
       setError(false);
@@ -45,6 +50,42 @@ export default function DocxViewer({ url, filename }: DocxViewerProps) {
     }
   }, [url]);
 
+  // Observer le scroll pour détecter quand l'utilisateur a lu jusqu'en bas
+  useEffect(() => {
+    if (!html || isLoading || !containerRef.current || hasNotifiedRef.current) return;
+
+    const container = containerRef.current;
+    
+    const handleScroll = () => {
+      if (hasNotifiedRef.current) return;
+      
+      // Vérifier si l'utilisateur a scrollé jusqu'en bas (avec une marge de 50px)
+      const scrolledToBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 50;
+      
+      if (scrolledToBottom) {
+        hasNotifiedRef.current = true;
+        console.log('[DocxViewer] ✅ Document lu jusqu\'en bas, notification de complétion');
+        onDocumentRead?.();
+      }
+    };
+
+    // Vérifier immédiatement si le contenu ne nécessite pas de scroll
+    if (container.scrollHeight <= container.clientHeight + 50) {
+      // Le document tient dans la vue, attendre 3 secondes avant de valider
+      const timer = setTimeout(() => {
+        if (!hasNotifiedRef.current) {
+          hasNotifiedRef.current = true;
+          console.log('[DocxViewer] ✅ Document court lu, notification de complétion');
+          onDocumentRead?.();
+        }
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [html, isLoading, onDocumentRead]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-gray-50 min-h-[600px]">
@@ -65,7 +106,7 @@ export default function DocxViewer({ url, filename }: DocxViewerProps) {
   }
 
   return (
-    <div className="w-full h-full overflow-auto bg-white p-8">
+    <div ref={containerRef} className="w-full h-full overflow-auto bg-white p-8">
       <div
         className="prose prose-lg max-w-none
           prose-headings:text-gray-900 prose-headings:font-bold
