@@ -414,8 +414,8 @@ export default function AboutPage() {
                   <strong>Options d'authentification externe :</strong> Un lien permet de s'inscrire via un compte externe en cliquant sur « Ou continuer avec » (Google, si disponible).
                 </p>
 
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                  <p className="text-gray-700">
+                <div className="bg-gray-50 border-l-4 border-yellow-400 p-4 mb-4">
+                  <p className="text-black">
                     <strong>Note importante :</strong> Les privilèges avancés sont attribués après validation par l'équipe Maison de la Société Civile. Avant de valider son inscription, l'utilisateur doit accepter les Conditions d'utilisation et la Politique de confidentialité. Un email de vérification est envoyé à l'adresse fournie.
                   </p>
                 </div>

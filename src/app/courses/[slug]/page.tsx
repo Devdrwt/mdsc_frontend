@@ -900,7 +900,7 @@ export default function CourseDetailPage() {
               <Button
                 variant="outline"
                 onClick={() => router.push('/courses')}
-                className="bg-white text-mdsc-blue-dark hover:bg-gray-100 border-2 border-white font-semibold shadow-xl hover:shadow-2xl transition-all px-6 py-3"
+                className="bg-white text-mdsc-blue-dark border-2 border-white font-semibold shadow-xl hover:shadow-2xl transition-all px-6 py-3"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour au catalogue
@@ -1506,7 +1506,7 @@ export default function CourseDetailPage() {
                       size="lg"
                       onClick={handleToggleFavorite}
                       disabled={togglingFavorite}
-                      className={`w-full mb-4 ${isFavorite ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100' : 'border-mdsc-blue-primary text-mdsc-blue-primary hover:bg-mdsc-blue-primary hover:text-white'}`}
+                      className={`w-full mb-4 ${isFavorite ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100' : 'border-mdsc-blue-primary text-mdsc-blue-primary hover:text-white'}`}
                     >
                       {togglingFavorite ? (
                         <>
