@@ -20,8 +20,8 @@ export default function Button({
   
   const variantClasses = {
     primary: 'bg-mdsc-blue-primary text-white hover:bg-mdsc-blue-dark hover:shadow-md hover:scale-105 active:scale-100 focus:ring-blue-200',
-    secondary: 'bg-mdsc-orange text-white hover:bg-orange-600 hover:shadow-md hover:scale-105 active:scale-100 focus:ring-orange-500',
-    outline: 'border-2 border-mdsc-blue-primary text-mdsc-blue-primary bg-transparent hover:bg-mdsc-blue-primary hover:text-white hover:shadow-md hover:scale-105 active:scale-100 focus:ring-blue-200',
+    secondary: 'bg-mdsc-orange text-white hover:bg-mdsc-orange/70 hover:shadow-md hover:scale-105 active:scale-100 focus:ring-orange-500',
+    outline: 'border-2 border-mdsc-blue-primary text-mdsc-blue-primary bg-transparent  hover:text-white hover:shadow-md hover:scale-105 active:scale-100 focus:ring-blue-200',
     ghost: 'text-mdsc-blue-primary bg-transparent hover:bg-mdsc-blue-primary/10 hover:shadow-md hover:scale-105 active:scale-100 focus:ring-blue-200',
   };
   
