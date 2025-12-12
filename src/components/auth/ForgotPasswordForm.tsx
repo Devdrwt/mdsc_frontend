@@ -6,10 +6,12 @@ import Button from '../ui/Button';
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { forgotPassword, ApiError } from '../../lib/services/authService';
 import { useNotification } from '../../lib/hooks/useNotification';
+import { useTranslations } from 'next-intl';
 
 export default function ForgotPasswordForm() {
   const router = useRouter();
   const { error: showError, success: showSuccess } = useNotification();
+  const t = useTranslations('auth.forgotPassword');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
@@ -18,7 +20,7 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
 
     if (!email.trim()) {
-      showError('Email requis', 'Veuillez saisir votre adresse email.');
+      showError(t('emailRequired'), t('enterEmail'));
       return;
     }
 
@@ -28,17 +30,17 @@ export default function ForgotPasswordForm() {
       const response = await forgotPassword(email);
       
       if (response.success) {
-        showSuccess('Email envoyé', 'Un lien de réinitialisation a été envoyé à votre adresse email');
+        showSuccess(t('emailSent'), t('emailSentSuccess'));
         setIsEmailSent(true);
       } else {
-        showError('Erreur d\'envoi', response.message || 'Erreur lors de l\'envoi de l\'email.');
+        showError(t('sendError'), response.message || t('sendFailed'));
       }
     } catch (err) {
       console.error('Password reset error:', err);
       if (err instanceof ApiError) {
-        showError('Erreur d\'envoi', err.message || 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
+        showError(t('sendError'), err.message || t('tryAgainLater'));
       } else {
-        showError('Erreur de connexion', 'Impossible de se connecter au serveur. Vérifiez votre connexion.');
+        showError(t('connectionError'), t('checkConnection'));
       }
     } finally {
       setIsLoading(false);
@@ -51,11 +53,10 @@ export default function ForgotPasswordForm() {
         <div className="card-mdsc text-center">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-mdsc-blue mb-2">
-            Email envoyé !
+            {t('emailSent')}
           </h2>
           <p className="text-gray-700 mb-6">
-            Nous avons envoyé un lien de réinitialisation à <strong>{email}</strong>. 
-            Vérifiez votre boîte de réception et suivez les instructions.
+            {t('resetLinkSent')} <strong>{email}</strong>. {t('checkInbox')}
           </p>
           
           <div className="space-y-3">
@@ -64,13 +65,13 @@ export default function ForgotPasswordForm() {
               variant="outline"
               className="w-full"
             >
-              Envoyer un autre email
+              {t('sendAnotherEmail')}
             </Button>
             <Button 
               onClick={() => router.push('/login')}
               className="w-full"
             >
-              Retour à la connexion
+              {t('backToLogin')}
             </Button>
           </div>
 
@@ -79,12 +80,12 @@ export default function ForgotPasswordForm() {
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900 mb-1">
-                  Conseils :
+                  {t('tips')}
                 </p>
                 <ul className="text-blue-700 space-y-1">
-                  <li>• Vérifiez votre dossier spam/courrier indésirable</li>
-                  <li>• Le lien expire dans 1 heure</li>
-                  <li>• Contactez le support si vous ne recevez pas l'email</li>
+                  <li>• {t('checkSpam')}</li>
+                  <li>• {t('linkExpires')}</li>
+                  <li>• {t('contactSupport')}</li>
                 </ul>
               </div>
             </div>
@@ -102,17 +103,17 @@ export default function ForgotPasswordForm() {
             <Mail className="h-8 w-8 text-mdsc-orange" />
           </div>
           <h2 className="text-2xl font-bold text-mdsc-blue mb-2">
-            Mot de passe oublié ?
+            {t('title')}
           </h2>
           <p className="text-gray-700">
-            Saisissez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+            {t('subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Adresse email
+              {t('email')}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -138,7 +139,7 @@ export default function ForgotPasswordForm() {
             loading={isLoading}
             disabled={isLoading}
           >
-            {isLoading ? 'Envoi en cours...' : 'Envoyer le lien de réinitialisation'}
+            {isLoading ? t('submitting') : t('submit')}
           </Button>
         </form>
 
@@ -148,7 +149,7 @@ export default function ForgotPasswordForm() {
             className="text-gray-700 hover:text-mdsc-blue font-medium text-sm flex items-center space-x-2 mx-auto"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Retour à la connexion</span>
+            <span>{t('backToLogin')}</span>
           </button>
         </div>
       </div>

@@ -4,22 +4,25 @@ import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
-
-const content = {
-  image: '/Colleagues.png',
-  title: 'Bienvenue à votre Espace de formation',
-  subtitle: 'Rejoignez notre communauté et développez vos compétences',
-  features: [
-    { text: 'Accès à tous les cours', icon: BookOpen },
-    { text: 'Certifications reconnues', icon: Award },
-    { text: 'Assistant IA personnel', icon: Sparkles },
-    { text: 'Suivi de progression détaillé', icon: TrendingUp }
-  ],
-} as const;
+import { useTranslations } from 'next-intl';
 
 function RegisterContent() {
+  const t = useTranslations('home.hero');
+  const tNav = useTranslations('nav');
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
+  
+  const content = {
+    image: '/Colleagues.png',
+    title: t('welcomeTitle'),
+    subtitle: t('welcomeSubtitleRegister'),
+    features: [
+      { text: t('featureAccessCourses'), icon: BookOpen },
+      { text: t('featureCertifications'), icon: Award },
+      { text: t('featureAIAssistant'), icon: Sparkles },
+      { text: t('featureProgressTracking'), icon: TrendingUp }
+    ],
+  };
 
   return (
     <div className="min-h-screen flex relative overflow-hidden">
@@ -31,7 +34,7 @@ function RegisterContent() {
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        <span className="font-medium">Retour à l'accueil</span>
+        <span className="font-medium">{tNav('backToHome')}</span>
       </a>
 
       {/* Colonne gauche - Image de fond avec texte */}
