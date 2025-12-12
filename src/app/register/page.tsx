@@ -5,21 +5,21 @@ import { useSearchParams } from 'next/navigation';
 import { AlertCircle, BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
 import SimpleRegisterForm from '../../components/auth/SimpleRegisterForm';
 
-const content = {
-  image: '/Colleagues.png',
-  title: 'Bienvenue à votre Espace de formation',
-  subtitle: 'Rejoignez notre communauté et développez vos compétences',
-  features: [
-    { text: 'Accès à tous les cours', icon: BookOpen },
-    { text: 'Certifications reconnues', icon: Award },
-    { text: 'Assistant IA personnel', icon: Sparkles },
-    { text: 'Suivi de progression détaillé', icon: TrendingUp }
-  ],
-} as const;
-
 function RegisterContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
+  
+  const content = {
+    image: '/Colleagues.png',
+    title: 'Bienvenue sur la Plateforme Maison de la Société Civile',
+    subtitle: 'Créez votre compte et commencez votre parcours d\'apprentissage',
+    features: [
+      { text: 'Accédez à des centaines de cours de qualité', icon: BookOpen },
+      { text: 'Obtenez des certifications reconnues', icon: Award },
+      { text: 'Bénéficiez d\'un assistant IA personnel', icon: Sparkles },
+      { text: 'Suivez votre progression en temps réel', icon: TrendingUp }
+    ],
+  };
 
   return (
     <div className="min-h-screen flex relative overflow-hidden">

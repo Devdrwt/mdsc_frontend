@@ -5,13 +5,13 @@ import { BookOpen, Award, Sparkles, TrendingUp } from 'lucide-react';
 
 export default function LoginPage() {
   const slide = {
-    title: 'Bienvenue à votre Espace de formation',
-    subtitle: 'Développez vos compétences avec nos formations certifiantes',
+    title: 'Bienvenue sur la Plateforme Maison de la Société Civile',
+    subtitle: 'Renforcez vos compétences avec nos formations certifiantes',
     features: [
-      { text: 'Accès à tous les cours', icon: BookOpen },
-      { text: 'Certifications reconnues', icon: Award },
-      { text: 'Assistant IA personnel', icon: Sparkles },
-      { text: 'Suivi de progression détaillé', icon: TrendingUp }
+      { text: 'Accédez à des centaines de cours de qualité', icon: BookOpen },
+      { text: 'Obtenez des certifications reconnues', icon: Award },
+      { text: 'Bénéficiez d\'un assistant IA personnel', icon: Sparkles },
+      { text: 'Suivez votre progression en temps réel', icon: TrendingUp }
     ]
   };
 

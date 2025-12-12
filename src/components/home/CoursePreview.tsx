@@ -31,9 +31,9 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
     <section className="section-mdsc bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             Formations populaires
-          </div>
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
@@ -75,7 +75,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                 <div className="flex items-center flex-wrap gap-3 text-small">
                   <div className="flex items-center space-x-1">
                     <Users className="h-4 w-4" />
-                    <span>{course.students} inscrit{course.students > 1 ? 's' : ''}</span>
+                    <span>{course.students} apprenant{course.students > 1 ? 's' : ''}</span>
                   </div>
                   {course.total_lessons && course.total_lessons > 0 && (
                     <div className="flex items-center space-x-1">
@@ -87,7 +87,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
 
                 <div className="flex items-end justify-between pt-4 border-t border-gray-100 mt-auto">
                   <div>
-                    <p className="text-small">Par {course.instructor}</p>
+                    <p className="text-small">Formateur : {course.instructor}</p>
                     <p className="text-lg text-heading">
                       {course.price === 0 ? 'Gratuit' : `${course.price} FCFA`}
                     </p>
@@ -99,7 +99,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
                       router.push(`/courses/${slug}`);
                     }}
                   >
-                    Voir détails
+                    Voir le cours
                   </Button>
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function CoursePreview({ courses }: CoursePreviewProps) {
             className="group"
             onClick={() => router.push('/courses')}
           >
-            Voir toutes les formations
+            Voir tous les cours
             <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </div>

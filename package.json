@@ -36,7 +36,6 @@
     "mammoth": "^1.11.0",
     "next": "^15.5.7",
     "next-auth": "^5.0.0-beta.22",
-    "next-intl": "^4.3.12",
     "pdfjs-dist": "^5.4.449",
     "pptx-preview": "^1.0.7",
     "prom-client": "^15.1.3",

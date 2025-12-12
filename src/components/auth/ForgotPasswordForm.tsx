@@ -18,7 +18,7 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
 
     if (!email.trim()) {
-      showError('Email requis', 'Veuillez saisir votre adresse email.');
+      showError('Email requis', 'Veuillez entrer votre adresse email');
       return;
     }
 
@@ -28,17 +28,17 @@ export default function ForgotPasswordForm() {
       const response = await forgotPassword(email);
       
       if (response.success) {
-        showSuccess('Email envoyé', 'Un lien de réinitialisation a été envoyé à votre adresse email');
+        showSuccess('Email envoyé', 'Un email de réinitialisation a été envoyé avec succès');
         setIsEmailSent(true);
       } else {
-        showError('Erreur d\'envoi', response.message || 'Erreur lors de l\'envoi de l\'email.');
+        showError('Erreur d\'envoi', response.message || 'Échec de l\'envoi de l\'email');
       }
     } catch (err) {
       console.error('Password reset error:', err);
       if (err instanceof ApiError) {
-        showError('Erreur d\'envoi', err.message || 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.');
+        showError('Erreur d\'envoi', err.message || 'Veuillez réessayer plus tard');
       } else {
-        showError('Erreur de connexion', 'Impossible de se connecter au serveur. Vérifiez votre connexion.');
+        showError('Erreur de connexion', 'Veuillez vérifier votre connexion internet');
       }
     } finally {
       setIsLoading(false);
@@ -51,11 +51,10 @@ export default function ForgotPasswordForm() {
         <div className="card-mdsc text-center">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-mdsc-blue mb-2">
-            Email envoyé !
+            Email envoyé
           </h2>
           <p className="text-gray-700 mb-6">
-            Nous avons envoyé un lien de réinitialisation à <strong>{email}</strong>. 
-            Vérifiez votre boîte de réception et suivez les instructions.
+            Un lien de réinitialisation a été envoyé à <strong>{email}</strong>. Veuillez vérifier votre boîte de réception.
           </p>
           
           <div className="space-y-3">
@@ -79,11 +78,11 @@ export default function ForgotPasswordForm() {
               <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-blue-900 mb-1">
-                  Conseils :
+                  Conseils
                 </p>
                 <ul className="text-blue-700 space-y-1">
                   <li>• Vérifiez votre dossier spam/courrier indésirable</li>
-                  <li>• Le lien expire dans 1 heure</li>
+                  <li>• Le lien expire après 24 heures</li>
                   <li>• Contactez le support si vous ne recevez pas l'email</li>
                 </ul>
               </div>
@@ -105,7 +104,7 @@ export default function ForgotPasswordForm() {
             Mot de passe oublié ?
           </h2>
           <p className="text-gray-700">
-            Saisissez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+            Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe
           </p>
         </div>
 
