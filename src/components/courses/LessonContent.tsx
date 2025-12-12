@@ -519,16 +519,40 @@ export default function LessonContent({
     lastTrustedPlaybackPositionRef.current = 0;
   }, [lesson.id]);
 
+  // Ref pour éviter les auto-complétions multiples sur la même leçon
+  const hasAutoCompletedRef = useRef(false);
+  
+  // Reset la ref quand la leçon change
   useEffect(() => {
-    if (!shouldWatchScrollCompletion || !scrollCompletionTarget || isCompleted) {
+    hasAutoCompletedRef.current = false;
+  }, [lesson.id]);
+
+  useEffect(() => {
+    // Ne pas déclencher l'auto-complétion si déjà complété ou si déjà déclenché pour cette leçon
+    if (!shouldWatchScrollCompletion || !scrollCompletionTarget || isCompleted || hasAutoCompletedRef.current) {
       return;
     }
+
+    // Utiliser un délai avant de considérer que l'utilisateur a vraiment lu le contenu
+    let scrollTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            requestAutoCompletion('scroll-depth');
+          if (entry.isIntersecting && !hasAutoCompletedRef.current && !isCompleted) {
+            // Attendre 3 secondes après avoir atteint le bas pour s'assurer que l'utilisateur a lu
+            if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
+            scrollTimeoutId = setTimeout(() => {
+              if (!hasAutoCompletedRef.current && !isCompleted) {
+                hasAutoCompletedRef.current = true;
+                console.log('[LessonContent] ⚡ Auto-complétion déclenchée après 3s de lecture');
+                requestAutoCompletion('scroll-depth-confirmed');
+              }
+            }, 3000);
+          } else if (!entry.isIntersecting && scrollTimeoutId) {
+            // Si l'utilisateur scroll away, annuler le timer
+            clearTimeout(scrollTimeoutId);
+            scrollTimeoutId = null;
           }
         });
       },
@@ -539,8 +563,9 @@ export default function LessonContent({
 
     return () => {
       observer.disconnect();
+      if (scrollTimeoutId) clearTimeout(scrollTimeoutId);
     };
-  }, [isCompleted, requestAutoCompletion, scrollCompletionTarget, shouldWatchScrollCompletion]);
+  }, [isCompleted, requestAutoCompletion, scrollCompletionTarget, shouldWatchScrollCompletion, lesson.id]);
 
   const renderMediaContent = () => {
     // Pour les leçons de type "text", on n'a pas besoin de média si on a du contenu texte

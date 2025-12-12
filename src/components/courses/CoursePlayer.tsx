@@ -110,31 +110,35 @@ export default function CoursePlayer({
   );
 
 
+  // Ref pour éviter les navigations multiples
+  const hasInitializedLessonRef = React.useRef(false);
+
+  // Sélectionner la leçon initiale UNIQUEMENT au premier chargement
+  // IMPORTANT: Ne pas dépendre de completedLessons/unlockedLessons pour éviter les boucles
   useEffect(() => {
-    if (!course.modules) {
+    if (!course.modules || hasInitializedLessonRef.current) {
+      return;
+    }
+
+    // Si une leçon est déjà spécifiée dans l'URL (initialLessonId), ne pas changer
+    if (initialLessonId) {
+      hasInitializedLessonRef.current = true;
       return;
     }
 
     const orderedLessons = getOrderedLessons();
 
-    if (!selectedLessonId) {
-      const unlockedOrdered = orderedLessons.find((lesson) => unlockedLessons.has(lesson.id));
-      const lastCompletedOrdered = orderedLessons.filter((lesson) => completedLessons.has(lesson.id)).pop();
-      const fallbackLesson = unlockedOrdered || lastCompletedOrdered || orderedLessons[0];
-
-      if (fallbackLesson) {
-        const moduleId = fallbackLesson.module_id ?? (fallbackLesson as any).moduleId ?? course.modules[0]?.id;
-        setSelectedModuleId(moduleId);
-        setSelectedLessonId(fallbackLesson.id);
-        // Sauvegarder la position de scroll
-        const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-        setSavedScrollPosition(scrollPosition);
-        router.replace(`/learn/${course.id}?module=${moduleId}&lesson=${fallbackLesson.id}`);
-      }
+    if (!selectedLessonId && orderedLessons.length > 0) {
+      // Au premier chargement, sélectionner simplement la première leçon
+      const firstLesson = orderedLessons[0];
+      const moduleId = firstLesson.module_id ?? (firstLesson as any).moduleId ?? course.modules[0]?.id;
+      
+      hasInitializedLessonRef.current = true;
+      setSelectedModuleId(moduleId);
+      setSelectedLessonId(firstLesson.id);
+      router.replace(`/learn/${course.id}?module=${moduleId}&lesson=${firstLesson.id}`, { scroll: false });
     }
-    // Ne pas forcer l'ouverture du module automatiquement quand une leçon est sélectionnée
-    // Laisser l'utilisateur contrôler l'ouverture/fermeture manuellement
-  }, [course.modules, completedLessons, unlockedLessons, selectedLessonId, router, getOrderedLessons]);
+  }, [course.modules, course.id, initialLessonId, getOrderedLessons, router, selectedLessonId]);
 
   // Charger les quiz des modules et l'évaluation finale
   const loadCourseQuizzesAndEvaluation = async () => {
@@ -183,7 +187,27 @@ export default function CoursePlayer({
     }
   };
 
-  const loadProgress = async () => {
+  // Ref pour éviter les appels multiples à loadProgress
+  const isLoadingProgressRef = React.useRef(false);
+  const lastProgressLoadTimeRef = React.useRef(0);
+
+  const loadProgress = useCallback(async () => {
+    // Éviter les appels multiples simultanés
+    if (isLoadingProgressRef.current) {
+      console.log('[CoursePlayer] ⏭️ loadProgress déjà en cours, ignoré');
+      return;
+    }
+
+    // Éviter les appels trop fréquents (minimum 2 secondes entre chaque appel)
+    const now = Date.now();
+    if (now - lastProgressLoadTimeRef.current < 2000) {
+      console.log('[CoursePlayer] ⏭️ loadProgress appelé trop récemment, ignoré');
+      return;
+    }
+
+    isLoadingProgressRef.current = true;
+    lastProgressLoadTimeRef.current = now;
+
     const numericCourseId = Number(course.id);
     const orderedLessons = getOrderedLessons();
 
@@ -625,85 +649,73 @@ export default function CoursePlayer({
       unlockedSet.add(orderedLessons[0].id);
     }
 
-    setCompletedLessons((prev) => new Set([...prev, ...completedSet]));
-    setUnlockedLessons((prev) => new Set([...prev, ...unlockedSet]));
-  };
+    // IMPORTANT: Remplacer les sets au lieu de les cumuler pour éviter les faux positifs
+    // On garde seulement les leçons complétées depuis l'API, pas les anciennes valeurs locales
+    setCompletedLessons(completedSet);
+    setUnlockedLessons((prev) => {
+      // Pour les unlocked, on garde les anciennes + les nouvelles car une leçon déverrouillée reste déverrouillée
+      const merged = new Set([...prev, ...unlockedSet]);
+      return merged;
+    });
 
-  // Vérifier et mettre à jour la progression pour les cours live
-  // Si la date de fin est passée, mettre la progression à 70%
-  const checkAndUpdateLiveCourseProgress = useCallback(async () => {
-    if (!course || !enrollmentId) return;
-    
-    const courseAny = course as any;
-    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
-    
-    if (!isLiveCourse) return;
-    
-    try {
-      const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
-      if (!courseEndDate) return;
-      
-      const now = new Date();
-      const endDate = new Date(courseEndDate);
-      
-      // Si la date de fin est passée et que la progression est < 70%
-      if (now >= endDate && courseProgress < 70) {
-        console.log('[CoursePlayer] 📅 Date de fin du cours live passée, mise à jour progression à 70%');
-        // Le backend devrait gérer cela automatiquement lors du chargement de la progression
-        // On recharge simplement la progression pour obtenir la valeur mise à jour
-        await loadProgress();
-      }
-    } catch (error) {
-      console.warn('[CoursePlayer] Erreur lors de la vérification de la date de fin:', error);
-    }
-  }, [course, enrollmentId, courseProgress, loadProgress]);
+    isLoadingProgressRef.current = false;
+  }, [course.id, course.modules, getOrderedLessons, finalEvaluation, finalEvaluationAttempts]);
+
+  // Note: Supprimé checkAndUpdateLiveCourseProgress car il causait des appels répétés
+  // La progression des cours live est maintenant gérée uniquement par le backend
 
   // useEffect qui utilisent loadProgress - doivent être déclarés après loadProgress
+  // loadProgress est maintenant stable grâce à useCallback
   useEffect(() => {
     loadProgress();
   }, [course.id, loadProgress]);
 
+  // Charger les quiz et évaluations quand l'enrollmentId change
   useEffect(() => {
     if (enrollmentId) {
       loadCourseQuizzesAndEvaluation().then(() => {
-        // Recharger la progression après avoir chargé l'évaluation finale
-        // pour ajuster le pourcentage si nécessaire
+        // Recharger la progression une seule fois après le chargement initial
         loadProgress();
+      });
+    }
+  }, [enrollmentId, loadProgress]);
 
-        const courseAny = course as any;
-        const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
-        const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+  // Gérer l'ouverture de l'évaluation séparément pour éviter les boucles
+  useEffect(() => {
+    if (!enrollmentId || !finalEvaluation) return;
 
-        // 1) Si paramètre evaluation=true : ouvrir dès que possible
-        if (showEvaluationParam && (finalEvaluation || evaluationId)) {
-          const evalId = finalEvaluation?.id ? String(finalEvaluation.id) : evaluationId;
+    const courseAny = course as any;
+    const isLiveCourse = courseAny.course_type === 'live' || courseAny.courseType === 'live';
+    const courseEndDate = courseAny.course_end_date || courseAny.courseEndDate;
+
+    // 1) Si paramètre evaluation=true : ouvrir l'évaluation
+    if (showEvaluationParam) {
+      const evalId = finalEvaluation?.id ? String(finalEvaluation.id) : evaluationId;
+      if (evalId && viewMode !== 'evaluation') {
+        setSelectedEvaluationId(evalId);
+        setViewMode('evaluation');
+        return;
+      }
+    }
+
+    // 2) Pour les cours live terminés : ouvrir si évaluation existe et non validée
+    if (isLiveCourse && courseEndDate) {
+      const now = new Date();
+      const endDate = new Date(courseEndDate);
+      if (now >= endDate) {
+        const hasPassedAttempt = finalEvaluationAttempts.some((attempt: any) => 
+          attempt.is_passed === true || attempt.is_passed === 1
+        );
+        if (!hasPassedAttempt && viewMode !== 'evaluation') {
+          const evalId = finalEvaluation.id ? String(finalEvaluation.id) : evaluationId;
           if (evalId) {
             setSelectedEvaluationId(evalId);
             setViewMode('evaluation');
-            return;
           }
         }
-
-        // 2) Pour les cours live terminés : ouvrir si évaluation existe et non validée
-        if (isLiveCourse && courseEndDate && finalEvaluation) {
-          const now = new Date();
-          const endDate = new Date(courseEndDate);
-          if (now >= endDate) {
-            const hasPassedAttempt = finalEvaluationAttempts.some((attempt: any) => 
-              attempt.is_passed === true || attempt.is_passed === 1
-            );
-            if (!hasPassedAttempt) {
-              const evalId = finalEvaluation.id ? String(finalEvaluation.id) : evaluationId;
-              if (evalId) {
-                setSelectedEvaluationId(evalId);
-                setViewMode('evaluation');
-              }
-            }
-          }
-        }
-      });
+      }
     }
-  }, [enrollmentId, course.id, loadProgress, loadCourseQuizzesAndEvaluation, course, finalEvaluation, finalEvaluationAttempts, evaluationId, showEvaluationParam]);
+  }, [enrollmentId, finalEvaluation, showEvaluationParam, course, evaluationId, finalEvaluationAttempts, viewMode]);
 
   // Si le paramètre est présent et que l'évaluation se charge plus tard, ouvrir dès qu'elle apparaît
   useEffect(() => {
@@ -717,39 +729,20 @@ export default function CoursePlayer({
   }, [showEvaluationParam, finalEvaluation, evaluationId, enrollmentId]);
 
   // Recharger la progression périodiquement pour maintenir la synchronisation avec le backend
-  // Cela garantit que la progression affichée dans le header reste à jour
+  // IMPORTANT: Réduire la fréquence pour éviter les vibrations et les re-renders excessifs
   useEffect(() => {
     if (!enrollmentId) return;
     
     const interval = setInterval(async () => {
-      console.log('[CoursePlayer] 🔄 Rechargement périodique de la progression (toutes les 15s)');
+      console.log('[CoursePlayer] 🔄 Rechargement périodique de la progression (toutes les 60s)');
       await loadProgress();
-      // Vérifier aussi la progression pour les cours live
-      await checkAndUpdateLiveCourseProgress();
-    }, 15000); // Recharger toutes les 15 secondes pour une meilleure synchronisation
+    }, 60000); // Recharger toutes les 60 secondes seulement
     
     return () => clearInterval(interval);
-  }, [enrollmentId, loadProgress, checkAndUpdateLiveCourseProgress]);
+  }, [enrollmentId, loadProgress]);
 
-  // Recalculer la progression quand l'évaluation finale ou ses tentatives changent
-  // MAIS seulement si la progression actuelle n'est pas déjà à 100% depuis l'API
-  useEffect(() => {
-    if (enrollmentId) {
-      // Attendre un peu pour s'assurer que finalEvaluation et finalEvaluationAttempts sont à jour
-      const timer = setTimeout(() => {
-        // Ne recharger que si la progression n'est pas déjà à 100%
-        // Si elle est à 100%, c'est que le backend a confirmé que l'évaluation est complétée
-        // On ne veut pas risquer de la réduire à 90% avec une vérification qui pourrait échouer
-        if (courseProgress < 100) {
-          console.log('[CoursePlayer] 🔄 Recalcul de la progression (actuellement < 100%)');
-          loadProgress();
-        } else {
-          console.log('[CoursePlayer] ⏭️ Progression déjà à 100%, pas de recalcul nécessaire');
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [finalEvaluation, finalEvaluationAttempts.length, enrollmentId, courseProgress, loadProgress]);
+  // Note: Supprimé l'useEffect de recalcul car il causait des boucles infinies
+  // La progression est maintenant gérée uniquement par loadProgress() appelé aux moments appropriés
 
   const selectedModule = course.modules?.find((m) => m.id === selectedModuleId);
   const selectedLesson = selectedModule?.lessons?.find((l) => l.id === selectedLessonId);
@@ -795,22 +788,9 @@ export default function CoursePlayer({
     }
   }, [selectedLessonId, savedScrollPosition]);
 
-  // Si aucune leçon n'est sélectionnée mais qu'un module l'est, sélectionner la première leçon
-  useEffect(() => {
-    if (selectedModuleId && !selectedLessonId && selectedModule?.lessons && selectedModule.lessons.length > 0) {
-      const firstLesson = selectedModule.lessons[0];
-      // S'assurer qu'on désélectionne toute leçon précédente
-      setSelectedLessonId(null);
-      // Puis sélectionner la première leçon du module
-      setTimeout(() => {
-        // Sauvegarder la position de scroll
-        const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-        setSavedScrollPosition(scrollPosition);
-        setSelectedLessonId(firstLesson.id);
-        router.replace(`/learn/${course.id}?module=${selectedModuleId}&lesson=${firstLesson.id}`);
-      }, 0);
-    }
-  }, [selectedModuleId]);
+  // Note: Supprimé l'useEffect qui sélectionnait automatiquement la première leçon
+  // d'un module car il causait des problèmes de boucle et de clignotement
+  // La sélection de leçon est maintenant gérée uniquement par handleLessonSelect
 
   // Fonction pour obtenir la leçon suivante
   const getNextLesson = useCallback((): Lesson | null => {
@@ -1035,27 +1015,13 @@ export default function CoursePlayer({
         setUnlockedLessons((prev) => new Set([...prev, result.unlockedLessonId!]));
       }
 
-      // Recharger la progression immédiatement
-      await loadProgress();
-      
-      // Recharger à nouveau après plusieurs délais pour s'assurer que le backend a mis à jour
-      // Cela garantit que la progression affichée dans le header est synchronisée
+      // Recharger la progression UNE SEULE FOIS après un court délai
+      // pour laisser le temps au backend de traiter la mise à jour
+      // IMPORTANT: Éviter les appels multiples qui causent des vibrations
       setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai 500ms)');
+        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon');
         await loadProgress();
-      }, 500);
-      
-      // Recharger après un délai plus long pour s'assurer que le backend a bien traité la mise à jour
-      setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement de la progression après complétion de leçon (délai 2s)');
-        await loadProgress();
-      }, 2000);
-      
-      // Recharger une dernière fois après un délai encore plus long pour garantir la synchronisation
-      setTimeout(async () => {
-        console.log('[CoursePlayer] 🔄 Rechargement final de la progression après complétion de leçon (délai 5s)');
-        await loadProgress();
-      }, 5000);
+      }, 1000);
     } catch (error) {
       console.error('Erreur lors de la complétion de la leçon:', error);
       setCompletedLessons(previousCompleted);
