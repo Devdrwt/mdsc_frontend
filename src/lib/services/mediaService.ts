@@ -123,7 +123,7 @@ export class MediaService {
    */
   static getMaxFileSize(contentType: string): number {
     const sizes: Record<string, number> = {
-      video: 500 * 1024 * 1024, // 500MB
+      video: 600 * 1024 * 1024, // 600MB
       document: 50 * 1024 * 1024, // 50MB
       audio: 100 * 1024 * 1024, // 100MB
       presentation: 100 * 1024 * 1024, // 100MB

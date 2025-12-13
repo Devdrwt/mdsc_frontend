@@ -580,27 +580,52 @@ export async function apiRequest<T = any>(
   // Variable pour suivre si on a déjà tenté de rafraîchir le token
   let hasTriedRefresh = false;
   
+  // Créer un AbortController avec timeout
+  // 30 minutes pour TOUS les uploads (vidéos, documents, audio, PDF, images, etc.)
+  // 2 minutes pour les requêtes normales (GET, POST sans fichier)
+  const isUpload = endpoint.includes('/upload') || body instanceof FormData;
+  const timeoutMs = isUpload ? 30 * 60 * 1000 : 2 * 60 * 1000; // 30 min ou 2 min
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
   const makeRequest = async (): Promise<ApiResponse<T>> => {
     // Logger pour debug sur POST/PUT/DELETE et GET pour /favorites
     if (method === 'POST' || method === 'PUT' || method === 'DELETE' || (method === 'GET' && endpoint.includes('/favorites'))) {
       console.log(`📤 [${method}] ${url}`, {
         headers: requestHeaders,
         body: body instanceof FormData ? '[FormData]' : body,
-        endpoint: endpoint
+        endpoint: endpoint,
+        timeout: isUpload ? '30 minutes' : '2 minutes'
       });
     }
     
-    // Faire la requête
-    const response = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body,
-      credentials,
-      mode: 'cors',
-    });
-    
-    // Gérer la réponse
-    return await handleResponse<T>(response);
+    try {
+      // Faire la requête avec signal pour le timeout
+      const response = await fetch(url, {
+        method,
+        headers: requestHeaders,
+        body,
+        credentials,
+        mode: 'cors',
+        signal: controller.signal
+      });
+      
+      // Nettoyer le timeout une fois la réponse reçue
+      clearTimeout(timeoutId);
+      
+      // Gérer la réponse
+      return await handleResponse<T>(response);
+    } catch (error: any) {
+      // Nettoyer le timeout en cas d'erreur
+      clearTimeout(timeoutId);
+      
+      // Gérer l'erreur d'abort (timeout)
+      if (error.name === 'AbortError') {
+        throw new Error(`La requête a expiré après ${timeoutMs / 1000} secondes. Veuillez réessayer.`);
+      }
+      
+      throw error;
+    }
   };
   
   try {
