@@ -6,6 +6,7 @@ import { courseService, Course, Lesson, CreateLessonData, UpdateLessonData } fro
 import { moduleService } from '../../../lib/services/moduleService';
 import { Module } from '../../../types/course';
 import { MediaService } from '../../../lib/services/mediaService';
+import { uploadFileToMinIO } from '../../../lib/services/minioUpload';
 import { createSanitizedHtml } from '../../../lib/utils/sanitizeHtml';
 import toast from '../../../lib/utils/toast';
 import ConfirmModal from '../../ui/ConfirmModal';
@@ -194,24 +195,40 @@ export default function LessonManagement({ courseId, moduleId, onLessonCreated }
       let finalContentUrl = formData.content_url;
       let finalMediaFileId = undefined;
 
-      // Si un fichier média est sélectionné, l'uploader
+      // Si un fichier média est sélectionné, l'uploader DIRECTEMENT vers MinIO
       if (mediaFile) {
         setUploadingMedia(true);
         try {
-          const uploadResult = await MediaService.uploadFile(
-            {
-              file: mediaFile,
-              contentType: formData.content_type as any,
-              lessonId: editingLesson?.id?.toString(),
-              courseId: courseId,
-            },
-            (progress) => console.log('Upload progress:', progress)
-          );
+          console.log('🚀 [LESSON] Upload direct vers MinIO:', {
+            fileName: mediaFile.name,
+            fileSize: `${(mediaFile.size / (1024 * 1024)).toFixed(2)} MB`,
+            contentType: formData.content_type
+          });
+
+          // NOUVEAU: Upload direct vers MinIO avec URLs pré-signées
+          const uploadResult = await uploadFileToMinIO({
+            file: mediaFile,
+            contentType: formData.content_type as any,
+            lessonId: editingLesson?.id ? Number(editingLesson.id) : undefined,
+            moduleId: formData.module_id ? Number(formData.module_id) : undefined,
+            onProgress: (progress) => {
+              console.log(`📊 [LESSON] Upload: ${progress}%`);
+              // Vous pouvez ajouter une barre de progression ici si besoin
+            }
+          });
+
+          if (!uploadResult.success || !uploadResult.data) {
+            throw new Error(uploadResult.error || 'Upload échoué');
+          }
           
-          finalContentUrl = uploadResult.url;
-          finalMediaFileId = uploadResult.id;
+          console.log('✅ [LESSON] Upload réussi:', uploadResult.data);
+          
+          finalContentUrl = uploadResult.data.url;
+          finalMediaFileId = uploadResult.data.mediaFileId;
+          
+          toast.success('Fichier uploadé', 'Le fichier a été uploadé avec succès vers MinIO');
         } catch (uploadError: any) {
-          console.error('Erreur lors de l\'upload:', uploadError);
+          console.error('❌ [LESSON] Erreur lors de l\'upload:', uploadError);
           toast.error('Erreur upload', uploadError.message || 'Impossible d\'uploader le fichier');
           return;
         } finally {
